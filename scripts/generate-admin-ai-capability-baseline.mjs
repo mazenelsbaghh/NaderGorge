@@ -32,6 +32,13 @@ function idPart(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'root';
 }
 
+function routeKey(method, route) {
+  const normalized = route.split('?')[0].toLowerCase()
+    .replace(/\{[^}]+\}/g, '{}')
+    .replace(/^\/api(?=\/)/, '');
+  return `${method}:${normalized}`;
+}
+
 function domainFor(value) {
   const input = value.toLowerCase();
   if (/(finance|wallet|recharge|payment|treasury|refund|expense|settlement|accounting)/.test(input)) return 'finance';
@@ -109,16 +116,23 @@ function build() {
     .filter((endpoint) => runtimeKeys.has(`${endpoint.controller.replace(/Controller$/, '')}.${endpoint.action}:${endpoint.method}`));
   if (!endpoints.length) throw new Error('No diagnostic Admin endpoints matched the authoritative runtime inventory.');
   const frontend = JSON.parse(frontendRaw);
+  const backendItems = endpoints.map((endpoint) => createItem(
+    'backend-endpoint', endpoint.method, endpoint.path, endpoint.source,
+    `${endpoint.controller}.${endpoint.action}`,
+    `diagnostic:${endpoint.controller}.${endpoint.action}`,
+  ));
+  const backendByRoute = new Map();
+  for (const item of backendItems) {
+    const key = routeKey(item.method, item.route);
+    if (backendByRoute.has(key)) throw new Error(`Ambiguous Admin endpoint route: ${key}`);
+    backendByRoute.set(key, item);
+  }
   const items = [
-    ...endpoints.map((endpoint) => createItem(
-      'backend-endpoint', endpoint.method, endpoint.path, endpoint.source,
-      `${endpoint.controller}.${endpoint.action}`,
-      `diagnostic:${endpoint.controller}.${endpoint.action}`,
-    )),
+    ...backendItems,
     ...frontend.calls.map((call) => createItem(
       'frontend-call', call.method, call.path, call.source,
       call.source.file,
-      'unresolved:frontend-contract',
+      backendByRoute.get(routeKey(call.method, call.path))?.authoritativeOperation ?? 'unresolved:frontend-contract',
     )),
   ].sort((left, right) => left.id.localeCompare(right.id));
   const payload = {

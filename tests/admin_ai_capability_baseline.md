@@ -1,6 +1,6 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `22325726e616adc20362e0b9e066928aa79bfbf06f6a9c2a8dcecab989da2432`
+Digest: `e66a974fab4a1c6d31a17c64416195b388c7534d6a2e949e64e194010ac6e651`
 
 Items: 1097; external-side-effect=26, mutation=626, read=431, export=11, preview=3.
 

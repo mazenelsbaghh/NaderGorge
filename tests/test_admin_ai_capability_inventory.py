@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from pathlib import Path
 
 
@@ -42,3 +43,18 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     allowed = set(json.loads(SCHEMA.read_text())["$defs"]["exclusion"]["properties"]["reason"]["enum"])
 
     assert all(exclusion["reason"] in allowed for exclusion in baseline.get("exclusions", []))
+
+
+def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operation():
+    items = json.loads(BASELINE.read_text())["items"]
+
+    def route_key(item):
+        route = re.sub(r"\{[^}]+\}", "{}", item["route"].split("?", 1)[0].lower())
+        return item["method"], re.sub(r"^/api(?=/)", "", route)
+
+    backend = {route_key(item): item for item in items if item["kind"] == "backend-endpoint"}
+    matched = [item for item in items if item["kind"] == "frontend-call" and route_key(item) in backend]
+
+    assert matched
+    assert all(item["authoritativeOperation"] == backend[route_key(item)]["authoritativeOperation"]
+               for item in matched)

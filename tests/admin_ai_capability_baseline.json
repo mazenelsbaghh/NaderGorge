@@ -14580,7 +14580,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteBunnyStreamLibrary",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14610,7 +14610,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RemoveUnusedCodes",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14640,7 +14640,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RemoveDevice",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14670,7 +14670,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteExamAttempt",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -14700,7 +14700,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteExamAttempt",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14730,7 +14730,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteExamQuestion",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14760,7 +14760,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.DeletePayrollAdjustment",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -14790,7 +14790,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.DeleteForm",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -14880,7 +14880,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.DeletePage",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -14910,7 +14910,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ResetPackageCodeProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14940,7 +14940,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteRole",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -14970,7 +14970,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteSubject",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -15000,7 +15000,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSystemLogsController.DeleteAll",
       "inputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:output:v1",
       "limits": {
@@ -15030,7 +15030,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteTeacherPhoto",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15060,7 +15060,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteTerm",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15090,7 +15090,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteStudentNote",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15120,7 +15120,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DisconnectDevice",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15150,7 +15150,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DisconnectAllDevices",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15180,7 +15180,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminVideoTypesController.Delete",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15210,7 +15210,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UnlinkVideoExam",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15240,7 +15240,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DeleteVideo",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15300,7 +15300,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrEmployeesController.DeleteEmployee",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -15420,7 +15420,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAssistantController.GetHomeworkReviews",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15447,7 +15447,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAssistantController.GetStats",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15474,7 +15474,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAssistantController.GetTasks",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15501,7 +15501,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAssistantController.GetWarnings",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15528,7 +15528,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Detail",
       "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
       "limits": {
@@ -15555,7 +15555,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.List",
       "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
       "limits": {
@@ -15582,7 +15582,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetAvailableBunnyStreamLibraries",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15609,7 +15609,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetBunnyStreamLibraries",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15636,7 +15636,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetBunnyCostReport",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15663,7 +15663,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetAcademicSubjectEligibilities",
       "inputSchema": "frontend-call:frontend-src-services-code-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-code-service-ts:output:v1",
       "limits": {
@@ -15690,7 +15690,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminLessonCommentsController.GetAllLessonComments",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15717,7 +15717,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.GetPendingComments",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15744,7 +15744,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.GetPostsForModeration",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15771,7 +15771,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetContentSummaryTeachers",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -15852,7 +15852,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminEmthntakController.Configuration",
       "inputSchema": "frontend-call:frontend-src-app-admin-emthntak-page-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-app-admin-emthntak-page-tsx:output:v1",
       "limits": {
@@ -15879,7 +15879,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPendingEssays",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15933,7 +15933,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetExamDashboard",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15960,7 +15960,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GetCodeAccounting",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -15987,7 +15987,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GetPayouts",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16014,7 +16014,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GetPayouts",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -16041,7 +16041,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GetPayroll",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -16068,7 +16068,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GetTeacherEvents",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -16095,7 +16095,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.GetFormSubmissions",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -16122,7 +16122,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.GetFormDetails",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -16149,7 +16149,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.ListForms",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -16176,7 +16176,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Details",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -16203,7 +16203,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Students",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -16230,7 +16230,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Targets",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -16257,7 +16257,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Teachers",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -16284,7 +16284,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.List",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -16338,7 +16338,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetHomeworkDashboard",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16392,7 +16392,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminHrController.GetAttendance",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -16419,7 +16419,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminHrController.GetEmployees",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -16500,7 +16500,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetLessonCockpit",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16527,7 +16527,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminLessonCommentsController.GetLessonCommentsForModeration",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16554,7 +16554,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetMimGame",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16581,7 +16581,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.GetSettings",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -16608,7 +16608,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.GetPipelines",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -16635,7 +16635,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.GetMediaKpis",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -16662,7 +16662,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.GetSocialPlans",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -16716,7 +16716,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPackageCodeProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16743,7 +16743,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPackageStats",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16770,7 +16770,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPackageById",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16797,7 +16797,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPackagesList",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -16824,7 +16824,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Bootstrap",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16851,7 +16851,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.BudgetActuals",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16878,7 +16878,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Dashboard",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16905,7 +16905,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Expenses",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16932,7 +16932,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Ledger",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16959,7 +16959,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.MigrationPreview",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -16986,7 +16986,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Periods",
       "inputSchema": "frontend-call:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:output:v1",
       "limits": {
@@ -17013,7 +17013,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Profits",
       "inputSchema": "frontend-call:frontend-src-services-platform-profits-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-profits-service-ts:output:v1",
       "limits": {
@@ -17040,7 +17040,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Reconciliation",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17067,7 +17067,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RefundBootstrap",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17094,7 +17094,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RefundStudent",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17121,7 +17121,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RefundUsagePreview",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17148,7 +17148,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.FindRefundStudent",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17175,7 +17175,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Refunds",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17202,7 +17202,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Report",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17229,7 +17229,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.TeacherSummary",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17256,7 +17256,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.TeacherDetail",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17283,7 +17283,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.WalletTransferReviews",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17310,7 +17310,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.WalletReport",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -17337,7 +17337,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPublicExamsController.Results",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17364,7 +17364,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPublicExamsController.List",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17391,7 +17391,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ListQuestions",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -17418,7 +17418,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ListRoles",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -17445,7 +17445,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.Coupon",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17472,7 +17472,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.Coupons",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17499,7 +17499,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.PrintableBatches",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17526,7 +17526,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.StackingPolicies",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17553,7 +17553,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesTemplatesController.List",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -17580,7 +17580,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetSectionStats",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -17607,7 +17607,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetSectionById",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -17634,7 +17634,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetStudentWelcomeStats",
       "inputSchema": "frontend-call:frontend-src-components-admin-studentwelcomestats-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-studentwelcomestats-tsx:output:v1",
       "limits": {
@@ -17661,7 +17661,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetPlatformSettings",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -17688,7 +17688,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSharedPackagesController.List",
       "inputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:output:v1",
       "limits": {
@@ -17715,7 +17715,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetSubjectById",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -17742,7 +17742,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetSubjects",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -17769,7 +17769,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSystemLogsController.Export",
       "inputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:output:v1",
       "limits": {
@@ -17796,7 +17796,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSystemLogsController.List",
       "inputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:output:v1",
       "limits": {
@@ -17823,7 +17823,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherCodeFinanceController.GetAccount",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17850,7 +17850,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.GetSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17877,7 +17877,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ListAgreements",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17904,7 +17904,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.GetTeacherCollections",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17931,7 +17931,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.GetLedger",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17958,7 +17958,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ListSettlements",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -17985,7 +17985,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.GetTeacherSummary",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -18012,7 +18012,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherById",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -18039,7 +18039,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherActivations",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18066,7 +18066,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetActiveTeacherPhoto",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18093,7 +18093,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherEssays",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18120,7 +18120,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherPhotos",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18147,7 +18147,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherProfileStats",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18174,7 +18174,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeacherStudents",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18201,7 +18201,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeachers",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18228,7 +18228,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTeachers",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -18255,7 +18255,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTermStats",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18282,7 +18282,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetTermById",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18309,7 +18309,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetUserAuditLogs",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18336,7 +18336,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetUserDevices",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18363,7 +18363,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetStudentProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18390,7 +18390,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ListUsers",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18417,7 +18417,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminVideoTypesController.List",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18444,7 +18444,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetRechargeMessageConflicts",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18471,7 +18471,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetRechargeSmsSuggestions",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18498,7 +18498,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetRechargeShiftReview",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18525,7 +18525,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetSmsLogs",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18552,7 +18552,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetUnmatchedSms",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18579,7 +18579,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.GetWallets",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -18606,7 +18606,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GetWatchRequests",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -18660,7 +18660,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.GetMembers",
       "inputSchema": "frontend-call:frontend-src-components-chat-createchatgroup-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-chat-createchatgroup-tsx:output:v1",
       "limits": {
@@ -18687,7 +18687,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.GetRoomMessages",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -18714,7 +18714,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.GetRooms",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -18876,7 +18876,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:CrmController.GetPerformanceReport",
       "inputSchema": "frontend-call:frontend-src-services-crm-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-crm-service-ts:output:v1",
       "limits": {
@@ -18903,7 +18903,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:CrmController.GetStudents",
       "inputSchema": "frontend-call:frontend-src-services-crm-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-crm-service-ts:output:v1",
       "limits": {
@@ -18930,7 +18930,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:CrmController.GetHistory",
       "inputSchema": "frontend-call:frontend-src-services-crm-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-crm-service-ts:output:v1",
       "limits": {
@@ -19389,7 +19389,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.Corrections",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19416,7 +19416,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.DailyReport",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19443,7 +19443,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.GetAttendancePolicies",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19470,7 +19470,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.Sessions",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19497,7 +19497,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.Cases",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -19524,7 +19524,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.Configuration",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19551,7 +19551,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.Tasks",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -19578,7 +19578,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.Cycles",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -19605,7 +19605,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.Board",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -19632,7 +19632,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.GetAssignments",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19659,7 +19659,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.GetCalendars",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19686,7 +19686,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.GetTemplates",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19713,7 +19713,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrApprovalsController.Inbox",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19740,7 +19740,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrController.GetMyAttendance",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19767,7 +19767,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrEmployeesController.GetEmployee",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19794,7 +19794,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.MigrationStatus",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -19821,7 +19821,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.ExportWorkforce",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -19848,7 +19848,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.Workforce",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -19875,7 +19875,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrOrganizationController.GetUnits",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -19902,7 +19902,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.Config",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -19929,7 +19929,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.Run",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -19956,7 +19956,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.Runs",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -19983,7 +19983,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.MyFinancialRequests",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -20010,7 +20010,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.MyPayslips",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -20037,7 +20037,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.Today",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -20064,7 +20064,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.History",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -20091,7 +20091,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.Balances",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -20118,7 +20118,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.Catalog",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -20145,7 +20145,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.MyRequests",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -20172,7 +20172,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.GetActiveConversations",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -20199,7 +20199,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Config",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -20226,7 +20226,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Evidence",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -20253,7 +20253,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Knowledge",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -20280,7 +20280,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.GetStats",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -20307,7 +20307,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Config",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20334,7 +20334,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Timeline",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20361,7 +20361,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Dashboard",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20388,7 +20388,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Ratings",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -22008,7 +22008,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppController.PreviewAssessmentParentRecovery",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22035,7 +22035,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppController.AssessmentParentRecoveryStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22062,7 +22062,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetBunnyStreamLibraryStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22092,7 +22092,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ToggleStudentStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22122,7 +22122,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminVideoTypesController.SetStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22152,7 +22152,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ToggleVideoActive",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22212,7 +22212,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.UpdatePublishedAssignment",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -22242,7 +22242,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.UpdateCalendar",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -22392,7 +22392,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ExtractAssessmentQuestionsFromImages",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22422,7 +22422,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Decision",
       "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
       "limits": {
@@ -22452,7 +22452,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateBunnyStreamLibrary",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22482,7 +22482,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CancelBunnyVideoReplacement",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22512,7 +22512,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CompleteBunnyUpload",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22542,7 +22542,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.FetchBunnyVideo",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22572,7 +22572,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateBunnyTusUpload",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22602,7 +22602,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SyncBunnyUsage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22632,7 +22632,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RefreshBunnyVideoStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22662,7 +22662,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RegenerateChapterMindmap",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22692,7 +22692,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminLessonCommentsController.ApproveLessonComment",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22722,7 +22722,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminLessonCommentsController.RejectLessonComment",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22752,7 +22752,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminLessonCommentsController.ReplyToLessonComment",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22782,7 +22782,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.ApproveComment",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22812,7 +22812,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.RejectComment",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22842,7 +22842,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.ApprovePost",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22872,7 +22872,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminCommunityController.RejectPost",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22902,7 +22902,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadContentImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22932,7 +22932,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AttachHomework",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -22992,7 +22992,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminEmthntakController.ForwardRequest",
       "inputSchema": "frontend-call:frontend-src-app-admin-emthntak-page-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-app-admin-emthntak-page-tsx:output:v1",
       "limits": {
@@ -23022,7 +23022,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GradeEssay",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23052,7 +23052,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AddQuestionsToExam",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23082,7 +23082,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateInlineExam",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23112,7 +23112,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.ResolvePayout",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23142,7 +23142,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.GeneratePayroll",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23172,7 +23172,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.AddPayrollAdjustment",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23202,7 +23202,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.ApprovePayroll",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23232,7 +23232,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.ReviewTeacherEvent",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23262,7 +23262,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFinanceController.CreateManualCompensation",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -23292,7 +23292,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.UploadCoverImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23322,7 +23322,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.CreateForm",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -23352,7 +23352,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Revoke",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -23382,7 +23382,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminGiftsController.Issue",
       "inputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-gifts-service-ts:output:v1",
       "limits": {
@@ -23412,7 +23412,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminHrController.ProvisionEmployee",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -23442,7 +23442,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminHrController.SaveEmployeeProfile",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -23472,7 +23472,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.DisableMimGame",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23502,7 +23502,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.GenerateMimGame",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23532,7 +23532,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.PublishMimGame",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23562,7 +23562,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateLesson",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23592,7 +23592,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.CheckPage",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -23622,7 +23622,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.LinkPage",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -23652,7 +23652,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.RotateVerifyToken",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -23682,7 +23682,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.CreatePipeline",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -23712,7 +23712,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.CreateSocialPlan",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -23742,7 +23742,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminOperationsController.ResolveApproval",
       "inputSchema": "frontend-call:frontend-src-services-assistant-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assistant-service-ts:output:v1",
       "limits": {
@@ -23772,7 +23772,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminOperationsController.CreateTask",
       "inputSchema": "frontend-call:frontend-src-services-assistant-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assistant-service-ts:output:v1",
       "limits": {
@@ -23802,7 +23802,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ResetWatchLimit",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23832,7 +23832,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreatePackage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -23862,7 +23862,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.CreateBudget",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -23892,7 +23892,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.PostExpense",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -23922,7 +23922,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.ReverseExpense",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -23952,7 +23952,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.CreateExpense",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -23982,7 +23982,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.PostHistoricalMigration",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24042,7 +24042,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.CreateExternalPackageRefund",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24072,7 +24072,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.PostRefund",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24102,7 +24102,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.ReverseRefund",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24132,7 +24132,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.CreateRefund",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24162,7 +24162,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Reconcile",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24192,7 +24192,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Transfer",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24222,7 +24222,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.BackfillWalletTransferReviews",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24252,7 +24252,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RecordWalletTransferExpense",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24282,7 +24282,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RecordWalletInternalTransfer",
       "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
       "limits": {
@@ -24312,7 +24312,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadPlatformPopupImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24342,7 +24342,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPublicExamsController.Create",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24372,7 +24372,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminPublicExamsController.Save",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24402,7 +24402,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadQuestionImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24432,7 +24432,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadQuestionAudio",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24462,7 +24462,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateQuestion",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24492,7 +24492,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadResourceFile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24522,7 +24522,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateResource",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24552,7 +24552,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateRole",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24582,7 +24582,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.CreateCoupon",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24612,7 +24612,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.CreatePrintableBatch",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24642,7 +24642,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.SaveStackingPolicy",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24672,7 +24672,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesTemplatesController.UploadBackgroundImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24702,7 +24702,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesTemplatesController.Save",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -24732,7 +24732,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateSection",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -24762,7 +24762,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSharedPackagesController.UploadImage",
       "inputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:output:v1",
       "limits": {
@@ -24792,7 +24792,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSharedPackagesController.Publish",
       "inputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:output:v1",
       "limits": {
@@ -24822,7 +24822,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSharedPackagesController.Create",
       "inputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-shared-package-service-ts:output:v1",
       "limits": {
@@ -24852,7 +24852,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateSubject",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -24882,7 +24882,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSystemLogsController.Delete",
       "inputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-system-logs-service-ts:output:v1",
       "limits": {
@@ -24912,7 +24912,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherCodeFinanceController.ConfirmDelivery",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -24942,7 +24942,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherCodeFinanceController.CollectPayment",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -24972,7 +24972,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ReverseSelectedLines",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25002,7 +25002,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25032,7 +25032,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ApproveSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25062,7 +25062,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.CancelSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25092,7 +25092,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PaySettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25122,7 +25122,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ReviewSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25152,7 +25152,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.CreateSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25182,7 +25182,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.CreateAgreement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -25212,7 +25212,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadTeacherPhoto",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25242,7 +25242,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetTeacherPhotoActive",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25272,7 +25272,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UploadTeacherProfileImage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25302,7 +25302,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateTeacher",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -25332,7 +25332,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateTerm",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25362,7 +25362,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ResetAdminPassword",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25392,7 +25392,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ArchiveStaff",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25422,7 +25422,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AdjustBalance",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25452,7 +25452,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AddStudentNote",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25482,7 +25482,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AdminResetPassword",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25512,7 +25512,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.AdjustGamification",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25542,7 +25542,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.OverrideVideoLimit",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25572,7 +25572,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CancelPackage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25602,7 +25602,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateUser",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25632,7 +25632,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminVideoTypesController.Create",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25662,7 +25662,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RequestAIAnalysis",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25692,7 +25692,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CancelAIAnalysis",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25722,7 +25722,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CancelMindmapGeneration",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25752,7 +25752,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RequestMindmapGeneration",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25782,7 +25782,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.CreateVideo",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -25812,7 +25812,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.RegenerateToken",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25842,7 +25842,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.ToggleWallet",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25872,7 +25872,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.ReassignRechargeSms",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25902,7 +25902,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.ResolveRechargeRequest",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25932,7 +25932,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.ReverseRechargeCredit",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25962,7 +25962,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.CreateWallet",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -25992,7 +25992,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.ApproveWatchRequest",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -26022,7 +26022,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.RejectWatchRequest",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -26142,7 +26142,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.TogglePin",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -26172,7 +26172,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.ArchiveRoom",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -26202,7 +26202,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.MarkRead",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -26232,7 +26232,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.CreateRoom",
       "inputSchema": "frontend-call:frontend-src-services-chat-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-chat-service-ts:output:v1",
       "limits": {
@@ -26292,7 +26292,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:CrmController.AssignStudent",
       "inputSchema": "frontend-call:frontend-src-services-crm-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-crm-service-ts:output:v1",
       "limits": {
@@ -26322,7 +26322,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:CrmController.LogCall",
       "inputSchema": "frontend-call:frontend-src-services-crm-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-crm-service-ts:output:v1",
       "limits": {
@@ -26802,7 +26802,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.DecideCorrection",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -26832,7 +26832,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.CreateAttendancePolicy",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -26862,7 +26862,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.AssignAttendancePolicy",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -26892,7 +26892,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.CancelEvent",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -26922,7 +26922,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.Decide",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -26952,7 +26952,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.OpenCase",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -26982,7 +26982,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.CreatePolicy",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27012,7 +27012,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.CreateType",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27042,7 +27042,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.StartOffboarding",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27072,7 +27072,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.Activate",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -27102,7 +27102,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.CreateCycle",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -27132,7 +27132,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPerformanceCasesController.PublishReview",
       "inputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-performance-service-ts:output:v1",
       "limits": {
@@ -27162,7 +27162,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.Hire",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27192,7 +27192,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.CreateOffer",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27222,7 +27222,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.AcceptOffer",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27252,7 +27252,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.AddCandidate",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27282,7 +27282,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrRecruitmentLifecycleController.CreateRequisition",
       "inputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-recruitment-service-ts:output:v1",
       "limits": {
@@ -27312,7 +27312,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.PublishAssignments",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27342,7 +27342,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.ValidateAssignments",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27372,7 +27372,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrShiftsController.CreateTemplate",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27402,7 +27402,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrApprovalsController.CreateDefinition",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27432,7 +27432,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrApprovalsController.Delegate",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27462,7 +27462,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrApprovalsController.Decide",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27492,7 +27492,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrController.ClockIn",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27522,7 +27522,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrController.ClockOut",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27552,7 +27552,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.Activate",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -27582,7 +27582,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.Reconcile",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -27612,7 +27612,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.DryRun",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -27642,7 +27642,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrGovernanceController.Rollback",
       "inputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-governance-service-ts:output:v1",
       "limits": {
@@ -27672,7 +27672,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.CreateComponent",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -27702,7 +27702,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.CreateRule",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -27762,7 +27762,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.Prepare",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -27792,7 +27792,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrPayrollController.SubmitFinancialRequest",
       "inputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-payroll-service-ts:output:v1",
       "limits": {
@@ -27822,7 +27822,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.EndBreak",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27852,7 +27852,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.StartBreak",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27882,7 +27882,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.ClockIn",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27912,7 +27912,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.ClockOut",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27942,7 +27942,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.SubmitCorrection",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -27972,7 +27972,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.Withdraw",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -28002,7 +28002,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrLeaveController.Submit",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -28032,7 +28032,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Disable",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -28062,7 +28062,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Enable",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -28092,7 +28092,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.SaveKnowledge",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -28122,7 +28122,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Preview",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -28152,7 +28152,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Publish",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -28182,7 +28182,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Intervene",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -30012,7 +30012,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppController.ApplyAssessmentParentRecovery",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30042,7 +30042,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppController.SendAdminExamResultMessage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30072,7 +30072,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppController.SendAdminTestMessage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30102,7 +30102,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Control",
       "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
       "limits": {
@@ -30132,7 +30132,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateBunnyStreamLibrary",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30162,7 +30162,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateCodeGroupSettings",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30192,7 +30192,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetContentArchiveState",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30252,7 +30252,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateExamQuestion",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30282,7 +30282,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetExamStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30312,7 +30312,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.UpdateForm",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -30342,7 +30342,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFormsController.UpdateSubmissionStatus",
       "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
       "limits": {
@@ -30402,7 +30402,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetHomeworkStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30432,7 +30432,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateLesson",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30462,7 +30462,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.LinkExam",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30492,7 +30492,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetLessonHomeworkComingSoon",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30522,7 +30522,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminFacebookMessengerController.UpdateSettings",
       "inputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-facebook-messenger-admin-service-ts:output:v1",
       "limits": {
@@ -30552,7 +30552,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminMediaController.UpdatePipeline",
       "inputSchema": "frontend-call:frontend-src-services-media-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-media-service-ts:output:v1",
       "limits": {
@@ -30582,7 +30582,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.SetWatchCount",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30612,7 +30612,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpsertPackageCodeProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30642,7 +30642,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdatePackage",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30702,7 +30702,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateRole",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30732,7 +30732,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminSalesController.UpdateCoupon",
       "inputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-sales-service-ts:output:v1",
       "limits": {
@@ -30762,7 +30762,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateSection",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30792,7 +30792,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdatePlatformSettings",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30822,7 +30822,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateSubject",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -30852,7 +30852,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.ReplaceAgreement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -30882,7 +30882,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminTeacherCodeFinanceController.SetFinancialTerms",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
@@ -30912,7 +30912,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateTeacher",
       "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
       "limits": {
@@ -30942,7 +30942,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateTerm",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -30972,7 +30972,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateUserRoles",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31002,7 +31002,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateUserStatus",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31032,7 +31032,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateStaffProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31062,7 +31062,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateStudentProfile",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31092,7 +31092,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminVideoTypesController.Update",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31122,7 +31122,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.LinkVideoExam",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31152,7 +31152,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminController.UpdateVideo",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -31182,7 +31182,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AdminWalletsController.UpdateLimits",
       "inputSchema": "frontend-call:frontend-src-services-wallet-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-wallet-service-ts:output:v1",
       "limits": {
@@ -31212,7 +31212,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:InternalChatController.UpdateMembers",
       "inputSchema": "frontend-call:frontend-src-components-chat-createchatgroup-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-chat-createchatgroup-tsx:output:v1",
       "limits": {
@@ -31272,7 +31272,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.UpdateBreak",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
@@ -31302,7 +31302,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.Save",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -31332,7 +31332,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAIAdminController.LinkKnowledge",
       "inputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-ai-service-ts:output:v1",
       "limits": {
@@ -31362,7 +31362,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.CannedReplies",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -31392,7 +31392,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Feature",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -31422,7 +31422,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportAdminController.Staff",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -31594,5 +31594,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "22325726e616adc20362e0b9e066928aa79bfbf06f6a9c2a8dcecab989da2432"
+  "digest": "e66a974fab4a1c6d31a17c64416195b388c7534d6a2e949e64e194010ac6e651"
 }
