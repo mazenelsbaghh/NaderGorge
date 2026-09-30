@@ -1398,17 +1398,18 @@ export const adminService = {
 
   listCodeGroups: async (...options: [{ force?: boolean; search?: string }?]) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
-    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>(path, { params: { search: options[0]?.search } });
+    const requestOptions = { params: { search: options[0]?.search } };
+    const res = isTeacher
+      ? await apiClient.get<ApiResponse<CodeGroupDto[]>>('/teacher/codes/groups', requestOptions)
+      : await apiClient.get<ApiResponse<CodeGroupDto[]>>('/admin/codes/groups', requestOptions);
     return res.data?.data;
   },
 
   getCodeGroupDetails: async (id: string) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher
-      ? `/teacher/codes/groups/${id}/details`
-      : `/admin/codes/groups/${id}/details`;
-    const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(path);
+    const res = isTeacher
+      ? await apiClient.get<ApiResponse<CodeDetailDto[]>>(`/teacher/codes/groups/${id}/details`)
+      : await apiClient.get<ApiResponse<CodeDetailDto[]>>(`/admin/codes/groups/${id}/details`);
     return res.data?.data;
   },
 

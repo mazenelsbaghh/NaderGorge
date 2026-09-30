@@ -132,9 +132,7 @@ function build() {
     if (backendByRoute.has(key)) throw new Error(`Ambiguous Admin endpoint route: ${key}`);
     backendByRoute.set(key, item);
   }
-  const items = [
-    ...backendItems,
-    ...frontend.calls.map((call) => {
+  const frontendItems = frontend.calls.map((call) => {
       const backend = backendByRoute.get(routeKey(call.method, call.path));
       const item = createItem('frontend-call', call.method, call.path, call.source,
         call.source.file, backend?.authoritativeOperation ?? 'unresolved:frontend-contract');
@@ -148,8 +146,16 @@ function build() {
         confirmation: backend.confirmation,
         refreshScopes: backend.refreshScopes,
       } : item;
-    }),
-  ].sort((left, right) => left.id.localeCompare(right.id));
+    });
+  const selfServicePath = 'frontend/src/services/admin-ai-agent-service.ts';
+  const selfServiceItems = frontendItems.filter((item) => item.source.file === selfServicePath);
+  const items = [...backendItems, ...frontendItems.filter((item) => item.source.file !== selfServicePath)]
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const exclusions = selfServiceItems.map((item) => ({
+    id: item.id,
+    reason: 'self-service',
+    detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
+  })).sort((left, right) => left.id.localeCompare(right.id));
   const payload = {
     schemaVersion: 1,
     generatedAtUtc: '2026-08-11T00:00:00.000Z',
@@ -160,7 +166,7 @@ function build() {
       semantic: { path: 'scripts/generate-admin-ai-capability-baseline.mjs', digest: digest(readFileSync(fileURLToPath(import.meta.url))) },
     },
     items,
-    exclusions: [],
+    exclusions,
   };
   payload.digest = digest(stable(payload));
   return payload;
@@ -177,6 +183,7 @@ function markdown(payload) {
     `Digest: \`${payload.digest}\``,
     '',
     `Items: ${payload.items.length}; ${Object.entries(totals).map(([key, count]) => `${key}=${count}`).join(', ')}.`,
+    `Reviewed non-business exclusions: ${payload.exclusions.length}.`,
     '',
     'This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.',
     '',

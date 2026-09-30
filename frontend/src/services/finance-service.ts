@@ -192,20 +192,20 @@ export interface AdminTeacherFinancialEventDto {
 export const financeService = {
   // --- Admin-only teacher finance center ---
   getTeacherStatement: async (teacherId: string | undefined, params: { from?: string; to?: string; page: number; pageSize: number }): Promise<TeacherStatement> => {
-    const path = teacherId ? `/admin/teacher-finance-center/teachers/${teacherId}/statement` : '/teacher/finance/statement';
-    const res = await apiClient.get<ApiResponse<TeacherStatement>>(path, {
-      params: { ...params, from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) },
-    });
+    const options = { params: { ...params, from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) } };
+    const res = teacherId
+      ? await apiClient.get<ApiResponse<TeacherStatement>>(`/admin/teacher-finance-center/teachers/${teacherId}/statement`, options)
+      : await apiClient.get<ApiResponse<TeacherStatement>>('/teacher/finance/statement', options);
     if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل كشف الحساب');
     return res.data.data;
   },
 
   exportTeacherStatementPdf: async (teacherId: string | undefined, params: { from?: string; to?: string }): Promise<Blob> => {
-    const path = teacherId ? `/admin/teacher-finance-center/teachers/${teacherId}/statement/pdf` : '/teacher/finance/statement/pdf';
-    const res = await apiClient.get<Blob>(path, {
-      params: { from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) },
-      responseType: 'blob', timeout: 120_000,
-    });
+    const options = { params: { from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) },
+      responseType: 'blob' as const, timeout: 120_000 };
+    const res = teacherId
+      ? await apiClient.get<Blob>(`/admin/teacher-finance-center/teachers/${teacherId}/statement/pdf`, options)
+      : await apiClient.get<Blob>('/teacher/finance/statement/pdf', options);
     return res.data;
   },
 

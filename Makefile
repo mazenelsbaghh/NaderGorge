@@ -195,6 +195,7 @@ verify-audit-remediation: ## Run audit remediation verification commands
 verify: verify-backend verify-frontend verify-worker verify-docker verify-performance-budgets verify-admin-ai-capabilities ## Run the repository verification contract
 
 verify-admin-ai-capabilities: ## Fail when the sealed Admin AI endpoint, route, or capability baseline drifts
+	cd frontend && node --test scripts/generate-admin-ai-capability-baseline.test.mjs
 	node frontend/scripts/generate-admin-ai-capability-baseline.mjs --check
 	node scripts/generate-admin-ai-capability-baseline.mjs --check
 	$(PYTHON) -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py

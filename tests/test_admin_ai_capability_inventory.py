@@ -33,9 +33,12 @@ def test_baseline_has_one_disposition_per_item_without_duplicate_id_or_route_met
     baseline = json.loads(BASELINE.read_text())
     items = baseline["items"]
     ids = [item["id"] for item in items]
+    excluded_ids = [item["id"] for item in baseline.get("exclusions", [])]
     route_methods = [(item["kind"], item["method"], item["route"], item["source"]["file"], item["source"]["line"]) for item in items]
 
     assert len(ids) == len(set(ids))
+    assert len(excluded_ids) == len(set(excluded_ids))
+    assert not set(ids).intersection(excluded_ids)
     assert len(route_methods) == len(set(route_methods))
     assert all(item["status"] != "excluded" for item in items)
     assert all(item["status"] != "blocked" or item.get("blocker") for item in items)
@@ -46,6 +49,9 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     allowed = set(json.loads(SCHEMA.read_text())["$defs"]["exclusion"]["properties"]["reason"]["enum"])
 
     assert all(exclusion["reason"] in allowed for exclusion in baseline.get("exclusions", []))
+    assert len(baseline.get("exclusions", [])) == 13
+    assert all(exclusion["reason"] == "self-service" and "Admin AI conversation/proposal transport" in exclusion["detail"]
+               for exclusion in baseline["exclusions"])
 
 
 def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operation():

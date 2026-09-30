@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import ts from '../node_modules/typescript/lib/typescript.js';
@@ -101,4 +102,22 @@ test('AdminAI graph keeps all service methods when the imported object escapes',
   `, ts.ScriptTarget.Latest, true);
 
   assert.equal(provenServiceMembers(target, 'studentService', new Map([[importer, source]])), null);
+});
+
+test('AdminAI transport service calls only its closed conversation and proposal path builder', () => {
+  const path = fileURLToPath(new URL('../src/services/admin-ai-agent-service.ts', import.meta.url));
+  const source = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
+  let calls = 0;
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && node.expression.expression.getText(source) === 'apiClient'
+      && ['get', 'post', 'patch', 'put', 'delete'].includes(node.expression.name.text)) {
+      calls += 1;
+      assert.ok(node.arguments[0]?.getText(source).startsWith('adminAiAgentPaths.'),
+        `Unexpected business route at ${source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.equal(calls, 14);
 });

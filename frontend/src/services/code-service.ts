@@ -70,24 +70,23 @@ export const codeService = {
       .then((response) => response.data.data ?? []),
 
   /** Create a new code group with the specified type and targets */
-  createCodeGroup: (data: CreateCodeGroupData) => {
-    const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/codes/bulk-generate' : '/admin/codes/bulk-generate';
-    return apiClient.post<ApiResponse<CodeGroupResponse>>(path, data);
-  },
+  createCodeGroup: (data: CreateCodeGroupData) =>
+    apiClient.post<ApiResponse<CodeGroupResponse>>('/admin/codes/bulk-generate', data),
 
   /** List all code groups */
   listCodeGroups: () => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
-    return apiClient.get<ApiResponse>(path);
+    return isTeacher
+      ? apiClient.get<ApiResponse>('/teacher/codes/groups')
+      : apiClient.get<ApiResponse>('/admin/codes/groups');
   },
 
   /** Get codes in a code group */
   getCodeGroupDetails: (groupId: string) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? `/teacher/codes/groups/${groupId}/details` : `/admin/codes/groups/${groupId}/details`;
-    return apiClient.get<ApiResponse>(path);
+    return isTeacher
+      ? apiClient.get<ApiResponse>(`/teacher/codes/groups/${groupId}/details`)
+      : apiClient.get<ApiResponse>(`/admin/codes/groups/${groupId}/details`);
   },
 
   /** Redeem a code (manual entry) */
