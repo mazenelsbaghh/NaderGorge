@@ -30,6 +30,7 @@
 - The original task-create command now accepts an optional server-owned operation identity. Task, audit, workroom, participants, and result receipt save together, replacing the prior two-save sequence. The AdminAI bridge supplies the execution identity and a receipt-backed resolver returns the task ID after an ambiguous outcome.
 - A disposable PostgreSQL test created one task and one workroom, replayed the same identity without another effect, rejected changed input, and recovered the task ID. The focused test passed 1/1; the complete AdminAI PostgreSQL group passed 38/38 and the AdminAI plus operations application tests passed 273/273. The production action catalog remains read-only.
 - The task-create candidate now has an authoritative, read-only preview. It verifies the assignee is not a student, verifies the actor exists, and fingerprints the assignee and supervisor workroom participants. On PostgreSQL the preview left task and workroom counts unchanged; renaming the assignee changed the fingerprint before confirmation. The focused replay/preview test passed 1/1, the complete AdminAI PostgreSQL group passed 38/38, and the AdminAI plus operations application group passed 273/273.
+- Its action adapter is now registered in the API service container alongside the preview and recovery resolver. The production catalog still exposes reads only, so this candidate is not enabled for users.
 
 ## 2026-09-30 concurrent worker claim
 

@@ -390,6 +390,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateSubjectAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateVideoTypeAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateVideoTypeAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateTaskAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAddTaskCommentAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateTaskStatusAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIResolveTaskApprovalAction>();
