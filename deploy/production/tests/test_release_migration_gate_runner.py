@@ -217,6 +217,8 @@ def test_runner_uses_real_primary_operation_and_emits_consumer_valid_gate(
         "20260930130047_AddExternalRefundGrantIdentity",
     ):
         assert migration in remote_script
+    assert "to_jsonb(current) - ''ReviewActorUserId'' - ''ReviewNote'' - ''ReviewOperationId''" in remote_script
+    assert 'current."ReviewOperationId" IS NOT NULL' in remote_script
     assert "massar_gate_refund_roles.roles" in remote_script
     assert "Refund role gate: unexpected assistant role change" in remote_script
     assert "20260921180957_BackfillAssistantRefundRolePermissions" in remote_script
