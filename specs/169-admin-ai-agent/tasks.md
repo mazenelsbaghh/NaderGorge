@@ -190,7 +190,7 @@
 - [X] T107 [P] [US2] Write proposal-preview zero-business-effect tests using EF save/command interception and fake queue/storage/provider/message clients in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIProposalNoSideEffectTests.cs.
 - [ ] T108 [P] [US2] Generate ordinary action schema/risk/preview/executor/audit/refresh parity tests for every ordinary baseline key in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIOrdinaryActionContractTests.cs.
 - [X] T109 [P] [US2] Write public proposal/get/confirm/cancel owner/version/idempotency/error contract tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIProposalApiTests.cs.
-- [ ] T110 [P] [US2] Write PostgreSQL serializable claim, stale fingerprint, matching replay, conflicting payload, two-tab, and two-Admin tests in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIActionConcurrencyTests.cs.
+- [X] T110 [P] [US2] Write PostgreSQL serializable claim, stale fingerprint, matching replay, conflicting payload, two-tab, and two-Admin tests in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIActionConcurrencyTests.cs and its `.Replay.cs` companion.
 - [X] T111 [P] [US2] Write worker propose_actions maximum-count/key/schema/no-risk/no-success-claim tests in worker/src/services/adminAIAgent.test.ts.
 - [X] T112 [P] [US2] Write typed proposal-card, ordinary CTA, expiry, cancel, execution-result, focus, and no-raw-JSON component tests in frontend/src/features/admin-ai-agent/AdminAiActionProposalCard.test.tsx.
 - [ ] T113 [P] [US2] Extend real-backend browser coverage for ordinary proposal/cancel/expire/stale/duplicate/parity paths in frontend/tests/e2e/admin-ai-agent.spec.ts.

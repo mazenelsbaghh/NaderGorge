@@ -9,7 +9,7 @@ using NaderGorge.Infrastructure.Services.AdminAI;
 
 namespace NaderGorge.Integration.Tests.AdminAI;
 
-public sealed class AdminAIActionConcurrencyTests
+public sealed partial class AdminAIActionConcurrencyTests
 {
     [Fact]
     public async Task AmbiguousAuthoritativeFailure_PreservesClaimAndNeverReissuesEffect()

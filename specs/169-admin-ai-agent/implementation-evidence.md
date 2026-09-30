@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 serializable confirmation claim
+
+- T110: a disposable PostgreSQL 16.10 database exposed `40001` during two simultaneous confirmations of one proposal. The executor now retries only a failed pre-effect claim in a fresh serializable transaction; it never retries after invoking an authoritative adapter. Matching retries may observe the durable `Claimed` row while the first request is still executing, and a later replay returns the same terminal execution ID.
+- The real PostgreSQL suite passed 7/7: ambiguous outcome recovery, same-intent replay and conflicting key, two-tab single effect, stale fingerprint, conflicting payload across proposals, second-Admin ownership denial, and a database-backed adapter executing after the claim commit. The two-tab test passed three additional independent runs. The focused AdminAI application suite passed 225/225. Frontend typecheck and focused lint passed after the execution card was corrected to present `Claimed`/`Executing` as pending. The disposable PostgreSQL container was stopped and removed after verification.
+- The source-only GitHub review branch is updated after verification; shared `codex/production` and production services remain unchanged. Full baseline coverage, provider, real-backend browser, performance, restart, and owner acceptance gates remain open.
+
 ## 2026-09-29 continuation
 
 - T110/T181 partial PostgreSQL recovery evidence: a disposable PostgreSQL 16.10 test reproduced a duplicate effect when an authoritative adapter raised an ambiguous exception after execution. The executor now commits its unique execution claim before invoking the adapter. A repeat with the same idempotency key returns the existing `RecoveryRequired` execution without reissuing the effect. The recovery sweep also converts a stranded claim older than five minutes to `RecoveryRequired` without execution; the combined real-database test passed 1/1. This covers one ambiguous failure and one restart state, not the full concurrency and restart matrices required by T110/T181.

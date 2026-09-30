@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Data;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Domain.Entities.AdminAI;
@@ -21,6 +22,27 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
     { _db = db; _access = access; _protector = protector; _secureInputs = secureInputs; _audit = audit; _adapters = adapters.ToDictionary(x => x.Key, StringComparer.Ordinal); }
 
     public async Task<AdminAIExecutionResultDto> ExecuteAsync(Guid actorId, Guid proposalId, string idempotencyKey, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                return await ExecuteOnceAsync(actorId, proposalId, idempotencyKey, ct);
+            }
+            catch (ClaimConflictException exception)
+            {
+                if (attempt == 2)
+                    throw new InvalidOperationException("Concurrent Admin AI execution claim could not be reconciled.", exception);
+                // No adapter has run yet. Discard EF's rolled-back claim and read the
+                // winning execution in a fresh serializable transaction.
+                if (_db is DbContext context) context.ChangeTracker.Clear();
+                await Task.Delay(25 * (attempt + 1), ct);
+            }
+        }
+        throw new InvalidOperationException("Concurrent Admin AI execution claim could not be reconciled.");
+    }
+
+    private async Task<AdminAIExecutionResultDto> ExecuteOnceAsync(Guid actorId, Guid proposalId, string idempotencyKey, CancellationToken ct)
     {
         await _access.RequireCurrentAdminAsync(actorId, null, ct);
         if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > 200) throw new ArgumentException("A bounded idempotency key is required.");
@@ -44,8 +66,15 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
             proposal.Status = AdminAIProposalStatus.Invalidated;
             proposal.InvalidatedReasonCode = "stale_state";
             proposal.Version++;
-            await _db.SaveChangesAsync(ct);
-            if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+                if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+            }
+            catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
+            {
+                throw new ClaimConflictException(exception);
+            }
             throw new InvalidOperationException("Proposal state changed.");
         }
         var execution = new AdminAIActionExecution { ProposalId = proposalId, ActorAdminUserId = actorId, CapabilityKey = proposal.CapabilityKey, CapabilityVersion = proposal.CapabilityVersion, IdempotencyDigest = digest, PayloadHash = proposal.PayloadHash, AuthoritativeOperation = adapter.GetType().FullName ?? adapter.GetType().Name, Status = AdminAIExecutionStatus.Claimed, TraceId = Guid.NewGuid().ToString("N"), ClaimedAt = DateTime.UtcNow };
@@ -78,8 +107,15 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
             // Persist the unique execution identity before any authoritative effect.
             // A crash or ambiguous exception must leave a durable claim that a retry
             // can replay, rather than running the effect a second time.
-            await _db.SaveChangesAsync(ct);
-            if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+                if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+            }
+            catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
+            {
+                throw new ClaimConflictException(exception);
+            }
 
             AdminAIActionOutcome outcome;
             try
@@ -148,6 +184,16 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         AdminAIExecutionStatus.RecoveryRequired => "ExecutionRecoveryRequired",
         _ => "ExecutionFailed"
     };
+
+    private static bool IsClaimConflict(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+            if (current is PostgresException postgres && postgres.SqlState is PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.UniqueViolation)
+                return true;
+        return false;
+    }
+
+    private sealed class ClaimConflictException(Exception inner) : Exception("Concurrent Admin AI execution claim conflicted.", inner);
 
     private async Task<AdminAIActionExecution?> FindExistingAsync(Guid actorId, AdminAIActionProposal proposal, string digest, CancellationToken ct)
     {
