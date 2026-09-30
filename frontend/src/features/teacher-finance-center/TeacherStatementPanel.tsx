@@ -131,6 +131,7 @@ export function TeacherStatementPanel({ teacherId, refreshVersion = 0 }: { teach
         {statement.account.reserved > 0 && <p className="text-sm">محجوز لصرف لم يكتمل: {teacherMoney(statement.account.reserved)}</p>}
         {statement.account.debt > 0 && <p className="text-sm">مديونية حالية: {teacherMoney(statement.account.debt)}</p>}
       </section>
+      {(Math.abs(statement.account.sourceDifference) >= 0.01 || Math.abs(statement.account.balanceDifference) >= 0.01) && <p role="status" className="text-sm">رصيد الحساب مختلف عن الحركات المسجلة؛ راجع الفرق قبل الصرف.</p>}
       <section className="space-y-3 border-t border-[var(--admin-border)] pt-4" aria-label="ملخص الأكواد">
         <h3 className="font-bold">الأكواد اللي سلّمتها للمدرس</h3>
         {statement.codeBatches.map((batch, index) => <div key={index} className="flex flex-wrap justify-between gap-3 border-b border-[var(--admin-border)] py-3 text-sm">

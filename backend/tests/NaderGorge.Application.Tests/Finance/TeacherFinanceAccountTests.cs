@@ -182,6 +182,39 @@ public sealed class TeacherFinanceAccountTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Code_statement_keeps_delivery_value_and_only_receipts_up_to_the_report_end()
+    {
+        var day = DateTime.UtcNow.Date.AddDays(-5);
+        var financial = new FinancialAccount { Code = "TEST-CASH", Name = "Cash" };
+        var treasury = new TreasuryAccount { Name = "Cash", FinancialAccountId = financial.Id };
+        var firstJournal = new JournalEntry { SequenceNumber = 1, IdempotencyKey = "receipt-one" };
+        var secondJournal = new JournalEntry { SequenceNumber = 2, IdempotencyKey = "receipt-two" };
+        var delivery = new CodeGroupDeliveryConfirmation {
+            CodeGroup = new CodeGroup { Teacher = teacher, Name = "دفعة أكواد", TotalCodes = 10, CreatedByUserId = teacher.UserId },
+            ConfirmedAt = day, ConfirmedByUserId = teacher.UserId, PlatformAmountDue = 200m, TeacherRetainedAmount = 800m,
+            Payments = [
+                new CodeGroupDeliveryPayment { Amount = 50m, ReceivedAt = day.AddDays(1), TreasuryAccountId = treasury.Id,
+                    ReceivedByUserId = teacher.UserId, JournalEntryId = firstJournal.Id, IdempotencyKey = "code-one" },
+                new CodeGroupDeliveryPayment { Amount = 150m, ReceivedAt = day.AddDays(3), TreasuryAccountId = treasury.Id,
+                    ReceivedByUserId = teacher.UserId, JournalEntryId = secondJournal.Id, IdempotencyKey = "code-two" }
+            ]
+        };
+        db.AddRange(financial, treasury, firstJournal, secondJournal, delivery);
+        await db.SaveChangesAsync();
+        var service = new TeacherStatementService(db);
+        var historical = (await service.GetAsync(teacher.Id, day, day.AddDays(2), 1, 25, default))!;
+        var batch = Assert.Single(historical.CodeBatches);
+        Assert.Equal(10, batch.Codes);
+        Assert.Equal(1000m, batch.Value);
+        Assert.Equal(50m, batch.Collected);
+        Assert.Equal(150m, batch.Remaining);
+        Assert.Equal(50m, historical.Totals.PlatformCodePayments);
+        var current = (await service.GetAsync(teacher.Id, day, null, 1, 25, default))!;
+        Assert.Equal(0m, Assert.Single(current.CodeBatches).Remaining);
+        Assert.Equal(200m, Assert.Single(current.CodeBatches).Collected);
+    }
+
+    [Fact]
     public async Task Reserved_debt_is_deducted_once_and_request_cannot_exceed_the_same_available_amount()
     {
         db.Add(new TeacherAccount { Teacher = teacher, TotalEarnings = 200m, CurrentBalance = 200m, ReservedBalance = 100m });

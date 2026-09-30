@@ -326,6 +326,8 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
                 foreach (var payment in payments)
                     column.Item().Text($"{CairoTime.ToLocal(payment.OccurredAt):yyyy-MM-dd} · {Money(payment.TeacherPaymentAmount!.Value)} · {payment.Detail}" + (string.IsNullOrWhiteSpace(payment.Reference) ? "" : $" · مرجع {payment.Reference}"));
             }
+            if (Math.Abs(statement.Account.SourceDifference) >= 0.01m || Math.Abs(statement.Account.BalanceDifference) >= 0.01m)
+                column.Item().Text("يوجد فرق بين رصيد الحساب والحركات المسجلة يحتاج مراجعة قبل الصرف.").Bold();
             column.Item().Text("المبالغ تخص الفترة المختارة، والباقي الآن يشمل كل الفترات. تسليم الأكواد واستخدامها لا يُحسبان مرتين.").FontSize(9);
         });
         page.Footer().AlignCenter().Text(text => { text.Span("صفحة "); text.CurrentPageNumber(); });
