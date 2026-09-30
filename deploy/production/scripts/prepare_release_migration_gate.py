@@ -301,8 +301,20 @@ DO $$ DECLARE name text; changed bigint; n bigint; BEGIN
   -- Original append-only rows and agreements must stay byte-for-byte intact.
   FOREACH name IN ARRAY ARRAY['teacher_financial_events','teacher_financial_allocations',
     'financial_journal_entries','financial_journal_lines'] LOOP
-    EXECUTE format('SELECT count(*) FROM massar_gate_funding.%I old LEFT JOIN public.%I current
-      ON current."Id"=old."Id" WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)',name,name) INTO changed;
+    IF name = 'teacher_financial_allocations' AND NOT EXISTS (
+      SELECT 1 FROM information_schema.columns WHERE table_schema='massar_gate_funding'
+        AND table_name=name AND column_name='ReviewOperationId') AND EXISTS (
+      SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+        AND table_name=name AND column_name='ReviewOperationId') THEN
+      EXECUTE format('SELECT count(*) FROM massar_gate_funding.%I old LEFT JOIN public.%I current
+        ON current."Id"=old."Id" WHERE to_jsonb(old) IS DISTINCT FROM
+          (to_jsonb(current) - ''ReviewActorUserId'' - ''ReviewNote'' - ''ReviewOperationId'')
+          OR current."ReviewActorUserId" IS NOT NULL OR current."ReviewNote" IS NOT NULL
+          OR current."ReviewOperationId" IS NOT NULL',name,name) INTO changed;
+    ELSE
+      EXECUTE format('SELECT count(*) FROM massar_gate_funding.%I old LEFT JOIN public.%I current
+        ON current."Id"=old."Id" WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)',name,name) INTO changed;
+    END IF;
     IF changed <> 0 THEN RAISE EXCEPTION 'Funding gate: historical rows changed in %',name; END IF;
   END LOOP;
   IF (SELECT activation FROM massar_gate_funding.migration_state) =
