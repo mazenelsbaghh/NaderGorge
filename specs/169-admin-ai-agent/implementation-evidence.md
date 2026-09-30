@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 PostgreSQL restart recovery matrix
+
+- Added a real PostgreSQL restart-context matrix for cancelled and stale queued turns, claimed/provider-running/reads-completed worker leases, exhausted pending callback delivery, and an already completed turn. A fresh DbContext performed the sweep and a separate context verified the durable outcomes and replay-safe second sweep.
+- A second matrix covered stale `Claimed` and `Executing` action executions, an already succeeded effect, expired proposals and challenge, and purging an expired secure-input payload. Both new tests passed 2/2; the complete AdminAI PostgreSQL integration group passed 23/23 against a disposable PostgreSQL 16.10 instance, which was stopped and removed afterward.
+- T181 remains open for actual worker and Redis delivery restart/callback acceptance evidence. These database sweeps alone do not prove end-to-end recovery.
+
 ## 2026-09-30 closed action-input contract
 
 - Proposal construction now validates every nested field against a closed, recursively checked action schema before invoking an authoritative preview or persisting a proposal. Unknown or duplicate fields, malformed UUIDs, enum/range/length/item-count violations, and ignored or open schema keywords fail closed. Optional nested schemas are checked even when omitted from the input.

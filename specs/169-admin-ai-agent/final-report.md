@@ -14,6 +14,8 @@ On 2026-09-30, activation validation was tightened to reject every unsupported m
 
 Proposal input validation now enforces closed nested schemas before preview and persistence, including typed identifiers, bounds, allowed values, and duplicate-field rejection. Create/get/cancel proposal responses now consistently return redacted preview objects; the raw-preview leak regression passed. The expanded AdminAI application group passed 244/244. The production action catalog and remaining release gates are still incomplete; the NO-GO decision remains.
 
+Two PostgreSQL restart-context recovery tests passed, and the complete AdminAI PostgreSQL integration group passed 23/23. Actual worker/Redis restart delivery and callback acceptance remain unverified, so T181 remains open.
+
 ## Disable and rollback
 
 Keep or restore `ADMIN_AI_ENABLED=false`; this prevents admission and worker readiness from exposing the feature. Use the normal immutable production rollback lane for the deployed release. Database changes are additive and evidence records must not be deleted during rollback.
