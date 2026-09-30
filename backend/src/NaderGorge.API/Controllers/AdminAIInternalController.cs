@@ -72,7 +72,8 @@ public sealed class AdminAIInternalController(
         step.Status = AdminAITurnStepStatus.Claimed; step.StartedAt ??= now; step.ExpectedTurnVersion = turn.Version; step.CallbackStatus = "Claimed"; step.Provider = request.WorkerInstanceId; step.NextCallbackAttemptAt = leaseExpiry; step.Version++;
         var leaseToken = IssueLease(turn.Id, step.StepNumber, turn.Version, leaseExpiry);
         step.CanonicalDecisionHash = HashToken(leaseToken);
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict)); }
         var messages = await db.AdminAIMessages.AsNoTracking().Where(x => x.ConversationId == turn.ConversationId).OrderByDescending(x => x.Sequence).Take(50).OrderBy(x => x.Sequence).Select(x => new { role = x.Role == AdminAIMessageRole.Admin ? "user" : "model", content = x.Content, createdAt = x.CreatedAt }).ToListAsync(ct);
         return Ok(new
         {

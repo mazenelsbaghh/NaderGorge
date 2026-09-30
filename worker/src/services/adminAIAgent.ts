@@ -232,7 +232,7 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
         return { callId: call.id?.slice(0, 160) || `call-${step}-${index}-${randomUUID().slice(0, 8)}`, functionName: call.name!, capabilityKey: tool.key, arguments: call.args };
       });
       const readCalls = calls.map(({ callId, capabilityKey, arguments: callArguments }) => ({ callId, capabilityKey, arguments: callArguments }));
-      const response = await callbacks.reads(claim.turnId, stepNumber, { schemaVersion: '1', leaseToken, expectedTurnVersion, expectedBaselineVersion: (claim.capabilityBaseline as JsonObject | undefined)?.version, expectedSensitivePolicyVersion: (claim.sensitiveDataPolicy as JsonObject | undefined)?.version, batchIdempotencyKey: `${claim.callbackIdempotencyKey}:read:${stepNumber}`, calls: readCalls });
+      const response = await callbacks.reads(claim.turnId, stepNumber, { schemaVersion: '1', leaseToken, expectedTurnVersion, expectedBaselineVersion: (claim.capabilityBaseline as JsonObject | undefined)?.version, expectedSensitivePolicyVersion: (claim.sensitiveDataPolicy as JsonObject | undefined)?.version, batchIdempotencyKey: `${claim.callbackIdempotencyKey}:read:${stepNumber}:${step}`, calls: readCalls });
       if (await cancelled()) throw new Error('CANCELLED'); callsUsed += calls.length; contextBytes += bytes(response);
       if (contextBytes > (budgets.remainingRedactedContextBytes ?? 65_536)) throw new Error('REDACTED_CONTEXT_LIMIT');
       if (typeof response.turnVersion === 'number') expectedTurnVersion = response.turnVersion;

@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 concurrent worker claim
+
+- The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.
+- The worker now gives each model read batch a distinct key even when multiple batches use the same backend step; its full suite passed 229/229. The backend currently validates but does not persist `BatchIdempotencyKey`. A lost read callback response can therefore advance the turn while a retry arrives with an old version. This remains an open callback-replay gap; the claim test does not close T181.
+
 ## 2026-09-30 Redis callback replay after worker replacement
 
 - An expired callback lease no longer forces a second model inference. A replacement worker first tries the saved completion; on a lease conflict it claims the same active turn and step again, verifies the baseline and sensitive-policy versions, saves the renewed callback fields in the BullMQ job, and resubmits the original decision. A second claim while any worker lease remains live is rejected without advancing the turn version. The backend accepts a matching already-delivered decision as an idempotent acknowledgment even after the turn deadline, while a wrong callback identity is rejected.

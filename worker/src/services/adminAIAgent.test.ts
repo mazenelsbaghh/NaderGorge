@@ -202,6 +202,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
   ];
   let providerStep = 0;
   const requestedCapabilities: string[] = [];
+  const batchKeys: string[] = [];
   const provider = async () => {
     providerStep += 1;
     if (providerStep === 1) return { functionCalls: [{ id: 'lookup', name: 'read_0', args: { query: 'نادر' } }] };
@@ -209,6 +210,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
     return { text: JSON.stringify(answer) };
   };
   const callback = callbacks(async (_turn, _step, payload) => {
+    batchKeys.push(String(payload.batchIdempotencyKey));
     const call = (payload.calls as Array<{ callId: string; capabilityKey: string }>)[0]!;
     requestedCapabilities.push(call.capabilityKey);
     return call.capabilityKey === 'teachers.search'
@@ -220,6 +222,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
 
   assert.equal(result.decision.type, 'answer');
   assert.deepEqual(requestedCapabilities, ['teachers.search', 'teacher.subscribers.summary']);
+  assert.equal(new Set(batchKeys).size, 2);
   assert.ok(!requestedCapabilities.includes('identity.users.summary'));
 });
 

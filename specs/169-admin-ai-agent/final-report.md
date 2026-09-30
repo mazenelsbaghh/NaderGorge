@@ -20,6 +20,8 @@ Internal lease renewal and read continuation now cap expiry at the absolute turn
 
 The saved model decision can now survive a worker replacement when its callback lease has expired: the replacement reclaims the same active step under the current baseline and policy, then retries the saved decision without another inference. Matching delivered callbacks receive an idempotent acknowledgment. A disposable Redis/BullMQ worker-replacement test passed twice with one inference across a failed callback, a lease conflict, and duplicate stream delivery. The worker suite passed 229/229 and the AdminAI application suite 264/264. Full real-backend/worker/Redis process-restart coverage and the rest of T181 remain open.
 
+Two concurrent workers now receive one PostgreSQL-backed claim and one safe conflict, with no duplicate lease. The forced race passed twice on PostgreSQL 16.10. Worker read batches now have distinct keys across model steps, but their callback identity is still not durable in the backend, so a lost read response can cause a stale-version retry; T181 and activation remain open.
+
 The action bridges now consume exact camelCase JSON from the worker and reject casing drift before dispatch. The AdminAI application group passed 246/246 after ordinary and secure-action wire tests. The missing production action catalog remains a release blocker.
 
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
