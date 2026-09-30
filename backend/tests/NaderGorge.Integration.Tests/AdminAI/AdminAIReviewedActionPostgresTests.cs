@@ -32,6 +32,20 @@ public sealed class AdminAIReviewedActionPostgresTests
         var actor = new User { FullName = "Task Creator", PhoneNumber = "01000000996", PasswordHash = "test" };
         db.Users.Add(actor);
         await db.SaveChangesAsync();
+        var previewSource = new AdminAIOperationsPreviewSource(db);
+        var previewInput = new AdminAICreateTaskInput("Review upload", "Check video", actor.Id,
+            TaskPriority.High, null);
+        var taskCountBeforePreview = await db.TaskItems.CountAsync();
+        var workroomCountBeforePreview = await db.ChatRooms.CountAsync();
+        var firstPreview = await previewSource.PreviewAsync("admin.operations.task.create", actor.Id,
+            previewInput, CancellationToken.None);
+        Assert.Equal(taskCountBeforePreview, await db.TaskItems.CountAsync());
+        Assert.Equal(workroomCountBeforePreview, await db.ChatRooms.CountAsync());
+        actor.FullName = "Renamed Task Creator";
+        await db.SaveChangesAsync();
+        var changedPreview = await previewSource.PreviewAsync("admin.operations.task.create", actor.Id,
+            previewInput, CancellationToken.None);
+        Assert.NotEqual(firstPreview.StateFingerprint, changedPreview.StateFingerprint);
         var operationId = $"admin-ai-task-create-{Guid.NewGuid():N}";
         var request = new CreateTaskCommand("Review upload", "Check video", actor.Id,
             TaskPriority.High, null, actor.Id) { OperationId = operationId };

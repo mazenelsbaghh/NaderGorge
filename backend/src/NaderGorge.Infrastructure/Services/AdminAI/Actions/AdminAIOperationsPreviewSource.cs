@@ -15,6 +15,8 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
         input switch
         {
+            AdminAICreateTaskInput create when capabilityKey == "admin.operations.task.create" =>
+                PreviewTaskCreateAsync(capabilityKey, actorId, create, ct),
             AdminAIAddTaskCommentInput comment when capabilityKey == "admin.operations.task-comment.create" =>
                 PreviewTaskCommentAsync(capabilityKey, actorId, comment, ct),
             AdminAIUpdateTaskStatusInput status when capabilityKey == "admin.operations.task.status.update" =>
@@ -23,6 +25,50 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
                 PreviewTaskApprovalAsync(capabilityKey, actorId, approval, ct),
             _ => throw new NotSupportedException("Admin AI action preview capability is unavailable.")
         };
+
+    private async Task<AdminAIActionPreview> PreviewTaskCreateAsync(
+        string capabilityKey, Guid actorId, AdminAICreateTaskInput input, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title) || input.Title.Length > 255
+            || input.Description?.Length > 4000 || input.AssigneeId == Guid.Empty
+            || !Enum.IsDefined(input.Priority))
+            throw new ArgumentException("Task creation input is invalid.", nameof(input));
+
+        var assignee = await db.Users.AsNoTracking()
+            .Where(item => item.Id == input.AssigneeId)
+            .Select(item => new
+            {
+                item.Id, item.FullName,
+                IsStudent = item.UserRoles.Any(role => role.Role.Type == RoleType.Student)
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new AdminAIActionPreviewUnavailableException("The assignee is unavailable.");
+        if (assignee.IsStudent)
+            throw new AdminAIActionPreviewUnavailableException("Tasks cannot be assigned to students.");
+        if (!await db.Users.AsNoTracking().AnyAsync(item => item.Id == actorId, ct))
+            throw new AdminAIActionPreviewUnavailableException("The actor is unavailable.");
+
+        var supervisorRole = await db.Roles.AsNoTracking()
+            .Where(item => item.Type == RoleType.Supervisor)
+            .Select(item => (Guid?)item.Id)
+            .FirstOrDefaultAsync(ct);
+        var supervisorIds = supervisorRole.HasValue
+            ? await db.UserRoles.AsNoTracking()
+                .Where(item => item.RoleId == supervisorRole.Value)
+                .OrderBy(item => item.UserId)
+                .Select(item => item.UserId)
+                .ToListAsync(ct)
+            : [];
+
+        return new AdminAIActionPreview(
+            "task", $"assignee:{assignee.Id:D}",
+            new { assignee.FullName, assignee.IsStudent, supervisorCount = supervisorIds.Count },
+            new { input.Title, input.Description, input.AssigneeId, input.Priority, input.DueDate },
+            new { taskWillBeCreated = true, workroomWillBeCreated = true, affected = 1 },
+            new { valid = true },
+            Fingerprint(capabilityKey, new { actorId, assignee.Id, assignee.FullName,
+                assignee.IsStudent, supervisorIds }));
+    }
 
     private async Task<AdminAIActionPreview> PreviewTaskCommentAsync(
         string capabilityKey, Guid actorId, AdminAIAddTaskCommentInput comment, CancellationToken ct)
@@ -175,7 +221,7 @@ public sealed class AdminAIOrdinaryPreviewSource(
         {
             "admin.finance.teacher-event.review" =>
                 teacherFinance.PreviewAsync(capabilityKey, actorId, input, ct),
-            "admin.operations.task-comment.create" or "admin.operations.task.status.update"
+            "admin.operations.task.create" or "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
             "admin.assessment.lesson-comment.approve" or "admin.assessment.community-post.approve"

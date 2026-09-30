@@ -34,6 +34,8 @@ Task status changes and manager approval/rejection now carry durable operation i
 
 Task creation now saves its task and workroom in one database operation and accepts the AdminAI execution identity for durable replay. A PostgreSQL test returned the same task ID without creating a second workroom, rejected changed input, and recovered the result from its receipt. The focused PostgreSQL test passed 1/1, the complete AdminAI PostgreSQL group passed 38/38, and the AdminAI plus operations application tests passed 273/273. Activation remains blocked by the wider action catalog and release gates.
 
+The task-create candidate also has a PostgreSQL-backed, read-only preview that checks the assignee and workroom participants. Its fingerprint changed after the assignee name changed, while preview created neither a task nor a workroom. The focused preview/replay test passed 1/1, the complete AdminAI PostgreSQL group passed 38/38, and the AdminAI plus operations application group passed 273/273. This candidate is still absent from the production action catalog.
+
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
 
 Startup no longer auto-approves a read-only AdminAI baseline when the feature flag is enabled. It now requires a manually approved active manifest matching the running action catalog and rejecting unsupported inventory items. The activation guard passed 9/9 tests and the focused application group passed 255/255; the current catalog is still read-only, so the gate correctly prevents activation.
