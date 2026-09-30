@@ -356,6 +356,7 @@ builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.Ad
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAssessmentPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.IAdminAIActionPreviewSource, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIOrdinaryPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAddStudentNoteAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIApproveWatchRequestAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateSubjectAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateSubjectAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateVideoTypeAction>();

@@ -30,24 +30,28 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
         var reason = string.IsNullOrWhiteSpace(request.Reason)
             ? "تمت الموافقة بواسطة الإدارة"
             : request.Reason.Trim();
+        if (reason.Length > 1000)
+            return ApiResponse<bool>.Fail("Approval reason is too long", ["REASON_TOO_LONG"]);
+
+        var watchEvent = await _context.VideoWatchEvents
+            .FirstOrDefaultAsync(v => v.UserId == req.UserId && v.LessonVideoId == req.LessonVideoId, cancellationToken);
+        var currentLimit = watchEvent?.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
+        var addedViews = request.AddedViews > 0 ? request.AddedViews : 1;
+        if (watchEvent is not null && currentLimit > 0 && currentLimit > int.MaxValue - addedViews)
+            return ApiResponse<bool>.Fail("Watch limit would overflow", ["WATCH_LIMIT_OVERFLOW"]);
 
         req.Status = RequestStatus.Approved;
         req.ResolvedAt = DateTime.UtcNow;
         req.RejectionReason = reason;
-
-        var watchEvent = await _context.VideoWatchEvents
-            .FirstOrDefaultAsync(v => v.UserId == req.UserId && v.LessonVideoId == req.LessonVideoId, cancellationToken);
 
         if (watchEvent != null)
         {
             watchEvent.IsLocked = false;
             // MaxWatchCount might be 0 meaning unlimited, but if it was locked, it has a limit.
             // Increment the custom max limit by AddedViews
-            int maxLimit = watchEvent.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
-            if (maxLimit > 0)
+            if (currentLimit > 0)
             {
-                int addedViews = request.AddedViews > 0 ? request.AddedViews : 1;
-                watchEvent.CustomMaxWatchCount = maxLimit + addedViews;
+                watchEvent.CustomMaxWatchCount = currentLimit + addedViews;
                 // Force a progress reset on next play session so they start the new view with a clean threshold baseline
                 watchEvent.TimeWatchedInSeconds = -1;
 
@@ -55,7 +59,7 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
                 {
                     UserId = req.UserId,
                     LessonVideoId = req.LessonVideoId,
-                    OriginalLimit = maxLimit,
+                    OriginalLimit = currentLimit,
                     NewLimit = watchEvent.CustomMaxWatchCount.Value,
                     AddedViews = addedViews,
                     Reason = $"قبول/تعديل طلب مشاهدة إضافية: {reason}",

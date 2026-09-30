@@ -17,6 +17,7 @@ public sealed class AdminAIIdentityContentPreviewSource(IAppDbContext db) : IAdm
         input switch
         {
             AdminAIAddStudentNoteInput note when capabilityKey == "admin.identity.student-note.create" => PreviewNoteAsync(note, ct),
+            AdminAIApproveWatchRequestInput watch when capabilityKey == "admin.identity.watch-request.approve" => PreviewWatchRequestAsync(watch, ct),
             AdminAICreateSubjectInput subject when capabilityKey == "admin.content.subject.create" => PreviewCreateSubjectAsync(subject, ct),
             AdminAIUpdateSubjectInput subject when capabilityKey == "admin.content.subject.update" => PreviewUpdateSubjectAsync(subject, ct),
             AdminAICreateVideoTypeInput type when capabilityKey == "admin.content.video-type.create" => PreviewCreateVideoTypeAsync(type, ct),
@@ -41,6 +42,58 @@ public sealed class AdminAIIdentityContentPreviewSource(IAppDbContext db) : IAdm
             new { noteWillBeAdded = true, affected = 1 },
             new { valid = true },
             Fingerprint("admin.identity.student-note.create", user));
+    }
+
+    private async Task<AdminAIActionPreview> PreviewWatchRequestAsync(AdminAIApproveWatchRequestInput input, CancellationToken ct)
+    {
+        if (input.RequestId == Guid.Empty || input.AddedViews is < 1 or > 1000
+            || input.Reason?.Trim().Length > 1000)
+            throw new ArgumentException("Watch request approval input is invalid.", nameof(input));
+        var request = await db.ExtraWatchRequests.AsNoTracking()
+            .Where(item => item.Id == input.RequestId)
+            .Select(item => new
+            {
+                item.Id, item.UserId, item.LessonVideoId, item.Status,
+                item.ResolvedAt, item.RejectionReason, item.RequestReason,
+                VideoTitle = item.LessonVideo.Title,
+                item.LessonVideo.LessonId,
+                BaseMaxWatchCount = item.LessonVideo.MaxWatchCount
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new AdminAIActionPreviewUnavailableException("The watch request is unavailable.");
+        var watch = await db.VideoWatchEvents.AsNoTracking()
+            .Where(item => item.UserId == request.UserId && item.LessonVideoId == request.LessonVideoId)
+            .Select(item => new
+            {
+                item.Id, item.WatchCount, item.IsLocked,
+                item.CustomMaxWatchCount, item.TimeWatchedInSeconds
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new AdminAIActionPreviewUnavailableException("The student's video watch state is unavailable.");
+        var currentLimit = watch.CustomMaxWatchCount ?? request.BaseMaxWatchCount;
+        if (currentLimit <= 0 || currentLimit > int.MaxValue - input.AddedViews)
+            throw new AdminAIActionPreviewUnavailableException("The video watch limit cannot be safely increased.");
+        var state = new
+        {
+            request.Id, request.UserId, request.LessonVideoId, request.Status,
+            request.ResolvedAt, request.RejectionReason, request.RequestReason,
+            request.VideoTitle, request.LessonId, request.BaseMaxWatchCount,
+            WatchEventId = watch.Id, watch.WatchCount, watch.IsLocked, watch.CustomMaxWatchCount,
+            watch.TimeWatchedInSeconds
+        };
+        return new AdminAIActionPreview(
+            "watch-request", $"watch-request:{request.Id:D}",
+            new
+            {
+                request.VideoTitle, request.Status, untrustedRequestReason = request.RequestReason,
+                watch.WatchCount, watch.IsLocked, currentLimit
+            },
+            new { input.AddedViews, input.Reason },
+            new { statusAfter = "Approved", limitAfter = currentLimit + input.AddedViews,
+                studentWillBeUnlocked = true, watchProgressWillBeReset = true,
+                studentAndStaffNotificationsWillBeQueued = true, affected = 1 },
+            new { valid = true, previouslyApproved = request.Status == NaderGorge.Domain.Enums.RequestStatus.Approved },
+            Fingerprint("admin.identity.watch-request.approve", state));
     }
 
     private async Task<AdminAIActionPreview> PreviewCreateSubjectAsync(AdminAICreateSubjectInput input, CancellationToken ct)

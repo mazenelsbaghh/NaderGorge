@@ -20,10 +20,10 @@ using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 
 namespace NaderGorge.Integration.Tests.AdminAI;
 
-public sealed class AdminAIIdentityContentPostgresTests
+public sealed class AdminAIReviewedActionPostgresTests
 {
     [Fact]
-    public async Task RealPostgres_OrdinaryIdentityContentOperationsAndModeration_PersistOneEffectPerConfirmedProposal()
+    public async Task RealPostgres_ReviewedActionCandidates_PersistOneEffectPerConfirmedProposal()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
         await using var db = fixture.CreateDbContext();
@@ -113,9 +113,26 @@ public sealed class AdminAIIdentityContentPostgresTests
             Post = teacherPost, ParentComment = communityParent, AuthorUser = student,
             Body = "Community reply", Status = CommunityCommentStatus.Pending
         };
+        var recordedType = new VideoType { Name = "Recorded", NormalizedName = "RECORDED" };
+        var lessonVideo = new LessonVideo
+        {
+            Title = "Recorded lesson", Lesson = lesson, VideoType = recordedType,
+            Provider = "youtube", ProviderVideoId = "recorded-test", MaxWatchCount = 3
+        };
+        var watchEvent = new VideoWatchEvent
+        {
+            User = student, LessonVideo = lessonVideo, WatchCount = 3,
+            IsLocked = true, CustomMaxWatchCount = 3
+        };
+        var extraWatchRequest = new ExtraWatchRequest
+        {
+            User = student, LessonVideo = lessonVideo, Status = RequestStatus.Pending,
+            RequestReason = "Need another view"
+        };
         db.AddRange(actor, student, baseline, policyVersion, conversation, message, turn,
             new UserRole { User = actor, Role = adminRole }, pipeline, task,
-            parentComment, replyComment, scopedPost, teacherPost, communityParent, communityReply);
+            parentComment, replyComment, scopedPost, teacherPost, communityParent, communityReply,
+            lessonVideo, watchEvent, extraWatchRequest);
         await db.SaveChangesAsync();
 
         using var services = new ServiceCollection()
@@ -139,13 +156,16 @@ public sealed class AdminAIIdentityContentPostgresTests
             new AdminAIResolveTaskApprovalAction(mediator, preview),
             new AdminAIApproveLessonCommentAction(mediator, preview),
             new AdminAIApproveCommunityPostAction(mediator, preview),
-            new AdminAIApproveCommunityCommentAction(mediator, preview)
+            new AdminAIApproveCommunityCommentAction(mediator, preview),
+            new AdminAIApproveWatchRequestAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
             [.. AdminAIIdentityContentActionCatalog.CreateCandidates(),
                 .. AdminAIOperationsActionCatalog.CreateCandidates(),
-                .. AdminAIAssessmentActionCatalog.CreateCandidates()]);
-        Assert.Equal(11, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
+                .. AdminAIAssessmentActionCatalog.CreateCandidates(),
+                .. AdminAIIdentityHighRiskActionCatalog.CreateCandidates()]);
+        Assert.Equal(11, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters[..11]).Count);
+        Assert.Single(AdminAIActionCapabilityRegistration.ValidateHighRiskCoverage(registry, [adapters[11]]));
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -166,6 +186,16 @@ public sealed class AdminAIIdentityContentPostgresTests
             var intent = $"intent-{proposal.Id:N}";
             var result = await commands.ConfirmAsync(actor.Id, proposal.Id,
                 proposal.Version, null, intent, default);
+            Assert.Equal(AdminAIExecutionStatus.Succeeded, result.Status);
+        }
+
+        async Task ConfirmStrongAsync(string key, object input)
+        {
+            var proposal = await builder.BuildAsync(actor.Id, turn.Id, key, input, default);
+            Assert.Equal(AdminAIConfirmationType.TypedStrong, proposal.Confirmation);
+            Assert.False(string.IsNullOrWhiteSpace(proposal.StrongPhrase));
+            var result = await commands.ConfirmAsync(actor.Id, proposal.Id,
+                proposal.Version, proposal.StrongPhrase, $"intent-{proposal.Id:N}", default);
             Assert.Equal(AdminAIExecutionStatus.Succeeded, result.Status);
         }
 
@@ -282,6 +312,29 @@ public sealed class AdminAIIdentityContentPostgresTests
             new ApproveCommunityCommentCommand(communityParent.Id, actor.Id));
         Assert.False(repeatedParentApproval.Success);
         Assert.Contains("ALREADY_RESOLVED", repeatedParentApproval.Errors!);
+        var overflowApproval = await mediator.Send(new ApproveWatchRequestCommand(
+            extraWatchRequest.Id, actor.Id, "Too many", int.MaxValue));
+        Assert.False(overflowApproval.Success);
+        Assert.Contains("WATCH_LIMIT_OVERFLOW", overflowApproval.Errors!);
+        var longReasonApproval = await mediator.Send(new ApproveWatchRequestCommand(
+            extraWatchRequest.Id, actor.Id, new string('x', 1001), 1));
+        Assert.False(longReasonApproval.Success);
+        Assert.Contains("REASON_TOO_LONG", longReasonApproval.Errors!);
+        Assert.Equal(RequestStatus.Pending,
+            (await db.ExtraWatchRequests.AsNoTracking().SingleAsync(item => item.Id == extraWatchRequest.Id)).Status);
+        var staleWatchProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[11].Key,
+            new { requestId = extraWatchRequest.Id, addedViews = 2 }, default);
+        Assert.Empty(await db.VideoOverrides.ToListAsync());
+        watchEvent.CustomMaxWatchCount = 4;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            staleWatchProposal.Id, staleWatchProposal.Version, staleWatchProposal.StrongPhrase,
+            $"intent-{staleWatchProposal.Id:N}", default));
+        Assert.Empty(await db.VideoOverrides.ToListAsync());
+        await ConfirmStrongAsync(adapters[11].Key,
+            new { requestId = extraWatchRequest.Id, addedViews = 2 });
+        await ConfirmStrongAsync(adapters[11].Key,
+            new { requestId = extraWatchRequest.Id, addedViews = 1 });
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -330,11 +383,23 @@ public sealed class AdminAIIdentityContentPostgresTests
             .CountAsync(item => item.Status == CommunityCommentStatus.Approved));
         Assert.Equal(2, await verifyDb.OutboxEvents.AsNoTracking()
             .CountAsync(item => item.Type == "CommunityCommentApproved"));
+        Assert.Equal(RequestStatus.Approved,
+            (await verifyDb.ExtraWatchRequests.AsNoTracking()
+                .SingleAsync(item => item.Id == extraWatchRequest.Id)).Status);
+        var finalWatch = await verifyDb.VideoWatchEvents.AsNoTracking()
+            .SingleAsync(item => item.Id == watchEvent.Id);
+        Assert.False(finalWatch.IsLocked);
+        Assert.Equal(7, finalWatch.CustomMaxWatchCount);
+        Assert.Equal(-1, finalWatch.TimeWatchedInSeconds);
+        Assert.Equal(new[] { 6, 7 }, await verifyDb.VideoOverrides.AsNoTracking()
+            .OrderBy(item => item.NewLimit).Select(item => item.NewLimit).ToArrayAsync());
+        Assert.Equal(4, await verifyDb.OutboxEvents.AsNoTracking()
+            .CountAsync(item => item.Type == "ExtraWatchRequestUpdated"));
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(16, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(18, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }

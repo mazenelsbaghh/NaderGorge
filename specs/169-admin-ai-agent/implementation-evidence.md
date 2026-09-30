@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 watch-request approval candidate
+
+- The original Admin screen intentionally lets an already approved request receive another explicit view increase. The authoritative command now rejects a reason longer than its database field and a view increment that would overflow `int`, before mutating tracked state. The AdminAI candidate previews the exact student's video limit, watch lock and request status, and invalidates a changed limit before execution.
+- The implementation plan places watch mutations in the high-risk family, so this candidate uses TypedStrong confirmation and the existing high-risk MediatR bridge. The generated diagnostic baseline currently labels the Admin watch-approval route ordinary; this risk mismatch must be reconciled during T172/T176 before activation.
+- A migrated PostgreSQL flow passed 1/1 with 18 confirmed executions. It rejected an overflowing direct command without changing request status, invalidated a stale AI proposal without a video override, then confirmed two distinct view increases (4→6→7) with two overrides and four notifications. The complete application suite passed 1,644 tests with 20 skips. Durable operation-level idempotency/recovery for this original command remains part of T171; this candidate alone does not seal the baseline.
+
 ## 2026-09-30 moderation candidates
 
 - Added reviewed candidate previews for lesson-comment, community-post, and community-comment approval through the existing Admin commands. The lesson preview requires Pending status and an approved parent. The post preview requires the same effective academic scope as its command when no teacher owns the post; it binds post text, poll options, and effective scope rows to the confirmation fingerprint. The community-comment preview also requires an approved post and parent comment.
