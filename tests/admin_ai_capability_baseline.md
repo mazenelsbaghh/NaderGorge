@@ -1,8 +1,8 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `1631cd7e6f8dfa1a3b0daac62cab97e5b3c3f047b03eb7ddfb6501da58abdb60`
+Digest: `22325726e616adc20362e0b9e066928aa79bfbf06f6a9c2a8dcecab989da2432`
 
-Items: 1127; external-side-effect=26, mutation=633, read=454, export=11, preview=3.
+Items: 1097; external-side-effect=26, mutation=626, read=431, export=11, preview=3.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -664,12 +664,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:chat-rooms-roomid-members:frontend-src-components-chat-createchatgroup-tsx:21 | GET | /chat/rooms/{roomId}/members | read | support | none | candidate |
 | fe:get:chat-rooms-roomid-messages-page-page-pagesize-pagesize:frontend-src-services-chat-service-ts:51 | GET | /chat/rooms/{roomId}/messages?page={page}&pageSize={pageSize} | read | support | none | candidate |
 | fe:get:chat-rooms:frontend-src-services-chat-service-ts:48 | GET | /chat/rooms | read | support | none | candidate |
-| fe:get:content-lessons-lessonid-comments-mine:frontend-src-services-content-service-ts:396 | GET | /content/lessons/{lessonId}/comments/mine | read | content | none | candidate |
-| fe:get:content-lessons-lessonid-comments-offset-offset-limit-limit:frontend-src-services-content-service-ts:393 | GET | /content/lessons/{lessonId}/comments?offset={offset}&limit={limit} | read | content | none | candidate |
-| fe:get:content-lessons-lessonid-comments:frontend-src-services-content-service-ts:394 | GET | /content/lessons/{lessonId}/comments | read | content | none | candidate |
-| fe:get:content-lessons-lessonid-resources:frontend-src-services-content-service-ts:395 | GET | /content/lessons/{lessonId}/resources | read | content | none | candidate |
 | fe:get:content-lessons-lessonid:frontend-src-services-content-service-ts:392 | GET | /content/lessons/{lessonId} | read | content | none | candidate |
-| fe:get:content-packages-packageid-code-page:frontend-src-services-content-service-ts:389 | GET | /content/packages/{packageId}/code-page | read | content | none | candidate |
 | fe:get:content-packages-packageid-terms:frontend-src-services-content-service-ts:386 | GET | /content/packages/{packageId}/terms | read | content | none | candidate |
 | fe:get:content-packages:frontend-src-services-content-service-ts:383 | GET | /content/packages | read | content | none | candidate |
 | fe:get:content-sections-sectionid-lessons:frontend-src-services-content-service-ts:391 | GET | /content/sections/{sectionId}/lessons | read | content | none | candidate |
@@ -759,26 +754,8 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:820 | GET | /live-support/whatsapp/preferences | read | support | none | candidate |
 | fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:703 | GET | /live-support/whatsapp/templates | read | support | none | candidate |
 | fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153 | GET | /public/forms/{slug} | read | other | none | candidate |
-| fe:get:public-packages-packageid:frontend-src-services-student-service-ts:364 | GET | /public/packages/{packageId} | read | identity | none | candidate |
 | fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323 | GET | /public/settings | read | content | none | candidate |
-| fe:get:public-teachers-landing:frontend-src-services-student-service-ts:354 | GET | /public/teachers/landing | read | identity | none | candidate |
-| fe:get:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:369 | GET | /public/teachers/{teacherId}/community-posts | read | identity | none | candidate |
-| fe:get:public-teachers-teacheridorslug:frontend-src-services-student-service-ts:359 | GET | /public/teachers/{teacherIdOrSlug} | read | identity | none | candidate |
-| fe:get:public-teachers:frontend-src-services-student-service-ts:349 | GET | /public/teachers | read | identity | none | candidate |
 | fe:get:scope-content-summary:frontend-src-services-content-service-ts:402 | GET | /{scope}/content/summary | read | content | none | candidate |
-| fe:get:student-dashboard-quick-access:frontend-src-services-student-service-ts:379 | GET | /student/dashboard/quick-access | read | identity | none | candidate |
-| fe:get:student-dashboard:frontend-src-services-student-service-ts:339 | GET | /student/dashboard | read | identity | none | candidate |
-| fe:get:student-grades:frontend-src-services-student-service-ts:335 | GET | /student/grades | read | identity | none | candidate |
-| fe:get:student-lessons:frontend-src-services-student-service-ts:389 | GET | /student/lessons | read | identity | none | candidate |
-| fe:get:student-mistakes:frontend-src-services-student-service-ts:394 | GET | /student/mistakes | read | identity | none | candidate |
-| fe:get:student-notifications:frontend-src-services-student-service-ts:424 | GET | /student/notifications | read | identity | none | candidate |
-| fe:get:student-profile:frontend-src-services-student-service-ts:414 | GET | /student/profile | read | identity | none | candidate |
-| fe:get:student-progress:frontend-src-services-student-service-ts:384 | GET | /student/progress | read | identity | none | candidate |
-| fe:get:student-shared-packages-id:frontend-src-services-shared-package-service-ts:156 | GET | /student/shared-packages/{id} | read | identity | none | candidate |
-| fe:get:student-shared-packages-purchased:frontend-src-services-shared-package-service-ts:151 | GET | /student/shared-packages/purchased | read | identity | none | candidate |
-| fe:get:student-shared-packages:frontend-src-services-shared-package-service-ts:146 | GET | /student/shared-packages | read | identity | none | candidate |
-| fe:get:student-shell-bootstrap:frontend-src-services-student-service-ts:344 | GET | /student/shell-bootstrap | read | identity | none | candidate |
-| fe:get:student-theme-preferences:frontend-src-services-student-service-ts:399 | GET | /student/theme-preferences | read | identity | none | candidate |
 | fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181 | GET | /student/video-session/{lessonVideoId}/request-status | read | identity | none | candidate |
 | fe:get:teacher-activity:frontend-src-services-teacher-service-ts:276 | GET | /teacher/activity | read | content | none | candidate |
 | fe:get:teacher-comments:frontend-src-services-teacher-service-ts:385 | GET | /teacher/comments | read | content | none | candidate |
@@ -951,7 +928,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:chat-rooms-roomid-read:frontend-src-services-chat-service-ts:63 | POST | /chat/rooms/{roomId}/read | mutation | support | ordinary | blocked |
 | fe:post:chat-rooms:frontend-src-services-chat-service-ts:54 | POST | /chat/rooms | mutation | support | ordinary | blocked |
 | fe:post:codes-activate:frontend-src-services-code-service-ts:95 | POST | /codes/activate | mutation | content | ordinary | blocked |
-| fe:post:content-lessons-lessonid-comments:frontend-src-services-content-service-ts:398 | POST | /content/lessons/{lessonId}/comments | mutation | content | ordinary | blocked |
 | fe:post:crm-students-studentid-assign:frontend-src-services-crm-service-ts:95 | POST | /crm/students/{studentId}/assign | mutation | identity | ordinary | blocked |
 | fe:post:crm-students-studentid-calls:frontend-src-services-crm-service-ts:101 | POST | /crm/students/{studentId}/calls | mutation | identity | ordinary | blocked |
 | fe:post:dynamic:frontend-src-services-admin-ai-agent-service-ts:100 | POST | <dynamic> | mutation | other | ordinary | blocked |
@@ -1051,10 +1027,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:843 | POST | /live-support/whatsapp/preferences | mutation | support | ordinary | blocked |
 | fe:post:live-support-whatsapp-templates-sync:frontend-src-services-live-support-service-ts:706 | POST | /live-support/whatsapp/templates/sync | mutation | support | ordinary | blocked |
 | fe:post:public-forms-slug-submit:frontend-src-services-forms-service-ts:161 | POST | /public/forms/{slug}/submit | mutation | other | ordinary | blocked |
-| fe:post:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:374 | POST | /public/teachers/{teacherId}/community-posts | mutation | identity | ordinary | blocked |
-| fe:post:student-acknowledge-tracking-popup:frontend-src-services-student-service-ts:446 | POST | /student/acknowledge-tracking-popup | mutation | identity | ordinary | blocked |
-| fe:post:student-notifications-id-read:frontend-src-services-student-service-ts:429 | POST | /student/notifications/{id}/read | mutation | identity | ordinary | blocked |
-| fe:post:student-shared-packages-id-purchase:frontend-src-services-shared-package-service-ts:161 | POST | /student/shared-packages/{id}/purchase | mutation | identity | ordinary | blocked |
 | fe:post:student-upload-audio:frontend-src-services-student-service-ts:437 | POST | /student/upload-audio | mutation | identity | ordinary | blocked |
 | fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:177 | POST | /student/video-session/{lessonVideoId}/request-extra | mutation | identity | ordinary | blocked |
 | fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:186 | POST | /student/video-session/{requestlessonVideoId}/track-progress | mutation | identity | ordinary | blocked |
@@ -1131,7 +1103,5 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:put:live-support-connections-conversations-id-block:frontend-src-services-live-support-service-ts:595 | PUT | /live-support/connections/conversations/{id}/block | mutation | support | ordinary | blocked |
 | fe:put:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:930 | PUT | /live-support/staff/canned-replies | mutation | support | ordinary | blocked |
 | fe:put:live-support-staff-conversations-conversationid-student-link:frontend-src-services-live-support-service-ts:938 | PUT | /live-support/staff/conversations/{conversationId}/student-link | mutation | identity | ordinary | blocked |
-| fe:put:student-profile:frontend-src-services-student-service-ts:419 | PUT | /student/profile | mutation | identity | ordinary | blocked |
-| fe:put:student-theme-preferences:frontend-src-services-student-service-ts:409 | PUT | /student/theme-preferences | mutation | identity | ordinary | blocked |
 | fe:put:teacher-profile:frontend-src-services-teacher-service-ts:259 | PUT | /teacher/profile | mutation | identity | ordinary | blocked |
 | fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | PUT | /video-learning/{id}/author | mutation | identity | ordinary | blocked |

@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 622,
+  "callCount": 592,
   "calls": [
     {
       "method": "DELETE",
@@ -3529,56 +3529,11 @@
     },
     {
       "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments?offset={offset}&limit={limit}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 393
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 394
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments/mine",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 396
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/resources",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 395
-      }
-    },
-    {
-      "method": "GET",
       "path": "/content/packages",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/content-service.ts",
         "line": 383
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/packages/{packageId}/code-page",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 389
       }
     },
     {
@@ -4240,173 +4195,11 @@
     },
     {
       "method": "GET",
-      "path": "/public/packages/{packageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 364
-      }
-    },
-    {
-      "method": "GET",
       "path": "/public/settings",
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
         "line": 323
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 349
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/{teacherId}/community-posts",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 369
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/{teacherIdOrSlug}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 359
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/landing",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 354
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/dashboard",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 339
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/dashboard/quick-access",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 379
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/grades",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 335
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/lessons",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 389
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/mistakes",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 394
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/notifications",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 424
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 414
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/progress",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 384
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 146
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 156
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages/purchased",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 151
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shell-bootstrap",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 344
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/theme-preferences",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 399
       }
     },
     {
@@ -6085,15 +5878,6 @@
     },
     {
       "method": "POST",
-      "path": "/content/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 398
-      }
-    },
-    {
-      "method": "POST",
       "path": "/crm/students/{studentId}/assign",
       "dynamic": true,
       "source": {
@@ -6854,42 +6638,6 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/forms-service.ts",
-        "line": 161
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/public/teachers/{teacherId}/community-posts",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 374
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/acknowledge-tracking-popup",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 446
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/notifications/{id}/read",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 429
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/shared-packages/{id}/purchase",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
         "line": 161
       }
     },
@@ -7678,24 +7426,6 @@
     },
     {
       "method": "PUT",
-      "path": "/student/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 419
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/student/theme-preferences",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 409
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/teacher/profile",
       "dynamic": false,
       "source": {
@@ -8184,5 +7914,5 @@
       }
     }
   ],
-  "digest": "e9cfbba07224b1974ceb3b90fca7ff395ac0e66a47309b34eed43364b2543401"
+  "digest": "51f137ab2e831847f72ae4bd5c1260a20704c9947142433307b88d4e03583f3f"
 }
