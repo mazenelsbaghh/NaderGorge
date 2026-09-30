@@ -1,4 +1,14 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using NaderGorge.API.Controllers;
+using NaderGorge.Application.Features.AdminAI.Catalog;
+using NaderGorge.Application.Features.AdminAI.Dtos;
+using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
@@ -8,6 +18,60 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 
 public sealed class AdminAIRecoveryIntegrationTests
 {
+    [Fact]
+    public async Task DeliveredCallback_ReplaysAfterLostResponseWithoutAnotherMessageOrOutboxEvent()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var seedDb = fixture.CreateDbContext();
+        await seedDb.Database.MigrateAsync();
+        var seed = Seed(seedDb);
+        seed.Conversation.LastSequence = 1;
+        var turn = AddTurn(seedDb, seed, 1, AdminAITurnStatus.Answering);
+        turn.CurrentStepNumber = 1;
+        AddStep(seedDb, turn, AdminAITurnStepStatus.ProviderRunning, DateTime.UtcNow);
+        await seedDb.SaveChangesAsync();
+
+        const string canonicalDecision = "{\"refusal\":{\"messageAr\":\"مرفوض\",\"reasonCode\":\"OUT_OF_SCOPE\"},\"schemaVersion\":\"1\",\"type\":\"refuse\"}";
+        var decision = JsonDocument.Parse(canonicalDecision).RootElement.Clone();
+        var request = new AdminAIInternalCompleteRequest(
+            "1", "lost-response-lease", turn.Version, 1, seed.Baseline.Version,
+            seed.Policy.Version, decision,
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalDecision))).ToLowerInvariant(),
+            $"turn-{turn.Id:N}", "test-provider", "test-model", null, null, null, 10);
+        var completion = new AdminAITurnCompletionService(
+            seedDb, new AdminAIAccessGate(seedDb), new RejectingProposalBuilder());
+        Assert.Equal(AdminAITurnStatus.Completed,
+            (await completion.CompleteAsync(turn.Id, request, default)).Status);
+
+        turn.QueuedAt = DateTime.UtcNow.AddMinutes(-5);
+        await seedDb.SaveChangesAsync();
+        await using var retryDb = fixture.CreateDbContext();
+        var registry = AdminAICapabilityRegistry.CreateProductionReadRegistry();
+        var controller = new AdminAIInternalController(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AdminAI:Enabled"] = "true", ["AdminAI:CallbackSecret"] = "test-secret"
+            }).Build(), retryDb, registry, null!, null!, null!,
+            new AdminAITurnCompletionService(retryDb, new AdminAIAccessGate(retryDb), new RejectingProposalBuilder()))
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        controller.Request.Headers["X-Internal-Token"] = "test-secret";
+
+        var replay = Assert.IsType<OkObjectResult>(await controller.Complete(turn.Id, request, default));
+        Assert.True(JsonSerializer.SerializeToElement(replay.Value).GetProperty("Replayed").GetBoolean());
+        Assert.Single(await retryDb.AdminAIMessages.Where(message => message.Role == AdminAIMessageRole.Assistant).ToListAsync());
+        Assert.Single(await retryDb.OutboxEvents.Where(item => item.Type == "AdminAIRealtime").ToListAsync());
+        var changedDecision = JsonDocument.Parse("{\"refusal\":{\"messageAr\":\"مختلف\",\"reasonCode\":\"OUT_OF_SCOPE\"},\"schemaVersion\":\"1\",\"type\":\"refuse\"}").RootElement.Clone();
+        var changed = request with
+        {
+            Decision = changedDecision,
+            DecisionHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(changedDecision.GetRawText()))).ToLowerInvariant()
+        };
+        Assert.IsType<ConflictObjectResult>(await controller.Complete(turn.Id, changed, default));
+        Assert.Single(await retryDb.AdminAIMessages.Where(message => message.Role == AdminAIMessageRole.Assistant).ToListAsync());
+    }
+
     [Fact]
     public async Task RestartSweep_RecoversLostQueueWorkerAndCallbackWithoutTouchingCompletedTurn()
     {
@@ -220,5 +284,14 @@ public sealed class AdminAIRecoveryIntegrationTests
         };
         db.Add(step);
         return step;
+    }
+
+    private sealed class RejectingProposalBuilder : IAdminAIProposalBuilder
+    {
+        public Task<AdminAIProposalDto> BuildAsync(Guid actorId, Guid turnId, string capabilityKey,
+            object input, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<AdminAIProposalDto>> BuildManyAsync(Guid actorId, Guid turnId,
+            IReadOnlyList<AdminAIActionSuggestion> suggestions, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 }

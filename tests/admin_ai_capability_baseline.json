@@ -2493,7 +2493,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:402",
+      "id": "be:get:api-admin-platform-finance-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:440",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/bootstrap",
@@ -2516,11 +2516,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 402
+        "line": 440
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-budgets-actuals:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:426",
+      "id": "be:get:api-admin-platform-finance-budgets-actuals:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:464",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/budgets/actuals",
@@ -2543,11 +2543,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 426
+        "line": 464
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-dashboard:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:37",
+      "id": "be:get:api-admin-platform-finance-dashboard:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:38",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/dashboard",
@@ -2570,11 +2570,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 37
+        "line": 38
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:108",
+      "id": "be:get:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:109",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/expenses",
@@ -2597,11 +2597,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 108
+        "line": 109
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-exports-format:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:449",
+      "id": "be:get:api-admin-platform-finance-exports-format:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:487",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/exports/{format}",
@@ -2624,11 +2624,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 449
+        "line": 487
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-journals-journalid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:63",
+      "id": "be:get:api-admin-platform-finance-journals-journalid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:64",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/journals/{journalid}",
@@ -2651,11 +2651,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 63
+        "line": 64
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-ledger:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:54",
+      "id": "be:get:api-admin-platform-finance-ledger:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:55",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/ledger",
@@ -2678,11 +2678,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 54
+        "line": 55
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-migration-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:467",
+      "id": "be:get:api-admin-platform-finance-migration-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:505",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/migration/preview",
@@ -2705,11 +2705,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 467
+        "line": 505
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-periods:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:477",
+      "id": "be:get:api-admin-platform-finance-periods:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:515",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/periods",
@@ -2732,11 +2732,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 477
+        "line": 515
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-profits:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:44",
+      "id": "be:get:api-admin-platform-finance-profits:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:45",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/profits",
@@ -2759,11 +2759,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 44
+        "line": 45
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-reconciliation:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:462",
+      "id": "be:get:api-admin-platform-finance-reconciliation:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:500",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/reconciliation",
@@ -2786,11 +2786,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 462
+        "line": 500
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:394",
+      "id": "be:get:api-admin-platform-finance-refunds-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:432",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds/bootstrap",
@@ -2813,11 +2813,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 394
+        "line": 432
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds-students-studentid-grants-accessgrantid-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:385",
+      "id": "be:get:api-admin-platform-finance-refunds-students-studentid-grants-accessgrantid-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:423",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview",
@@ -2840,11 +2840,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 385
+        "line": 423
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds-students-studentid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:376",
+      "id": "be:get:api-admin-platform-finance-refunds-students-studentid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:414",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds/students/{studentid}",
@@ -2867,11 +2867,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 376
+        "line": 414
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds-students:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:364",
+      "id": "be:get:api-admin-platform-finance-refunds-students:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:402",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds/students",
@@ -2894,11 +2894,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 364
+        "line": 402
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:296",
+      "id": "be:get:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:316",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds",
@@ -2921,11 +2921,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 296
+        "line": 316
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-reports-kind:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:457",
+      "id": "be:get:api-admin-platform-finance-reports-kind:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:495",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/reports/{kind}",
@@ -2948,11 +2948,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 457
+        "line": 495
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-teachers-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:68",
+      "id": "be:get:api-admin-platform-finance-teachers-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:69",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/teachers/summary",
@@ -2975,11 +2975,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 68
+        "line": 69
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:80",
+      "id": "be:get:api-admin-platform-finance-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:81",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/teachers/{teacherid}/summary",
@@ -3002,11 +3002,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 80
+        "line": 81
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-wallet-transfers-reviews:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:118",
+      "id": "be:get:api-admin-platform-finance-wallet-transfers-reviews:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:119",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews",
@@ -3029,11 +3029,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 118
+        "line": 119
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-wallets-report:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:141",
+      "id": "be:get:api-admin-platform-finance-wallets-report:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:142",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/wallets/report",
@@ -3056,7 +3056,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 141
+        "line": 142
       }
     },
     {
@@ -9360,7 +9360,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-budgets:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:416",
+      "id": "be:post:api-admin-platform-finance-budgets:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:454",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/budgets",
@@ -9385,12 +9385,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 416
+        "line": 454
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-payments:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:203",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-payments:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:204",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/payments",
@@ -9415,12 +9415,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 203
+        "line": 204
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:99",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:100",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/post",
@@ -9445,12 +9445,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 99
+        "line": 100
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:195",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:196",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/reverse",
@@ -9475,12 +9475,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 195
+        "line": 196
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:88",
+      "id": "be:post:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:89",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses",
@@ -9505,12 +9505,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 88
+        "line": 89
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-migration-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:472",
+      "id": "be:post:api-admin-platform-finance-migration-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:510",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/migration/post",
@@ -9535,12 +9535,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 472
+        "line": 510
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-periods-periodid-close:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:482",
+      "id": "be:post:api-admin-platform-finance-periods-periodid-close:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:520",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/periods/{periodid}/close",
@@ -9565,12 +9565,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 482
+        "line": 520
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-periods-periodid-reopen:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:487",
+      "id": "be:post:api-admin-platform-finance-periods-periodid-reopen:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:525",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/periods/{periodid}/reopen",
@@ -9595,12 +9595,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 487
+        "line": 525
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-external-package:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:223",
+      "id": "be:post:api-admin-platform-finance-refunds-external-package:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:224",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/external-package",
@@ -9625,12 +9625,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 223
+        "line": 224
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-refundid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:288",
+      "id": "be:post:api-admin-platform-finance-refunds-refundid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:308",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/{refundid}/post",
@@ -9655,12 +9655,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 288
+        "line": 308
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-refundid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:356",
+      "id": "be:post:api-admin-platform-finance-refunds-refundid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:394",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/{refundid}/reverse",
@@ -9685,12 +9685,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 356
+        "line": 394
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:212",
+      "id": "be:post:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:213",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds",
@@ -9715,12 +9715,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 212
+        "line": 213
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-treasury-reconciliations:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:440",
+      "id": "be:post:api-admin-platform-finance-treasury-reconciliations:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:478",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/treasury/reconciliations",
@@ -9745,12 +9745,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 440
+        "line": 478
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-treasury-transfers:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:431",
+      "id": "be:post:api-admin-platform-finance-treasury-transfers:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:469",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/treasury/transfers",
@@ -9775,12 +9775,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 431
+        "line": 469
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-backfill:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:133",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-backfill:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:134",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/backfill",
@@ -9805,12 +9805,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 133
+        "line": 134
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-expense:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:177",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-expense:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:178",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense",
@@ -9835,12 +9835,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 177
+        "line": 178
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:186",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:187",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer",
@@ -9865,7 +9865,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 186
+        "line": 187
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -31157,5 +31157,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "20d3062e6ba7a0cd8e9474371e9d42fd60320fa505454fd81e86adf7239904b8"
+  "digest": "63f6bd4ad9c15eb40eb559ad05eb52bb7ac3f0e1faf1e4ce98e8f938a467f244"
 }

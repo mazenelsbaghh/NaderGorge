@@ -4032,6 +4032,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("platform_refunds", table => table.HasCheckConstraint("CK_platform_refunds_amounts", "\"PlatformAmount\" >= 0 AND \"TeacherAmount\" >= 0 AND (\"PlatformAmount\" + \"TeacherAmount\") > 0"));
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.OriginalSourceType, x.OriginalSourceId });
+            e.HasIndex(x => x.AccessGrantId).IsUnique().HasFilter("\"AccessGrantId\" IS NOT NULL");
             e.HasIndex(x => x.Status);
             e.Property(x => x.OriginalSourceType).HasMaxLength(80).IsRequired();
             e.Property(x => x.PlatformAmount).HasColumnType("numeric(18,2)");
@@ -4040,6 +4041,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
             e.Property(x => x.PaymentReference).HasMaxLength(120);
+            e.HasOne<StudentAccessGrant>().WithMany().HasForeignKey(x => x.AccessGrantId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
         });

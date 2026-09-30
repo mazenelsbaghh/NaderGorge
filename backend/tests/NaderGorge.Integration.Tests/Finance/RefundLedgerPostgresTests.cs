@@ -73,9 +73,9 @@ public sealed class RefundLedgerPostgresTests
             }
         };
 
-        var result = await controller.CreateExternalPackageRefund(
-            new ExternalPackageRefundBody(grant.Id, null, student.Id, teacher.Id,
-                75m, 0m, cashbox.Id, "طلب الطالب", "CASH-REFUND-1"), default);
+        var request = new ExternalPackageRefundBody(grant.Id, null, student.Id, teacher.Id,
+            75m, 0m, cashbox.Id, "طلب الطالب", "CASH-REFUND-1");
+        var result = await controller.CreateExternalPackageRefund(request, default);
 
         Assert.IsType<OkObjectResult>(result.Result);
         await using var verifyDb = fixture.CreateDbContext();
@@ -84,12 +84,42 @@ public sealed class RefundLedgerPostgresTests
         Assert.Equal(75m, refund.TotalAmount);
         Assert.Equal("طلب الطالب", refund.Reason);
         Assert.Equal(PlatformRefundStatus.Posted, refund.Status);
+        Assert.Equal(grant.Id, refund.AccessGrantId);
         Assert.Equal(actor.Id, refund.CreatedByUserId);
         var journal = await verifyDb.JournalEntries.Include(item => item.Lines).SingleAsync();
         Assert.Equal(actor.Id, journal.ActorUserId);
         Assert.Equal(75m, journal.Lines.Sum(line => line.Debit));
         Assert.Equal(75m, journal.Lines.Sum(line => line.Credit));
         Assert.Empty(await verifyDb.BalanceTransactions.ToListAsync());
+
+        await using var replayDb = fixture.CreateDbContext();
+        using var replayServices = new ServiceCollection()
+            .AddSingleton<IAppDbContext>(replayDb)
+            .AddSingleton<TeacherAccountingService>()
+            .AddMediatR(config => config.RegisterServicesFromAssembly(typeof(ApiResponse).Assembly))
+            .BuildServiceProvider();
+        var replayController = new AdminPlatformFinanceController(
+            null!, null!, new PlatformFinanceOperationsService(replayDb,
+                new FinancialPostingService(replayDb),
+                new BalanceService(replayDb, NullLogger<BalanceService>.Instance)),
+            null!, null!, null!, replayDb, null!, null!, null!, null!,
+            replayServices.GetRequiredService<IMediator>())
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(ClaimTypes.NameIdentifier, actor.Id.ToString())], "test"))
+                }
+            }
+        };
+        Assert.IsType<OkObjectResult>(
+            (await replayController.CreateExternalPackageRefund(request, default)).Result);
+        Assert.IsType<ConflictObjectResult>(
+            (await replayController.CreateExternalPackageRefund(request with { PlatformAmount = 74m }, default)).Result);
+        Assert.Equal(1, await replayDb.PlatformRefunds.CountAsync());
+        Assert.Equal(1, await replayDb.JournalEntries.CountAsync());
     }
 
     [Fact]

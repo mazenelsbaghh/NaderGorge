@@ -2769,7 +2769,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 402
+        "line": 440
       }
     },
     {
@@ -2781,7 +2781,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 416
+        "line": 454
       }
     },
     {
@@ -2793,7 +2793,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 426
+        "line": 464
       }
     },
     {
@@ -2805,7 +2805,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 37
+        "line": 38
       }
     },
     {
@@ -2817,7 +2817,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 108
+        "line": 109
       }
     },
     {
@@ -2829,7 +2829,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 88
+        "line": 89
       }
     },
     {
@@ -2841,7 +2841,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 203
+        "line": 204
       }
     },
     {
@@ -2853,7 +2853,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 99
+        "line": 100
       }
     },
     {
@@ -2865,7 +2865,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 195
+        "line": 196
       }
     },
     {
@@ -2877,7 +2877,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 449
+        "line": 487
       }
     },
     {
@@ -2889,7 +2889,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 63
+        "line": 64
       }
     },
     {
@@ -2901,7 +2901,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 54
+        "line": 55
       }
     },
     {
@@ -2913,7 +2913,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 472
+        "line": 510
       }
     },
     {
@@ -2925,7 +2925,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 467
+        "line": 505
       }
     },
     {
@@ -2937,7 +2937,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 477
+        "line": 515
       }
     },
     {
@@ -2949,7 +2949,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 482
+        "line": 520
       }
     },
     {
@@ -2961,7 +2961,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 487
+        "line": 525
       }
     },
     {
@@ -2973,7 +2973,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 44
+        "line": 45
       }
     },
     {
@@ -2985,7 +2985,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 462
+        "line": 500
       }
     },
     {
@@ -2997,7 +2997,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 296
+        "line": 316
       }
     },
     {
@@ -3009,7 +3009,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 212
+        "line": 213
       }
     },
     {
@@ -3021,7 +3021,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 288
+        "line": 308
       }
     },
     {
@@ -3033,7 +3033,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 356
+        "line": 394
       }
     },
     {
@@ -3045,7 +3045,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 394
+        "line": 432
       }
     },
     {
@@ -3057,7 +3057,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 223
+        "line": 224
       }
     },
     {
@@ -3069,7 +3069,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 364
+        "line": 402
       }
     },
     {
@@ -3081,7 +3081,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 376
+        "line": 414
       }
     },
     {
@@ -3093,7 +3093,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 385
+        "line": 423
       }
     },
     {
@@ -3105,7 +3105,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 457
+        "line": 495
       }
     },
     {
@@ -3117,7 +3117,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 80
+        "line": 81
       }
     },
     {
@@ -3129,7 +3129,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 68
+        "line": 69
       }
     },
     {
@@ -3141,7 +3141,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 440
+        "line": 478
       }
     },
     {
@@ -3153,7 +3153,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 431
+        "line": 469
       }
     },
     {
@@ -3165,7 +3165,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 118
+        "line": 119
       }
     },
     {
@@ -3177,7 +3177,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 177
+        "line": 178
       }
     },
     {
@@ -3189,7 +3189,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 186
+        "line": 187
       }
     },
     {
@@ -3201,7 +3201,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 133
+        "line": 134
       }
     },
     {
@@ -3213,7 +3213,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 141
+        "line": 142
       }
     },
     {

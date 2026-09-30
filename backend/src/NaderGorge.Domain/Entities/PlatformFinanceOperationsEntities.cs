@@ -103,6 +103,7 @@ public sealed class PlatformRefund : BaseEntity
 {
     public Guid OriginalSourceId { get; set; }
     public string OriginalSourceType { get; set; } = string.Empty;
+    public Guid? AccessGrantId { get; set; }
     public Guid StudentId { get; set; }
     public Guid? TeacherId { get; set; }
     public decimal PlatformAmount { get; set; }
