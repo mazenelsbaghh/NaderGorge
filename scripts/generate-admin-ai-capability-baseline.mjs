@@ -54,11 +54,12 @@ function domainFor(value) {
 }
 
 function semantics(method, descriptor, route) {
-  const external = externalTerms.test(descriptor);
+  const operation = `${descriptor} ${route}`;
+  const external = externalTerms.test(operation);
   const mutation = method !== 'GET' && method !== 'ANY';
   const effect = mutation ? (external ? 'external-side-effect' : 'mutation') :
-    (/export|download/i.test(descriptor) ? 'export' : /preview/i.test(descriptor) ? 'preview' : 'read');
-  const risk = mutation && (strongTerms.test(descriptor) || reviewedStrongRoutes.has(routeKey(method, route)))
+    (/export|download/i.test(operation) ? 'export' : /preview/i.test(operation) ? 'preview' : 'read');
+  const risk = mutation && (method === 'DELETE' || strongTerms.test(operation) || reviewedStrongRoutes.has(routeKey(method, route)))
     ? 'strong' : mutation ? 'ordinary' : 'none';
   return {
     effect,
@@ -128,11 +129,21 @@ function build() {
   }
   const items = [
     ...backendItems,
-    ...frontend.calls.map((call) => createItem(
-      'frontend-call', call.method, call.path, call.source,
-      call.source.file,
-      backendByRoute.get(routeKey(call.method, call.path))?.authoritativeOperation ?? 'unresolved:frontend-contract',
-    )),
+    ...frontend.calls.map((call) => {
+      const backend = backendByRoute.get(routeKey(call.method, call.path));
+      const item = createItem('frontend-call', call.method, call.path, call.source,
+        call.source.file, backend?.authoritativeOperation ?? 'unresolved:frontend-contract');
+      // An exact route points to one authoritative operation. Its effect and risk
+      // cannot be downgraded by a generic frontend service filename.
+      return backend ? {
+        ...item,
+        effect: backend.effect,
+        domain: backend.domain,
+        risk: backend.risk,
+        confirmation: backend.confirmation,
+        refreshScopes: backend.refreshScopes,
+      } : item;
+    }),
   ].sort((left, right) => left.id.localeCompare(right.id));
   const payload = {
     schemaVersion: 1,

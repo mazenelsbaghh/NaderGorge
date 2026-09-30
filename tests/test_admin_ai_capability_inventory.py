@@ -61,6 +61,20 @@ def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operat
     assert matched
     assert all(item["authoritativeOperation"] == backend[route_key(item)]["authoritativeOperation"]
                for item in matched)
+    for item in matched:
+        source = backend[route_key(item)]
+        for field in ("effect", "domain", "risk", "confirmation", "refreshScopes"):
+            assert item[field] == source[field], (item["route"], field)
+
+
+def test_unresolved_frontend_deletes_require_strong_confirmation():
+    items = json.loads(BASELINE.read_text())["items"]
+    deletes = [item for item in items if item["kind"] == "frontend-call"
+               and item["method"] == "DELETE" and item["authoritativeOperation"].startswith("unresolved:")]
+
+    assert deletes
+    assert all(item["risk"] == "strong" and item["confirmation"] == "strong"
+               for item in deletes)
 
 
 def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():

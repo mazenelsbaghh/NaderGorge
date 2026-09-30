@@ -28,6 +28,8 @@ The five identity/content actions now have closed candidate input definitions. O
 
 The frontend call graph now proves direct member calls for any imported service object with a single exported service and retains the full service when its object escapes. This removed eleven unused self-service operations. The baseline generator now hashes its actual source and classifies watch-request approval under identity rather than HR. The graph contract suite passed 7/7 and both generated-artifact checks passed at 527 files, 538 frontend calls, and 1,043 baseline items.
 
+An exact route parity audit corrected 54 frontend risk/domain mismatches against the backend, including deletions that had been marked Ordinary. Matched calls now inherit backend effect, domain, risk, confirmation, and refresh scopes; unresolved deletions require strong confirmation. Six inventory assertions passed. This makes the blocked inventory more accurate but does not authorize activation.
+
 Teacher financial allocation review now runs through one authoritative transactional command for both the original Admin screen and a strong-confirmation AdminAI candidate. A unique operation identity, actor, note, serializable concurrency, preview fingerprint, and recovery resolver protect its teacher balance effect. Two direct PostgreSQL tests passed for fresh-context replay/conflict and eight concurrent reviewers; one end-to-end PostgreSQL proposal/typed-confirmation test passed alongside them. The complete AdminAI PostgreSQL integration group passed 27/27, and the focused AdminAI application suite passed 258/258. These results cover one finance operation, not the complete finance action family or activation gates.
 
 ## Disable and rollback
