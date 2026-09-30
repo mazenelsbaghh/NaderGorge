@@ -10,7 +10,7 @@ The current generated baseline has 1,054 items, of which 628 mutation/external-e
 
 The action executor now commits its unique claim before an authoritative effect and leaves ambiguous outcomes in `RecoveryRequired`. PostgreSQL `char(64)` padding for shorter state fingerprints was also corrected in the comparison path. The complete AdminAI PostgreSQL integration group passed 15/15 after a temporary unrelated build interruption, and the focused application suite passed 220/220 on the final rerun. These checks do not change the NO-GO decision.
 
-On 2026-09-30, activation validation was tightened to reject every unsupported manifest item, duplicate capability identity, and a missing ready marker. The focused AdminAI application suite passed 225/225, the generated inventory check passed 17/17, and production-tooling tests passed 575 with 8 skipped. The repository-wide performance gate still lacks authentic, comparable baseline and candidate artifacts. These results do not complete the 42 open AdminAI tasks or authorize activation.
+On 2026-09-30, activation validation was tightened to reject every unsupported manifest item, duplicate capability identity, and a missing ready marker. The focused AdminAI application suite passed 225/225, the generated inventory check passed 18/18 after frontend/backend route linking, and production-tooling tests passed 575 with 8 skipped. The repository-wide performance gate still lacks authentic, comparable baseline and candidate artifacts. These results do not complete the 42 open AdminAI tasks or authorize activation.
 
 ## Disable and rollback
 
