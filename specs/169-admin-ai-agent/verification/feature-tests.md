@@ -6,6 +6,8 @@ The subject-create candidate now shares the durable receipt mechanism and recove
 
 The subject-update candidate now rejects a conflicting replay and leaves a later Admin edit intact. Its real-PostgreSQL test passed 1/1; the full AdminAI integration group passed 31/31 and the focused application group passed 260/260. The EF guard and capability inventory gate passed. Browser/provider/manual acceptance remain open.
 
+Video-type create/update now store bounded safe response snapshots for exact replay and recovery. Their two disposable-PostgreSQL tests passed, the complete AdminAI integration group passed 33/33, the focused application group passed 261/261, and the existing video-type lifecycle group passed 17/17. The additive migration and inventory gates passed; activation remains blocked.
+
 Date: 2026-08-12 (Africa/Cairo)
 
 - Backend solution build: passed with 0 warnings and 0 errors.

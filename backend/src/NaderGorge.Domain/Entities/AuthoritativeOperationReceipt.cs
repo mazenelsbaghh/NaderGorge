@@ -9,4 +9,5 @@ public sealed class AuthoritativeOperationReceipt : BaseEntity
     public Guid ActorUserId { get; set; }
     public string RequestHash { get; set; } = string.Empty;
     public Guid ResultEntityId { get; set; }
+    public string? SafeResultJson { get; set; }
 }

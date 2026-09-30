@@ -14,7 +14,7 @@ public sealed class AdminAICreateVideoTypeAction(IMediator mediator, IAdminAIAct
 {
     public override string Key => "admin.content.video-type.create";
     protected override IRequest<ApiResponse<VideoTypeDto>> CreateCommand(AdminAICreateVideoTypeInput input, Guid actorId, string operationId) =>
-        new CreateVideoTypeCommand(input.Name, input.SortOrder, input.IsActive, actorId);
+        new CreateVideoTypeCommand(input.Name, input.SortOrder, input.IsActive, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<VideoTypeDto> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["video-types", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["video-types", "content"]);
@@ -58,7 +58,7 @@ public sealed class AdminAIUpdateVideoTypeAction(IMediator mediator, IAdminAIAct
 {
     public override string Key => "admin.content.video-type.update";
     protected override IRequest<ApiResponse<VideoTypeDto>> CreateCommand(AdminAIUpdateVideoTypeInput input, Guid actorId, string operationId) =>
-        new UpdateVideoTypeCommand(input.VideoTypeId, input.Name, input.SortOrder, actorId);
+        new UpdateVideoTypeCommand(input.VideoTypeId, input.Name, input.SortOrder, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<VideoTypeDto> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["video-types", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["video-types", "content"]);

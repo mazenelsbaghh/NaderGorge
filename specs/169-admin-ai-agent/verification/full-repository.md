@@ -21,3 +21,7 @@ The three-node read-only Production status returned `success`; evidence was save
 `make ops-check` passed: the API built with zero warnings and no pending EF model changes; application tests passed 1,644 with 20 skips; frontend lint had zero errors and one existing hook warning, and typecheck passed; worker tests passed 228/228; Docker Compose configuration passed. This is a focused change check, not the full `make verify` result. The authentic performance baseline/candidate artifacts and AdminAI activation gates remain open.
 
 The reviewed source-only Git tree was wrapped in a one-parent candidate commit without changing the canonical working tree. `make prod-source-publish-preview` accepted parent `651cacf9e4831f436e7c23cce6f65dec6bbb4d15` and candidate `a29e932820d606ff703f437adf2b201c92aa7889`. This was a dry run only; the shared `codex/production` branch and Production services were not changed.
+
+## 2026-09-30 after authoritative receipt changes
+
+`make ops-check` passed again after the additive receipt migrations and video-type replay work: API build and EF pending-model check passed with zero warnings/errors, 1,647 application tests passed with 20 integration-dependent skips, frontend lint/typecheck passed with one existing hook warning, worker tests passed 228/228, and Docker Compose configuration passed. The AdminAI PostgreSQL group passed separately at 33/33 against a disposable migrated PostgreSQL 16.10 database. This does not replace the blocked `make verify` performance evidence or owner acceptance.

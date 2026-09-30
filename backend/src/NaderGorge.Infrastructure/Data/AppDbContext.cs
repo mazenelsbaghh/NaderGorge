@@ -1729,6 +1729,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(item => item.OperationId).HasMaxLength(200).IsRequired();
             e.Property(item => item.Scope).HasMaxLength(100).IsRequired();
             e.Property(item => item.RequestHash).HasMaxLength(64).IsRequired();
+            e.Property(item => item.SafeResultJson).HasMaxLength(8192);
             e.HasIndex(item => item.OperationId).IsUnique();
         });
 

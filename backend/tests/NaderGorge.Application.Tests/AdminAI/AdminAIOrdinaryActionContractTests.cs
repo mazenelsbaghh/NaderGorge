@@ -7,6 +7,8 @@ using NaderGorge.Infrastructure.Services.AdminAI;
 using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Admin.VideoTypes;
+using NaderGorge.Application.Features.Admin.VideoTypes.Commands;
 using MediatR;
 using NaderGorge.Application.Features.AdminAI.Catalog;
 
@@ -75,6 +77,25 @@ public sealed class AdminAIOrdinaryActionContractTests
         var command = Assert.IsType<UpdateSubjectCommand>(mediator.Request);
         Assert.Equal(actor, command.ActorUserId);
         Assert.Equal("subject-update-1", command.OperationId);
+    }
+
+    [Fact]
+    public async Task VideoTypeAdapters_BindOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var preview = new PreviewSource();
+        await new AdminAICreateVideoTypeAction(mediator, preview).ExecuteAsync(actor,
+            new AdminAICreateVideoTypeInput("Lesson", 1, true), "video-type-create-1", default);
+        var create = Assert.IsType<CreateVideoTypeCommand>(mediator.Request);
+        Assert.Equal(actor, create.AdminUserId);
+        Assert.Equal("video-type-create-1", create.OperationId);
+
+        await new AdminAIUpdateVideoTypeAction(mediator, preview).ExecuteAsync(actor,
+            new AdminAIUpdateVideoTypeInput(Guid.NewGuid(), "Review", 2), "video-type-update-1", default);
+        var update = Assert.IsType<UpdateVideoTypeCommand>(mediator.Request);
+        Assert.Equal(actor, update.AdminUserId);
+        Assert.Equal("video-type-update-1", update.OperationId);
     }
 
     [Fact]
@@ -323,6 +344,9 @@ public sealed class AdminAIOrdinaryActionContractTests
             Request = request; SendCalls++;
             object response = typeof(TResponse) == typeof(ApiResponse<Guid>)
                 ? ApiResponse<Guid>.Ok(Guid.NewGuid())
+                : typeof(TResponse) == typeof(ApiResponse<VideoTypeDto>)
+                    ? ApiResponse<VideoTypeDto>.Ok(new VideoTypeDto(
+                        Guid.NewGuid(), "Lesson", 1, true, 0, DateTime.UtcNow, null))
                 : ApiResponse.Ok("done");
             return Task.FromResult((TResponse)response);
         }
