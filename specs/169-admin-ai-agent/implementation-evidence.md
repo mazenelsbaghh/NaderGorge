@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 remaining Teacher-only branches
+
+- Seven additional `/teacher` frontend calls came from shared code-group, subscriber, context, and finance services. Their backend `TeacherController` and `TeacherFinanceController` require the Teacher role. Admin alternatives for code groups and teacher statements remain in the inventory. The seven calls are now reviewed `teacher-surface` exclusions alongside the nine Teacher-only report calls.
+- The generated baseline now has 1,073 items, 623 blocked entries, 23 unresolved frontend calls (11 mutations), and 29 reviewed exclusions. Digest: `e05145fce26b401aa6b821c6322d3c88a7897662bf289291a0f1b5eb07b88757`. The full capability gate passed 10/10 frontend graph tests and 26/26 Python tests. The production catalog remains read-only and activation remains blocked.
+
 ## 2026-09-30 Teacher-only report branch exclusion
 
 - The shared `advancedReportService` contains both `/admin/reports` and `/teacher/reports` branches. `TeacherReportsController` requires the Teacher role, while the Admin route uses its separate Admin controller. The nine Teacher-only frontend calls are now reviewed `teacher-surface` exclusions; the matching Admin calls remain in the capability inventory, including strong confirmation for Admin report-definition deletion.

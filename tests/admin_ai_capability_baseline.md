@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `ea7b19ead4582cdf5e07a3aa2fbe332e0a20caad130b771d63c1e009ef7bc999`
+Digest: `e05145fce26b401aa6b821c6322d3c88a7897662bf289291a0f1b5eb07b88757`
 
-Items: 1080; external-side-effect=79, mutation=544, read=418, export=24, preview=15.
-Reviewed non-business exclusions: 22.
+Items: 1073; external-side-effect=79, mutation=544, read=412, export=23, preview=15.
+Reviewed non-business exclusions: 29.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -808,13 +808,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323 | GET | /public/settings | read | content | none | candidate |
 | fe:get:scope-content-summary:frontend-src-services-content-service-ts:402 | GET | /{scope}/content/summary | read | content | none | candidate |
 | fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181 | GET | /student/video-session/{lessonVideoId}/request-status | read | identity | none | candidate |
-| fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1411 | GET | /teacher/codes/groups/{id}/details | read | content | none | candidate |
-| fe:get:teacher-codes-groups:frontend-src-services-admin-service-ts:1403 | GET | /teacher/codes/groups | read | content | none | candidate |
-| fe:get:teacher-content-contenttype-id-subscribers-export:frontend-src-services-teacher-service-ts:299 | GET | /teacher/content/{contentType}/{id}/subscribers/export | export | content | none | candidate |
-| fe:get:teacher-content-contenttype-id-subscribers:frontend-src-services-teacher-service-ts:288 | GET | /teacher/content/{contentType}/{id}/subscribers | read | content | none | candidate |
-| fe:get:teacher-context:frontend-src-services-teacher-service-ts:278 | GET | /teacher/context | read | content | none | candidate |
-| fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:208 | GET | /teacher/finance/statement/pdf | read | finance | none | candidate |
-| fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:198 | GET | /teacher/finance/statement | read | finance | none | candidate |
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | GET | /video-learning/{id}/author | read | identity | none | candidate |
 | fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:48 | GET | /video-learning/{id}/report | read | content | none | candidate |

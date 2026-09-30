@@ -180,7 +180,23 @@ function build() {
   const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
   const teacherReportItems = frontendItems.filter((item) =>
     item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
-  const excludedIds = new Set([...selfServiceItems, ...teacherReportItems].map((item) => item.id));
+  const reviewedTeacherCalls = new Map([
+    ['frontend/src/services/admin-service.ts', new Set([
+      'GET:/teacher/codes/groups', 'GET:/teacher/codes/groups/{id}/details',
+    ])],
+    ['frontend/src/services/teacher-service.ts', new Set([
+      'GET:/teacher/context',
+      'GET:/teacher/content/{contentType}/{id}/subscribers',
+      'GET:/teacher/content/{contentType}/{id}/subscribers/export',
+    ])],
+    ['frontend/src/services/finance-service.ts', new Set([
+      'GET:/teacher/finance/statement', 'GET:/teacher/finance/statement/pdf',
+    ])],
+  ]);
+  const additionalTeacherItems = frontendItems.filter((item) =>
+    reviewedTeacherCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
+  const teacherOnlyItems = [...teacherReportItems, ...additionalTeacherItems];
+  const excludedIds = new Set([...selfServiceItems, ...teacherOnlyItems].map((item) => item.id));
   const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
     .sort((left, right) => left.id.localeCompare(right.id));
   const exclusions = [
@@ -189,10 +205,10 @@ function build() {
       reason: 'self-service',
       detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
     })),
-    ...teacherReportItems.map((item) => ({
+    ...teacherOnlyItems.map((item) => ({
       id: item.id,
       reason: 'teacher-surface',
-      detail: `Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: ${item.method} ${item.route}`,
+      detail: `Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: ${item.method} ${item.route}`,
     })),
   ].sort((left, right) => left.id.localeCompare(right.id));
   const payload = {

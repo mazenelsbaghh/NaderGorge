@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "b0a0b462875d44952ad61b3b287ef45b2b0e22649dc61df4ca93bf884fbe5989"
+      "digest": "cfd79095095743a71001c649a0d3e869c9289a9c9daccb715260ab05bfab04e3"
     }
   },
   "items": [
@@ -22677,195 +22677,6 @@
       }
     },
     {
-      "id": "fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1411",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/codes/groups/{id}/details",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1411
-      }
-    },
-    {
-      "id": "fe:get:teacher-codes-groups:frontend-src-services-admin-service-ts:1403",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/codes/groups",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1403
-      }
-    },
-    {
-      "id": "fe:get:teacher-content-contenttype-id-subscribers-export:frontend-src-services-teacher-service-ts:299",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/content/{contentType}/{id}/subscribers/export",
-      "effect": "export",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 299
-      }
-    },
-    {
-      "id": "fe:get:teacher-content-contenttype-id-subscribers:frontend-src-services-teacher-service-ts:288",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/content/{contentType}/{id}/subscribers",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 288
-      }
-    },
-    {
-      "id": "fe:get:teacher-context:frontend-src-services-teacher-service-ts:278",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/context",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 278
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:208",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/statement/pdf",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 208
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:198",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/statement",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 198
-      }
-    },
-    {
       "id": "fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74",
       "kind": "frontend-call",
       "method": "GET",
@@ -31051,7 +30862,7 @@
     {
       "id": "fe:delete:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:187",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: DELETE /teacher/reports/definitions/{id}"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: DELETE /teacher/reports/definitions/{id}"
     },
     {
       "id": "fe:get:dynamic:frontend-src-services-admin-ai-agent-service-ts:192",
@@ -31069,24 +30880,59 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: GET <dynamic>"
     },
     {
+      "id": "fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1411",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/codes/groups/{id}/details"
+    },
+    {
+      "id": "fe:get:teacher-codes-groups:frontend-src-services-admin-service-ts:1403",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/codes/groups"
+    },
+    {
+      "id": "fe:get:teacher-content-contenttype-id-subscribers-export:frontend-src-services-teacher-service-ts:299",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/content/{contentType}/{id}/subscribers/export"
+    },
+    {
+      "id": "fe:get:teacher-content-contenttype-id-subscribers:frontend-src-services-teacher-service-ts:288",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/content/{contentType}/{id}/subscribers"
+    },
+    {
+      "id": "fe:get:teacher-context:frontend-src-services-teacher-service-ts:278",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/context"
+    },
+    {
+      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:208",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement/pdf"
+    },
+    {
+      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:198",
+      "reason": "teacher-surface",
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement"
+    },
+    {
       "id": "fe:get:teacher-reports-catalog:frontend-src-services-advanced-report-service-ts:149",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: GET /teacher/reports/catalog"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/reports/catalog"
     },
     {
       "id": "fe:get:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:168",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: GET /teacher/reports/definitions"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/reports/definitions"
     },
     {
       "id": "fe:get:teacher-reports-filter-options:frontend-src-services-advanced-report-service-ts:155",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: GET /teacher/reports/filter-options"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/reports/filter-options"
     },
     {
       "id": "fe:get:teacher-reports-student-ledger-export:frontend-src-services-advanced-report-service-ts:201",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: GET /teacher/reports/student-ledger/export"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/reports/student-ledger/export"
     },
     {
       "id": "fe:patch:dynamic:frontend-src-services-admin-ai-agent-service-ts:74",
@@ -31141,23 +30987,23 @@
     {
       "id": "fe:post:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:175",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: POST /teacher/reports/definitions"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: POST /teacher/reports/definitions"
     },
     {
       "id": "fe:post:teacher-reports-execute:frontend-src-services-advanced-report-service-ts:162",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: POST /teacher/reports/execute"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: POST /teacher/reports/execute"
     },
     {
       "id": "fe:post:teacher-reports-export-format:frontend-src-services-advanced-report-service-ts:194",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: POST /teacher/reports/export/{format}"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: POST /teacher/reports/export/{format}"
     },
     {
       "id": "fe:put:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:182",
       "reason": "teacher-surface",
-      "detail": "Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: PUT /teacher/reports/definitions/{id}"
+      "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "ea7b19ead4582cdf5e07a3aa2fbe332e0a20caad130b771d63c1e009ef7bc999"
+  "digest": "e05145fce26b401aa6b821c6322d3c88a7897662bf289291a0f1b5eb07b88757"
 }

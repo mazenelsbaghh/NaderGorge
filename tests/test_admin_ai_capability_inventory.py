@@ -50,11 +50,14 @@ def test_baseline_uses_only_approved_exclusion_reasons():
 
     assert all(exclusion["reason"] in allowed for exclusion in baseline.get("exclusions", []))
     self_service = [item for item in baseline["exclusions"] if item["reason"] == "self-service"]
-    teacher_reports = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
+    teacher_surface = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
+    teacher_reports = [item for item in teacher_surface if "/teacher/reports/" in item["detail"]]
+    teacher_other = [item for item in teacher_surface if "/teacher/reports/" not in item["detail"]]
     assert len(self_service) == 13
     assert all("Admin AI conversation/proposal transport" in item["detail"] for item in self_service)
     assert len(teacher_reports) == 9
-    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_reports)
+    assert len(teacher_other) == 7
+    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface)
     assert '[Authorize(Roles = "Teacher")]' in (
         ROOT / "backend/src/NaderGorge.API/Controllers/TeacherReportsController.cs"
     ).read_text()
@@ -78,6 +81,31 @@ def test_baseline_uses_only_approved_exclusion_reasons():
             assert admin_delete[0]["risk"] == admin_delete[0]["confirmation"] == "strong"
     assert not any(item["kind"] == "frontend-call" and item["route"].startswith("/teacher/reports/")
                    for item in baseline["items"])
+    expected_teacher_only = {
+        "/teacher/codes/groups": "frontend/src/services/admin-service.ts",
+        "/teacher/codes/groups/{id}/details": "frontend/src/services/admin-service.ts",
+        "/teacher/context": "frontend/src/services/teacher-service.ts",
+        "/teacher/content/{contentType}/{id}/subscribers": "frontend/src/services/teacher-service.ts",
+        "/teacher/content/{contentType}/{id}/subscribers/export": "frontend/src/services/teacher-service.ts",
+        "/teacher/finance/statement": "frontend/src/services/finance-service.ts",
+        "/teacher/finance/statement/pdf": "frontend/src/services/finance-service.ts",
+    }
+    for controller in ("TeacherController.cs", "TeacherFinanceController.cs"):
+        assert '[Authorize(Roles = "Teacher")]' in (
+            ROOT / "backend/src/NaderGorge.API/Controllers" / controller
+        ).read_text()
+    for route, source_file in expected_teacher_only.items():
+        assert any(call["method"] == "GET" and call["path"] == route
+                   and call["source"]["file"] == source_file for call in calls)
+        assert any(item["detail"].endswith(f"GET {route}") for item in teacher_other)
+        assert not any(item["kind"] == "frontend-call" and item["route"] == route
+                       for item in baseline["items"])
+    admin_controller = (ROOT / "backend/src/NaderGorge.API/Controllers/AdminController.cs").read_text()
+    admin_finance = (ROOT / "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs").read_text()
+    assert '[HttpGet("codes/groups")]' in admin_controller
+    assert '[HttpGet("codes/groups/{id:guid}/details")]' in admin_controller
+    assert '[HttpGet("teachers/{teacherId:guid}/statement")]' in admin_finance
+    assert '[HttpGet("teachers/{teacherId:guid}/statement/pdf")]' in admin_finance
 
 
 def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operation():
