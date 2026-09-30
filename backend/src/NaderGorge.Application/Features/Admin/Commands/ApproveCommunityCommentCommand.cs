@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -27,11 +28,22 @@ public class ApproveCommunityCommentCommandHandler
 
     public async Task<ApiResponse<ModerateCommunityCommentResponse>> Handle(ApproveCommunityCommentCommand request, CancellationToken ct)
     {
-        var comment = await _db.CommunityPostComments.FindAsync(new object[] { request.CommentId }, ct);
+        var comment = await _db.CommunityPostComments
+            .Include(item => item.Post)
+            .Include(item => item.ParentComment)
+            .FirstOrDefaultAsync(item => item.Id == request.CommentId, ct);
         if (comment == null)
         {
             return ApiResponse<ModerateCommunityCommentResponse>.Fail("Comment not found", new List<string> { "NOT_FOUND" });
         }
+
+        if (comment.Status != CommunityCommentStatus.Pending)
+            return ApiResponse<ModerateCommunityCommentResponse>.Fail("Comment is already resolved", ["ALREADY_RESOLVED"]);
+        if (comment.Post.Status != CommunityPostStatus.Approved)
+            return ApiResponse<ModerateCommunityCommentResponse>.Fail("Post must be approved first", ["POST_NOT_APPROVED"]);
+        if (comment.ParentComment != null && (comment.ParentComment.PostId != comment.PostId
+            || comment.ParentComment.Status != CommunityCommentStatus.Approved))
+            return ApiResponse<ModerateCommunityCommentResponse>.Fail("Parent comment must be approved first", ["PARENT_NOT_APPROVED"]);
 
         comment.Status = CommunityCommentStatus.Approved;
         comment.RejectionReason = null;

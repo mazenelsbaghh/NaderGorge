@@ -175,7 +175,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
             "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
-            "admin.assessment.lesson-comment.approve" or "admin.assessment.community-post.approve" =>
+            "admin.assessment.lesson-comment.approve" or "admin.assessment.community-post.approve"
+                or "admin.assessment.community-comment.approve" =>
                 assessment.PreviewAsync(capabilityKey, actorId, input, ct),
             _ => identityContent.PreviewAsync(capabilityKey, actorId, input, ct)
         };

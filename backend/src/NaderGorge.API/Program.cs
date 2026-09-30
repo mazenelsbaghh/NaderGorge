@@ -365,6 +365,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIResolveTaskApprovalAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIApproveLessonCommentAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIApproveCommunityPostAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIApproveCommunityCommentAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIIdentitySummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSearchRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSnapshotRead>();

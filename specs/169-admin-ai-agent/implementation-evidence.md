@@ -2,9 +2,10 @@
 
 ## 2026-09-30 moderation candidates
 
-- Added reviewed candidate previews for lesson-comment and community-post approval through the existing Admin commands. The lesson preview requires Pending status and an approved parent before publishing. The post preview requires the same effective academic scope as the authoritative command when no teacher owns the post; it binds post text, poll options, and effective scope rows to the confirmation fingerprint.
-- A migrated PostgreSQL flow passed 1/1 with 14 confirmed executions. It blocked a reply before its parent, invalidated an edited comment, blocked an unscoped post, invalidated a changed academic scope and a changed poll option, then verified two comment approvals and two post approvals with their six notification outbox rows. The original post command used the real `AcademicScopeService` in this run. The focused AdminAI application suite passed 258/258.
-- These two actions remain candidates. No production action catalog or approved full baseline exists yet, so feature activation remains closed.
+- Added reviewed candidate previews for lesson-comment, community-post, and community-comment approval through the existing Admin commands. The lesson preview requires Pending status and an approved parent. The post preview requires the same effective academic scope as its command when no teacher owns the post; it binds post text, poll options, and effective scope rows to the confirmation fingerprint. The community-comment preview also requires an approved post and parent comment.
+- Repaired the authoritative community-comment approval command to reject an already resolved comment, an unpublished post, or an unapproved/mismatched parent. This prevents repeat public outbox notifications and orphaned reply publication for the original Admin and teacher screens as well as AdminAI.
+- A migrated PostgreSQL flow passed 1/1 with 16 confirmed executions. It blocked premature replies and an unscoped post, invalidated edited content, academic scope, and a poll option, then verified two approvals in each moderation family and eight notification outbox rows. The original post command used the real `AcademicScopeService` in this run. The complete application suite passed 1,644 tests with 20 skips.
+- These three actions remain candidates. No production action catalog or approved full baseline exists yet, so feature activation remains closed.
 
 ## 2026-09-30 ordinary operations candidate
 

@@ -29,3 +29,15 @@ public sealed class AdminAIApproveCommunityPostAction(IMediator mediator, IAdmin
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["community-posts", "moderation"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["community-posts", "moderation"]);
 }
+
+public sealed record AdminAIApproveCommunityCommentInput(Guid CommentId);
+public sealed class AdminAIApproveCommunityCommentAction(IMediator mediator, IAdminAIActionPreviewSource preview)
+    : AdminAIMediatRActionCapability<AdminAIApproveCommunityCommentInput, ApiResponse<ModerateCommunityCommentResponse>>(mediator, preview)
+{
+    public override string Key => "admin.assessment.community-comment.approve";
+    protected override IRequest<ApiResponse<ModerateCommunityCommentResponse>> CreateCommand(AdminAIApproveCommunityCommentInput input, Guid actorId, string operationId) =>
+        new ApproveCommunityCommentCommand(input.CommentId, actorId);
+    protected override AdminAIActionOutcome ToOutcome(ApiResponse<ModerateCommunityCommentResponse> response) => response.Success
+        ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["community-comments", "moderation"])
+        : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["community-comments", "moderation"]);
+}

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.AdminAI.Catalog;
 using NaderGorge.Application.Features.AdminAI.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
@@ -102,9 +103,19 @@ public sealed class AdminAIIdentityContentPostgresTests
         {
             AuthorUser = student, Teacher = teacher, Body = "A teacher post", Status = CommunityPostStatus.Pending
         };
+        var communityParent = new CommunityPostComment
+        {
+            Post = teacherPost, AuthorUser = student, Body = "Original community comment",
+            Status = CommunityCommentStatus.Pending
+        };
+        var communityReply = new CommunityPostComment
+        {
+            Post = teacherPost, ParentComment = communityParent, AuthorUser = student,
+            Body = "Community reply", Status = CommunityCommentStatus.Pending
+        };
         db.AddRange(actor, student, baseline, policyVersion, conversation, message, turn,
             new UserRole { User = actor, Role = adminRole }, pipeline, task,
-            parentComment, replyComment, scopedPost, teacherPost);
+            parentComment, replyComment, scopedPost, teacherPost, communityParent, communityReply);
         await db.SaveChangesAsync();
 
         using var services = new ServiceCollection()
@@ -127,13 +138,14 @@ public sealed class AdminAIIdentityContentPostgresTests
             new AdminAIUpdateTaskStatusAction(mediator, preview),
             new AdminAIResolveTaskApprovalAction(mediator, preview),
             new AdminAIApproveLessonCommentAction(mediator, preview),
-            new AdminAIApproveCommunityPostAction(mediator, preview)
+            new AdminAIApproveCommunityPostAction(mediator, preview),
+            new AdminAIApproveCommunityCommentAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
             [.. AdminAIIdentityContentActionCatalog.CreateCandidates(),
                 .. AdminAIOperationsActionCatalog.CreateCandidates(),
                 .. AdminAIAssessmentActionCatalog.CreateCandidates()]);
-        Assert.Equal(10, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
+        Assert.Equal(11, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -216,6 +228,10 @@ public sealed class AdminAIIdentityContentPostgresTests
             (await db.LessonComments.AsNoTracking().SingleAsync(item => item.Id == parentComment.Id)).Status);
         await ConfirmAsync(adapters[8].Key, new { commentId = parentComment.Id });
         await ConfirmAsync(adapters[8].Key, new { commentId = replyComment.Id });
+        var unpublishedParentApproval = await mediator.Send(
+            new ApproveCommunityCommentCommand(communityParent.Id, actor.Id));
+        Assert.False(unpublishedParentApproval.Success);
+        Assert.Contains("POST_NOT_APPROVED", unpublishedParentApproval.Errors!);
         await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() => builder.BuildAsync(
             actor.Id, turn.Id, adapters[9].Key, new { postId = scopedPost.Id }, default));
         var academicScope = new StudentFacingAcademicScope
@@ -247,6 +263,25 @@ public sealed class AdminAIIdentityContentPostgresTests
             $"intent-{pendingPollProposal.Id:N}", default));
         await ConfirmAsync(adapters[9].Key, new { postId = scopedPost.Id });
         await ConfirmAsync(adapters[9].Key, new { postId = teacherPost.Id });
+        var prematureReplyApproval = await mediator.Send(
+            new ApproveCommunityCommentCommand(communityReply.Id, actor.Id));
+        Assert.False(prematureReplyApproval.Success);
+        Assert.Contains("PARENT_NOT_APPROVED", prematureReplyApproval.Errors!);
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() => builder.BuildAsync(
+            actor.Id, turn.Id, adapters[10].Key, new { commentId = communityReply.Id }, default));
+        var pendingCommunityCommentProposal = await builder.BuildAsync(actor.Id, turn.Id,
+            adapters[10].Key, new { commentId = communityParent.Id }, default);
+        communityParent.Body = "Edited community comment";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            pendingCommunityCommentProposal.Id, pendingCommunityCommentProposal.Version, null,
+            $"intent-{pendingCommunityCommentProposal.Id:N}", default));
+        await ConfirmAsync(adapters[10].Key, new { commentId = communityParent.Id });
+        await ConfirmAsync(adapters[10].Key, new { commentId = communityReply.Id });
+        var repeatedParentApproval = await mediator.Send(
+            new ApproveCommunityCommentCommand(communityParent.Id, actor.Id));
+        Assert.False(repeatedParentApproval.Success);
+        Assert.Contains("ALREADY_RESOLVED", repeatedParentApproval.Errors!);
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -291,11 +326,15 @@ public sealed class AdminAIIdentityContentPostgresTests
             .SingleAsync(item => item.Id == pollOption.Id)).Text);
         Assert.Equal(2, await verifyDb.OutboxEvents.AsNoTracking()
             .CountAsync(item => item.Type == "CommunityPostApproved"));
+        Assert.Equal(2, await verifyDb.CommunityPostComments.AsNoTracking()
+            .CountAsync(item => item.Status == CommunityCommentStatus.Approved));
+        Assert.Equal(2, await verifyDb.OutboxEvents.AsNoTracking()
+            .CountAsync(item => item.Type == "CommunityCommentApproved"));
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(14, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(16, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }

@@ -143,7 +143,8 @@ public sealed class AdminAIOrdinaryActionContractTests
         var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(mediator, preview);
         var expected = new[]
         {
-            "admin.assessment.community-post.approve", "admin.assessment.lesson-comment.approve",
+            "admin.assessment.community-comment.approve", "admin.assessment.community-post.approve",
+            "admin.assessment.lesson-comment.approve",
             "admin.commercial.form.create", "admin.commercial.form.update",
             "admin.content.subject.create", "admin.content.subject.update",
             "admin.content.video-type.create", "admin.content.video-type.update",
@@ -308,6 +309,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.content.video-type.update" => new AdminAIUpdateVideoTypeInput(Guid.NewGuid(), "type", 1),
         "admin.assessment.lesson-comment.approve" => new AdminAIApproveLessonCommentInput(Guid.NewGuid()),
         "admin.assessment.community-post.approve" => new AdminAIApproveCommunityPostInput(Guid.NewGuid()),
+        "admin.assessment.community-comment.approve" => new AdminAIApproveCommunityCommentInput(Guid.NewGuid()),
         "admin.commercial.form.create" => new AdminAICreateFormInput("form", "description", "form", true, null, null, null, "[]"),
         "admin.commercial.form.update" => new AdminAIUpdateFormInput(Guid.NewGuid(), "form", "description", "form", true, null, null, null, "[]"),
         "admin.operations.task.create" => new AdminAICreateTaskInput("task", "description", Guid.NewGuid(), TaskPriority.Medium, null),
@@ -326,6 +328,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.content.video-type.create" or "admin.content.video-type.update" => ["video-types", "content"],
         "admin.assessment.lesson-comment.approve" => ["lesson-comments", "moderation"],
         "admin.assessment.community-post.approve" => ["community-posts", "moderation"],
+        "admin.assessment.community-comment.approve" => ["community-comments", "moderation"],
         "admin.commercial.form.create" or "admin.commercial.form.update" => ["forms"],
         "admin.operations.task.create" => ["operations-tasks", "internal-chat"],
         "admin.operations.task.status.update" => ["operations-tasks"],
