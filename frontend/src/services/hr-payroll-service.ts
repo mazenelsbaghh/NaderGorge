@@ -17,7 +17,18 @@ export const hrPayrollService = {
   runs: async (): Promise<PayrollRunDto[]> => (await apiClient.get('/hr/payroll/runs')).data ?? [],
   run: async (id: string): Promise<EmployeePayrollDto[]> => (await apiClient.get(`/hr/payroll/runs/${id}`)).data ?? [],
   prepare: async (payload: { periodStart: string; periodEnd: string; cutoffAt: string }) => (await apiClient.post('/hr/payroll/runs/prepare', payload)).data,
-  transition: async (id: string, action: 'finance-review' | 'finance-approve' | 'gm-approve' | 'pay' | 'close' | 'return', expectedVersion: number) => (await apiClient.post(`/hr/payroll/runs/${id}/${action}`, { expectedVersion })).data,
+  transition: async (id: string, action: 'finance-review' | 'finance-approve' | 'gm-approve' | 'pay' | 'close' | 'return', expectedVersion: number) => {
+    const payload = { expectedVersion };
+    switch (action) {
+      case 'finance-review': return (await apiClient.post(`/hr/payroll/runs/${id}/finance-review`, payload)).data;
+      case 'finance-approve': return (await apiClient.post(`/hr/payroll/runs/${id}/finance-approve`, payload)).data;
+      case 'gm-approve': return (await apiClient.post(`/hr/payroll/runs/${id}/gm-approve`, payload)).data;
+      case 'pay': return (await apiClient.post(`/hr/payroll/runs/${id}/pay`, payload)).data;
+      case 'close': return (await apiClient.post(`/hr/payroll/runs/${id}/close`, payload)).data;
+      case 'return': return (await apiClient.post(`/hr/payroll/runs/${id}/return`, payload)).data;
+      default: throw new Error('إجراء دورة الرواتب غير معروف');
+    }
+  },
   myPayslips: async (): Promise<PayslipDto[]> => (await apiClient.get('/hr/payroll/self/payslips')).data ?? [],
   myFinancialRequests: async (): Promise<FinancialRequestDto[]> => (await apiClient.get('/hr/payroll/self/financial-requests')).data ?? [],
   submitFinancialRequest: async (payload: { type: FinancialRequestType; amount: number; installments: number; reason: string; attachmentReference: string }) => (await apiClient.post('/hr/payroll/self/financial-requests', payload)).data,

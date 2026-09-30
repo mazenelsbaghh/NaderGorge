@@ -109,7 +109,6 @@ export interface AdvancedReportFilterOptions {
 }
 
 type ApiEnvelope<T> = { data?: T; success?: boolean; message?: string };
-const endpoint = (audience: ReportAudience) => `/${audience}/reports`;
 const unwrap = <T>(payload: ApiEnvelope<T> | T): T =>
   payload && typeof payload === 'object' && 'data' in payload
     ? (payload as ApiEnvelope<T>).data as T
@@ -145,51 +144,61 @@ const serializeQuery = (query: AdvancedReportQuery) => ({
 
 export const advancedReportService = {
   async getCatalog(audience: ReportAudience) {
-    const response = await apiClient.get<ApiEnvelope<AdvancedReportCatalog>>(`${endpoint(audience)}/catalog`);
+    const response = audience === 'admin'
+      ? await apiClient.get<ApiEnvelope<AdvancedReportCatalog>>('/admin/reports/catalog')
+      : await apiClient.get<ApiEnvelope<AdvancedReportCatalog>>('/teacher/reports/catalog');
     return unwrap(response.data);
   },
   async getFilterOptions(audience: ReportAudience) {
-    const response = await apiClient.get<ApiEnvelope<AdvancedReportFilterOptions>>(`${endpoint(audience)}/filter-options`);
+    const response = audience === 'admin'
+      ? await apiClient.get<ApiEnvelope<AdvancedReportFilterOptions>>('/admin/reports/filter-options')
+      : await apiClient.get<ApiEnvelope<AdvancedReportFilterOptions>>('/teacher/reports/filter-options');
     return unwrap(response.data);
   },
   async run(audience: ReportAudience, query: AdvancedReportQuery) {
-    const response = await apiClient.post<ApiEnvelope<AdvancedReportResult>>(
-      `${endpoint(audience)}/execute`, serializeQuery(query),
-    );
+    const payload = serializeQuery(query);
+    const response = audience === 'admin'
+      ? await apiClient.post<ApiEnvelope<AdvancedReportResult>>('/admin/reports/execute', payload)
+      : await apiClient.post<ApiEnvelope<AdvancedReportResult>>('/teacher/reports/execute', payload);
     return unwrap(response.data);
   },
   async listSaved(audience: ReportAudience) {
-    const response = await apiClient.get<ApiEnvelope<SavedAdvancedReport[]>>(
-      `${endpoint(audience)}/definitions`,
-    );
+    const response = audience === 'admin'
+      ? await apiClient.get<ApiEnvelope<SavedAdvancedReport[]>>('/admin/reports/definitions')
+      : await apiClient.get<ApiEnvelope<SavedAdvancedReport[]>>('/teacher/reports/definitions');
     return unwrap(response.data) ?? [];
   },
   async save(audience: ReportAudience, payload: { name: string; configuration: AdvancedReportQuery }) {
-    const response = await apiClient.post<ApiEnvelope<SavedAdvancedReport>>(
-      `${endpoint(audience)}/definitions`, { ...payload, configuration: serializeQuery(payload.configuration) },
-    );
+    const body = { ...payload, configuration: serializeQuery(payload.configuration) };
+    const response = audience === 'admin'
+      ? await apiClient.post<ApiEnvelope<SavedAdvancedReport>>('/admin/reports/definitions', body)
+      : await apiClient.post<ApiEnvelope<SavedAdvancedReport>>('/teacher/reports/definitions', body);
     return unwrap(response.data);
   },
   async update(audience: ReportAudience, id: string, payload: { name: string; configuration: AdvancedReportQuery; version?: number }) {
-    const response = await apiClient.put<ApiEnvelope<SavedAdvancedReport>>(
-      `${endpoint(audience)}/definitions/${id}`, { ...payload, configuration: serializeQuery(payload.configuration) },
-    );
+    const body = { ...payload, configuration: serializeQuery(payload.configuration) };
+    const response = audience === 'admin'
+      ? await apiClient.put<ApiEnvelope<SavedAdvancedReport>>(`/admin/reports/definitions/${id}`, body)
+      : await apiClient.put<ApiEnvelope<SavedAdvancedReport>>(`/teacher/reports/definitions/${id}`, body);
     return unwrap(response.data);
   },
   async remove(audience: ReportAudience, id: string) {
-    await apiClient.delete(`${endpoint(audience)}/definitions/${id}`);
+    if (audience === 'admin') await apiClient.delete(`/admin/reports/definitions/${id}`);
+    else await apiClient.delete(`/teacher/reports/definitions/${id}`);
   },
   async exportFile(audience: ReportAudience, format: 'xlsx' | 'pdf', query: AdvancedReportQuery) {
-    const response = await apiClient.post<Blob>(
-      `${endpoint(audience)}/export/${format}`, serializeQuery(query), { responseType: 'blob' },
-    );
+    const payload = serializeQuery(query);
+    const options = { responseType: 'blob' as const };
+    const response = audience === 'admin'
+      ? await apiClient.post<Blob>(`/admin/reports/export/${format}`, payload, options)
+      : await apiClient.post<Blob>(`/teacher/reports/export/${format}`, payload, options);
     return response.data;
   },
   async exportStudentLedger(audience: ReportAudience, filters: { teacherId?: string; stage?: string; studyTrack?: string }) {
-    const response = await apiClient.get<Blob>(`${endpoint(audience)}/student-ledger/export`, {
-      params: filters,
-      responseType: 'blob',
-    });
+    const options = { params: filters, responseType: 'blob' as const };
+    const response = audience === 'admin'
+      ? await apiClient.get<Blob>('/admin/reports/student-ledger/export', options)
+      : await apiClient.get<Blob>('/teacher/reports/student-ledger/export', options);
     return response.data;
   },
 };

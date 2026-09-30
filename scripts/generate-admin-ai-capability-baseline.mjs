@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const endpointPath = resolve(root, 'tests/endpoint_inventory.json');
@@ -13,8 +14,23 @@ const checkOnly = process.argv.includes('--check');
 
 const strongTerms = /(delete|remove|revoke|reset|password|role|permission|disable|toggle|bulk|finance|payment|wallet|refund|settlement|treasury|expense|salary|payroll|publish|cancel|migrat|transfer|generate)/i;
 const externalTerms = /(whatsapp|bunny|upload|export|download|sync|analy[sz]e)/i;
-const directControllerFamilies = /^(AdminFinance|AdminPlatformFinance|AdminTeacherFinanceCenter|AdminTeacherCodeFinance|AdminSharedPackages|HrApprovals|HrDocumentsAssets|HrLeave|HrPayroll|HrPerformanceCases|HrRecruitmentLifecycle|HrShifts)$/;
-const directControllerOperations = new Set(['AdminController.GetPendingEssays']);
+const reviewedStrongRoutes = new Set(['POST:/admin/watch-requests/{}/approve']);
+const reviewedSharedAdminCommands = new Map([
+  ['POST:/v1/assistant/tasks/my/{}/comments', 'command:AddTaskCommentCommand'],
+  ['POST:/v1/assistant/tasks/my/{}/status', 'command:UpdateTaskStatusCommand'],
+]);
+// These POST handlers only read persisted state or calculate a response. Review
+// each handler and its callees before adding another route to this list.
+const reviewedReadOnlyPostRoutes = new Map([
+  ['POST:/admin/exams/{}/revision-preview', 'preview'],
+  ['POST:/admin/homework/{}/revision-preview', 'preview'],
+  ['POST:/admin/teacher-finance-center/settlements/preview', 'preview'],
+  ['POST:/admin/teacher-finance-center/shared-packages/{}/allocation-preview', 'preview'],
+  ['POST:/hr/admin/shifts/assignments/validate', 'read'],
+  ['POST:/live-support/whatsapp/campaigns/audience/preview', 'preview'],
+  ['POST:/live-support/whatsapp/campaigns/spreadsheet/inspect', 'read'],
+  ['POST:/live-support/whatsapp/preferences/contacts/search', 'read'],
+]);
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -32,11 +48,20 @@ function idPart(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'root';
 }
 
+function routeKey(method, route) {
+  const normalized = route.split('?')[0].toLowerCase()
+    .replace(/\{[^}]+\}/g, '{}')
+    .replace(/^\/api(?=\/)/, '');
+  return `${method}:${normalized}`;
+}
+
 function domainFor(value) {
-  const input = value.toLowerCase();
+  // Preserve CamelCase word boundaries before matching short domain names.
+  // Otherwise ApproveWatchRequest contains "hr" across Watch/Request.
+  const input = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
   if (/(finance|wallet|recharge|payment|treasury|refund|expense|settlement|accounting)/.test(input)) return 'finance';
-  if (/(hr|employee|payroll|leave|recruit|attendance|shift|governance)/.test(input)) return 'hr';
-  if (/(student|user|role|auth|device|profile)/.test(input)) return 'identity';
+  if (/(\bhr\b|employee|payroll|leave|recruit|attendance|shift|governance)/.test(input)) return 'hr';
+  if (/(student|user|role|auth|device|profile|watch)/.test(input)) return 'identity';
   if (/(content|lesson|video|package|subject|teacher|code|exam|question|homework)/.test(input)) return 'content';
   if (/(gift|sale|coupon|purchase|commercial)/.test(input)) return 'commercial';
   if (/(support|chat|crm|operation)/.test(input)) return 'support';
@@ -44,33 +69,47 @@ function domainFor(value) {
   return 'other';
 }
 
-function semantics(method, descriptor) {
-  const external = externalTerms.test(descriptor);
-  const mutation = method !== 'GET' && method !== 'ANY';
-  const effect = mutation ? (external ? 'external-side-effect' : 'mutation') :
-    (/export|download/i.test(descriptor) ? 'export' : /preview/i.test(descriptor) ? 'preview' : 'read');
-  const risk = mutation && strongTerms.test(descriptor) ? 'strong' : mutation ? 'ordinary' : 'none';
+function semantics(method, descriptor, route) {
+  const operation = `${descriptor} ${route}`;
+  const external = externalTerms.test(operation);
+  const reviewedReadEffect = reviewedReadOnlyPostRoutes.get(routeKey(method, route));
+  const mutation = method !== 'GET' && !reviewedReadEffect;
+  const effect = reviewedReadEffect ?? (mutation ? (external ? 'external-side-effect' : 'mutation') :
+    (/export|download/i.test(operation) ? 'export' : /preview/i.test(operation) ? 'preview' : 'read'));
+  const risk = mutation && (method === 'DELETE' || strongTerms.test(operation) || reviewedStrongRoutes.has(routeKey(method, route)))
+    ? 'strong' : mutation ? 'ordinary' : 'none';
   return {
     effect,
     risk,
     confirmation: risk === 'strong' ? 'strong' : risk === 'ordinary' ? 'ordinary' : 'none',
     status: mutation ? 'blocked' : 'candidate',
-    blocker: mutation ? 'Requires a reviewed capability adapter that calls an authoritative application command/service.' : undefined,
+    blocker: mutation ? 'Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts.' : undefined,
   };
 }
 
 function includeEndpoint(endpoint) {
-  return endpoint.controller.startsWith('Admin') ||
+  return /^\/api\/admin(?:\/|$)/.test(endpoint.path) ||
+    (endpoint.controller === 'ContentController' && endpoint.method === 'GET'
+      && /^\/api\/content\/(?:packages$|packages\/[^/]+\/terms$|terms\/[^/]+\/sections$|sections\/[^/]+\/lessons$|lessons\/[^/]+$)/.test(endpoint.path)) ||
+    (endpoint.controller === 'VideoLearningController' && endpoint.action === 'Read'
+      && endpoint.method === 'GET' && endpoint.path === '/api/video-learning/{videoid}') ||
+    (endpoint.controller === 'StudentController' && endpoint.action === 'UploadStudentAudio'
+      && endpoint.method === 'POST' && endpoint.path === '/api/student/upload-audio') ||
+    endpoint.controller === 'LearningCenterController' ||
+    /^\/api\/v1\/assistant\/tasks\/my(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/live-support\/(?:connections|staff)(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/live-support\/whatsapp\/(?:campaigns|preferences|templates)(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/exams\/admin(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/video-learning\/[^/]+\/(?:author|report|ai)$/.test(endpoint.path) ||
+    endpoint.controller.startsWith('Admin') ||
     endpoint.controller.startsWith('Hr') ||
     ['CrmController', 'InternalChatController', 'LiveSupportAdminController', 'LiveSupportAIAdminController', 'WhatsAppController'].includes(endpoint.controller) ||
     endpoint.path.startsWith('/api/hr/');
 }
 
 function createItem(kind, method, route, source, descriptor, authoritativeOperation) {
-  const semantic = semantics(method, descriptor);
+  const semantic = semantics(method, descriptor, route);
   const mutation = semantic.risk !== 'none';
-  const controllerName = descriptor.split('.')[0]?.replace(/Controller$/, '') ?? '';
-  const directControllerWrite = mutation && (directControllerFamilies.test(controllerName) || directControllerOperations.has(descriptor));
   return {
     id: `${kind === 'backend-endpoint' ? 'be' : 'fe'}:${method.toLowerCase()}:${idPart(route)}:${idPart(source.file)}:${source.line}`,
     kind,
@@ -90,9 +129,7 @@ function createItem(kind, method, route, source, descriptor, authoritativeOperat
     audit: mutation ? 'missing' : 'read-evidence',
     refreshScopes: mutation ? [domainFor(`${descriptor} ${route}`)] : [],
     source,
-    ...(semantic.blocker ? { blocker: directControllerWrite
-      ? 'Direct controller database write must be extracted into an authoritative application command/service before adaptation.'
-      : semantic.blocker } : {}),
+    ...(semantic.blocker ? { blocker: semantic.blocker } : {}),
   };
 }
 
@@ -109,17 +146,126 @@ function build() {
     .filter((endpoint) => runtimeKeys.has(`${endpoint.controller.replace(/Controller$/, '')}.${endpoint.action}:${endpoint.method}`));
   if (!endpoints.length) throw new Error('No diagnostic Admin endpoints matched the authoritative runtime inventory.');
   const frontend = JSON.parse(frontendRaw);
-  const items = [
-    ...endpoints.map((endpoint) => createItem(
-      'backend-endpoint', endpoint.method, endpoint.path, endpoint.source,
-      `${endpoint.controller}.${endpoint.action}`,
-      `diagnostic:${endpoint.controller}.${endpoint.action}`,
-    )),
-    ...frontend.calls.map((call) => createItem(
-      'frontend-call', call.method, call.path, call.source,
-      call.source.file,
-      'unresolved:frontend-contract',
-    )),
+  const backendItems = endpoints.map((endpoint) => createItem(
+    'backend-endpoint', endpoint.method, endpoint.path, endpoint.source,
+    `${endpoint.controller}.${endpoint.action}`,
+    reviewedSharedAdminCommands.get(routeKey(endpoint.method, endpoint.path))
+      ?? `diagnostic:${endpoint.controller}.${endpoint.action}`,
+  ));
+  const backendByRoute = new Map();
+  for (const item of backendItems) {
+    const key = routeKey(item.method, item.route);
+    if (backendByRoute.has(key)) throw new Error(`Ambiguous Admin endpoint route: ${key}`);
+    backendByRoute.set(key, item);
+  }
+  const frontendItems = frontend.calls.map((call) => {
+      // The Admin page passes scope="admin" to the shared content-summary panel.
+      const route = call.source.file === 'frontend/src/services/content-service.ts'
+        && call.method === 'GET' && call.path === '/{scope}/content/summary'
+        ? '/admin/content/summary' : call.path;
+      const backend = backendByRoute.get(routeKey(call.method, route));
+      const item = createItem('frontend-call', call.method, route, call.source,
+        call.source.file, backend?.authoritativeOperation ?? 'unresolved:frontend-contract');
+      // An exact route points to one authoritative operation. Its effect and risk
+      // cannot be downgraded by a generic frontend service filename.
+      if (!backend) return item;
+      const matched = {
+        ...item,
+        effect: backend.effect,
+        domain: backend.domain,
+        risk: backend.risk,
+        confirmation: backend.confirmation,
+        status: backend.status,
+        limits: backend.limits,
+        idempotency: backend.idempotency,
+        concurrency: backend.concurrency,
+        audit: backend.audit,
+        refreshScopes: backend.refreshScopes,
+      };
+      if (backend.blocker) matched.blocker = backend.blocker;
+      else delete matched.blocker;
+      return matched;
+    });
+  const selfServicePath = 'frontend/src/services/admin-ai-agent-service.ts';
+  const selfServiceItems = frontendItems.filter((item) => item.source.file === selfServicePath);
+  // The shared player appears in Admin lesson previews. Its calls operate on
+  // the current viewer's playback session, not an Admin business resource.
+  const playbackPath = 'frontend/src/services/video-session-service.ts';
+  const playbackItems = frontendItems.filter((item) => item.source.file === playbackPath
+    && (item.route === '/api/video/session' || item.route.startsWith('/student/video-session')));
+  const reviewedPublicCalls = new Map([
+    ['frontend/src/services/forms-service.ts', new Set([
+      'GET:/public/forms/{slug}', 'POST:/public/forms/{slug}/submit',
+    ])],
+    ['frontend/src/components/video/SecureVideoPlayer.tsx', new Set(['GET:/public/settings'])],
+    ['frontend/src/services/live-support-service.ts', new Set([
+      'GET:/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}',
+    ])],
+  ]);
+  const publicItems = frontendItems.filter((item) =>
+    reviewedPublicCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
+  const authRefreshItems = frontendItems.filter((item) =>
+    item.source.file === 'frontend/src/services/api-client.ts'
+    && item.method === 'POST' && item.route === '/{API_BASE_URL}/auth/refresh');
+  const learningCenterHelperItems = frontendItems.filter((item) =>
+    item.source.file === 'frontend/src/services/learning-center-service.ts'
+    && (item.method === 'GET' || item.method === 'ANY') && item.route === '/{base}/{path}');
+  const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
+  const teacherReportItems = frontendItems.filter((item) =>
+    item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
+  const reviewedTeacherCalls = new Map([
+    ['frontend/src/services/admin-service.ts', new Set([
+      'GET:/teacher/codes/groups', 'GET:/teacher/codes/groups/{id}/details',
+    ])],
+    ['frontend/src/services/teacher-service.ts', new Set([
+      'GET:/teacher/context',
+      'GET:/teacher/content/{contentType}/{id}/subscribers',
+      'GET:/teacher/content/{contentType}/{id}/subscribers/export',
+    ])],
+    ['frontend/src/services/finance-service.ts', new Set([
+      'GET:/teacher/finance/statement', 'GET:/teacher/finance/statement/pdf',
+    ])],
+  ]);
+  const additionalTeacherItems = frontendItems.filter((item) =>
+    reviewedTeacherCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
+  const teacherOnlyItems = [...teacherReportItems, ...additionalTeacherItems];
+  const excludedIds = new Set([
+    ...selfServiceItems, ...playbackItems, ...publicItems, ...authRefreshItems,
+    ...learningCenterHelperItems, ...teacherOnlyItems,
+  ].map((item) => item.id));
+  const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const exclusions = [
+    ...selfServiceItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...playbackItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Current-viewer playback session used by Admin lesson preview is not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...publicItems.map((item) => ({
+      id: item.id,
+      reason: 'public-surface',
+      detail: `Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: ${item.method} ${item.route}`,
+    })),
+    ...authRefreshItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Current-user authentication refresh is transport, not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...learningCenterHelperItems.map((item) => ({
+      id: item.id,
+      reason: 'non-business',
+      detail: `Generic Learning Center read dispatcher; all concrete Admin-accessible backend routes are inventoried: ${item.method} ${item.route}`,
+    })),
+    ...teacherOnlyItems.map((item) => ({
+      id: item.id,
+      reason: 'teacher-surface',
+      detail: `Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: ${item.method} ${item.route}`,
+    })),
   ].sort((left, right) => left.id.localeCompare(right.id));
   const payload = {
     schemaVersion: 1,
@@ -128,10 +274,10 @@ function build() {
     sources: {
       runtime: { path: 'tests/admin_ai_runtime_endpoint_inventory.json', digest: digest(runtimeRaw) },
       frontend: { path: 'tests/admin_ai_frontend_reachable_calls.json', digest: digest(frontendRaw) },
-      semantic: { path: 'scripts/generate-admin-ai-capability-baseline.mjs', digest: digest('heuristic-v1-reviewed-required') },
+      semantic: { path: 'scripts/generate-admin-ai-capability-baseline.mjs', digest: digest(readFileSync(fileURLToPath(import.meta.url))) },
     },
     items,
-    exclusions: [],
+    exclusions,
   };
   payload.digest = digest(stable(payload));
   return payload;
@@ -148,6 +294,7 @@ function markdown(payload) {
     `Digest: \`${payload.digest}\``,
     '',
     `Items: ${payload.items.length}; ${Object.entries(totals).map(([key, count]) => `${key}=${count}`).join(', ')}.`,
+    `Reviewed non-business exclusions: ${payload.exclusions.length}.`,
     '',
     'This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.',
     '',

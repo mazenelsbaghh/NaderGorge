@@ -9,12 +9,16 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "deploy/production/scripts"))
+from ef_migration_inventory import migration_inventory
+
 
 ROOT = Path(__file__).resolve().parents[4]
 MIGRATIONS = ROOT / "backend/src/NaderGorge.Infrastructure/Migrations"
 SNAPSHOT = MIGRATIONS / "AppDbContextModelSnapshot.cs"
-MIGRATION_FILE = re.compile(r"^(\d{14}_[A-Za-z0-9_]+)\.cs$")
 TO_TABLE = re.compile(r'\.ToTable\("([^"]+)"')
+SQL_MANAGED_TABLE = "thanaweya_results"
+SQL_MANAGED_MIGRATION = "20260728210000_AddThanaweyaResults.cs"
 
 
 class InventoryError(RuntimeError):
@@ -27,15 +31,14 @@ def expected_contract(snapshot: Path = SNAPSHOT) -> tuple[list[str], list[str]]:
     tables = sorted(set(TO_TABLE.findall(snapshot.read_text(encoding="utf-8"))))
     if not tables:
         raise InventoryError("EF snapshot did not contain any public tables")
-    migrations = sorted(
-        match.group(1)
-        for path in MIGRATIONS.iterdir()
-        if path.is_file()
-        and not path.is_symlink()
-        and (match := MIGRATION_FILE.fullmatch(path.name))
-    )
+    files = {path.name: path for path in MIGRATIONS.iterdir()
+             if path.is_file() and not path.is_symlink()}
+    migrations, _ = migration_inventory(files, lambda name: files[name].read_text(encoding="utf-8"))
     if not migrations:
-        raise InventoryError("repository does not contain numbered EF migrations")
+        raise InventoryError("repository does not contain registered EF migrations")
+    sql_migration = files.get(SQL_MANAGED_MIGRATION)
+    if sql_migration and "CREATE TABLE IF NOT EXISTS thanaweya_results" in sql_migration.read_text(encoding="utf-8"):
+        tables = sorted(set(tables) | {SQL_MANAGED_TABLE})
     return tables, migrations
 
 
@@ -46,6 +49,9 @@ def compare(actual_path: Path, snapshot: Path = SNAPSHOT) -> dict[str, object]:
     if actual.get("status") != "success" or not isinstance(actual.get("tableCounts"), dict):
         raise InventoryError("actual catalog does not match the successful audit contract")
     expected_tables, expected_migrations = expected_contract(snapshot)
+    files = {path.name: path for path in MIGRATIONS.iterdir()
+             if path.is_file() and not path.is_symlink()}
+    _, unregistered = migration_inventory(files, lambda name: files[name].read_text(encoding="utf-8"))
     actual_tables = sorted(str(value) for value in actual["tableCounts"])
     actual_migrations = actual.get("migrationIds")
     if not isinstance(actual_migrations, list) or not all(
@@ -86,6 +92,7 @@ def compare(actual_path: Path, snapshot: Path = SNAPSHOT) -> dict[str, object]:
         "actualMigrations": actual_migrations,
         "pendingMigrations": pending_migrations,
         "unexpectedMigrations": unexpected_migrations,
+        "unregisteredMigrationSources": unregistered,
     }
 
 
@@ -109,6 +116,7 @@ def main() -> int:
                 "missingTables": payload["missingTables"],
                 "pendingMigrations": payload["pendingMigrations"],
                 "unexpectedMigrations": payload["unexpectedMigrations"],
+                "unregisteredMigrationSources": payload["unregisteredMigrationSources"],
                 "output": str(args.output),
             }
         )

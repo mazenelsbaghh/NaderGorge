@@ -17,15 +17,18 @@ public class TeacherFinanceController : ControllerBase
     private readonly IMediator _mediator;
     private readonly TeacherAuthorizationService _teacherAuthorization;
     private readonly ITeacherFinanceExportService _exportService;
+    private readonly ITeacherStatementService _statement;
 
     public TeacherFinanceController(
         IMediator mediator,
         TeacherAuthorizationService teacherAuthorization,
-        ITeacherFinanceExportService exportService)
+        ITeacherFinanceExportService exportService,
+        ITeacherStatementService statement)
     {
         _mediator = mediator;
         _teacherAuthorization = teacherAuthorization;
         _exportService = exportService;
+        _statement = statement;
     }
 
     private Guid GetUserId() => User.RequireUserId();
@@ -37,6 +40,28 @@ public class TeacherFinanceController : ControllerBase
         if (teacherUserId == null) return Forbid();
         var result = await _mediator.Send(new GetTeacherAccountQuery(teacherUserId.Value), ct);
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("statement")]
+    public async Task<IActionResult> GetStatement([FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default)
+    {
+        if (from > to || page < 1 || pageSize is < 1 or > 100 || page > int.MaxValue / pageSize)
+            return BadRequest(new { success = false, message = "فترة أو صفحة كشف الحساب غير صالحة" });
+        var workspace = await _teacherAuthorization.GetWorkspaceAccessAsync(GetUserId(), ct);
+        if (workspace is null || (!workspace.IsOwner && !workspace.PermissionKeys.Contains("finance"))) return Forbid();
+        var statement = await _statement.GetAsync(workspace.TeacherId, from, to, page, pageSize, ct);
+        return statement is null ? NotFound() : Ok(new { success = true, data = statement });
+    }
+
+    [HttpGet("statement/pdf")]
+    public async Task<IActionResult> ExportStatement([FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        if (from > to) return BadRequest(new { success = false, message = "فترة كشف الحساب غير صالحة" });
+        var workspace = await _teacherAuthorization.GetWorkspaceAccessAsync(GetUserId(), ct);
+        if (workspace is null || (!workspace.IsOwner && !workspace.PermissionKeys.Contains("finance"))) return Forbid();
+        var result = await _statement.ExportPdfAsync(workspace.TeacherId, from, to, ct);
+        return result is null ? NotFound() : File(result.Content, result.ContentType, result.FileName);
     }
 
     [HttpGet("calendar")]

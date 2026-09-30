@@ -120,6 +120,7 @@ public interface IAppDbContext
 
     // Student Notes
     DbSet<StudentNote> StudentNotes { get; }
+    DbSet<AuthoritativeOperationReceipt> AuthoritativeOperationReceipts { get; }
 
     // Phase 2: HR Core
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
@@ -247,6 +248,7 @@ public interface IAppDbContext
     DbSet<AdminAITurn> AdminAITurns { get; }
     DbSet<AdminAITurnStep> AdminAITurnSteps { get; }
     DbSet<AdminAIReadInvocation> AdminAIReadInvocations { get; }
+    DbSet<AdminAIReadBatchReceipt> AdminAIReadBatchReceipts { get; }
     DbSet<AdminAIActionProposal> AdminAIActionProposals { get; }
     DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges { get; }
     DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants { get; }

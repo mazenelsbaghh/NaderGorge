@@ -553,6 +553,11 @@ stage="restore-previous-compose"
 if test '{target.node_id}' = node-3 && grep -q '^  baileys:' "$previous/deploy/production/compose/compose.app.yml"; then
   services="$services baileys"
 fi
+if test '{target.node_id}' = node-3 && \
+   grep -qx 'ADMIN_AI_PROVIDER=codex-cli' /etc/massar/app.env && \
+   grep -q '^  admin-ai-codex:' "$previous/deploy/production/compose/compose.app.yml"; then
+  services="$services admin-ai-codex"
+fi
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true
 compose up -d --no-build --force-recreate --remove-orphans $services
 stage="wait-previous-health"
@@ -870,6 +875,16 @@ compose config -q
 services="{services}"
 if test '{target.node_id}' = node-3 && grep -q '^  baileys:' {release_root}/deploy/production/compose/compose.app.yml; then
   services="$services baileys"
+fi
+if test '{target.node_id}' = node-3 && \
+   grep -qx 'ADMIN_AI_PROVIDER=codex-cli' /etc/massar/app.env && \
+   grep -q '^  admin-ai-codex:' {release_root}/deploy/production/compose/compose.app.yml; then
+  stage="verify-admin-ai-codex"
+  test -r /home/massar-ops/.local/share/massar-auto-repair/codex-home/auth.json
+  systemctl is-active --quiet massar-auto-repair-proxy.service
+  sudo docker network inspect massar-repair-internal >/dev/null
+  sudo install -d -m 2770 -o massar-ops -g 10001 /var/lib/massar/admin-ai-codex/socket
+  services="$services admin-ai-codex"
 fi
 stage="start-compose"
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true

@@ -34,6 +34,7 @@ import {
 import toast from 'react-hot-toast';
 import { TeacherAccountOverview } from '@/features/teacher-finance-center/TeacherAccountOverview';
 import { allocationRuleLabel } from '@/features/teacher-finance-center/TeacherAllocationExplanation';
+import { TeacherStatementPanel } from '@/features/teacher-finance-center/TeacherStatementPanel';
 
 type TabType = 'transactions' | 'payouts';
 
@@ -399,9 +400,12 @@ export default function TeacherFinancePageClient() {
         </button>
       }
     >
+      <div className="mb-8"><TeacherStatementPanel /></div>
+
       <section className="admin-panel mb-8 rounded-2xl p-5" aria-label="ملخص حساب المدرس">
         {accountLoading ? <p role="status">جارٍ تحميل الحساب...</p> : account?.account ? <TeacherAccountOverview account={account.account} showSources /> : <p role="alert">تعذر تحميل الحساب. <button type="button" className="min-h-11 px-3 underline" onClick={() => void fetchAccountSummary()}>إعادة المحاولة</button></p>}
       </section>
+
 
       <section className="mb-8 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

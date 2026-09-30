@@ -164,17 +164,17 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
       </div>
       {canCreate ? <form onSubmit={createExternalRefund} className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-bold">رقم هاتف الطالب</label>
+          <label htmlFor="refund-student-phone" className="mb-1 block text-xs font-bold">رقم هاتف الطالب</label>
           <div className="flex gap-2">
-            <input className="admin-input" value={phone} onChange={event => setPhone(event.target.value)} placeholder="01xxxxxxxxx" />
+            <input id="refund-student-phone" className="admin-input" value={phone} onChange={event => setPhone(event.target.value)} placeholder="01xxxxxxxxx" />
             <button className="admin-btn-ghost shrink-0" type="button" onClick={() => void searchStudent()}>بحث</button>
           </div>
           {students.length > 0 ? <div className="mt-2 divide-y rounded-xl border border-[var(--admin-border)]">{students.map(item => <button key={item.id} type="button" onClick={() => void selectStudent(item.id)} className="flex w-full justify-between p-3 text-right hover:bg-[var(--admin-card-strong)]"><b>{item.fullName}</b><bdi className="font-mono">{item.phoneNumber}</bdi></button>)}</div> : null}
           {student ? <p className="mt-2 rounded-xl bg-emerald-500/10 p-3 text-sm font-bold text-emerald-700">تم اختيار: {student.fullName} — <bdi>{student.phone}</bdi></p> : null}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold">الباقة التي سيتم إلغاؤها</label>
-          <select className="admin-input" required value={grantId} onChange={event => { setGrantId(event.target.value); setPreview(null); setPreviewKey(''); setRefundAmount(''); }} disabled={!student}>
+          <label htmlFor="refund-grant" className="mb-1 block text-xs font-bold">الباقة التي سيتم إلغاؤها</label>
+          <select id="refund-grant" className="admin-input" required value={grantId} onChange={event => { setGrantId(event.target.value); setPreview(null); setPreviewKey(''); setRefundAmount(''); }} disabled={!student}>
             <option value="">اختر باقة</option>
             {studentPackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>
               {item.name} — {purchaseMethodLabels[item.purchaseMethod] || 'طريقة الحصول غير معروفة'}
@@ -205,20 +205,20 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
           </div> : null}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold">الخزنة أو المحفظة التي خرج منها المبلغ</label>
-          <select className="admin-input" required value={treasuryId} onChange={event => setTreasuryId(event.target.value)}>
+          <label htmlFor="refund-treasury" className="mb-1 block text-xs font-bold">الخزنة أو المحفظة التي خرج منها المبلغ</label>
+          <select id="refund-treasury" className="admin-input" required value={treasuryId} onChange={event => setTreasuryId(event.target.value)}>
             <option value="">اختر الخزنة</option>
             {bootstrap?.treasuryAccounts.map(item => <option key={item.id} value={item.id}>{item.name}{item.maskedIdentifier ? ` — ${item.maskedIdentifier}` : ''}</option>)}
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold">المبلغ المرتجع فعلياً (تحدده يدويًا)</label>
-          <input className="admin-input" type="number" min="0.01" max={preview?.remainingRefundableAmount} step="0.01" required value={refundAmount} onChange={event => setRefundAmount(event.target.value)} placeholder="المبلغ بالجنيه" disabled={!preview || preview.remainingRefundableAmount <= 0} />
+          <label htmlFor="refund-amount" className="mb-1 block text-xs font-bold">المبلغ المرتجع فعلياً (تحدده يدويًا)</label>
+          <input id="refund-amount" className="admin-input" type="number" min="0.01" max={preview?.remainingRefundableAmount} step="0.01" required value={refundAmount} onChange={event => setRefundAmount(event.target.value)} placeholder="المبلغ بالجنيه" disabled={!preview || preview.remainingRefundableAmount <= 0} />
           <p className="mt-1 text-xs text-[var(--admin-muted)]">تنفيذ الاسترداد يلغي المنحة دائمًا؛ أرقام الاستخدام للمساعدة في الحساب فقط ولا تقترح مبلغًا.</p>
         </div>
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-bold">سبب الاسترداد</label>
-          <input className="admin-input" required value={reason} onChange={event => setReason(event.target.value)} placeholder="اكتب سبب إلغاء الباقة ورد المبلغ" />
+          <label htmlFor="refund-reason" className="mb-1 block text-xs font-bold">سبب الاسترداد</label>
+          <input id="refund-reason" className="admin-input" required value={reason} onChange={event => setReason(event.target.value)} placeholder="اكتب سبب إلغاء الباقة ورد المبلغ" />
         </div>
         <div className="md:col-span-2 flex justify-end">
           <button className="admin-btn-primary" type="submit" disabled={submitting || previewLoading || !preview || !previewKey || preview.remainingRefundableAmount <= 0 || !student || !grantId || !treasuryId}>{submitting ? 'جارٍ التنفيذ…' : 'إلغاء الباقة وتسجيل الاسترداد'}</button>
@@ -229,7 +229,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     <section className="admin-panel rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">سجل الاستردادات</h2><p className="mt-1 text-xs text-[var(--admin-muted)]">يشمل الاستردادات المسجلة بالمركز المالي واستردادات الرصيد القديمة تلقائياً.</p></div><button className="admin-btn-ghost" type="button" onClick={() => void load()}>تحديث</button></div>
       {error ? <p role="alert" className="mb-3 text-rose-600">{error}</p> : null}
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>السبب</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الإجمالي</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={staff ? `/assistant/students/${row.studentId}` : `/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{canReverse && !row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
+      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>المبلغ المسترد</th><th>سجله أو نفذه</th><th>سبب الاسترداد</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={staff ? `/assistant/students/${row.studentId}` : `/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.processedByName || 'غير مسجل'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{canReverse && !row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
     </section>
   </div>;
 }

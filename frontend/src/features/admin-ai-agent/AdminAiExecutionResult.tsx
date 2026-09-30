@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, CircleX } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleX, LoaderCircle } from 'lucide-react';
 import type { AdminAiExecution } from '@/services/admin-ai-agent-contract';
 export function AdminAiExecutionResult({
   execution,
@@ -7,7 +7,8 @@ export function AdminAiExecutionResult({
 }) {
   const good = execution.status === 'Succeeded';
   const recovery = execution.status === 'RecoveryRequired';
-  const Icon = good ? CheckCircle2 : recovery ? AlertTriangle : CircleX;
+  const pending = execution.status === 'Claimed' || execution.status === 'Executing';
+  const Icon = good ? CheckCircle2 : recovery ? AlertTriangle : pending ? LoaderCircle : CircleX;
   return (
     <section
       aria-label="نتيجة التنفيذ"
@@ -15,10 +16,15 @@ export function AdminAiExecutionResult({
     >
       <h4 className="flex items-center gap-2 font-black">
         <Icon
-          className={`h-5 w-5 ${good ? 'text-[var(--admin-success)]' : 'text-[var(--admin-warning)]'}`}
+          className={`h-5 w-5 ${good ? 'text-[var(--admin-success)]' : pending ? 'text-[var(--admin-accent)]' : 'text-[var(--admin-warning)]'} ${pending ? 'motion-safe:animate-spin' : ''}`}
         />
-        {execution.safeSummaryAr}
+        {pending ? 'جار تنفيذ الإجراء' : execution.safeSummaryAr}
       </h4>
+      {pending && (
+        <p className="mt-2 text-sm text-[var(--admin-muted)]">
+          ستظهر النتيجة هنا عند اكتمال التنفيذ.
+        </p>
+      )}
       {recovery && (
         <p className="mt-2 text-sm text-[var(--admin-warning)]">
           النتيجة تحتاج مصالحة آمنة من المصدر الأصلي. لا تعِد التنفيذ يدويًا.

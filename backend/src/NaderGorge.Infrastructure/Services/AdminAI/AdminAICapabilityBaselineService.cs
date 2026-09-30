@@ -120,19 +120,29 @@ public sealed class AdminAICapabilityBaselineService(IAppDbContext db, IAdminAIA
             throw new InvalidOperationException("Admin AI baseline manifest contract is invalid.");
         if (!requireActivatable) return;
 
-        if (document.RootElement.TryGetProperty("activation", out var activation)
-            && !string.Equals(activation.GetString(), "ready", StringComparison.Ordinal))
+        if (!document.RootElement.TryGetProperty("activation", out var activation)
+            || activation.ValueKind != JsonValueKind.String
+            || !string.Equals(activation.GetString(), "ready", StringComparison.Ordinal))
             throw new InvalidOperationException("Admin AI baseline is not marked ready for activation.");
 
+        var seenItems = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in items.EnumerateArray())
         {
-            var effect = item.TryGetProperty("effect", out var effectValue) ? effectValue.GetString() : null;
-            var status = item.TryGetProperty("status", out var statusValue) ? statusValue.GetString() : null;
-            if (string.Equals(status, "blocked", StringComparison.Ordinal)
-                || string.Equals(effect, "mutation", StringComparison.Ordinal)
-                    && !string.Equals(status, "supported", StringComparison.Ordinal))
+            if (item.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException("Admin AI baseline contains an invalid capability item.");
+            var identity = item.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String
+                ? id.GetString()
+                : item.TryGetProperty("key", out var key) && key.ValueKind == JsonValueKind.String ? key.GetString() : null;
+            if (string.IsNullOrWhiteSpace(identity) || !seenItems.Add(identity))
+                throw new InvalidOperationException("Admin AI baseline contains a missing or duplicate capability identity.");
+            var status = item.TryGetProperty("status", out var statusValue) && statusValue.ValueKind == JsonValueKind.String
+                ? statusValue.GetString()
+                : null;
+            if (!string.Equals(status, "supported", StringComparison.Ordinal))
                 throw new InvalidOperationException("Admin AI baseline still contains a current business capability gap.");
         }
+        if (seenItems.Count == 0)
+            throw new InvalidOperationException("Admin AI baseline cannot be activated without capabilities.");
 
         if (document.RootElement.TryGetProperty("exclusions", out var exclusions)
             && exclusions.ValueKind == JsonValueKind.Array

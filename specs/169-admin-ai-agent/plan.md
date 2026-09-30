@@ -1,5 +1,7 @@
 # Implementation Plan: Admin AI Agent
 
+> **2026-09-29 provider amendment:** The owner authorized implementation and selected Codex CLI for the Admin AI provider. The original Gemini design below records the initial plan; its provider choice and release-acceptance references are superseded by `docs/production/admin-ai-codex-cli.md` and `verification/real-provider.md`. The full Admin capability and verification gates still apply. Source preparation is authorized; publication and production activation are not authorized in this run.
+
 **Logical Feature**: `169-admin-ai-agent`
 **Workspace Branch**: planning-only; no branch was created or switched because implementation is not authorized and the worktree already contains owner changes
 **Date**: 2026-08-11

@@ -91,7 +91,13 @@ function runScopedBullMqJobId(physicalBaseJobId: string, generationRunId: string
   return `${sanitizeBullMqJobId(physicalBaseJobId).slice(0, baseLength)}${runSuffix}`;
 }
 
-export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStreamId: string, fields: string[]): Promise<IngestResult> {
+export async function ingestStreamJob(
+  redis: Redis,
+  queues: QueueSet,
+  messageStreamId: string,
+  fields: string[],
+  isCancelled: (jobId: string) => Promise<boolean> = isJobCancellationMarked,
+): Promise<IngestResult> {
   const obj: Record<string, string | undefined> = {};
   for (let i = 0; i < fields.length; i += 2) {
     const key = fields[i];
@@ -128,7 +134,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     : undefined;
   logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
 
-  if ((jobType === 'essay' || jobType === 'homework essay') && await isJobCancellationMarked(targetJobId)) {
+  if ((jobType === 'essay' || jobType === 'homework essay') && await isCancelled(targetJobId)) {
     await acknowledge(redis, messageStreamId);
     return { action: 'skipped-existing', targetJobId };
   }
@@ -152,7 +158,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     }
   }
 
-  if (await isJobCancellationMarked(targetJobId) || await isJobCancellationMarked(logicalJobId)) {
+  if (await isCancelled(targetJobId) || await isCancelled(logicalJobId)) {
     logQueueEvent('job-stream', 'Skipping cancelled job ingestion.', { jobId: targetJobId });
     await acknowledge(redis, messageStreamId);
     return { action: 'skipped-existing', targetJobId };

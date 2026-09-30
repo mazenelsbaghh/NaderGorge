@@ -3,8 +3,11 @@ using System.Text.Json;
 using System.Data;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
+using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -22,23 +25,58 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
 
     public async Task<AdminAIExecutionResultDto> ExecuteAsync(Guid actorId, Guid proposalId, string idempotencyKey, CancellationToken ct)
     {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                return await ExecuteOnceAsync(actorId, proposalId, idempotencyKey, ct);
+            }
+            catch (ClaimConflictException exception)
+            {
+                if (attempt == 2)
+                    throw new InvalidOperationException("Concurrent Admin AI execution claim could not be reconciled.", exception);
+                // No adapter has run yet. Discard EF's rolled-back claim and read the
+                // winning execution in a fresh serializable transaction.
+                if (_db is DbContext context) context.ChangeTracker.Clear();
+                await Task.Delay(25 * (attempt + 1), ct);
+            }
+        }
+        throw new InvalidOperationException("Concurrent Admin AI execution claim could not be reconciled.");
+    }
+
+    private async Task<AdminAIExecutionResultDto> ExecuteOnceAsync(Guid actorId, Guid proposalId, string idempotencyKey, CancellationToken ct)
+    {
         await _access.RequireCurrentAdminAsync(actorId, null, ct);
         if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > 200) throw new ArgumentException("A bounded idempotency key is required.");
         var digest = _protector.Digest("action-idempotency", Encoding.UTF8.GetBytes($"{actorId:N}:{idempotencyKey}"));
-        await using var transaction = await BeginSerializableIfSupportedAsync(ct);
+        await using var claimTransaction = await BeginSerializableIfSupportedAsync(ct);
         var proposal = await _db.AdminAIActionProposals.SingleOrDefaultAsync(x => x.Id == proposalId && x.ActorAdminUserId == actorId, ct) ?? throw new KeyNotFoundException();
         var existing = await FindExistingAsync(actorId, proposal, digest, ct);
         if (existing is not null)
         {
-            if (transaction is not null) await transaction.CommitAsync(ct);
+            if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
             return Dto(existing);
         }
         if (proposal.Status != AdminAIProposalStatus.Confirming || proposal.ExpiresAt <= DateTime.UtcNow) throw new InvalidOperationException("Proposal is not executable.");
         if (!_adapters.TryGetValue(proposal.CapabilityKey, out var adapter)) throw new NotSupportedException("Authoritative action adapter is unavailable.");
         var plaintext = _protector.Unprotect("proposal-payload", new AdminAIProtectedValue(proposal.ProtectedNormalizedPayload, proposal.PayloadHash));
         var input = JsonSerializer.Deserialize<JsonElement>(plaintext);
-        var preview = await adapter.PreviewAsync(actorId, input, ct);
-        if (!StringComparer.Ordinal.Equals(preview.StateFingerprint, proposal.StateFingerprint)) { proposal.Status = AdminAIProposalStatus.Invalidated; proposal.InvalidatedReasonCode = "stale_state"; proposal.Version++; await _db.SaveChangesAsync(ct); throw new InvalidOperationException("Proposal state changed."); }
+        AdminAIActionPreview preview;
+        try
+        {
+            preview = await adapter.PreviewAsync(actorId, input, ct);
+        }
+        catch (AdminAIActionPreviewUnavailableException)
+        {
+            await InvalidateBeforeEffectAsync(proposal, claimTransaction, ct);
+            throw new InvalidOperationException("Proposal target changed.");
+        }
+        // PostgreSQL char(64) pads a shorter opaque fingerprint on read.
+        if (!StringComparer.Ordinal.Equals(preview.StateFingerprint, proposal.StateFingerprint.TrimEnd(' ')))
+        {
+            await InvalidateBeforeEffectAsync(proposal, claimTransaction, ct);
+            throw new InvalidOperationException("Proposal state changed.");
+        }
         var execution = new AdminAIActionExecution { ProposalId = proposalId, ActorAdminUserId = actorId, CapabilityKey = proposal.CapabilityKey, CapabilityVersion = proposal.CapabilityVersion, IdempotencyDigest = digest, PayloadHash = proposal.PayloadHash, AuthoritativeOperation = adapter.GetType().FullName ?? adapter.GetType().Name, Status = AdminAIExecutionStatus.Claimed, TraceId = Guid.NewGuid().ToString("N"), ClaimedAt = DateTime.UtcNow };
         // The execution id is generated client-side by BaseEntity. Persist the same
         // deterministic identity before invoking an external provider so an
@@ -47,68 +85,96 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         _db.AdminAIActionExecutions.Add(execution); proposal.Status = AdminAIProposalStatus.Executing; proposal.Version++;
         if (_audit is not null)
             await _audit.WriteAsync("ExecutionStarted", actorId, proposal.ConversationId, proposal.TurnId, proposal.Id, new { ExecutionId = execution.Id, execution.CapabilityKey, AffectedCount = 0 }, ct);
-        await _db.SaveChangesAsync(ct);
         byte[]? securePlaintext = null;
-        if (proposal.SecureInputGrantId is not null)
-        {
-            if (adapter is not IAdminAISecureActionCapability secureAdapter)
-                throw new InvalidOperationException("The proposal has secure input but its authoritative adapter does not accept it.");
-            var grant = await _db.AdminAISecureInputGrants.AsNoTracking()
-                .SingleAsync(x => x.Id == proposal.SecureInputGrantId.Value && x.ProposalId == proposalId && x.ActorAdminUserId == actorId, ct);
-            if (!StringComparer.Ordinal.Equals(grant.InputKind, secureAdapter.SecureInputKind))
-                throw new InvalidOperationException("Secure input kind does not match the authoritative adapter.");
-            var protectedInput = await _secureInputs.ConsumeAsync(actorId, proposalId, ct);
-            securePlaintext = _protector.Unprotect($"secure-input:{grant.InputKind}", protectedInput);
-        }
-        else if (adapter is IAdminAISecureActionCapability)
-        {
-            throw new InvalidOperationException("The authoritative adapter requires secure input.");
-        }
-        AdminAIActionOutcome outcome;
         try
         {
-            outcome = adapter is IAdminAISecureActionCapability secureAdapter
-                ? await secureAdapter.ExecuteSecureAsync(actorId, input, securePlaintext!, execution.ExternalOperationId, ct)
-                : await adapter.ExecuteAsync(actorId, input, execution.ExternalOperationId, ct);
-        }
-        catch (TimeoutException)
-        {
-            await MarkRecoveryRequiredAsync(execution, proposal, ct);
-            if (transaction is not null) await transaction.CommitAsync(ct);
-            return Dto(execution);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            await MarkRecoveryRequiredAsync(execution, proposal, ct);
-            if (transaction is not null) await transaction.CommitAsync(ct);
+            if (proposal.SecureInputGrantId is not null)
+            {
+                if (adapter is not IAdminAISecureActionCapability secureAdapter)
+                    throw new InvalidOperationException("The proposal has secure input but its authoritative adapter does not accept it.");
+                var grant = await _db.AdminAISecureInputGrants.AsNoTracking()
+                    .SingleAsync(x => x.Id == proposal.SecureInputGrantId.Value && x.ProposalId == proposalId && x.ActorAdminUserId == actorId, ct);
+                if (!StringComparer.Ordinal.Equals(grant.InputKind, secureAdapter.SecureInputKind))
+                    throw new InvalidOperationException("Secure input kind does not match the authoritative adapter.");
+                var protectedInput = await _secureInputs.ConsumeAsync(actorId, proposalId, ct);
+                securePlaintext = _protector.Unprotect($"secure-input:{grant.InputKind}", protectedInput);
+            }
+            else if (adapter is IAdminAISecureActionCapability)
+            {
+                throw new InvalidOperationException("The authoritative adapter requires secure input.");
+            }
+
+            // Persist the unique execution identity before any authoritative effect.
+            // A crash or ambiguous exception must leave a durable claim that a retry
+            // can replay, rather than running the effect a second time.
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+                if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+            }
+            catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
+            {
+                throw new ClaimConflictException(exception);
+            }
+
+            AdminAIActionOutcome outcome;
+            try
+            {
+                outcome = adapter is IAdminAISecureActionCapability secureAdapter
+                    ? await secureAdapter.ExecuteSecureAsync(actorId, input, securePlaintext!, execution.ExternalOperationId, ct)
+                    : await adapter.ExecuteAsync(actorId, input, execution.ExternalOperationId, ct);
+            }
+            // Once the adapter starts, even an unexpected exception can follow a
+            // committed business effect. Keep the durable claim and require review.
+            catch (Exception)
+            {
+                await MarkRecoveryRequiredAsync(execution, proposal, CancellationToken.None);
+                return Dto(execution);
+            }
+
+            execution.Status = outcome.Status; execution.SafeResultJson = JsonSerializer.Serialize(outcome.SafeResult); execution.AffectedCount = outcome.AffectedCount; execution.SucceededCount = outcome.SucceededCount; execution.SkippedCount = outcome.SkippedCount; execution.FailedCount = outcome.FailedCount; execution.RefreshScopesJson = JsonSerializer.Serialize(outcome.RefreshScopes); execution.OriginalAuditLogId = outcome.OriginalAuditLogId; execution.CompletedAt = DateTime.UtcNow; execution.Version++;
+            if (outcome.Items is not null)
+            {
+                foreach (var item in outcome.Items)
+                {
+                    execution.Items.Add(new AdminAIActionExecutionItem
+                    {
+                        ItemSequence = item.Sequence,
+                        SafeItemReference = item.SafeReference,
+                        ItemReferenceHash = _protector.Digest("bulk-item-reference", Encoding.UTF8.GetBytes(item.SafeReference)),
+                        Status = item.Status,
+                        SafeResultJson = JsonSerializer.Serialize(item.SafeResult),
+                        FailureCode = item.FailureCode
+                    });
+                }
+            }
+            proposal.Status = outcome.Status == AdminAIExecutionStatus.Succeeded ? AdminAIProposalStatus.Succeeded : outcome.Status == AdminAIExecutionStatus.PartiallySucceeded ? AdminAIProposalStatus.PartiallySucceeded : AdminAIProposalStatus.Failed; proposal.CompletedAt = DateTime.UtcNow; proposal.Version++;
+            if (_audit is not null)
+                await _audit.WriteAsync(TerminalAuditEvent(outcome.Status), actorId, proposal.ConversationId, proposal.TurnId, proposal.Id, new { ExecutionId = execution.Id, execution.CapabilityKey, outcome.AffectedCount, outcome.OriginalAuditLogId }, ct);
+            await _db.SaveChangesAsync(ct);
             return Dto(execution);
         }
         finally
         {
             if (securePlaintext is not null) CryptographicOperations.ZeroMemory(securePlaintext);
         }
-        execution.Status = outcome.Status; execution.SafeResultJson = JsonSerializer.Serialize(outcome.SafeResult); execution.AffectedCount = outcome.AffectedCount; execution.SucceededCount = outcome.SucceededCount; execution.SkippedCount = outcome.SkippedCount; execution.FailedCount = outcome.FailedCount; execution.RefreshScopesJson = JsonSerializer.Serialize(outcome.RefreshScopes); execution.OriginalAuditLogId = outcome.OriginalAuditLogId; execution.CompletedAt = DateTime.UtcNow; execution.Version++;
-        if (outcome.Items is not null)
+    }
+
+    private async Task InvalidateBeforeEffectAsync(
+        AdminAIActionProposal proposal, IDbContextTransaction? claimTransaction, CancellationToken ct)
+    {
+        proposal.Status = AdminAIProposalStatus.Invalidated;
+        proposal.InvalidatedReasonCode = "stale_state";
+        proposal.Version++;
+        try
         {
-            foreach (var item in outcome.Items)
-            {
-                execution.Items.Add(new AdminAIActionExecutionItem
-                {
-                    ItemSequence = item.Sequence,
-                    SafeItemReference = item.SafeReference,
-                    ItemReferenceHash = _protector.Digest("bulk-item-reference", Encoding.UTF8.GetBytes(item.SafeReference)),
-                    Status = item.Status,
-                    SafeResultJson = JsonSerializer.Serialize(item.SafeResult),
-                    FailureCode = item.FailureCode
-                });
-            }
+            await _db.SaveChangesAsync(ct);
+            if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
         }
-        proposal.Status = outcome.Status == AdminAIExecutionStatus.Succeeded ? AdminAIProposalStatus.Succeeded : outcome.Status == AdminAIExecutionStatus.PartiallySucceeded ? AdminAIProposalStatus.PartiallySucceeded : AdminAIProposalStatus.Failed; proposal.CompletedAt = DateTime.UtcNow; proposal.Version++;
-        if (_audit is not null)
-            await _audit.WriteAsync(TerminalAuditEvent(outcome.Status), actorId, proposal.ConversationId, proposal.TurnId, proposal.Id, new { ExecutionId = execution.Id, execution.CapabilityKey, outcome.AffectedCount, outcome.OriginalAuditLogId }, ct);
-        await _db.SaveChangesAsync(ct);
-        if (transaction is not null) await transaction.CommitAsync(ct);
-        return Dto(execution);
+        catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
+        {
+            throw new ClaimConflictException(exception);
+        }
     }
 
     private async Task MarkRecoveryRequiredAsync(AdminAIActionExecution execution, AdminAIActionProposal proposal, CancellationToken ct)
@@ -135,6 +201,16 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         AdminAIExecutionStatus.RecoveryRequired => "ExecutionRecoveryRequired",
         _ => "ExecutionFailed"
     };
+
+    private static bool IsClaimConflict(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+            if (current is PostgresException postgres && postgres.SqlState is PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.UniqueViolation)
+                return true;
+        return false;
+    }
+
+    private sealed class ClaimConflictException(Exception inner) : Exception("Concurrent Admin AI execution claim conflicted.", inner);
 
     private async Task<AdminAIActionExecution?> FindExistingAsync(Guid actorId, AdminAIActionProposal proposal, string digest, CancellationToken ct)
     {

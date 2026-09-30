@@ -137,6 +137,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
     public DbSet<ParentDeviceToken> ParentDeviceTokens => Set<ParentDeviceToken>();
     public DbSet<StudentNote> StudentNotes => Set<StudentNote>();
+    public DbSet<AuthoritativeOperationReceipt> AuthoritativeOperationReceipts => Set<AuthoritativeOperationReceipt>();
 
     // Phase 2: HR Core
     public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
@@ -265,6 +266,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<AdminAITurn> AdminAITurns => Set<AdminAITurn>();
     public DbSet<AdminAITurnStep> AdminAITurnSteps => Set<AdminAITurnStep>();
     public DbSet<AdminAIReadInvocation> AdminAIReadInvocations => Set<AdminAIReadInvocation>();
+    public DbSet<AdminAIReadBatchReceipt> AdminAIReadBatchReceipts => Set<AdminAIReadBatchReceipt>();
     public DbSet<AdminAIActionProposal> AdminAIActionProposals => Set<AdminAIActionProposal>();
     public DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges => Set<AdminAIConfirmationChallenge>();
     public DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants => Set<AdminAISecureInputGrant>();
@@ -1404,6 +1406,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("video_overrides");
             e.HasKey(o => o.Id);
+            e.Property(o => o.OperationId).HasMaxLength(200);
+            e.HasIndex(o => o.OperationId).IsUnique().HasFilter("\"OperationId\" IS NOT NULL");
+            e.HasIndex(o => o.WatchRequestId);
             e.HasIndex(o => o.UserId);
             e.HasIndex(o => o.LessonVideoId);
             e.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId);
@@ -1716,6 +1721,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(ep => ep.BasicSalary).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(ep => ep.StandardStartTime).IsRequired();
             e.Property(ep => ep.TargetDailyHours).IsRequired();
+        });
+
+        modelBuilder.Entity<AuthoritativeOperationReceipt>(e =>
+        {
+            e.ToTable("authoritative_operation_receipts");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.OperationId).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Scope).HasMaxLength(100).IsRequired();
+            e.Property(item => item.RequestHash).HasMaxLength(64).IsRequired();
+            e.Property(item => item.SafeResultJson).HasMaxLength(8192);
+            e.HasIndex(item => item.OperationId).IsUnique();
         });
 
         modelBuilder.Entity<HrIdempotencyRecord>(e =>
@@ -2579,6 +2595,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("teacher_financial_allocations");
             e.HasKey(x => x.Id);
+            e.Property(x => x.ReviewOperationId).HasMaxLength(200);
+            e.Property(x => x.ReviewNote).HasMaxLength(1000);
+            e.HasIndex(x => x.ReviewOperationId).IsUnique().HasFilter("\"ReviewOperationId\" IS NOT NULL");
             e.Property(x => x.AllocationMode).HasConversion<int>();
             e.Property(x => x.ReviewStatus).HasConversion<int>();
             e.Property(x => x.PayoutStatus).HasConversion<int>();
@@ -4013,6 +4032,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("platform_refunds", table => table.HasCheckConstraint("CK_platform_refunds_amounts", "\"PlatformAmount\" >= 0 AND \"TeacherAmount\" >= 0 AND (\"PlatformAmount\" + \"TeacherAmount\") > 0"));
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.OriginalSourceType, x.OriginalSourceId });
+            e.HasIndex(x => x.AccessGrantId).IsUnique().HasFilter("\"AccessGrantId\" IS NOT NULL");
             e.HasIndex(x => x.Status);
             e.Property(x => x.OriginalSourceType).HasMaxLength(80).IsRequired();
             e.Property(x => x.PlatformAmount).HasColumnType("numeric(18,2)");
@@ -4021,6 +4041,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
             e.Property(x => x.PaymentReference).HasMaxLength(120);
+            e.HasOne<StudentAccessGrant>().WithMany().HasForeignKey(x => x.AccessGrantId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
         });

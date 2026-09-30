@@ -50,6 +50,8 @@ public class LessonProgress : BaseEntity
 
 public class VideoOverride : BaseEntity
 {
+    public string? OperationId { get; set; }
+    public Guid? WatchRequestId { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

@@ -67,7 +67,7 @@ public sealed class AdminAIMigrationTests
 
         Assert.Equal("preserve-me", await ScalarAsync<string>(connection,
             "SELECT value FROM admin_ai_existing_data_sentinel WHERE id = 1"));
-        Assert.Equal(14L, await ScalarAsync<long>(connection,
+        Assert.Equal(15L, await ScalarAsync<long>(connection,
             "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE 'admin_ai_%' AND tablename <> 'admin_ai_existing_data_sentinel'"));
 
         var nonRestrictForeignKeys = await ScalarAsync<long>(connection, """

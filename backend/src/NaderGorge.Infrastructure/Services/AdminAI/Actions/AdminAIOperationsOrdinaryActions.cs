@@ -13,7 +13,8 @@ public sealed class AdminAICreateTaskAction(IMediator mediator, IAdminAIActionPr
 {
     public override string Key => "admin.operations.task.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateTaskInput input, Guid actorId, string operationId) =>
-        new CreateTaskCommand(input.Title, input.Description, input.AssigneeId, input.Priority, input.DueDate, actorId);
+        new CreateTaskCommand(input.Title, input.Description, input.AssigneeId, input.Priority, input.DueDate, actorId)
+        { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { taskId = response.Data }, 1, ["operations-tasks", "internal-chat"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "internal-chat"]);
@@ -25,7 +26,7 @@ public sealed class AdminAIUpdateTaskStatusAction(IMediator mediator, IAdminAIAc
 {
     public override string Key => "admin.operations.task.status.update";
     protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIUpdateTaskStatusInput input, Guid actorId, string operationId) =>
-        new UpdateTaskStatusCommand(input.TaskId, input.Status, actorId);
+        new UpdateTaskStatusCommand(input.TaskId, input.Status, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<bool> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { updated = response.Data }, 1, ["operations-tasks"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks"]);
@@ -37,8 +38,22 @@ public sealed class AdminAIAddTaskCommentAction(IMediator mediator, IAdminAIActi
 {
     public override string Key => "admin.operations.task-comment.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAIAddTaskCommentInput input, Guid actorId, string operationId) =>
-        new AddTaskCommentCommand(input.TaskId, actorId, input.Content, input.AttachmentUrl);
+        new AddTaskCommentCommand(input.TaskId, actorId, input.Content, input.AttachmentUrl)
+        { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { commentId = response.Data }, 1, ["operations-tasks", "task-comments"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "task-comments"]);
+}
+
+public sealed record AdminAIResolveTaskApprovalInput(Guid TaskId, bool Approve, string? RejectionReason);
+public sealed class AdminAIResolveTaskApprovalAction(IMediator mediator, IAdminAIActionPreviewSource preview)
+    : AdminAIMediatRActionCapability<AdminAIResolveTaskApprovalInput, ApiResponse<bool>>(mediator, preview)
+{
+    public override string Key => "admin.operations.task.approval.resolve";
+    protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIResolveTaskApprovalInput input, Guid actorId, string operationId) =>
+        new AdminResolveApprovalCommand(input.TaskId, actorId, input.Approve, input.RejectionReason)
+        { OperationId = operationId };
+    protected override AdminAIActionOutcome ToOutcome(ApiResponse<bool> response) => response.Success
+        ? AdminAIActionOutcomeFactory.Success(new { resolved = response.Data }, 1, ["operations-tasks", "media-pipelines", "task-comments"])
+        : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "media-pipelines", "task-comments"]);
 }

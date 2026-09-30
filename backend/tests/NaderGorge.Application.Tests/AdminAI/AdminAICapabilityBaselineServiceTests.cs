@@ -54,6 +54,40 @@ public sealed class AdminAICapabilityBaselineServiceTests
         Assert.Equal(AdminAICapabilityBaselineStatus.Draft, draft.Status);
     }
 
+    [Theory]
+    [InlineData("read")]
+    [InlineData("preview")]
+    [InlineData("export")]
+    [InlineData("external-side-effect")]
+    public async Task Activation_RejectsUnreviewedCurrentBusinessEffect(string effect)
+    {
+        await using var db = CreateDb();
+        var actor = Guid.NewGuid();
+        var draft = Baseline("candidate", "ready", "candidate", AdminAICapabilityBaselineStatus.Draft, effect);
+        db.AdminAICapabilityBaselines.Add(draft);
+        await db.SaveChangesAsync();
+        var service = new AdminAICapabilityBaselineService(db, new AllowAccess(actor));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ActivateAsync(actor, draft.Id, default));
+
+        Assert.Equal(AdminAICapabilityBaselineStatus.Draft, draft.Status);
+    }
+
+    [Fact]
+    public async Task Activation_RejectsDuplicateCapabilityIdentity()
+    {
+        await using var db = CreateDb();
+        var actor = Guid.NewGuid();
+        var draft = Baseline("candidate", "ready", "supported", AdminAICapabilityBaselineStatus.Draft);
+        draft.SafeManifestJson = """{"activation":"ready","items":[{"id":"same","effect":"read","status":"supported"},{"id":"same","effect":"mutation","status":"supported"}],"exclusions":[]}""";
+        draft.ManifestHash = Hash(draft.SafeManifestJson);
+        db.AdminAICapabilityBaselines.Add(draft);
+        await db.SaveChangesAsync();
+        var service = new AdminAICapabilityBaselineService(db, new AllowAccess(actor));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ActivateAsync(actor, draft.Id, default));
+    }
+
     [Fact]
     public async Task Draft_RejectsManifestHashMismatchWithoutWriting()
     {
@@ -68,9 +102,9 @@ public sealed class AdminAICapabilityBaselineServiceTests
         Assert.Empty(db.AdminAICapabilityBaselines);
     }
 
-    private static AdminAICapabilityBaseline Baseline(string version, string activation, string status, AdminAICapabilityBaselineStatus baselineStatus)
+    private static AdminAICapabilityBaseline Baseline(string version, string activation, string status, AdminAICapabilityBaselineStatus baselineStatus, string effect = "mutation")
     {
-        var json = Manifest(activation, status);
+        var json = Manifest(activation, status, effect);
         return new AdminAICapabilityBaseline
         {
             Version = version,
@@ -85,8 +119,8 @@ public sealed class AdminAICapabilityBaselineServiceTests
         };
     }
 
-    private static string Manifest(string activation, string status) =>
-        $$"""{"activation":"{{activation}}","items":[{"effect":"mutation","status":"{{status}}"}],"exclusions":[]}""";
+    private static string Manifest(string activation, string status, string effect = "mutation") =>
+        $$"""{"activation":"{{activation}}","items":[{"id":"capability-1","effect":"{{effect}}","status":"{{status}}"}],"exclusions":[]}""";
 
     private static string Hash(string value) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));

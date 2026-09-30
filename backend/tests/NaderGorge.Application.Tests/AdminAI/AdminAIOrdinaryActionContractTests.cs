@@ -7,6 +7,8 @@ using NaderGorge.Infrastructure.Services.AdminAI;
 using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Admin.VideoTypes;
+using NaderGorge.Application.Features.Admin.VideoTypes.Commands;
 using MediatR;
 using NaderGorge.Application.Features.AdminAI.Catalog;
 
@@ -32,6 +34,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         var command = Assert.IsType<AddStudentNoteCommand>(mediator.Request);
         Assert.Equal(actor, command.AdminId);
         Assert.Equal(input.StudentId, command.StudentId);
+        Assert.Equal("execution-1", command.OperationId);
         Assert.Equal(1, mediator.SendCalls);
         Assert.Equal(AdminAIExecutionStatus.Succeeded, outcome.Status);
     }
@@ -44,6 +47,91 @@ public sealed class AdminAIOrdinaryActionContractTests
         var json = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"studentId\":\"00000000-0000-0000-0000-000000000001\",\"content\":\"x\",\"isPinned\":false,\"extra\":true}");
         await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => adapter.ExecuteAsync(Guid.NewGuid(), json, "execution-1", default));
         Assert.Equal(0, mediator.SendCalls);
+    }
+
+    [Fact]
+    public async Task SubjectCreationAdapter_BindsActorAndOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var adapter = new AdminAICreateSubjectAction(mediator, new PreviewSource());
+
+        await adapter.ExecuteAsync(actor, new AdminAICreateSubjectInput("History", "Course"),
+            "subject-execution-1", default);
+
+        var command = Assert.IsType<CreateSubjectCommand>(mediator.Request);
+        Assert.Equal(actor, command.ActorUserId);
+        Assert.Equal("subject-execution-1", command.OperationId);
+    }
+
+    [Fact]
+    public async Task SubjectUpdateAdapter_BindsActorAndOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var adapter = new AdminAIUpdateSubjectAction(mediator, new PreviewSource());
+
+        await adapter.ExecuteAsync(actor, new AdminAIUpdateSubjectInput(Guid.NewGuid(), "History", "Course"),
+            "subject-update-1", default);
+
+        var command = Assert.IsType<UpdateSubjectCommand>(mediator.Request);
+        Assert.Equal(actor, command.ActorUserId);
+        Assert.Equal("subject-update-1", command.OperationId);
+    }
+
+    [Fact]
+    public async Task VideoTypeAdapters_BindOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var preview = new PreviewSource();
+        await new AdminAICreateVideoTypeAction(mediator, preview).ExecuteAsync(actor,
+            new AdminAICreateVideoTypeInput("Lesson", 1, true), "video-type-create-1", default);
+        var create = Assert.IsType<CreateVideoTypeCommand>(mediator.Request);
+        Assert.Equal(actor, create.AdminUserId);
+        Assert.Equal("video-type-create-1", create.OperationId);
+
+        await new AdminAIUpdateVideoTypeAction(mediator, preview).ExecuteAsync(actor,
+            new AdminAIUpdateVideoTypeInput(Guid.NewGuid(), "Review", 2), "video-type-update-1", default);
+        var update = Assert.IsType<UpdateVideoTypeCommand>(mediator.Request);
+        Assert.Equal(actor, update.AdminUserId);
+        Assert.Equal("video-type-update-1", update.OperationId);
+    }
+
+    [Fact]
+    public async Task OrdinaryAdapters_AcceptOnlyExactCamelCaseWireFields()
+    {
+        var mediator = new CapturingMediator();
+        var preview = new PreviewSource();
+        var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(mediator, preview);
+        var wireOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        };
+
+        foreach (var adapter in adapters)
+        {
+            var wireInput = System.Text.Json.JsonSerializer.SerializeToElement(InputFor(adapter.Key), wireOptions);
+            await adapter.PreviewAsync(Guid.NewGuid(), wireInput, default);
+        }
+        Assert.Equal(adapters.Count, preview.Calls);
+
+        var note = adapters.Single(adapter => adapter.Key == "admin.identity.student-note.create");
+        var actor = Guid.NewGuid();
+        var student = Guid.NewGuid();
+        var valid = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"studentId\":\"{student:D}\",\"content\":\"safe\",\"isPinned\":true}}");
+        await note.ExecuteAsync(actor, valid, "operation-1", default);
+        var command = Assert.IsType<AddStudentNoteCommand>(mediator.Request);
+        Assert.Equal(student, command.StudentId);
+        Assert.Equal(actor, command.AdminId);
+        Assert.Equal("operation-1", command.OperationId);
+
+        var wrongCase = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"StudentId\":\"{student:D}\",\"content\":\"safe\",\"isPinned\":true}}");
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
+            note.ExecuteAsync(actor, wrongCase, "operation-2", default));
+        Assert.Equal(1, mediator.SendCalls);
     }
 
     [Fact]
@@ -108,11 +196,13 @@ public sealed class AdminAIOrdinaryActionContractTests
         var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(mediator, preview);
         var expected = new[]
         {
-            "admin.assessment.community-post.approve", "admin.assessment.lesson-comment.approve",
+            "admin.assessment.community-comment.approve", "admin.assessment.community-post.approve",
+            "admin.assessment.lesson-comment.approve",
             "admin.commercial.form.create", "admin.commercial.form.update",
             "admin.content.subject.create", "admin.content.subject.update",
             "admin.content.video-type.create", "admin.content.video-type.update",
             "admin.identity.student-note.create", "admin.operations.task-comment.create",
+            "admin.operations.task.approval.resolve",
             "admin.operations.task.create", "admin.operations.task.status.update",
             "admin.tools.media-pipeline.create", "admin.tools.social-plan.create"
         };
@@ -156,6 +246,35 @@ public sealed class AdminAIOrdinaryActionContractTests
     }
 
     [Fact]
+    public async Task TargetRemovedAfterPreview_InvalidatesBeforeClaimingExecution()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var protector = AdminAIStrongConfirmationTests.Protector();
+        var protectedPayload = protector.Protect("proposal-payload", "{}"u8);
+        var proposal = new AdminAIActionProposal
+        {
+            ActorAdminUserId = actor, CapabilityKey = "test.unavailable", CapabilityVersion = "1",
+            Status = AdminAIProposalStatus.Confirming, ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            ProtectedNormalizedPayload = protectedPayload.Ciphertext, PayloadHash = protectedPayload.Digest,
+            StateFingerprint = "state-v1"
+        };
+        db.Add(proposal);
+        await db.SaveChangesAsync();
+        var adapter = new UnavailableAction();
+        var executor = new AdminAIActionExecutor(db, new AdminAIConversationTests.AllowAccess(actor),
+            protector, new NoSecureInput(), [adapter]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            executor.ExecuteAsync(actor, proposal.Id, "intent", default));
+
+        Assert.Equal(AdminAIProposalStatus.Invalidated, proposal.Status);
+        Assert.Equal("stale_state", proposal.InvalidatedReasonCode);
+        Assert.Empty(db.AdminAIActionExecutions);
+        Assert.Equal(0, adapter.ExecuteCalls);
+    }
+
+    [Fact]
     public async Task ExternalTimeout_PersistsDeterministicIdentityAndRequiresRecovery()
     {
         await using var db = AdminAIStrongConfirmationTests.CreateDb(); var actor = Guid.NewGuid(); var protector = AdminAIStrongConfirmationTests.Protector();
@@ -180,6 +299,18 @@ public sealed class AdminAIOrdinaryActionContractTests
         public string Key => "test.action"; public int ExecuteCalls { get; private set; }
         public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) => Task.FromResult(new AdminAIActionPreview("user", "user:1", new { }, new { }, new { }, new { valid = true }, "state-v1"));
         public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct) { ExecuteCalls++; return Task.FromResult(new AdminAIActionOutcome(AdminAIExecutionStatus.Succeeded, new { done = true }, 1, ["users"])); }
+    }
+    private sealed class UnavailableAction : IAdminAIActionCapability
+    {
+        public string Key => "test.unavailable";
+        public int ExecuteCalls { get; private set; }
+        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) =>
+            throw new AdminAIActionPreviewUnavailableException("Target changed.");
+        public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct)
+        {
+            ExecuteCalls++;
+            throw new InvalidOperationException("No execution was expected.");
+        }
     }
     private sealed class TimeoutAction : IAdminAIActionCapability
     {
@@ -211,7 +342,12 @@ public sealed class AdminAIOrdinaryActionContractTests
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
             Request = request; SendCalls++;
-            object response = ApiResponse.Ok("done");
+            object response = typeof(TResponse) == typeof(ApiResponse<Guid>)
+                ? ApiResponse<Guid>.Ok(Guid.NewGuid())
+                : typeof(TResponse) == typeof(ApiResponse<VideoTypeDto>)
+                    ? ApiResponse<VideoTypeDto>.Ok(new VideoTypeDto(
+                        Guid.NewGuid(), "Lesson", 1, true, 0, DateTime.UtcNow, null))
+                : ApiResponse.Ok("done");
             return Task.FromResult((TResponse)response);
         }
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest => throw new NotSupportedException();
@@ -231,11 +367,13 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.content.video-type.update" => new AdminAIUpdateVideoTypeInput(Guid.NewGuid(), "type", 1),
         "admin.assessment.lesson-comment.approve" => new AdminAIApproveLessonCommentInput(Guid.NewGuid()),
         "admin.assessment.community-post.approve" => new AdminAIApproveCommunityPostInput(Guid.NewGuid()),
+        "admin.assessment.community-comment.approve" => new AdminAIApproveCommunityCommentInput(Guid.NewGuid()),
         "admin.commercial.form.create" => new AdminAICreateFormInput("form", "description", "form", true, null, null, null, "[]"),
         "admin.commercial.form.update" => new AdminAIUpdateFormInput(Guid.NewGuid(), "form", "description", "form", true, null, null, null, "[]"),
         "admin.operations.task.create" => new AdminAICreateTaskInput("task", "description", Guid.NewGuid(), TaskPriority.Medium, null),
         "admin.operations.task.status.update" => new AdminAIUpdateTaskStatusInput(Guid.NewGuid(), NaderGorge.Domain.Enums.TaskStatus.InProgress),
         "admin.operations.task-comment.create" => new AdminAIAddTaskCommentInput(Guid.NewGuid(), "comment", null),
+        "admin.operations.task.approval.resolve" => new AdminAIResolveTaskApprovalInput(Guid.NewGuid(), true, null),
         "admin.tools.media-pipeline.create" => new AdminAICreateMediaPipelineInput("pipeline", null, null, null),
         "admin.tools.social-plan.create" => new AdminAICreateSocialPlanInput("plan", null, null, SocialPlatform.Facebook, SocialPlanStatus.Draft, DateTime.UtcNow, null),
         _ => throw new InvalidOperationException($"No contract fixture for {key}.")
@@ -248,10 +386,12 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.content.video-type.create" or "admin.content.video-type.update" => ["video-types", "content"],
         "admin.assessment.lesson-comment.approve" => ["lesson-comments", "moderation"],
         "admin.assessment.community-post.approve" => ["community-posts", "moderation"],
+        "admin.assessment.community-comment.approve" => ["community-comments", "moderation"],
         "admin.commercial.form.create" or "admin.commercial.form.update" => ["forms"],
         "admin.operations.task.create" => ["operations-tasks", "internal-chat"],
         "admin.operations.task.status.update" => ["operations-tasks"],
         "admin.operations.task-comment.create" => ["operations-tasks", "task-comments"],
+        "admin.operations.task.approval.resolve" => ["operations-tasks", "media-pipelines", "task-comments"],
         "admin.tools.media-pipeline.create" => ["media-pipelines"],
         "admin.tools.social-plan.create" => ["social-plans"],
         _ => throw new InvalidOperationException($"No refresh contract for {key}.")

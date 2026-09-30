@@ -54,11 +54,140 @@ public sealed class AdminAIProposalBuilderTests
         Assert.Equal(AdminAIConfirmationType.TypedStrong, proposal.Confirmation); Assert.NotNull(proposal.StrongPhrase); Assert.Equal(AdminAIRiskCategory.Security, proposal.Risk); Assert.Equal(0, adapter.ExecuteCalls);
     }
 
-    private static AdminAICapabilityDefinition Definition(string risk) => new("test.action", "1", "action", risk, risk == "strong" ? "strong" : "ordinary", "{}", "{}", 1, 4096, 5000, "Fake.Command", ["users"]);
+    [Theory]
+    [InlineData("{\"target\":{\"id\":\"not-a-uuid\"}}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\",\"extra\":1}}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\",\"mode\":\"other\"}}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\"},\"count\":5}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\"},\"tags\":[\"same\",\"same\"]}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\"},\"tags\":[\"toolong\"]}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\"},\"tags\":[\"one\",\"two\",\"three\"]}")]
+    [InlineData("{\"target\":{\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\",\"id\":\"d70c1e94-60e8-49e0-a8f6-81499079d641\"}}")]
+    public async Task NestedActionInput_RejectsInvalidValuesBeforePreview(string inputJson)
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var adapter = new PreviewOnlyAction();
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary") with { InputSchema = NestedSchema }]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [adapter], new ConfigurationBuilder().Build());
+        using var input = System.Text.Json.JsonDocument.Parse(inputJson);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            builder.BuildAsync(actor, turn.Id, "test.action", input.RootElement.Clone(), default));
+
+        Assert.Equal(0, adapter.PreviewCalls);
+        Assert.Empty(db.AdminAIActionProposals);
+    }
+
+    [Fact]
+    public async Task NestedActionInput_AcceptsReviewedShape()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var adapter = new PreviewOnlyAction();
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary") with { InputSchema = NestedSchema }]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [adapter], new ConfigurationBuilder().Build());
+
+        var proposal = await builder.BuildAsync(actor, turn.Id, "test.action", new
+        {
+            target = new { id = "d70c1e94-60e8-49e0-a8f6-81499079d641", mode = "up" },
+            count = 2,
+            tags = new[] { "one", "two" }
+        }, default);
+
+        Assert.Equal(AdminAIProposalStatus.PendingConfirmation, proposal.Status);
+        Assert.Equal(1, adapter.PreviewCalls);
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}},\"additionalProperties\":true}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\",\"minimum\":1}},\"additionalProperties\":false}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}},\"additionalProperties\":false,\"oneOf\":[]}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\",\"format\":\"unknown\"}},\"additionalProperties\":false}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\",\"pattern\":\"[\"}},\"additionalProperties\":false}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"},\"value\":{\"type\":\"integer\"}},\"additionalProperties\":false}")]
+    [InlineData("{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}},\"additionalProperties\":false,\"additionalProperties\":false}")]
+    public async Task ActionSchema_WithOpenOrIgnoredRules_FailsClosed(string schema)
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var adapter = new PreviewOnlyAction();
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary") with { InputSchema = schema }]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [adapter], new ConfigurationBuilder().Build());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            builder.BuildAsync(actor, turn.Id, "test.action", new { value = "safe" }, default));
+
+        Assert.Equal(0, adapter.PreviewCalls);
+        Assert.Empty(db.AdminAIActionProposals);
+    }
+
+    [Fact]
+    public async Task ActionSchema_RejectsOpenOptionalNestedObjectEvenWhenOmitted()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var adapter = new PreviewOnlyAction();
+        const string schema = """
+            {"type":"object","properties":{"optional":{"type":"object","properties":{},"additionalProperties":true}},"additionalProperties":false}
+            """;
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary") with { InputSchema = schema }]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [adapter], new ConfigurationBuilder().Build());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            builder.BuildAsync(actor, turn.Id, "test.action", new { }, default));
+
+        Assert.Equal(0, adapter.PreviewCalls);
+        Assert.Empty(db.AdminAIActionProposals);
+    }
+
+    [Fact]
+    public async Task ProposalResponse_UsesPersistedRedactedPreview()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary")]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [new PreviewOnlyAction(leak: true)], new ConfigurationBuilder().Build());
+
+        var proposal = await builder.BuildAsync(actor, turn.Id, "test.action", new { note = "safe" }, default);
+        var responseJson = System.Text.Json.JsonSerializer.Serialize(proposal);
+        var persisted = Assert.Single(db.AdminAIActionProposals);
+
+        Assert.DoesNotContain("sentinel-secret", responseJson, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", responseJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("sentinel-secret", persisted.SafeCurrentStateJson, StringComparison.Ordinal);
+    }
+
+    private const string NestedSchema = """
+        {"type":"object","properties":{"target":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"mode":{"type":"string","enum":["up","down"]}},"required":["id"],"additionalProperties":false},"count":{"type":"integer","minimum":1,"maximum":3},"tags":{"type":"array","maxItems":2,"items":{"type":"string","maxLength":5},"uniqueItems":true}},"required":["target"],"additionalProperties":false}
+        """;
+    private static AdminAICapabilityDefinition Definition(string risk) => new("test.action", "1", "action", risk, risk == "strong" ? "strong" : "ordinary", "{\"type\":\"object\",\"properties\":{\"note\":{\"type\":\"string\"},\"value\":{\"type\":\"integer\"}},\"additionalProperties\":false}", "{}", 1, 4096, 5000, "Fake.Command", ["users"]);
     private sealed class PreviewOnlyAction : IAdminAIActionCapability
     {
+        private readonly bool _leak;
+        public PreviewOnlyAction(bool leak = false) => _leak = leak;
         public string Key => "test.action"; public int PreviewCalls { get; private set; } public int ExecuteCalls { get; private set; }
-        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) { PreviewCalls++; return Task.FromResult(new AdminAIActionPreview("user", "user:1", new { note = "old" }, new { note = "new" }, new { affected = 1 }, new { valid = true }, "state-v1")); }
+        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) { PreviewCalls++; return Task.FromResult(new AdminAIActionPreview("user", "user:1", _leak ? new { note = "old", password = "sentinel-secret" } : new { note = "old" }, new { note = "new" }, new { affected = 1 }, new { valid = true }, "state-v1")); }
         public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct) { ExecuteCalls++; throw new InvalidOperationException("Preview must never execute."); }
     }
     private sealed class NoChallenge : IAdminAIConfirmationChallengeService

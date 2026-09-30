@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
@@ -41,7 +42,12 @@ public sealed class AdminAIProposalCommands(IAppDbContext db, IAdminAIAccessGate
     public async Task<AdminAIProposalDto> GetAsync(Guid actorId, Guid proposalId, CancellationToken ct)
     { await access.RequireCurrentAdminAsync(actorId, null, ct); var proposal = await db.AdminAIActionProposals.AsNoTracking().SingleOrDefaultAsync(x => x.Id == proposalId && x.ActorAdminUserId == actorId, ct) ?? throw new KeyNotFoundException(); return Dto(proposal, await challenges.PhraseAsync(actorId, proposalId, ct)); }
 
-    private static AdminAIProposalDto Dto(NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal p, string? phrase = null) => new(p.Id, p.CapabilityKey, p.SafeTargetType, p.SafeTargetReference, p.PrimaryRisk, p.ConfirmationType, p.SafeCurrentStateJson, p.SafeRequestedStateJson, p.SafeEffectJson, p.ExpiresAt, p.Status, p.Version, phrase);
+    private static AdminAIProposalDto Dto(NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal p, string? phrase = null) => new(
+        p.Id, p.CapabilityKey, p.SafeTargetType, p.SafeTargetReference, p.PrimaryRisk, p.ConfirmationType,
+        JsonSerializer.Deserialize<JsonElement>(p.SafeCurrentStateJson),
+        JsonSerializer.Deserialize<JsonElement>(p.SafeRequestedStateJson),
+        JsonSerializer.Deserialize<JsonElement>(p.SafeEffectJson),
+        p.ExpiresAt, p.Status, p.Version, phrase);
 
     private async Task PurgeGrantAsync(Guid proposalId, AdminAISecureInputGrantStatus status, CancellationToken ct)
     {

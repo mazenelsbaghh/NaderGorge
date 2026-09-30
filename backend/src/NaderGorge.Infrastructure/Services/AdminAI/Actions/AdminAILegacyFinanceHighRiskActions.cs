@@ -11,6 +11,17 @@ public sealed record AdminAIApproveLegacyPayrollInput(Guid PayrollId);
 public sealed record AdminAIAddLegacyPayrollAdjustmentInput(Guid PayrollId, PayrollAdjustmentType Type, decimal Amount, string Reason);
 public sealed record AdminAIDeleteLegacyPayrollAdjustmentInput(Guid PayrollId, Guid AdjustmentId);
 public sealed record AdminAIResolveLegacyPayoutInput(Guid PayoutId, PayoutStatus Status, string? RejectionReason);
+public sealed record AdminAIReviewTeacherFinancialAllocationInput(Guid AllocationId, TeacherFinancialReviewStatus Status, string? Note);
+
+public sealed class AdminAIReviewTeacherFinancialAllocationAction(IMediator mediator, IAdminAIActionPreviewSource preview)
+    : AdminAIMediatRActionCapability<AdminAIReviewTeacherFinancialAllocationInput, ApiResponse<bool>>(mediator, preview)
+{
+    public override string Key => "admin.finance.teacher-event.review";
+    protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIReviewTeacherFinancialAllocationInput i, Guid actor, string operationId) =>
+        new ReviewTeacherFinancialAllocationCommand(i.AllocationId, i.Status, actor, i.Note, operationId);
+    protected override AdminAIActionOutcome ToOutcome(ApiResponse<bool> r) =>
+        LegacyFinanceOutcome.From(r, r.Success ? 1 : 0, ["teacher-finance", "finance"]);
+}
 
 public sealed class AdminAIGenerateLegacyPayrollAction(IMediator mediator, IAdminAIActionPreviewSource preview)
     : AdminAIMediatRActionCapability<AdminAIGenerateLegacyPayrollInput, ApiResponse<int>>(mediator, preview)

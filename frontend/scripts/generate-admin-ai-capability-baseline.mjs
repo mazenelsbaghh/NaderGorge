@@ -67,19 +67,104 @@ function routeForPage(filePath) {
 function literalPath(node) {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isTemplateExpression(node)) {
-    const names = node.templateSpans.map((span) => span.expression.getText().replace(/[^A-Za-z0-9_$]/g, '') || 'value');
+    const names = node.templateSpans.map((span) => {
+      const expression = span.expression;
+      if (ts.isIdentifier(expression)) return expression.text;
+      if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+      return expression.getText().replace(/[^A-Za-z0-9_$]/g, '') || 'value';
+    });
     return `${node.head.text}${names.map((name, index) => `{${name}}${node.templateSpans[index].literal.text}`).join('')}`;
   }
   return '<dynamic>';
 }
 
-function callRecords(filePath, sourceFile) {
+function exportedObject(sourceFile, name) {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement) || !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (ts.isIdentifier(declaration.name) && declaration.name.text === name && declaration.initializer && ts.isObjectLiteralExpression(declaration.initializer)) {
+        return declaration.initializer;
+      }
+    }
+  }
+  return null;
+}
+
+function isTypeOnlyReference(node) {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (ts.isTypeQueryNode(parent)) return true;
+    if (ts.isStatement(parent)) return false;
+  }
+  return false;
+}
+
+export function provenServiceMembers(targetFile, exportName, sourceFiles) {
+  let imported = false;
+  let uncertain = false;
+  const members = new Set();
+  for (const [filePath, sourceFile] of sourceFiles) {
+    if (filePath === targetFile) continue;
+    const aliases = new Set();
+    for (const statement of sourceFile.statements) {
+      if (!statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)
+        || resolveImport(filePath, statement.moduleSpecifier.text) !== targetFile) continue;
+      if (ts.isExportDeclaration(statement)) {
+        uncertain = true;
+        continue;
+      }
+      if (!ts.isImportDeclaration(statement)) continue;
+      const bindings = statement.importClause?.namedBindings;
+      if (!bindings || !ts.isNamedImports(bindings)) {
+        uncertain = true;
+        continue;
+      }
+      for (const element of bindings.elements) {
+        if ((element.propertyName?.text ?? element.name.text) === exportName && !element.isTypeOnly) {
+          aliases.add(element.name.text);
+          imported = true;
+        }
+      }
+    }
+    if (aliases.size === 0) continue;
+    const visit = (node) => {
+      if (ts.isImportDeclaration(node)) return;
+      if (ts.isIdentifier(node) && aliases.has(node.text)) {
+        if (isTypeOnlyReference(node)) return;
+        const parent = node.parent;
+        if (ts.isPropertyAccessExpression(parent) && parent.expression === node) members.add(parent.name.text);
+        else if (ts.isElementAccessExpression(parent) && parent.expression === node && ts.isStringLiteral(parent.argumentExpression)) members.add(parent.argumentExpression.text);
+        else uncertain = true;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+  }
+  return imported && !uncertain ? members : null;
+}
+
+function containingMember(node, objectLiteral) {
+  for (let parent = node.parent; parent && parent !== objectLiteral; parent = parent.parent) {
+    if (ts.isPropertyAssignment(parent) && parent.parent === objectLiteral) {
+      return ts.isIdentifier(parent.name) || ts.isStringLiteral(parent.name) ? parent.name.text : null;
+    }
+  }
+  return null;
+}
+
+function callRecords(filePath, sourceFile, selectedObject = null, selectedMembers = null) {
   const calls = [];
   const visit = (node) => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-      const method = node.expression.name.text.toUpperCase();
-      const client = node.expression.expression.getText(sourceFile);
-      if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && /(?:apiClient|axios|api)\b/.test(client)) {
+    if (ts.isCallExpression(node) && (ts.isPropertyAccessExpression(node.expression)
+      || ts.isElementAccessExpression(node.expression))) {
+      const invocation = node.expression;
+      const method = ts.isPropertyAccessExpression(invocation)
+        ? invocation.name.text.toUpperCase()
+        : ts.isStringLiteral(invocation.argumentExpression)
+          ? invocation.argumentExpression.text.toUpperCase() : 'ANY';
+      const client = invocation.expression.getText(sourceFile);
+      const member = selectedObject ? containingMember(node, selectedObject) : null;
+      if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'ANY'].includes(method) && /(?:apiClient|axios|api)\b/.test(client)
+        && (!member || !selectedMembers || selectedMembers.has(member))) {
         const path = node.arguments.length ? literalPath(node.arguments[0]) : '<dynamic>';
         calls.push({
           method,
@@ -109,7 +194,7 @@ export function collectAdminCallGraph() {
   const queue = [...new Set(roots)].sort();
   const visited = new Set();
   const reachableFiles = [];
-  const calls = [];
+  const sourceFiles = new Map();
 
   while (queue.length) {
     const filePath = queue.shift();
@@ -117,14 +202,41 @@ export function collectAdminCallGraph() {
     visited.add(filePath);
     const source = readFileSync(filePath, 'utf8');
     const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true);
+    sourceFiles.set(filePath, sourceFile);
     reachableFiles.push({ file: normalize(relative(repositoryRoot, filePath)), route: routeForPage(filePath) });
-    calls.push(...callRecords(filePath, sourceFile));
     for (const specifier of importSpecifiers(sourceFile)) {
       const imported = resolveImport(filePath, specifier);
       if (imported && !visited.has(imported)) queue.push(imported);
     }
     queue.sort();
   }
+
+  const serviceSelections = new Map();
+  const servicesDirectory = `${resolve(sourceRoot, 'services')}/`;
+  for (const [filePath, sourceFile] of sourceFiles) {
+    if (!filePath.startsWith(servicesDirectory)) continue;
+    const exportedServices = sourceFile.statements
+      .filter((statement) => ts.isVariableStatement(statement)
+        && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
+      .flatMap((statement) => statement.declarationList.declarations)
+      .filter((declaration) => ts.isIdentifier(declaration.name)
+        && /Service$/.test(declaration.name.text)
+        && declaration.initializer && ts.isObjectLiteralExpression(declaration.initializer))
+      .map((declaration) => declaration.name.text);
+    // Multiple service objects in one file need separate call ownership analysis.
+    // Until then, keep every call from that file in the conservative inventory.
+    if (exportedServices.length !== 1) continue;
+    const exportName = exportedServices[0];
+    const object = exportedObject(sourceFile, exportName);
+    const members = object && provenServiceMembers(filePath, exportName, sourceFiles);
+    if (object && members) serviceSelections.set(filePath, { object, members });
+  }
+  const calls = [...sourceFiles].flatMap(([filePath, sourceFile]) => callRecords(
+    filePath,
+    sourceFile,
+    serviceSelections.get(filePath)?.object,
+    serviceSelections.get(filePath)?.members,
+  ));
 
   const normalizedCalls = calls
     .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))

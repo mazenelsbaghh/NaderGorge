@@ -17,11 +17,13 @@ public static class AdminAIActionCapabilityRegistration
             new AdminAIUpdateVideoTypeAction(mediator, preview),
             new AdminAIApproveLessonCommentAction(mediator, preview),
             new AdminAIApproveCommunityPostAction(mediator, preview),
+            new AdminAIApproveCommunityCommentAction(mediator, preview),
             new AdminAICreateFormAction(mediator, preview),
             new AdminAIUpdateFormAction(mediator, preview),
             new AdminAICreateTaskAction(mediator, preview),
             new AdminAIUpdateTaskStatusAction(mediator, preview),
             new AdminAIAddTaskCommentAction(mediator, preview),
+            new AdminAIResolveTaskApprovalAction(mediator, preview),
             new AdminAICreateMediaPipelineAction(mediator, preview),
             new AdminAICreateSocialPlanAction(mediator, preview)
         ]);

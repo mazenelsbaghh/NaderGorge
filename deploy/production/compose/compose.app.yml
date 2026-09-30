@@ -112,6 +112,7 @@ services:
       - /srv/massar-shared:/shared
       - /srv/massar-shared/public:/backend/src/NaderGorge.API/wwwroot
       - /etc/massar/secrets/apns-auth-key.p8:/run/secrets/apns-auth-key.p8:ro
+      - /var/lib/massar/admin-ai-codex/socket:/run/admin-ai
     depends_on:
       backend:
         condition: service_healthy
@@ -121,6 +122,42 @@ services:
       timeout: 5s
       retries: 6
       start_period: 60s
+
+  # Node-3 only. This process receives bounded, redacted Admin AI prompts over
+  # a local Unix socket and has no application environment, database, or app network.
+  admin-ai-codex:
+    profiles: [admin-ai-codex]
+    image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    entrypoint: ["node", "/app/dist/adminAICodexServer.js"]
+    user: "1000:1000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 1g
+    cpus: 1.0
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    environment:
+      NODE_ENV: production
+      CODEX_HOME: /codex
+      ADMIN_AI_CODEX_SOCKET: /run/admin-ai/codex.sock
+      HTTPS_PROXY: http://massar-repair-proxy:3128
+      HTTP_PROXY: http://massar-repair-proxy:3128
+      NO_PROXY: ""
+    volumes:
+      - /home/massar-ops/.local/share/massar-auto-repair/codex-home:/codex
+      - /var/lib/massar/admin-ai-codex/socket:/run/admin-ai
+    networks:
+      - massar_repair_internal
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get({socketPath:'/run/admin-ai/codex.sock',path:'/health'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
 
   # Explicitly started only on node-3 by the rolling release helper.
   # Host networking binds only the inventory-selected WireGuard address.
@@ -231,6 +268,9 @@ services:
       start_period: 15s
 
 networks:
+  massar_repair_internal:
+    external: true
+    name: massar-repair-internal
   massar_app:
     name: massar_app
     driver: bridge

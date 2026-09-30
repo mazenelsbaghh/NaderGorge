@@ -9,6 +9,9 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -21,7 +24,11 @@ public record CreateFormCommand(
     DateTime? StartsAt,
     DateTime? ExpiresAt,
     string FieldsJson
-) : IRequest<ApiResponse<Guid>>;
+) : IRequest<ApiResponse<Guid>>
+{
+    public Guid PerformedByUserId { get; init; }
+    public string? OperationId { get; init; }
+}
 
 public class CreateFormCommandValidator : AbstractValidator<CreateFormCommand>
 {
@@ -40,7 +47,40 @@ public class CreateFormCommandHandler : IRequestHandler<CreateFormCommand, ApiRe
 
     public async Task<ApiResponse<Guid>> Handle(CreateFormCommand request, CancellationToken ct)
     {
-        var slugExists = await _db.CustomForms.AnyAsync(f => f.Slug == request.Slug, ct);
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<Guid>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await CreateOnceAsync(request, null, null, ct);
+        if (request.PerformedByUserId == Guid.Empty)
+            return ApiResponse<Guid>.Fail("Operation actor is required.", ["INVALID_OPERATION_ACTOR"]);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.Title, request.Description, request.Slug,
+                request.IsActive, request.CoverImageUrl, request.StartsAt, request.ExpiresAt,
+                request.FieldsJson, request.PerformedByUserId }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "form.create" && prior.ActorUserId == request.PerformedByUserId
+                && prior.RequestHash == requestHash
+                ? ApiResponse<Guid>.Ok(prior.ResultEntityId)
+                : ApiResponse<Guid>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+        if (request.IsActive)
+            return ApiResponse<Guid>.Fail("Form activation requires a high-risk action.",
+                ["RISK_REQUIRES_STRONG_CONFIRMATION"]);
+
+        var created = await CreateOnceAsync(request, operationId, requestHash, ct);
+        await transaction.CommitAsync(ct);
+        return created;
+    }
+
+    private async Task<ApiResponse<Guid>> CreateOnceAsync(CreateFormCommand request,
+        string? operationId, string? requestHash, CancellationToken ct)
+    {
+        var normalizedSlug = request.Slug.ToLowerInvariant();
+        var slugExists = await _db.CustomForms.AnyAsync(f => f.Slug == normalizedSlug, ct);
         if (slugExists) return ApiResponse<Guid>.Fail("الرابط المختصر (slug) مستخدم بالفعل في نموذج آخر.");
 
         // Basic JSON validation
@@ -61,7 +101,7 @@ public class CreateFormCommandHandler : IRequestHandler<CreateFormCommand, ApiRe
         {
             Title = request.Title,
             Description = request.Description,
-            Slug = request.Slug.ToLowerInvariant(),
+            Slug = normalizedSlug,
             IsActive = request.IsActive,
             CoverImageUrl = request.CoverImageUrl,
             StartsAt = request.StartsAt,
@@ -70,6 +110,12 @@ public class CreateFormCommandHandler : IRequestHandler<CreateFormCommand, ApiRe
         };
 
         _db.CustomForms.Add(form);
+        if (operationId is not null)
+            _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+            {
+                OperationId = operationId, Scope = "form.create",
+                ActorUserId = request.PerformedByUserId, RequestHash = requestHash!, ResultEntityId = form.Id
+            });
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(form.Id);
@@ -87,7 +133,11 @@ public record UpdateFormCommand(
     DateTime? StartsAt,
     DateTime? ExpiresAt,
     string FieldsJson
-) : IRequest<ApiResponse>;
+) : IRequest<ApiResponse>
+{
+    public Guid PerformedByUserId { get; init; }
+    public string? OperationId { get; init; }
+}
 
 public class UpdateFormCommandValidator : AbstractValidator<UpdateFormCommand>
 {
@@ -106,10 +156,48 @@ public class UpdateFormCommandHandler : IRequestHandler<UpdateFormCommand, ApiRe
 
     public async Task<ApiResponse> Handle(UpdateFormCommand request, CancellationToken ct)
     {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await UpdateOnceAsync(request, null, null, ct);
+        if (request.PerformedByUserId == Guid.Empty)
+            return ApiResponse.Fail("Operation actor is required.", ["INVALID_OPERATION_ACTOR"]);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.Id, request.Title, request.Description, request.Slug,
+                request.IsActive, request.CoverImageUrl, request.StartsAt, request.ExpiresAt,
+                request.FieldsJson, request.PerformedByUserId }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "form.update" && prior.ActorUserId == request.PerformedByUserId
+                && prior.RequestHash == requestHash && prior.ResultEntityId == request.Id
+                ? ApiResponse.Ok()
+                : ApiResponse.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+        if (request.IsActive)
+            return ApiResponse.Fail("Form activation requires a high-risk action.",
+                ["RISK_REQUIRES_STRONG_CONFIRMATION"]);
+
+        var updated = await UpdateOnceAsync(request, operationId, requestHash, ct);
+        await transaction.CommitAsync(ct);
+        return updated;
+    }
+
+    private async Task<ApiResponse> UpdateOnceAsync(UpdateFormCommand request,
+        string? operationId, string? requestHash, CancellationToken ct)
+    {
         var form = await _db.CustomForms.FindAsync(new object[] { request.Id }, ct);
         if (form == null) return ApiResponse.Fail("النموذج غير موجود.");
 
-        var slugExists = await _db.CustomForms.AnyAsync(f => f.Slug == request.Slug && f.Id != request.Id, ct);
+        if (operationId is not null && (form.IsActive
+            || await _db.FormSubmissions.AnyAsync(item => item.CustomFormId == request.Id, ct)))
+            return ApiResponse.Fail("Active forms or forms with responses require a high-risk action.",
+                ["RISK_REQUIRES_STRONG_CONFIRMATION"]);
+
+        var normalizedSlug = request.Slug.ToLowerInvariant();
+        var slugExists = await _db.CustomForms.AnyAsync(f => f.Slug == normalizedSlug && f.Id != request.Id, ct);
         if (slugExists) return ApiResponse.Fail("الرابط المختصر (slug) مستخدم بالفعل في نموذج آخر.");
 
         // Basic JSON validation
@@ -128,12 +216,20 @@ public class UpdateFormCommandHandler : IRequestHandler<UpdateFormCommand, ApiRe
 
         form.Title = request.Title;
         form.Description = request.Description;
-        form.Slug = request.Slug.ToLowerInvariant();
+        form.Slug = normalizedSlug;
         form.IsActive = request.IsActive;
         form.CoverImageUrl = request.CoverImageUrl;
         form.StartsAt = request.StartsAt;
         form.ExpiresAt = request.ExpiresAt;
         form.FieldsJson = request.FieldsJson;
+
+        if (operationId is not null)
+            _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+            {
+                OperationId = operationId, Scope = "form.update",
+                ActorUserId = request.PerformedByUserId, RequestHash = requestHash!, ResultEntityId = request.Id,
+                SafeResultJson = "{\"updated\":true}"
+            });
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();

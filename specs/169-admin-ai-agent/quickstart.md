@@ -2,7 +2,9 @@
 
 ## Current status
 
-Feature 169 is implemented only as a fail-closed work in progress. Its isolated persistence, worker protocol, Admin-only workspace, proposal/confirmation foundations, and verification tooling exist, but production capability registration remains empty and the feature defaults disabled. Do not deploy or claim feature availability until the capability baseline has zero gaps and every release gate in `tasks.md` passes.
+Feature 169 is implemented only as a fail-closed work in progress. Its isolated persistence, worker protocol, Admin-only workspace, proposal/confirmation foundations, and verification tooling exist, but the production registry contains reads only and the feature defaults disabled. Do not deploy or claim feature availability until the capability baseline has zero gaps and every release gate in `tasks.md` passes.
+
+The backend startup gate requires a manually approved Active baseline. Its `SafeManifestJson` must contain `activation: "ready"`, a `registryHash` equal to the running registry hash, unique supported inventory `items`, and a `capabilities` array listing every registered key and version exactly once. It rejects a read-only catalog, incomplete coverage, or two Active baselines; startup does not create a baseline automatically.
 
 The worktree also contains unrelated owner changes; all verification and remaining implementation must preserve them.
 
@@ -14,7 +16,7 @@ The worktree also contains unrelated owner changes; all verification and remaini
 - Redis 7/BullMQ and existing SignalR backplane.
 - Existing private attachment storage.
 - Existing AI_CALLBACK_SECRET configured for backend/worker internal callbacks.
-- GEMINI_API_KEY and reviewed AI_TEXT_MODEL in the worker.
+- A reviewed node-3 Codex CLI login, the pinned `@openai/codex` worker dependency, and the restricted Unix-socket sidecar described in `docs/production/admin-ai-codex-cli.md`. Other worker AI jobs continue to use their existing provider configuration.
 - Docker Compose secrets required by docs/verification-contract.md.
 - No new vector store, web search credential, or worker database credential.
 
@@ -48,8 +50,10 @@ Worker settings:
 | AI_ADMIN_AGENT_MAX_QUEUE_AGE_MS | 300000 |
 | INTERNAL_API_URL | existing backend internal URL |
 | AI_CALLBACK_SECRET | same existing backend/worker secret |
-| GEMINI_API_KEY | existing provider secret |
-| AI_TEXT_MODEL | existing reviewed model override |
+| ADMIN_AI_PROVIDER | `codex-cli` for this feature; the rendered feature flag remains false until acceptance |
+| AI_ADMIN_CODEX_MODEL | `gpt-5.6-sol`; verify host access before rollout |
+| ADMIN_AI_CODEX_SOCKET | `/run/admin-ai/codex.sock`; node 3 only |
+| AI_ADMIN_AGENT_RUNNER_NODE | `node-3` when Codex CLI is selected |
 
 The backend claim supplies the authoritative per-turn `deadlineAt`; the worker enforces that deadline. There is no separate provider-deadline environment key.
 
@@ -157,6 +161,10 @@ Required:
 
     npm --prefix worker test
     npm --prefix worker run build
+    ADMIN_AI_TEST_REDIS_URL='redis://127.0.0.1:<disposable-port>/14' \
+      npm --prefix worker run test:admin-ai-redis-restart
+
+The restart command requires an isolated disposable Redis 7 instance. It exercises stream ingestion, BullMQ worker replacement, duplicate delivery, and saved callback replay; it does not replace the combined real-backend restart gate.
 
 Required:
 
@@ -231,7 +239,7 @@ Mocks prove deterministic boundaries but cannot be reported as production AI acc
 
 Planned real-provider test:
 
-- uses configured GEMINI_API_KEY/AI_TEXT_MODEL through the worker;
+- uses the configured node-3 Codex CLI login and `AI_ADMIN_CODEX_MODEL` through the restricted sidecar;
 - operates on a dedicated seeded E2E Admin and safe dataset;
 - captures the exact outbound request in a secure test harness and asserts no sentinel;
 - runs read, clarification, empty/truncated, action suggestion, refusal, timeout/cancellation, and malformed-output recovery;
@@ -239,7 +247,7 @@ Planned real-provider test:
 - never executes a production financial/destructive effect;
 - records provider/model/latency and safe trace, not prompt/result content.
 
-Missing provider credential/network is an explicit blocked acceptance gate, not a pass.
+Missing Codex login, restricted proxy, sidecar health, or outbound capture is an explicit blocked acceptance gate, not a pass.
 
 ## Manual owner QA
 

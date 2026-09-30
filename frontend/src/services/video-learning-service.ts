@@ -32,7 +32,9 @@ export interface LearningReport {
 export interface LearningReview { id: string; lessonVideoId: string; lessonId: string; videoTitle: string; seconds: number; kind: string; title: string }
 const unwrap = <T>(response: { data: { data: T } }) => response.data.data;
 export const videoLearningService = {
-  read: (id: string, author = false, signal?: AbortSignal) => api.get<{ data: LearningSnapshot }>(`/video-learning/${id}${author ? '/author' : ''}`, { signal }).then(unwrap),
+  read: (id: string, author = false, signal?: AbortSignal) => (author
+    ? api.get<{ data: LearningSnapshot }>(`/video-learning/${id}/author`, { signal })
+    : api.get<{ data: LearningSnapshot }>(`/video-learning/${id}`, { signal })).then(unwrap),
   save: (id: string, snapshot: LearningSnapshot) => api.put<{ data: LearningSnapshot }>(`/video-learning/${id}/author`, {
     version: snapshot.version, sourceRevision: snapshot.sourceRevision, document: snapshot.document,
   }).then(unwrap),

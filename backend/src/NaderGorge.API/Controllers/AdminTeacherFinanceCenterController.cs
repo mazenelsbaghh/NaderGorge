@@ -26,12 +26,15 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     private readonly IAppDbContext _db;
     private readonly IMediator _mediator;
     private readonly TeacherSettlementAuthorityService _settlements;
+    private readonly ITeacherStatementService _statement;
 
-    public AdminTeacherFinanceCenterController(IAppDbContext db, IMediator mediator, IFinancialPostingService posting)
+    public AdminTeacherFinanceCenterController(IAppDbContext db, IMediator mediator, IFinancialPostingService posting,
+        ITeacherStatementService statement)
     {
         _db = db;
         _mediator = mediator;
         _settlements = new TeacherSettlementAuthorityService(db, posting);
+        _statement = statement;
     }
 
     private Guid ActorId() => User.RequireUserId();
@@ -123,6 +126,27 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         var snapshot = await new TeacherFinanceAccountService(_db).GetAsync(teacherId, ct);
         return snapshot is null ? NotFound(new { success = false, message = "حساب المدرس غير موجود" })
             : Ok(new { success = true, data = snapshot });
+    }
+
+    [HttpGet("teachers/{teacherId:guid}/statement")]
+    public async Task<IActionResult> GetStatement(Guid teacherId, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default)
+    {
+        if (from > to || page < 1 || pageSize is < 1 or > 100 || page > int.MaxValue / pageSize)
+            return BadRequest(new { success = false, message = "فترة أو صفحة كشف الحساب غير صالحة" });
+        var statement = await _statement.GetAsync(teacherId, from, to, page, pageSize, ct);
+        return statement is null ? NotFound(new { success = false, message = "المدرس غير موجود" })
+            : Ok(new { success = true, data = statement });
+    }
+
+    [HttpGet("teachers/{teacherId:guid}/statement/pdf")]
+    public async Task<IActionResult> ExportStatement(Guid teacherId, [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        if (from > to) return BadRequest(new { success = false, message = "فترة كشف الحساب غير صالحة" });
+        var result = await _statement.ExportPdfAsync(teacherId, from, to, ct);
+        return result is null ? NotFound(new { success = false, message = "المدرس غير موجود" })
+            : File(result.Content, result.ContentType, result.FileName);
     }
 
     [HttpGet("teachers/{teacherId:guid}/ledger")]

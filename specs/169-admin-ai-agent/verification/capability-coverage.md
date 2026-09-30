@@ -1,13 +1,13 @@
 # Capability coverage
 
-Generated baseline on 2026-08-12:
+Current generated baseline checked on 2026-09-30:
 
-- Items: 962
-- Backend endpoints: 698
-- Frontend calls: 585
-- Candidate items: 400
-- Blocked mutations/external effects: 562
-- Baseline digest: `7e7bf6aca30c0e1a24486b55ad09226d9096fdb52f792ef1fa6e03688c5baebf`
+- Items: 1,076 (597 backend-endpoint entries and 479 frontend-call entries)
+- Candidate items: 456
+- Blocked mutations/external effects: 620 (345 distinct authoritative-operation labels)
+- Unresolved frontend calls: 0
+- Reviewed non-business exclusions: 45 (13 AdminAI transport, 9 current-viewer playback, 1 auth refresh, 4 public or participant branches, 16 Teacher-only calls, 2 generic Learning Center dispatcher calls)
+- Baseline digest: `63f6bd4ad9c15eb40eb559ad05eb52bb7ac3f0e1faf1e4ce98e8f938a467f244`
 - Activation: `blocked`
 
-Inventory freshness and security tests pass. This is not zero-gap coverage: unsupported current Admin mutations remain blocked, so the production catalog and feature activation must remain fail-closed.
+The generated endpoint inventory has 831 backend endpoints and 712 frontend calls. Two Admin-accessible shared task mutation routes now map to their original commands, and both frontend calls inherit those exact backend labels. Sixteen Teacher-only branches retained by shared services are excluded after checking their Teacher role restrictions; Admin alternatives for reports, code groups, and financial statements were checked. Nine current-viewer playback calls reached by Admin lesson previews are excluded after checking the Admin preview policy and session ownership. The graph suite passed 12/12 and the inventory/source suite passed 30/30. The shared content-summary call is resolved to its proven Admin scope; the generic Learning Center read and computed-method save dispatchers are excluded as transport after all its concrete backend routes were inventoried. The Admin-accessible content reads, video-learning read, question-audio upload, and all 11 Learning Center routes now have backend inventory entries; public form, public settings, auth refresh, and participant-only branches have exact reviewed exclusions. This is not zero-gap coverage: unsupported current Admin mutations remain blocked, so the production catalog and feature activation must remain fail-closed.

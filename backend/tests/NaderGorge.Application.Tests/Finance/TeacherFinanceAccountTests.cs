@@ -66,6 +66,155 @@ public sealed class TeacherFinanceAccountTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Statement_keeps_pending_and_cash_movements_separate_and_exports_summary()
+    {
+        db.Add(new TeacherAccount { Teacher = teacher, TotalEarnings = 100m, CurrentBalance = 50m });
+        AddIncome(TeacherFinancialSourceType.DirectPurchase, 100m);
+        AddIncome(TeacherFinancialSourceType.Refund, -20m, TeacherFinancialReviewStatus.Reversed);
+        AddIncome(TeacherFinancialSourceType.DirectPurchase, 50m, TeacherFinancialReviewStatus.PendingReview);
+        db.Add(new TeacherPayout { Teacher = teacher, Amount = 30m, Status = PayoutStatus.Paid });
+        db.Add(new TeacherPayout { Teacher = teacher, Amount = 25m, Status = PayoutStatus.Pending });
+        db.Add(new TeacherPayoutAdjustment { Teacher = teacher, Amount = -10m, Reason = "Refund debt" });
+        db.Add(new TeacherSettlement { TeacherId = teacher.Id, CreatedByUserId = teacher.UserId,
+            Status = TeacherSettlementStatus.Paid,
+            Payments = [new TeacherSettlementPayment { Amount = 20m, PaidByUserId = teacher.UserId }] });
+        await db.SaveChangesAsync();
+
+        var service = new TeacherStatementService(db);
+        var firstPage = (await service.GetAsync(teacher.Id, null, null, 1, 2, default))!;
+        Assert.Equal(8, firstPage.Total);
+        Assert.Equal(2, firstPage.Items.Count);
+        Assert.Equal(80m, firstPage.Totals.Earned);
+        Assert.Equal(50m, firstPage.Totals.PendingEarnings);
+        Assert.Equal(50m, firstPage.Totals.TeacherPayments);
+        Assert.Equal(10m, firstPage.Totals.OpenDebtAdjustments);
+        Assert.Equal(40m, firstPage.Account.NetPayable);
+
+        var pdf = (await service.ExportPdfAsync(teacher.Id, null, null, default))!;
+        Assert.Equal("application/pdf", pdf.ContentType);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf.Content, 0, 4));
+        Assert.True(pdf.Content.Length > 1000);
+    }
+
+    [Fact]
+    public async Task Statement_counts_students_vodafone_refunds_and_used_codes_from_their_source_records()
+    {
+        var student = new User { FullName = "Student A", PhoneNumber = "01011111111", PasswordHash = "test" };
+        var wallet = new DigitalWallet { Label = "Teacher wallet", PhoneNumber = "01022222222" };
+        var sms = new IncomingSmsLog { Wallet = wallet, Sender = "VodafoneCash", ReceivedAt = DateTime.UtcNow,
+            DeduplicationHash = Guid.NewGuid().ToString("N"), TransferReference = "VF-1" };
+        var group = new CodeGroup { Name = "Teacher codes", Teacher = teacher, CreatedByUserId = teacher.UserId };
+        var code = new AccessCode { CodeGroup = group, CodeHash = Guid.NewGuid().ToString("N"), SerialNumber = 12345 };
+        var journal = new JournalEntry { SourceType = "Refund", IdempotencyKey = Guid.NewGuid().ToString("N") };
+        db.AddRange(student, wallet, sms, group, code, journal,
+            new TeacherAccount { Teacher = teacher, TotalEarnings = 30m, CurrentBalance = 30m },
+            new RechargeRequest { User = student, Teacher = teacher, Wallet = wallet, MatchedSmsLog = sms,
+                Amount = 100m, Status = RechargeRequestStatus.Approved, ResolvedAt = DateTime.UtcNow },
+            new RechargeRequest { User = student, Teacher = teacher, Wallet = wallet,
+                Amount = 25m, Status = RechargeRequestStatus.Approved, ResolvedAt = DateTime.UtcNow },
+            new AccessCodeActivationLog { AccessCode = code, Student = student, Teacher = teacher,
+                Price = 75m, CommissionEarned = 30m, ActivatedAt = DateTime.UtcNow },
+            new TeacherFinancialAllocation { Teacher = teacher, StudentNameSnapshot = student.FullName,
+                TeacherShareAmount = 30m, TeacherFinancialEvent = new TeacherFinancialEvent {
+                    Student = student, SourceType = TeacherFinancialSourceType.DirectPurchase,
+                    SourceId = Guid.NewGuid(), PaidAmount = 120m, OccurredAt = DateTime.UtcNow } });
+        await db.SaveChangesAsync();
+        db.Add(new PlatformRefund { StudentId = student.Id, TeacherId = teacher.Id,
+            PlatformAmount = 30m, TeacherAmount = 20m, Status = PlatformRefundStatus.Posted,
+            Method = PlatformRefundMethod.Cash, JournalEntryId = journal.Id, Reason = "Refund" });
+        await db.SaveChangesAsync();
+
+        var statement = (await new TeacherStatementService(db).GetAsync(teacher.Id, null, null, 1, 25, default))!;
+        Assert.Equal(1, statement.Activity.PurchasingStudents);
+        Assert.Equal(120m, statement.Activity.PurchaseValue);
+        Assert.Equal(1, statement.Activity.RechargeStudents);
+        Assert.Equal(125m, statement.Activity.RechargeAmount);
+        Assert.Equal(100m, statement.Activity.VodafoneCashAmount);
+        Assert.Equal(25m, statement.Activity.OtherRechargeAmount);
+        Assert.Equal(2, statement.Items.Count(x => x.Kind == "StudentCollection" && x.Detail.StartsWith("تحويل مقبول")));
+        Assert.DoesNotContain(statement.Items, x => x.Detail.Contains("غير مؤكد"));
+        Assert.Equal(1, statement.Activity.RefundedStudents);
+        Assert.Equal(50m, statement.Activity.RefundAmount);
+        Assert.Equal(1, statement.Activity.ActivatedCodes);
+        Assert.Equal(75m, statement.Activity.ActivatedCodeValue);
+        Assert.Contains(statement.Items, x => x.Kind == "StudentCollection" && x.Detail.Contains("تحويل مقبول · فودافون كاش"));
+        Assert.Contains(statement.Items, x => x.Kind == "StudentRefund" && x.StudentRefundAmount == 50m);
+        Assert.Contains(statement.Items, x => x.Kind == "CodeActivation" && x.Reference == "12345");
+        var pdf = (await new TeacherStatementService(db).ExportPdfAsync(teacher.Id, null, null, default))!;
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf.Content, 0, 4));
+    }
+
+    [Fact]
+    public async Task Simple_statement_groups_prices_and_historical_shares_without_counting_students_twice()
+    {
+        var student = new User { FullName = "طالب تجريبي", PhoneNumber = "01099900111", PasswordHash = "test" };
+        db.Add(student);
+        foreach (var share in new[] { 80m, 80m, 70m })
+            db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = share,
+                PlatformShareAmount = 100m - share, TeacherFinancialEvent = new TeacherFinancialEvent {
+                    Student = student, SourceType = TeacherFinancialSourceType.DirectPurchase,
+                    SourceId = Guid.NewGuid(), IdempotencyKey = Guid.NewGuid().ToString("N"),
+                    PaidAmount = 100m, OccurredAt = DateTime.UtcNow } });
+        db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = 999m,
+            ReviewStatus = TeacherFinancialReviewStatus.PendingReview,
+            TeacherFinancialEvent = new TeacherFinancialEvent { Student = student,
+                SourceType = TeacherFinancialSourceType.DirectPurchase,
+                IdempotencyKey = Guid.NewGuid().ToString("N"), PaidAmount = 999m } });
+        await db.SaveChangesAsync();
+        var service = new TeacherStatementService(db);
+        var statement = (await service.GetAsync(teacher.Id, null, null, 1, 1, default))!;
+        Assert.Equal(1, statement.Activity.PurchasingStudents);
+        Assert.Equal(3, statement.Activity.PurchaseOperations);
+        Assert.Equal(300m, statement.Activity.PurchaseValue);
+        Assert.Equal(70m, statement.Totals.PlatformEarned);
+        Assert.Equal(2, statement.Sales.Count);
+        var twentyPercent = Assert.Single(statement.Sales, sale => sale.PlatformPercent == 20m);
+        Assert.Equal(2, twentyPercent.Operations);
+        Assert.Equal(1, twentyPercent.Students);
+        Assert.Equal(200m, twentyPercent.Total);
+        Assert.Equal(160m, twentyPercent.TeacherShare);
+        Assert.Equal(40m, twentyPercent.PlatformShare);
+        Assert.Single(statement.Items);
+        var pdf = (await service.ExportPdfAsync(teacher.Id, null, null, default))!;
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf.Content, 0, 4));
+        if (Environment.GetEnvironmentVariable("FINANCE_PDF_SAMPLE") is { Length: > 0 } samplePath)
+            await File.WriteAllBytesAsync(samplePath, pdf.Content);
+    }
+
+    [Fact]
+    public async Task Code_statement_keeps_delivery_value_and_only_receipts_up_to_the_report_end()
+    {
+        var day = DateTime.UtcNow.Date.AddDays(-5);
+        var financial = new FinancialAccount { Code = "TEST-CASH", Name = "Cash" };
+        var treasury = new TreasuryAccount { Name = "Cash", FinancialAccountId = financial.Id };
+        var firstJournal = new JournalEntry { SequenceNumber = 1, IdempotencyKey = "receipt-one" };
+        var secondJournal = new JournalEntry { SequenceNumber = 2, IdempotencyKey = "receipt-two" };
+        var delivery = new CodeGroupDeliveryConfirmation {
+            CodeGroup = new CodeGroup { Teacher = teacher, Name = "دفعة أكواد", TotalCodes = 10, CreatedByUserId = teacher.UserId },
+            ConfirmedAt = day, ConfirmedByUserId = teacher.UserId, PlatformAmountDue = 200m, TeacherRetainedAmount = 800m,
+            Payments = [
+                new CodeGroupDeliveryPayment { Amount = 50m, ReceivedAt = day.AddDays(1), TreasuryAccountId = treasury.Id,
+                    ReceivedByUserId = teacher.UserId, JournalEntryId = firstJournal.Id, IdempotencyKey = "code-one" },
+                new CodeGroupDeliveryPayment { Amount = 150m, ReceivedAt = day.AddDays(3), TreasuryAccountId = treasury.Id,
+                    ReceivedByUserId = teacher.UserId, JournalEntryId = secondJournal.Id, IdempotencyKey = "code-two" }
+            ]
+        };
+        db.AddRange(financial, treasury, firstJournal, secondJournal, delivery);
+        await db.SaveChangesAsync();
+        var service = new TeacherStatementService(db);
+        var historical = (await service.GetAsync(teacher.Id, day, day.AddDays(2), 1, 25, default))!;
+        var batch = Assert.Single(historical.CodeBatches);
+        Assert.Equal(10, batch.Codes);
+        Assert.Equal(1000m, batch.Value);
+        Assert.Equal(50m, batch.Collected);
+        Assert.Equal(150m, batch.Remaining);
+        Assert.Equal(50m, historical.Totals.PlatformCodePayments);
+        var current = (await service.GetAsync(teacher.Id, day, null, 1, 25, default))!;
+        Assert.Equal(0m, Assert.Single(current.CodeBatches).Remaining);
+        Assert.Equal(200m, Assert.Single(current.CodeBatches).Collected);
+    }
+
+    [Fact]
     public async Task Reserved_debt_is_deducted_once_and_request_cannot_exceed_the_same_available_amount()
     {
         db.Add(new TeacherAccount { Teacher = teacher, TotalEarnings = 200m, CurrentBalance = 200m, ReservedBalance = 100m });

@@ -97,6 +97,17 @@ internal static class AdminAIEntityConfigurations
             e.HasOne(x => x.Turn).WithMany(x => x.ReadInvocations).HasForeignKey(x => x.TurnId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<AdminAITurnStep>().WithMany().HasForeignKey(x => x.TurnStepId).OnDelete(DeleteBehavior.Restrict);
         });
+        b.Entity<AdminAIReadBatchReceipt>(e =>
+        {
+            e.ToTable("admin_ai_read_batch_receipts", table => table.HasCheckConstraint("ck_admin_ai_read_batch_receipt_version", "\"ResponseTurnVersion\" > 0"));
+            e.HasIndex(x => new { x.TurnId, x.BatchKeyDigest }).IsUnique();
+            e.HasIndex(x => x.ExpiresAt);
+            e.Property(x => x.BatchKeyDigest).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.RequestDigest).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.ResponseHash).HasMaxLength(64).IsFixedLength();
+            e.HasOne<AdminAITurn>().WithMany().HasForeignKey(x => x.TurnId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<AdminAITurnStep>().WithMany().HasForeignKey(x => x.TurnStepId).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private static void ConfigureProposal(ModelBuilder b)

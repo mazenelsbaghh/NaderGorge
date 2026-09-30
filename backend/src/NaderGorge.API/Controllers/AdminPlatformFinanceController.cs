@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Features.Admin.PlatformFinance;
@@ -13,6 +14,7 @@ using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Services.Finance.Migration;
 using NaderGorge.Application.Services;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.API.Controllers;
 
@@ -224,6 +226,12 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.refunds.create")]
     public async Task<ActionResult<object>> CreateExternalPackageRefund([FromBody] ExternalPackageRefundBody body, CancellationToken ct)
     {
+        var actorId = CurrentUserId();
+        var amount = body.PlatformAmount + body.TeacherAmount;
+        var existing = await db.PlatformRefunds.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.AccessGrantId == body.AccessGrantId, ct);
+        if (existing is not null)
+            return ReplayExternalPackageRefund(existing, body, actorId, amount);
         var grant = await db.StudentAccessGrants.AsNoTracking().SingleOrDefaultAsync(item => item.Id == body.AccessGrantId, ct);
         var source = body.PurchaseOperationId.HasValue
             ? await db.SalesFinancialEffects.AsNoTracking()
@@ -231,11 +239,16 @@ public sealed class AdminPlatformFinanceController(
             : null;
         var preview = await mediator.Send(
             new GetRefundUsagePreviewQuery(body.StudentId, body.AccessGrantId, body.PurchaseOperationId), ct);
-        var amount = body.PlatformAmount + body.TeacherAmount;
         if (grant is null || preview is null || grant.UserId != body.StudentId || !grant.IsActive ||
             (source is not null && (source.StudentId != body.StudentId || source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount)) ||
             amount <= 0m || amount > preview.RemainingRefundableAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
+        {
+            existing = await db.PlatformRefunds.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.AccessGrantId == body.AccessGrantId, ct);
+            if (existing is not null)
+                return ReplayExternalPackageRefund(existing, body, actorId, amount);
             return BadRequest(new { message = "بيانات الباقة أو مبلغ الاسترداد غير صالح." });
+        }
         var fraction = amount / preview.PaidAmount;
         var teacherAmount = source is null
             ? 0m
@@ -246,10 +259,14 @@ public sealed class AdminPlatformFinanceController(
         try
         {
             var cancellation = await mediator.Send(
-                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason, new TeacherRefundScope(sourceId, fraction)), ct);
+                new CancelPackageGrantCommand(body.AccessGrantId, false, actorId, body.Reason, new TeacherRefundScope(sourceId, fraction)), ct);
             if (!cancellation.Success)
             {
                 await transaction.RollbackAsync(ct);
+                existing = await db.PlatformRefunds.AsNoTracking()
+                    .SingleOrDefaultAsync(item => item.AccessGrantId == body.AccessGrantId, ct);
+                if (existing is not null)
+                    return ReplayExternalPackageRefund(existing, body, actorId, amount);
                 return BadRequest(cancellation);
             }
 
@@ -264,15 +281,25 @@ public sealed class AdminPlatformFinanceController(
                 body.TreasuryAccountId,
                 body.Reason,
                 body.PaymentReference,
-                CurrentUserId(),
+                actorId,
                 grant.Id), ct);
             refund = await operations.PostRefundAsync(
                 refund.Id,
                 $"external-refund-{body.AccessGrantId}",
-                CurrentUserId(),
+                actorId,
                 ct);
             await transaction.CommitAsync(ct);
             return Ok(new { refund.Id, refund.TotalAmount, refund.Status });
+        }
+        catch (Exception exception) when (IsExternalRefundConcurrency(exception))
+        {
+            await transaction.RollbackAsync(ct);
+            await transaction.DisposeAsync();
+            var committed = await db.PlatformRefunds.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.AccessGrantId == body.AccessGrantId, ct);
+            if (committed is not null)
+                return ReplayExternalPackageRefund(committed, body, actorId, amount);
+            throw;
         }
         catch
         {
@@ -283,6 +310,35 @@ public sealed class AdminPlatformFinanceController(
         {
             await transaction.DisposeAsync();
         }
+    }
+
+    private ActionResult<object> ReplayExternalPackageRefund(
+        PlatformRefund refund, ExternalPackageRefundBody body, Guid actorId, decimal amount)
+    {
+        var sameRequest = refund.Status == PlatformRefundStatus.Posted
+            && refund.StudentId == body.StudentId
+            && refund.OriginalSourceId == (body.PurchaseOperationId ?? body.AccessGrantId)
+            && refund.OriginalSourceType == (body.PurchaseOperationId.HasValue ? "PurchaseOperation" : "HistoricalAccessGrant")
+            && refund.TotalAmount == amount
+            && refund.Method == PlatformRefundMethod.Cash
+            && refund.TreasuryAccountId == body.TreasuryAccountId
+            && refund.Reason == body.Reason?.Trim()
+            && refund.PaymentReference == body.PaymentReference?.Trim()
+            && refund.CreatedByUserId == actorId;
+        return sameRequest
+            ? Ok(new { refund.Id, refund.TotalAmount, refund.Status })
+            : Conflict(new { message = "تم تسجيل استرداد مختلف لهذه المنحة؛ راجع السجل قبل المحاولة مجددًا." });
+    }
+
+    private static bool IsExternalRefundConcurrency(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException postgres &&
+                postgres.SqlState is PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.UniqueViolation)
+                return true;
+        }
+        return false;
     }
 
     [HttpPost("refunds/{refundId:guid}/post")]
@@ -309,6 +365,11 @@ public sealed class AdminPlatformFinanceController(
                 x.StudentId,
                 db.Users.Where(user => user.Id == x.StudentId).Select(user => user.FullName).FirstOrDefault() ?? "طالب غير معروف",
                 db.Users.Where(user => user.Id == x.StudentId).Select(user => user.PhoneNumber).FirstOrDefault() ?? string.Empty,
+                x.JournalEntryId == null
+                    ? x.CreatedByUserId
+                    : db.JournalEntries.Where(entry => entry.Id == x.JournalEntryId)
+                        .Select(entry => entry.ActorUserId).FirstOrDefault() ?? x.CreatedByUserId,
+                string.Empty,
                 x.TeacherId,
                 x.PlatformAmount,
                 x.TeacherAmount,
@@ -335,6 +396,8 @@ public sealed class AdminPlatformFinanceController(
                 x.StudentBalance.UserId,
                 x.StudentBalance.User.FullName,
                 x.StudentBalance.User.PhoneNumber,
+                x.PerformedByUserId,
+                string.Empty,
                 null,
                 x.Amount,
                 0m,
@@ -347,10 +410,21 @@ public sealed class AdminPlatformFinanceController(
                 true))
             .ToListAsync(ct);
 
-        return Ok(recordedRefunds
+        var latestRefunds = recordedRefunds
             .Concat(historicalRefunds)
             .OrderByDescending(x => x.CreatedAt)
-            .Take(500));
+            .Take(500).ToList();
+        var actorIds = latestRefunds.Where(x => x.ProcessedByUserId.HasValue)
+            .Select(x => x.ProcessedByUserId!.Value).Distinct().ToArray();
+        var actorNames = await db.Users.AsNoTracking()
+            .Where(user => actorIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.FullName, ct);
+        return Ok(latestRefunds.Select(refund => refund with
+        {
+            ProcessedByName = refund.ProcessedByUserId is { } actorId
+                ? actorNames.GetValueOrDefault(actorId, "مستخدم سابق")
+                : "غير مسجل"
+        }));
     }
 
     [HttpPost("refunds/{refundId:guid}/reverse")]
@@ -517,6 +591,8 @@ public sealed record PlatformRefundListItem(
     Guid StudentId,
     string StudentName,
     string StudentPhoneNumber,
+    Guid? ProcessedByUserId,
+    string ProcessedByName,
     Guid? TeacherId,
     decimal PlatformAmount,
     decimal TeacherAmount,

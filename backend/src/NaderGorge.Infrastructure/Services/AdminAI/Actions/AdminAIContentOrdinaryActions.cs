@@ -14,7 +14,7 @@ public sealed class AdminAICreateVideoTypeAction(IMediator mediator, IAdminAIAct
 {
     public override string Key => "admin.content.video-type.create";
     protected override IRequest<ApiResponse<VideoTypeDto>> CreateCommand(AdminAICreateVideoTypeInput input, Guid actorId, string operationId) =>
-        new CreateVideoTypeCommand(input.Name, input.SortOrder, input.IsActive, actorId);
+        new CreateVideoTypeCommand(input.Name, input.SortOrder, input.IsActive, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<VideoTypeDto> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["video-types", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["video-types", "content"]);
@@ -26,7 +26,11 @@ public sealed class AdminAICreateSubjectAction(IMediator mediator, IAdminAIActio
 {
     public override string Key => "admin.content.subject.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateSubjectInput input, Guid actorId, string operationId) =>
-        new CreateSubjectCommand(input.Name, input.Description);
+        new CreateSubjectCommand(input.Name, input.Description)
+        {
+            ActorUserId = actorId,
+            OperationId = operationId
+        };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { subjectId = response.Data }, 1, ["subjects", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["subjects", "content"]);
@@ -38,9 +42,13 @@ public sealed class AdminAIUpdateSubjectAction(IMediator mediator, IAdminAIActio
 {
     public override string Key => "admin.content.subject.update";
     protected override IRequest<ApiResponse> CreateCommand(AdminAIUpdateSubjectInput input, Guid actorId, string operationId) =>
-        new UpdateSubjectCommand(input.SubjectId, input.Name, input.Description);
+        new UpdateSubjectCommand(input.SubjectId, input.Name, input.Description)
+        {
+            ActorUserId = actorId,
+            OperationId = operationId
+        };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse response) => response.Success
-        ? AdminAIActionOutcomeFactory.Success(new { subjectId = true }, 1, ["subjects", "content"])
+        ? AdminAIActionOutcomeFactory.Success(new { updated = true }, 1, ["subjects", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["subjects", "content"]);
 }
 
@@ -50,7 +58,7 @@ public sealed class AdminAIUpdateVideoTypeAction(IMediator mediator, IAdminAIAct
 {
     public override string Key => "admin.content.video-type.update";
     protected override IRequest<ApiResponse<VideoTypeDto>> CreateCommand(AdminAIUpdateVideoTypeInput input, Guid actorId, string operationId) =>
-        new UpdateVideoTypeCommand(input.VideoTypeId, input.Name, input.SortOrder, actorId);
+        new UpdateVideoTypeCommand(input.VideoTypeId, input.Name, input.SortOrder, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<VideoTypeDto> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["video-types", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["video-types", "content"]);

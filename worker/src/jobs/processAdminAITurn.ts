@@ -30,7 +30,25 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
     if ((job.name && job.name !== 'respond') || job.data.schemaVersion !== '1' || !turnId) throw new Error('AI_INVALID_JOB');
     const queuedAt = Date.parse(job.data.queuedAt);
     if (Number.isFinite(queuedAt)) recordAdminAIMetric('queue_age', Math.max(0, startedAt - queuedAt), { queue: 'ai-admin-agent-turns' });
-    if (job.data.completion) { await dependencies.callbacks.complete(turnId, job.data.completion); recordAdminAIMetric('recovery_outcome', 1, { outcome: 'callback-replayed' }); logAdminAIEvent('callback_replayed', { outcome: 'success', decisionType: job.data.completion.decision.type }); return { success: true, decision: job.data.completion.decision.type, callbackReplay: true }; }
+    if (job.data.completion) {
+      let completion = job.data.completion;
+      try { await dependencies.callbacks.complete(turnId, completion); }
+      catch (error) {
+        if (!(error instanceof AdminAICallbackError) || error.httpStatus !== 409) throw error;
+        if (await dependencies.cancelled(job)) return { success: false, reason: 'CANCELLED' };
+        const resumed = await dependencies.callbacks.claim(turnId, dependencies.workerInstanceId);
+        if (!resumed || resumed.stepNumber !== completion.expectedStepNumber ||
+            resumed.capabilityBaseline.version !== completion.expectedBaselineVersion ||
+            resumed.sensitiveDataPolicy.version !== completion.expectedSensitivePolicyVersion)
+          throw new AdminAICallbackError('CALLBACK_REJECTED', false, 409);
+        completion = { ...completion, leaseToken: resumed.leaseToken, expectedTurnVersion: resumed.expectedTurnVersion };
+        await job.updateData({ ...job.data, completion });
+        await dependencies.callbacks.complete(turnId, completion);
+      }
+      recordAdminAIMetric('recovery_outcome', 1, { outcome: 'callback-replayed' });
+      logAdminAIEvent('callback_replayed', { outcome: 'success', decisionType: completion.decision.type });
+      return { success: true, decision: completion.decision.type, callbackReplay: true };
+    }
     if (await dependencies.cancelled(job)) return { success: false, reason: 'CANCELLED' };
     const context = await dependencies.callbacks.claim(turnId, dependencies.workerInstanceId); if (!context) return { success: false, reason: 'TURN_NOT_FOUND' };
     const queueAge = dependencies.now() - Date.parse(job.data.queuedAt); const maximumAge = Math.max(30_000, Number.parseInt(process.env.AI_ADMIN_AGENT_MAX_QUEUE_AGE_MS || '300000', 10) || 300_000);

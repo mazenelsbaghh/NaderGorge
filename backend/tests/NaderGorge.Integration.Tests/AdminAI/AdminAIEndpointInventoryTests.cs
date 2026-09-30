@@ -121,6 +121,7 @@ public sealed class AdminAIEndpointInventoryTests : IClassFixture<AdminAIEndpoin
             builder.UseEnvironment("E2e");
             builder.UseSetting("Security:RequireHttps", "false");
             builder.UseSetting("AdminAI:HmacKey", Convert.ToBase64String(new byte[32]));
+            builder.UseSetting("AiMediaRelay:Secret", "admin-ai-inventory-test-relay-secret-20260929");
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IHostedService>();

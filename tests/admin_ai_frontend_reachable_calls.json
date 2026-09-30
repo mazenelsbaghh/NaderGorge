@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 525,
+  "reachableFileCount": 526,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -908,6 +908,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/components/admin/gifts/GiftContentPicker.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/components/admin/gifts/GiftDetailsPanel.tsx",
       "route": null
     },
@@ -1612,10 +1616,6 @@
       "route": null
     },
     {
-      "file": "frontend/src/features/teacher-finance-center/TeacherAllocationExplanation.tsx",
-      "route": null
-    },
-    {
       "file": "frontend/src/features/teacher-finance-center/TeacherCodeBatches.tsx",
       "route": null
     },
@@ -1633,6 +1633,10 @@
     },
     {
       "file": "frontend/src/features/teacher-finance-center/TeacherPayoutRequests.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherStatementPanel.tsx",
       "route": null
     },
     {
@@ -2104,15 +2108,15 @@
       "route": null
     }
   ],
-  "callCount": 620,
+  "callCount": 524,
   "calls": [
     {
-      "method": "DELETE",
-      "path": "/{endpointaudience}/definitions/{id}",
+      "method": "ANY",
+      "path": "/{base}/{path}",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 180
+        "file": "frontend/src/services/learning-center-service.ts",
+        "line": 155
       }
     },
     {
@@ -2121,7 +2125,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1891
+        "line": 1892
       }
     },
     {
@@ -2130,16 +2134,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1427
-      }
-    },
-    {
-      "method": "DELETE",
-      "path": "/admin/devices/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1343
+        "line": 1428
       }
     },
     {
@@ -2157,7 +2152,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2198
+        "line": 2199
       }
     },
     {
@@ -2166,7 +2161,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2192
+        "line": 2193
       }
     },
     {
@@ -2175,7 +2170,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 312
+        "line": 331
       }
     },
     {
@@ -2202,7 +2197,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2204
+        "line": 2205
       }
     },
     {
@@ -2220,7 +2215,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1570
+        "line": 1571
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 186
       }
     },
     {
@@ -2229,7 +2233,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2409
+        "line": 2410
       }
     },
     {
@@ -2265,7 +2269,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1595
+        "line": 1596
       }
     },
     {
@@ -2274,7 +2278,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2319
+        "line": 2320
       }
     },
     {
@@ -2301,7 +2305,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1719
+        "line": 1720
       }
     },
     {
@@ -2310,16 +2314,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1818
-      }
-    },
-    {
-      "method": "DELETE",
-      "path": "/admin/videos/{videoId}/exams/{examId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2088
+        "line": 1819
       }
     },
     {
@@ -2333,29 +2328,20 @@
     },
     {
       "method": "DELETE",
-      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 664
-      }
-    },
-    {
-      "method": "DELETE",
       "path": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 865
+        "line": 867
       }
     },
     {
       "method": "DELETE",
-      "path": "/video-learning/{id}/entries/{entryId}",
+      "path": "/teacher/reports/definitions/{id}",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 42
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 187
       }
     },
     {
@@ -2369,83 +2355,11 @@
     },
     {
       "method": "GET",
-      "path": "/{endpointaudience}/catalog",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 148
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/definitions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 162
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/filter-options",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 152
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/student-ledger/export",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 189
-      }
-    },
-    {
-      "method": "GET",
       "path": "/{scope}/content/summary",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 402
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{contentType}s/{id}/subscribers",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2569
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{contentType}s/{id}/subscribers/export",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2581
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{kindexamexamshomework}/{id}/editor",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 52
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{kindexamexamshomework}/notification-templates",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 50
+        "line": 412
       }
     },
     {
@@ -2454,7 +2368,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2507
+        "line": 2508
       }
     },
     {
@@ -2463,7 +2377,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2485
+        "line": 2486
       }
     },
     {
@@ -2472,7 +2386,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2496
+        "line": 2497
       }
     },
     {
@@ -2481,7 +2395,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2518
+        "line": 2519
       }
     },
     {
@@ -2508,7 +2422,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1850
+        "line": 1851
       }
     },
     {
@@ -2517,7 +2431,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1857
+        "line": 1858
       }
     },
     {
@@ -2526,7 +2440,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1949
+        "line": 1950
       }
     },
     {
@@ -2540,11 +2454,29 @@
     },
     {
       "method": "GET",
+      "path": "/admin/codes/groups",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1404
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/codes/groups/{id}/details",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1412
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/comments",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1770
+        "line": 1771
       }
     },
     {
@@ -2553,7 +2485,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1743
+        "line": 1744
       }
     },
     {
@@ -2562,7 +2494,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1722
+        "line": 1723
       }
     },
     {
@@ -2571,7 +2503,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 400
+        "line": 410
       }
     },
     {
@@ -2581,15 +2513,6 @@
       "source": {
         "file": "frontend/src/app/admin/emthntak/page.tsx",
         "line": 20
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/essays/pending",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1487
       }
     },
     {
@@ -2607,7 +2530,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2167
+        "line": 2168
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/exams/{id}/editor",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/exams/notification-templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 51
       }
     },
     {
@@ -2616,7 +2557,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 360
+        "line": 379
       }
     },
     {
@@ -2625,7 +2566,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2470
+        "line": 2471
       }
     },
     {
@@ -2634,7 +2575,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 327
+        "line": 346
       }
     },
     {
@@ -2643,7 +2584,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 282
+        "line": 301
       }
     },
     {
@@ -2652,7 +2593,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 373
+        "line": 392
       }
     },
     {
@@ -2688,7 +2629,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 125
+        "line": 126
       }
     },
     {
@@ -2697,7 +2638,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 128
+        "line": 129
       }
     },
     {
@@ -2706,7 +2647,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 139
+        "line": 140
       }
     },
     {
@@ -2715,7 +2656,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 147
+        "line": 148
       }
     },
     {
@@ -2724,7 +2665,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 144
+        "line": 145
       }
     },
     {
@@ -2742,7 +2683,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2173
+        "line": 2174
       }
     },
     {
@@ -2752,6 +2693,24 @@
       "source": {
         "file": "frontend/src/components/admin/MissingHomeworkExport.tsx",
         "line": 18
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/homework/{id}/editor",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 55
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/homework/notification-templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 52
       }
     },
     {
@@ -2778,7 +2737,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1652
+        "line": 1653
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2575
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2591
       }
     },
     {
@@ -2787,7 +2764,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1761
+        "line": 1762
       }
     },
     {
@@ -2796,7 +2773,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1658
+        "line": 1659
       }
     },
     {
@@ -2837,11 +2814,11 @@
     },
     {
       "method": "GET",
-      "path": "/admin/operations/tasks{query}",
-      "dynamic": true,
+      "path": "/admin/operations/tasks",
+      "dynamic": false,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 103
+        "line": 102
       }
     },
     {
@@ -2850,7 +2827,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1543
+        "line": 1544
       }
     },
     {
@@ -2859,7 +2836,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1554
+        "line": 1555
       }
     },
     {
@@ -2868,7 +2845,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2530
+        "line": 2531
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2572
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2586
       }
     },
     {
@@ -2949,7 +2944,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 23
+        "line": 26
       }
     },
     {
@@ -3075,7 +3070,43 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1438
+        "line": 1439
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/catalog",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 167
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/filter-options",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 154
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/student-ledger/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 200
       }
     },
     {
@@ -3084,7 +3115,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2378
+        "line": 2379
       }
     },
     {
@@ -3138,7 +3169,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1603
+        "line": 1604
       }
     },
     {
@@ -3147,7 +3178,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2552
+        "line": 2553
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sections/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2574
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sections/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2590
       }
     },
     {
@@ -3156,7 +3205,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2366
+        "line": 2367
       }
     },
     {
@@ -3188,15 +3237,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/subjects/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 166
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/system-logs",
       "dynamic": false,
       "source": {
@@ -3219,7 +3259,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 273
+        "line": 292
       }
     },
     {
@@ -3228,7 +3268,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 250
+        "line": 269
       }
     },
     {
@@ -3237,7 +3277,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 194
+        "line": 213
       }
     },
     {
@@ -3246,7 +3286,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 223
+        "line": 242
       }
     },
     {
@@ -3255,7 +3295,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 231
+        "line": 250
       }
     },
     {
@@ -3264,7 +3304,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 335
+        "line": 354
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/statement",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 197
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/statement/pdf",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 207
       }
     },
     {
@@ -3273,7 +3331,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 216
+        "line": 235
       }
     },
     {
@@ -3309,7 +3367,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2459
+        "line": 2460
       }
     },
     {
@@ -3327,7 +3385,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2448
+        "line": 2449
       }
     },
     {
@@ -3345,7 +3403,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2415
+        "line": 2416
       }
     },
     {
@@ -3354,7 +3412,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2429
+        "line": 2430
       }
     },
     {
@@ -3363,7 +3421,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1599
+        "line": 1600
       }
     },
     {
@@ -3372,7 +3430,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2541
+        "line": 2542
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2573
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2588
       }
     },
     {
@@ -3395,15 +3471,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/users/{id}/devices",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1315
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/users/students/{id}/profile",
       "dynamic": true,
       "source": {
@@ -3417,7 +3484,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1689
+        "line": 1690
       }
     },
     {
@@ -3435,16 +3502,16 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 249
+        "line": 247
       }
     },
     {
       "method": "GET",
-      "path": "/admin/wallets/recharge-requests/{id}/sms-suggestions",
-      "dynamic": true,
+      "path": "/admin/wallets/recharge-requests",
+      "dynamic": false,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 242
+        "line": 224
       }
     },
     {
@@ -3453,7 +3520,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 277
+        "line": 275
       }
     },
     {
@@ -3462,7 +3529,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 237
+        "line": 235
       }
     },
     {
@@ -3471,7 +3538,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 232
+        "line": 230
       }
     },
     {
@@ -3480,7 +3547,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2326
+        "line": 2327
       }
     },
     {
@@ -3516,43 +3583,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 392
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments?offset={offset}&limit={limit}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 393
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 394
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/comments/mine",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 396
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/lessons/{lessonId}/resources",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 395
+        "line": 402
       }
     },
     {
@@ -3561,16 +3592,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 383
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/content/packages/{packageId}/code-page",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 389
+        "line": 393
       }
     },
     {
@@ -3579,7 +3601,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 386
+        "line": 396
       }
     },
     {
@@ -3588,7 +3610,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 391
+        "line": 401
       }
     },
     {
@@ -3597,7 +3619,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 390
+        "line": 400
       }
     },
     {
@@ -3625,15 +3647,6 @@
       "source": {
         "file": "frontend/src/services/crm-service.ts",
         "line": 107
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/health/ready/ai-live-support",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-ai-service.ts",
-        "line": 65
       }
     },
     {
@@ -3836,20 +3849,11 @@
     },
     {
       "method": "GET",
-      "path": "/hr/payroll/self/financial-requests",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 22
-      }
-    },
-    {
-      "method": "GET",
       "path": "/hr/payroll/self/payslips",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 21
+        "line": 32
       }
     },
     {
@@ -3895,15 +3899,6 @@
       "source": {
         "file": "frontend/src/services/hr-service.ts",
         "line": 351
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 636
       }
     },
     {
@@ -3957,7 +3952,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 892
+        "line": 894
       }
     },
     {
@@ -3966,7 +3961,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 901
+        "line": 903
       }
     },
     {
@@ -3975,7 +3970,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 895
+        "line": 897
       }
     },
     {
@@ -3984,16 +3979,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 898
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/availability",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 600
+        "line": 900
       }
     },
     {
@@ -4016,101 +4002,20 @@
     },
     {
       "method": "GET",
-      "path": "/live-support/participant/conversations",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 603
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}",
+      "path": "/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 612
+        "line": 639
       }
     },
     {
       "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/pending-action",
+      "path": "/live-support/staff/conversations/{conversationId}/attachments/{attachmentId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 1019
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/snapshot",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 621
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/session",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1022
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 615
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/bootstrap",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 682
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/canned-replies",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 927
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 956
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}/draft",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 962
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/context",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 959
+        "line": 638
       }
     },
     {
@@ -4119,52 +4024,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 871
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-context",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 944
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-context/{section}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 947
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-history",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 950
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-history/{historyConversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 953
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/students/search",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 935
+        "line": 873
       }
     },
     {
@@ -4182,7 +4042,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 874
+        "line": 876
       }
     },
     {
@@ -4209,7 +4069,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 822
       }
     },
     {
@@ -4232,173 +4092,11 @@
     },
     {
       "method": "GET",
-      "path": "/public/packages/{packageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 364
-      }
-    },
-    {
-      "method": "GET",
       "path": "/public/settings",
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 319
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 349
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/{teacherId}/community-posts",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 369
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/{teacherIdOrSlug}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 359
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/public/teachers/landing",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 354
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/dashboard",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 339
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/dashboard/quick-access",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 379
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/grades",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 335
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/lessons",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 389
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/mistakes",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 394
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/notifications",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 424
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 414
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/progress",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 384
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 146
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 156
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shared-packages/purchased",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
-        "line": 151
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/shell-bootstrap",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 344
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/student/theme-preferences",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 399
+        "line": 323
       }
     },
     {
@@ -4412,38 +4110,20 @@
     },
     {
       "method": "GET",
-      "path": "/teacher/activity",
+      "path": "/teacher/codes/groups",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 276
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1403
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/comments",
-      "dynamic": false,
+      "path": "/teacher/codes/groups/{id}/details",
+      "dynamic": true,
       "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 385
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/community/comments/pending",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 345
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/community/posts",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 339
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1411
       }
     },
     {
@@ -4475,137 +4155,56 @@
     },
     {
       "method": "GET",
-      "path": "/teacher/dashboard/stats",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 237
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/essays",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 241
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/finance/account",
+      "path": "/teacher/finance/statement",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 408
+        "line": 198
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/finance/calendar",
+      "path": "/teacher/finance/statement/pdf",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 430
+        "line": 208
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/finance/calendar/export",
+      "path": "/teacher/reports/catalog",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 438
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 149
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/finance/payouts",
+      "path": "/teacher/reports/definitions",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 446
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 168
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/finance/transactions",
+      "path": "/teacher/reports/filter-options",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 419
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 155
       }
     },
     {
       "method": "GET",
-      "path": "/teacher/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 369
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/profile",
+      "path": "/teacher/reports/student-ledger/export",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 248
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/profile/active-photo",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 274
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/public-exams",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 327
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/staff",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 310
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/students",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 239
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/subjects",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 280
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/v1/assistant/tasks/my",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 70
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 201
       }
     },
     {
@@ -4619,29 +4218,20 @@
     },
     {
       "method": "GET",
-      "path": "/v1/assistant/tasks/pending{queryParams}",
+      "path": "/video-learning/{id}",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 59
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 37
       }
     },
     {
       "method": "GET",
-      "path": "/video-learning/{id}{authorauthor}",
+      "path": "/video-learning/{id}/author",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 35
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/video-learning/{id}/entries/{entryId}/replies",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 41
+        "line": 36
       }
     },
     {
@@ -4650,16 +4240,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 46
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/video-learning/review",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 47
+        "line": 48
       }
     },
     {
@@ -4678,15 +4259,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1120
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-ai-agent-service.ts",
-        "line": 132
       }
     },
     {
@@ -4717,57 +4289,12 @@
       }
     },
     {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1402
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1411
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 83
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 90
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/wallet-service.ts",
-        "line": 227
-      }
-    },
-    {
       "method": "PATCH",
       "path": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}/status",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1883
+        "line": 1884
       }
     },
     {
@@ -4785,7 +4312,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1712
+        "line": 1713
       }
     },
     {
@@ -4794,7 +4321,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1812
+        "line": 1813
       }
     },
     {
@@ -4817,38 +4344,11 @@
     },
     {
       "method": "PATCH",
-      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 658
-      }
-    },
-    {
-      "method": "PATCH",
       "path": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 859
-      }
-    },
-    {
-      "method": "PATCH",
-      "path": "/teacher/staff/{staffMemberId}/permissions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 322
-      }
-    },
-    {
-      "method": "PATCH",
-      "path": "/teacher/staff/{staffMemberId}/status",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 317
+        "line": 861
       }
     },
     {
@@ -4871,47 +4371,11 @@
     },
     {
       "method": "POST",
-      "path": "/{endpointaudience}/definitions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 168
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/{endpointaudience}/execute",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 156
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/{endpointaudience}/export/{format}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 183
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/{definitionkindexamexamshomework}/{definitionassessmentId}/revision-preview",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 53
-      }
-    },
-    {
-      "method": "POST",
       "path": "/admin/assessments/ocr/questions",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2181
+        "line": 2182
       }
     },
     {
@@ -4929,7 +4393,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1864
+        "line": 1865
       }
     },
     {
@@ -4938,7 +4402,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1911
+        "line": 1912
       }
     },
     {
@@ -4947,7 +4411,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1905
+        "line": 1906
       }
     },
     {
@@ -4956,7 +4420,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1919
+        "line": 1920
       }
     },
     {
@@ -4965,7 +4429,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1898
+        "line": 1899
       }
     },
     {
@@ -4974,16 +4438,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1938
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/bunny/videos/{assetId}/refresh-status",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1926
+        "line": 1939
       }
     },
     {
@@ -4992,7 +4447,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1959
+        "line": 1960
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/codes/bulk-generate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 74
       }
     },
     {
@@ -5001,7 +4465,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1782
+        "line": 1783
       }
     },
     {
@@ -5010,7 +4474,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1792
+        "line": 1793
       }
     },
     {
@@ -5019,7 +4483,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1788
+        "line": 1789
       }
     },
     {
@@ -5028,7 +4492,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1749
+        "line": 1750
       }
     },
     {
@@ -5037,7 +4501,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1755
+        "line": 1756
       }
     },
     {
@@ -5046,7 +4510,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1731
+        "line": 1732
       }
     },
     {
@@ -5055,7 +4519,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1737
+        "line": 1738
       }
     },
     {
@@ -5064,7 +4528,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1525
+        "line": 1526
       }
     },
     {
@@ -5073,7 +4537,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2022
+        "line": 2023
       }
     },
     {
@@ -5087,20 +4551,11 @@
     },
     {
       "method": "POST",
-      "path": "/admin/essays/{essaySubmissionId}/grade",
+      "path": "/admin/exams/{assessmentId}/revision-preview",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1498
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/exams/{examId}/questions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2159
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 57
       }
     },
     {
@@ -5109,7 +4564,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2134
+        "line": 2135
       }
     },
     {
@@ -5118,7 +4573,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 344
+        "line": 363
       }
     },
     {
@@ -5127,7 +4582,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 301
+        "line": 320
       }
     },
     {
@@ -5136,7 +4591,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 319
+        "line": 338
       }
     },
     {
@@ -5145,7 +4600,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 290
+        "line": 309
       }
     },
     {
@@ -5154,7 +4609,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 387
+        "line": 406
       }
     },
     {
@@ -5163,7 +4618,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 399
+        "line": 418
       }
     },
     {
@@ -5190,7 +4645,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 131
+        "line": 132
       }
     },
     {
@@ -5199,7 +4654,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 135
+        "line": 136
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/homework/{assessmentId}/revision-preview",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 58
       }
     },
     {
@@ -5226,7 +4690,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1624
+        "line": 1625
       }
     },
     {
@@ -5235,7 +4699,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1681
+        "line": 1682
       }
     },
     {
@@ -5244,7 +4708,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1665
+        "line": 1666
       }
     },
     {
@@ -5253,7 +4717,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1673
+        "line": 1674
       }
     },
     {
@@ -5307,7 +4771,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 113
+        "line": 112
       }
     },
     {
@@ -5316,7 +4780,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 119
+        "line": 118
       }
     },
     {
@@ -5325,7 +4789,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2231
+        "line": 2232
       }
     },
     {
@@ -5334,7 +4798,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1511
+        "line": 1512
       }
     },
     {
@@ -5384,7 +4848,16 @@
     },
     {
       "method": "POST",
-      "path": "/admin/platform-finance/periods/{periodid}/{periodstatus2reopenclose}",
+      "path": "/admin/platform-finance/periods/{id}/close",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
+        "line": 12
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/periods/{id}/reopen",
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
@@ -5478,7 +4951,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2057
+        "line": 2058
       }
     },
     {
@@ -5505,7 +4978,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1461
+        "line": 1462
       }
     },
     {
@@ -5514,7 +4987,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1474
+        "line": 1475
       }
     },
     {
@@ -5523,7 +4996,34 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2034
+        "line": 2035
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 174
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/execute",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 161
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/export/{format}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 193
       }
     },
     {
@@ -5532,7 +5032,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1971
+        "line": 1972
       }
     },
     {
@@ -5541,7 +5041,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1981
+        "line": 1982
       }
     },
     {
@@ -5550,7 +5050,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2388
+        "line": 2389
       }
     },
     {
@@ -5604,7 +5104,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1607
+        "line": 1608
       }
     },
     {
@@ -5658,7 +5158,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 269
+        "line": 288
       }
     },
     {
@@ -5667,7 +5167,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 277
+        "line": 296
       }
     },
     {
@@ -5676,7 +5176,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 260
+        "line": 279
       }
     },
     {
@@ -5685,7 +5185,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 245
+        "line": 264
       }
     },
     {
@@ -5694,7 +5194,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 255
+        "line": 274
       }
     },
     {
@@ -5703,7 +5203,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 256
+        "line": 275
       }
     },
     {
@@ -5712,7 +5212,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 257
+        "line": 276
       }
     },
     {
@@ -5721,7 +5221,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 254
+        "line": 273
       }
     },
     {
@@ -5730,7 +5230,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 239
+        "line": 258
       }
     },
     {
@@ -5739,7 +5239,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 202
+        "line": 221
       }
     },
     {
@@ -5784,7 +5284,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1581
+        "line": 1582
       }
     },
     {
@@ -5802,7 +5302,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2299
+        "line": 2300
       }
     },
     {
@@ -5811,7 +5311,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2303
+        "line": 2304
       }
     },
     {
@@ -5820,7 +5320,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2261
+        "line": 2262
       }
     },
     {
@@ -5829,7 +5329,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2311
+        "line": 2312
       }
     },
     {
@@ -5838,7 +5338,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2291
+        "line": 2292
       }
     },
     {
@@ -5865,7 +5365,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2358
+        "line": 2359
       }
     },
     {
@@ -5874,7 +5374,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1698
+        "line": 1699
       }
     },
     {
@@ -5883,7 +5383,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1798
+        "line": 1799
       }
     },
     {
@@ -5892,7 +5392,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1822
+        "line": 1823
       }
     },
     {
@@ -5901,7 +5401,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1838
+        "line": 1839
       }
     },
     {
@@ -5910,7 +5410,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1844
+        "line": 1845
       }
     },
     {
@@ -5919,7 +5419,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1831
+        "line": 1832
       }
     },
     {
@@ -5955,7 +5455,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 256
+        "line": 254
       }
     },
     {
@@ -5964,7 +5464,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 269
+        "line": 267
       }
     },
     {
@@ -5973,7 +5473,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/wallet-service.ts",
-        "line": 282
+        "line": 280
       }
     },
     {
@@ -5982,7 +5482,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2337
+        "line": 2338
       }
     },
     {
@@ -5991,7 +5491,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2345
+        "line": 2346
       }
     },
     {
@@ -6050,24 +5550,6 @@
     },
     {
       "method": "POST",
-      "path": "/codes/activate",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 95
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/content/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 398
-      }
-    },
-    {
-      "method": "POST",
       "path": "/crm/students/{studentId}/assign",
       "dynamic": true,
       "source": {
@@ -6090,7 +5572,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2224
+        "line": 2225
       }
     },
     {
@@ -6374,11 +5856,56 @@
     },
     {
       "method": "POST",
-      "path": "/hr/payroll/runs/{id}/{action}",
+      "path": "/hr/payroll/runs/{id}/close",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 20
+        "line": 27
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/finance-approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 24
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/finance-review",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 23
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/gm-approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 25
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/pay",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 26
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/return",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 28
       }
     },
     {
@@ -6388,15 +5915,6 @@
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
         "line": 19
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/hr/payroll/self/financial-requests",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 23
       }
     },
     {
@@ -6513,7 +6031,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 904
+        "line": 906
       }
     },
     {
@@ -6563,159 +6081,6 @@
     },
     {
       "method": "POST",
-      "path": "/live-support/connections/whatsapp/{id}/refresh",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 589
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 606
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/abandon",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 670
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{payloaddecisionId}/register",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1013
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/cancel",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 977
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/confirm",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 971
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/cancel",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 995
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/confirm",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 983
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/request",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 989
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/{payloadsessionId}/answer",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1007
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/lookup",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1001
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/attachments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 626
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 652
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/rating",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 676
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 965
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/attachments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 688
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/close",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 880
-      }
-    },
-    {
-      "method": "POST",
       "path": "/live-support/staff/conversations/{conversationId}/messages",
       "dynamic": true,
       "source": {
@@ -6725,29 +6090,20 @@
     },
     {
       "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/transfer",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 886
-      }
-    },
-    {
-      "method": "POST",
       "path": "/live-support/staff/conversations/{conversationId}/whatsapp-template",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 853
+        "line": 855
       }
     },
     {
       "method": "POST",
-      "path": "/live-support/whatsapp/campaigns/{campaignId}/{operation}",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/cancel",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 807
+        "line": 813
       }
     },
     {
@@ -6757,6 +6113,24 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 777
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/pause",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 810
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/resume",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 812
       }
     },
     {
@@ -6801,7 +6175,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 843
+        "line": 845
       }
     },
     {
@@ -6810,7 +6184,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 831
+        "line": 833
       }
     },
     {
@@ -6828,42 +6202,6 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/forms-service.ts",
-        "line": 161
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/public/teachers/{teacherId}/community-posts",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 374
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/acknowledge-tracking-popup",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 446
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/notifications/{id}/read",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 429
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/student/shared-packages/{id}/purchase",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/shared-package-service.ts",
         "line": 161
       }
     },
@@ -6896,7 +6234,7 @@
     },
     {
       "method": "POST",
-      "path": "/student/video-session/{requestlessonVideoId}/track-progress",
+      "path": "/student/video-session/{lessonVideoId}/track-progress",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
@@ -6905,7 +6243,7 @@
     },
     {
       "method": "POST",
-      "path": "/student/video-session/{requestlessonVideoId}/track-progress",
+      "path": "/student/video-session/{lessonVideoId}/track-progress",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
@@ -6932,128 +6270,29 @@
     },
     {
       "method": "POST",
-      "path": "/teacher/comments/{commentId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 375
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/comments/{commentId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 380
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/comments/{commentId}/reply",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 389
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/comments/{commentId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 359
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/comments/{commentId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 364
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/posts/{postId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 349
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/posts/{postId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 354
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/essays/{id}/grade",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 243
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/finance/payouts",
+      "path": "/teacher/reports/definitions",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 453
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 175
       }
     },
     {
       "method": "POST",
-      "path": "/teacher/profile/upload-ai-photo",
+      "path": "/teacher/reports/execute",
       "dynamic": false,
       "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 269
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 162
       }
     },
     {
       "method": "POST",
-      "path": "/teacher/profile/upload-image",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 264
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/public-exams/new",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 331
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/staff",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 312
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/v1/assistant/tasks/{taskId}/resolve",
+      "path": "/teacher/reports/export/{format}",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 63
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 194
       }
     },
     {
@@ -7080,16 +6319,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 44
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/video-learning/{id}/entries",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 40
+        "line": 46
       }
     },
     {
@@ -7108,15 +6338,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1095
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/whatsapp/admin/test-message",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1086
       }
     },
     {
@@ -7201,42 +6422,6 @@
       }
     },
     {
-      "method": "POST",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1395
-      }
-    },
-    {
-      "method": "POST",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 76
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/{endpointaudience}/definitions/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 174
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/{requestdefinitionkindexamexamshomework}/{requestdefinitionassessmentId}/definition",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 56
-      }
-    },
-    {
       "method": "PUT",
       "path": "/admin/auto-repair/control",
       "dynamic": false,
@@ -7251,7 +6436,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1875
+        "line": 1876
       }
     },
     {
@@ -7260,7 +6445,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1419
+        "line": 1420
       }
     },
     {
@@ -7283,11 +6468,11 @@
     },
     {
       "method": "PUT",
-      "path": "/admin/exams/{examId}/questions/{examQuestionId}",
+      "path": "/admin/exams/{assessmentId}/definition",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2215
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 61
       }
     },
     {
@@ -7296,7 +6481,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2094
+        "line": 2095
       }
     },
     {
@@ -7319,6 +6504,15 @@
     },
     {
       "method": "PUT",
+      "path": "/admin/homework/{assessmentId}/definition",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 62
+      }
+    },
+    {
+      "method": "PUT",
       "path": "/admin/homework/{assessmentId}/submissions/{attemptId}/grade",
       "dynamic": true,
       "source": {
@@ -7332,7 +6526,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2101
+        "line": 2102
       }
     },
     {
@@ -7341,7 +6535,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1634
+        "line": 1635
       }
     },
     {
@@ -7350,7 +6544,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2074
+        "line": 2075
       }
     },
     {
@@ -7359,7 +6553,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1644
+        "line": 1645
       }
     },
     {
@@ -7382,20 +6576,11 @@
     },
     {
       "method": "PUT",
-      "path": "/admin/overrides/set-watch-count",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2243
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/admin/packages/{id}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1547
+        "line": 1548
       }
     },
     {
@@ -7404,7 +6589,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1563
+        "line": 1564
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 181
       }
     },
     {
@@ -7413,7 +6607,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2401
+        "line": 2402
       }
     },
     {
@@ -7431,7 +6625,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1617
+        "line": 1618
       }
     },
     {
@@ -7440,7 +6634,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2371
+        "line": 2372
       }
     },
     {
@@ -7458,7 +6652,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 209
+        "line": 228
       }
     },
     {
@@ -7467,7 +6661,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 265
+        "line": 284
       }
     },
     {
@@ -7485,16 +6679,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1591
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/users/{id}/roles",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1223
+        "line": 1592
       }
     },
     {
@@ -7512,7 +6697,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2283
+        "line": 2284
       }
     },
     {
@@ -7521,7 +6706,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2272
+        "line": 2273
       }
     },
     {
@@ -7530,7 +6715,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1705
+        "line": 1706
       }
     },
     {
@@ -7539,16 +6724,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1805
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/videos/{videoId}/exam",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2081
+        "line": 1806
       }
     },
     {
@@ -7602,7 +6778,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 922
+        "line": 924
       }
     },
     {
@@ -7611,7 +6787,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 910
+        "line": 912
       }
     },
     {
@@ -7620,7 +6796,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 916
+        "line": 918
       }
     },
     {
@@ -7634,47 +6810,11 @@
     },
     {
       "method": "PUT",
-      "path": "/live-support/staff/canned-replies",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 930
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/live-support/staff/conversations/{conversationId}/student-link",
+      "path": "/teacher/reports/definitions/{id}",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 938
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/student/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 419
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/student/theme-preferences",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 409
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/teacher/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 259
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 182
       }
     },
     {
@@ -7683,7 +6823,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 36
+        "line": 38
       }
     }
   ],
@@ -8158,5 +7298,5 @@
       }
     }
   ],
-  "digest": "67c07d02e2999f783a349fe94b27f0536bb50735a00d2e0b8af32a164e2c99fc"
+  "digest": "62d8938ee98e2a8b8570d326fdaf8a66369c09c9752d306ebd73aa59cad87161"
 }

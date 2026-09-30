@@ -13,6 +13,7 @@ import {
 import { getAcademicScopeLabel } from '@/lib/academic-labels';
 import { createClientId } from '@/lib/client-id';
 import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
+import { GiftContentPicker } from './GiftContentPicker';
 
 const targetTypes = Object.keys(giftTargetLabels) as GiftTargetType[];
 const isBalance = (type: GiftTargetType) => type === 'GeneralBalance' || type === 'TeacherBalance';
@@ -24,10 +25,12 @@ export function GiftIssueForm() {
   const [teachers, setTeachers] = useState<GiftLookupDto[]>([]);
   const [targets, setTargets] = useState<GiftLookupDto[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [teacherSearch, setTeacherSearch] = useState('');
   const [targetSearch, setTargetSearch] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [teacherId, setTeacherId] = useState('');
   const [targetId, setTargetId] = useState('');
+  const [hierarchyTarget, setHierarchyTarget] = useState<GiftLookupDto | null>(null);
   const [amount, setAmount] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [maxUses, setMaxUses] = useState('');
@@ -39,27 +42,28 @@ export function GiftIssueForm() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    Promise.all([
-      adminGiftsService.students(
-        studentSearch,
-        isBalance(targetType) ? undefined : targetType,
-        isBalance(targetType) ? undefined : targetId || undefined,
-      ),
-      adminGiftsService.teachers(),
-    ])
-      .then(([studentRows, teacherRows]) => {
-        if (!active) return;
-        setStudents(studentRows);
-        setTeachers(teacherRows);
-      })
-      .catch(() => toast.error('تعذر تحميل قوائم الاختيار.'))
+    adminGiftsService.students(
+      studentSearch,
+      isBalance(targetType) ? undefined : targetType,
+      isBalance(targetType) ? undefined : targetId || undefined,
+    )
+      .then((studentRows) => { if (active) setStudents(studentRows); })
+      .catch(() => { if (active) toast.error('تعذر تحميل قائمة الطلاب.'); })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [studentSearch, targetId, targetType]);
 
   useEffect(() => {
-    setTargetId('');
-    if (isBalance(targetType)) {
+    let active = true;
+    setTeachers([]);
+    adminGiftsService.teachers(teacherSearch)
+      .then((teacherRows) => { if (active) setTeachers(teacherRows); })
+      .catch(() => { if (active) toast.error('تعذر تحميل قائمة المدرسين.'); });
+    return () => { active = false; };
+  }, [teacherSearch]);
+
+  useEffect(() => {
+    if (isBalance(targetType) || targetType === 'Lesson' || targetType === 'Video') {
       setTargets([]);
       return;
     }
@@ -75,8 +79,10 @@ export function GiftIssueForm() {
     [selectedStudents, students],
   );
   const selectedTarget = useMemo(
-    () => targets.find((target) => target.id === targetId) ?? null,
-    [targetId, targets],
+    () => targetType === 'Lesson' || targetType === 'Video'
+      ? hierarchyTarget
+      : targets.find((target) => target.id === targetId) ?? null,
+    [targetType, hierarchyTarget, targetId, targets],
   );
 
   const toggleStudent = (id: string) => {
@@ -126,22 +132,36 @@ export function GiftIssueForm() {
         <h2 className="text-base font-black text-[var(--admin-text)]">نوع الهدية</h2>
         <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
           {targetTypes.map((type) => (
-            <button key={type} type="button" onClick={() => { setTargetType(type); setTeacherId(''); setMaxUses(''); }} className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition ${targetType === type ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}>
+            <button key={type} type="button" onClick={() => { setTargetType(type); setTeacherId(''); setTargetId(''); setHierarchyTarget(null); setMaxUses(''); }} className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition ${targetType === type ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}>
               {giftTargetLabels[type]}
             </button>
           ))}
         </div>
 
         {targetType === 'TeacherBalance' ? (
-          <label className="mt-5 block text-sm font-bold text-[var(--admin-text)]">المدرس
-            <select className="admin-input mt-2" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
-              <option value="">اختر المدرس</option>
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
-            </select>
-          </label>
+          <div className="mt-5 space-y-3">
+            <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن المدرس
+              <input className="admin-input mt-2" value={teacherSearch} onChange={(event) => { setTeacherSearch(event.target.value); setTeacherId(''); }} placeholder="اسم المدرس" />
+            </label>
+            <label className="block text-sm font-bold text-[var(--admin-text)]">المدرس
+              <select className="admin-input mt-2" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
+                <option value="">اختر المدرس</option>
+                {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+              </select>
+            </label>
+          </div>
         ) : null}
 
-        {!isBalance(targetType) ? (
+        {(targetType === 'Lesson' || targetType === 'Video') ? (
+          <GiftContentPicker
+            key={targetType}
+            targetType={targetType}
+            teachers={teachers}
+            teacherSearch={teacherSearch}
+            onTeacherSearchChange={setTeacherSearch}
+            onSelect={(target) => { setTargetId(target?.id ?? ''); setHierarchyTarget(target); }}
+          />
+        ) : !isBalance(targetType) ? (
           <div className="mt-5 space-y-3">
             <label className="relative block">
               <Search className="absolute end-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />

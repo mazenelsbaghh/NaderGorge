@@ -12,7 +12,9 @@ public sealed class AdminAICreateFormAction(IMediator mediator, IAdminAIActionPr
 {
     public override string Key => "admin.commercial.form.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateFormInput input, Guid actorId, string operationId) =>
-        new CreateFormCommand(input.Title, input.Description, input.Slug, input.IsActive, input.CoverImageUrl, input.StartsAt, input.ExpiresAt, input.FieldsJson);
+        new CreateFormCommand(input.Title, input.Description, input.Slug, input.IsActive,
+            input.CoverImageUrl, input.StartsAt, input.ExpiresAt, input.FieldsJson)
+        { PerformedByUserId = actorId, OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { formId = response.Data }, 1, ["forms"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["forms"]);
@@ -24,8 +26,10 @@ public sealed class AdminAIUpdateFormAction(IMediator mediator, IAdminAIActionPr
 {
     public override string Key => "admin.commercial.form.update";
     protected override IRequest<ApiResponse> CreateCommand(AdminAIUpdateFormInput input, Guid actorId, string operationId) =>
-        new UpdateFormCommand(input.FormId, input.Title, input.Description, input.Slug, input.IsActive, input.CoverImageUrl, input.StartsAt, input.ExpiresAt, input.FieldsJson);
+        new UpdateFormCommand(input.FormId, input.Title, input.Description, input.Slug, input.IsActive,
+            input.CoverImageUrl, input.StartsAt, input.ExpiresAt, input.FieldsJson)
+        { PerformedByUserId = actorId, OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse response) => response.Success
-        ? AdminAIActionOutcomeFactory.Success(new { formId = true }, 1, ["forms"])
+        ? AdminAIActionOutcomeFactory.Success(new { updated = true }, 1, ["forms"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["forms"]);
 }

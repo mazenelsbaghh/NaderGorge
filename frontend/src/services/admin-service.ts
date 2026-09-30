@@ -1398,17 +1398,18 @@ export const adminService = {
 
   listCodeGroups: async (...options: [{ force?: boolean; search?: string }?]) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
-    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>(path, { params: { search: options[0]?.search } });
+    const requestOptions = { params: { search: options[0]?.search } };
+    const res = isTeacher
+      ? await apiClient.get<ApiResponse<CodeGroupDto[]>>('/teacher/codes/groups', requestOptions)
+      : await apiClient.get<ApiResponse<CodeGroupDto[]>>('/admin/codes/groups', requestOptions);
     return res.data?.data;
   },
 
   getCodeGroupDetails: async (id: string) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher
-      ? `/teacher/codes/groups/${id}/details`
-      : `/admin/codes/groups/${id}/details`;
-    const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(path);
+    const res = isTeacher
+      ? await apiClient.get<ApiResponse<CodeDetailDto[]>>(`/teacher/codes/groups/${id}/details`)
+      : await apiClient.get<ApiResponse<CodeDetailDto[]>>(`/admin/codes/groups/${id}/details`);
     return res.data?.data;
   },
 
@@ -2566,11 +2567,13 @@ export const adminService = {
     pageSize = 20,
     search = ''
   ) => {
-    const res = await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(
-      `/admin/${contentType}s/${id}/subscribers`,
-      { params: { page, pageSize, ...(search ? { search } : {}) } }
-    );
-    return res.data?.data;
+    const options = { params: { page, pageSize, ...(search ? { search } : {}) } };
+    switch (contentType) {
+      case 'package': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/packages/${id}/subscribers`, options)).data?.data;
+      case 'term': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/terms/${id}/subscribers`, options)).data?.data;
+      case 'section': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/sections/${id}/subscribers`, options)).data?.data;
+      case 'lesson': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/lessons/${id}/subscribers`, options)).data?.data;
+    }
   },
 
   exportContentSubscribersCsv: async (
@@ -2578,12 +2581,14 @@ export const adminService = {
     id: string,
     contentName: string
   ) => {
-    const res = await apiClient.get(
-      `/admin/${contentType}s/${id}/subscribers/export`,
-      {
-        responseType: 'blob',
-      }
-    );
+    const options = { responseType: 'blob' as const };
+    const res = contentType === 'package'
+      ? await apiClient.get(`/admin/packages/${id}/subscribers/export`, options)
+      : contentType === 'term'
+        ? await apiClient.get(`/admin/terms/${id}/subscribers/export`, options)
+        : contentType === 'section'
+          ? await apiClient.get(`/admin/sections/${id}/subscribers/export`, options)
+          : await apiClient.get(`/admin/lessons/${id}/subscribers/export`, options);
     const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

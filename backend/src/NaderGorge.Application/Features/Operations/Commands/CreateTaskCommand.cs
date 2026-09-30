@@ -1,3 +1,7 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +20,10 @@ public record CreateTaskCommand(
     TaskPriority Priority,
     DateTime? DueDate,
     Guid CreatedById
-) : IRequest<ApiResponse<Guid>>;
+) : IRequest<ApiResponse<Guid>>
+{
+    public string? OperationId { get; init; }
+}
 
 public class CreateTaskCommandValidator : AbstractValidator<CreateTaskCommand>
 {
@@ -39,6 +46,32 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, ApiRe
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateTaskCommand request, CancellationToken ct)
+    {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<Guid>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await CreateOnceAsync(request, null, null, ct);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.Title, request.Description, request.AssigneeId,
+                request.Priority, request.DueDate, request.CreatedById }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "operations.task.create" && prior.ActorUserId == request.CreatedById
+                && prior.RequestHash == requestHash
+                ? ApiResponse<Guid>.Ok(prior.ResultEntityId)
+                : ApiResponse<Guid>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+
+        var created = await CreateOnceAsync(request, operationId, requestHash, ct);
+        await transaction.CommitAsync(ct);
+        return created;
+    }
+
+    private async Task<ApiResponse<Guid>> CreateOnceAsync(CreateTaskCommand request,
+        string? operationId, string? requestHash, CancellationToken ct)
     {
         // 1. Verify assignee exists
         var assignee = await _db.Users
@@ -89,8 +122,6 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, ApiRe
             CreatedAt = DateTime.UtcNow
         });
 
-        await _db.SaveChangesAsync(ct);
-
         // 5. Automatically create a Workroom Chat for the task
         var supervisorRole = await _db.Roles.FirstOrDefaultAsync(r => r.Type == RoleType.Supervisor, ct);
         var supervisorUserIds = supervisorRole != null
@@ -124,6 +155,12 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, ApiRe
         }
 
         _db.ChatRooms.Add(chatRoom);
+        if (operationId is not null)
+            _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+            {
+                OperationId = operationId, Scope = "operations.task.create",
+                ActorUserId = request.CreatedById, RequestHash = requestHash!, ResultEntityId = task.Id
+            });
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(task.Id);

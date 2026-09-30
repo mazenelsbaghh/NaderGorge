@@ -5493,6 +5493,40 @@
     "permissions": []
   },
   {
+    "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/statement",
+    "controller": "AdminTeacherFinanceCenter",
+    "action": "GetStatement",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/statement/pdf",
+    "controller": "AdminTeacherFinanceCenter",
+    "action": "ExportStatement",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/summary",
     "controller": "AdminTeacherFinanceCenter",
     "action": "GetTeacherSummary",
@@ -13550,6 +13584,40 @@
     "action": "RequestPayout",
     "methods": [
       "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/teacher/finance/statement",
+    "controller": "TeacherFinance",
+    "action": "GetStatement",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/teacher/finance/statement/pdf",
+    "controller": "TeacherFinance",
+    "action": "ExportStatement",
+    "methods": [
+      "GET"
     ],
     "authorization": [
       {

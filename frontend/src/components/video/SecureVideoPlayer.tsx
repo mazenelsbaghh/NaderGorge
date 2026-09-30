@@ -87,6 +87,7 @@ export interface WatchStatus {
 interface SecureVideoPlayerProps {
   lessonVideoId: string;
   localYouTubeQualityPreview?: boolean;
+  localYouTubeHlsPreview?: boolean;
   isExamLocked?: boolean;
   blockingExamId?: string;
   videoExamId?: string;
@@ -170,6 +171,7 @@ function createVideoEmbedIframe(sessionId: string): HTMLIFrameElement {
 const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, SecureVideoPlayerProps>(({ 
   lessonVideoId, 
   localYouTubeQualityPreview = false,
+  localYouTubeHlsPreview = false,
   isExamLocked = false,
   blockingExamId,
   videoExamId,
@@ -186,6 +188,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   lessonId
 }, ref) => {
   const isLocalQualityPreview = process.env.NODE_ENV === 'development' && localYouTubeQualityPreview;
+  const isLocalHlsPreview = process.env.NODE_ENV === 'development' && localYouTubeHlsPreview;
+  const isLocalPreview = isLocalQualityPreview || isLocalHlsPreview;
   const [qualityGear, setQualityGear] = useState({ left: 26, top: 2, size: 44 });
   const [touchQualityControls, setTouchQualityControls] = useState(false);
   const qualityPreviewStartedRef = useRef(false);
@@ -314,7 +318,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const fullscreenRootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isLocalQualityPreview) return;
+    if (isLocalPreview) return;
     let active = true;
     apiClient.get('/public/settings').then(({ data }) => {
       if (!active) return;
@@ -339,7 +343,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       bunnyShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.bunnyPlayerShadowHideDelaySeconds ?? data?.BunnyPlayerShadowHideDelaySeconds ?? 5))) * 1000;
     }).catch((error) => devConsole.error('Failed to load player appearance settings:', error));
     return () => { active = false; };
-  }, [isLocalQualityPreview]);
+  }, [isLocalPreview]);
 
   const showPersistentPlayerShadows = useCallback(() => {
     if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
@@ -530,6 +534,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     setNativeProviderSurfaceLoaded(false);
 
     const iframe = createVideoEmbedIframe(sessionId);
+    if (isLocalHlsPreview) iframe.src = '/api/dev/youtube-hls?player=1';
     qualityPreviewStartedRef.current = false;
     setQualityPreviewStarted(false);
     setNativeQualityMenuOpen(false);
@@ -546,7 +551,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setStatus('error');
       setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
     });
-  }, [fitQualityPreview, isLocalQualityPreview, youtubeQualityEnabled]);
+  }, [fitQualityPreview, isLocalHlsPreview, isLocalQualityPreview, youtubeQualityEnabled]);
 
   const scheduleBunnyPlaybackRecovery = useCallback(() => {
     if (bunnyRecoveryTimerRef.current) return true;
@@ -587,7 +592,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, []);
 
   const loadActiveEmbed = useCallback(async (sessionId: string, signal: AbortSignal) => {
-    if (isLocalQualityPreview) {
+    if (isLocalPreview) {
       if (signal.aborted || securitySuspendedRef.current) return;
       mountVideoEmbed(sessionId);
       return;
@@ -639,7 +644,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     embedReadinessWatchdogRef.current = watchdog;
     watchdog.start();
     mountVideoEmbed(sessionId);
-  }, [isLocalQualityPreview, mountVideoEmbed, scheduleBunnyPlaybackRecovery]);
+  }, [isLocalPreview, mountVideoEmbed, scheduleBunnyPlaybackRecovery]);
 
   useEffect(() => () => {
     embedReadinessWatchdogRef.current?.cancel();
@@ -696,13 +701,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [fitQualityPreview, youtubeQualityEnabled, status]);
 
   useEffect(() => {
-    if (!isLocalQualityPreview || status !== 'loading') return;
+    if (!isLocalPreview || status !== 'loading') return;
     const timer = setTimeout(() => {
       setStatus('error');
       setErrorMessage('تحميل الفيديو اتأخر. اضغط إعادة المحاولة لتشغيل التجربة من جديد.');
     }, 30000);
     return () => clearTimeout(timer);
-  }, [isLocalQualityPreview, status]);
+  }, [isLocalPreview, status]);
 
   // ── PostMessage listener ──
   // Receives events from the embedded video page
@@ -742,6 +747,20 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           break;
         }
         case 'renewSourceRequired': {
+          if (isLocalHlsPreview) {
+            void fetch('/api/dev/youtube-hls?info=1', { cache: 'no-store' })
+              .then(async response => {
+                if (!response.ok) throw new Error('Preview source unavailable');
+                const metadata = await response.json();
+                sendCommand('renewSource', {
+                  source: '/api/dev/youtube-hls?s=11111111-1111-4111-8111-111111111111&playlist=master',
+                  serverNowMs: metadata.serverNowMs,
+                  sessionExpiresAtMs: metadata.expiresAt,
+                });
+              })
+              .catch(() => sendCommand('sourceRenewalFailed', { status: 503 }));
+            break;
+          }
           const sessionId = activeSessionIdRef.current;
           const playerWindow = iframeRef.current?.contentWindow;
           if (!sessionId || !playerWindow || !usesRenewableHlsSource(providerRef.current)
@@ -1068,7 +1087,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
+  }, [isLocalHlsPreview, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
@@ -1648,8 +1667,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
       if (activeSessionIdRef.current) clearVideoPlaybackCookies(activeSessionIdRef.current);
       activeSessionIdRef.current = null;
-      if (isLocalQualityPreview) {
+      if (isLocalPreview) {
         trackingEnabledRef.current = false;
+        if (isLocalHlsPreview) {
+          providerRef.current = 'youtube-hls';
+          setProvider('youtube-hls');
+          setQualityLevels([]);
+          setCurrentQuality('auto');
+        }
         setEmbedRequest({ sessionId: '' });
         return;
       }
@@ -2053,12 +2078,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const chapterKey = activeChapterDesktop?.id;
   useEffect(() => {
     if (!enableChapterAids) { setIsChapterInfoOpen(false); setIsMindmapOpen(false); return; }
+    if (isLocalHlsPreview) return;
     if (status !== 'ready' || !chapterKey || /iPhone|iPod/i.test(navigator.userAgent)) return;
     setIsChapterInfoOpen(!activeChapterDesktop?.mindmapImageUrl);
     setIsMindmapOpen(Boolean(activeChapterDesktop?.mindmapImageUrl));
-  }, [chapterKey, status, activeChapterDesktop?.mindmapImageUrl, enableChapterAids]);
+  }, [chapterKey, status, activeChapterDesktop?.mindmapImageUrl, enableChapterAids, isLocalHlsPreview]);
 
   const usesNativePlayerChrome = usesNativeProviderControls(provider);
+  const dockedPlayerControls = youtubeQualityEnabled || provider === 'youtube-hls';
 
   // ── Render States ──
   if (isExamLocked) {
@@ -2329,7 +2356,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const playerControls = (
     <PlayerControls
             compact
-            docked={youtubeQualityEnabled}
+            docked={dockedPlayerControls}
             isPlaying={isPlaying}
             onTogglePlay={togglePlay}
             progress={progress}
@@ -2346,7 +2373,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             qualityLevels={qualityLevels}
             currentQuality={currentQuality}
             onQualityChange={handleQualityChange}
-            visible={youtubeQualityEnabled || showControls}
+            visible={dockedPlayerControls || showControls}
             onHide={() => setShowControls(false)}
             provider={provider}
             onControlHover={setIsHoveringControls}
@@ -2524,7 +2551,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             })}
           </div>
         )}
-        {status === 'ready' && !youtubeQualityEnabled && !usesNativePlayerChrome && !isChapterInfoOpen && !isMindmapOpen && (
+        {status === 'ready' && !dockedPlayerControls && !usesNativePlayerChrome && !isChapterInfoOpen && !isMindmapOpen && (
           playerControls
         )}
       {youtubeQualityEnabled && status === 'ready' && (
@@ -2561,7 +2588,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onClose={() => { setIsChapterInfoOpen(false); setIsMindmapOpen(false); }}
         onSeek={time => { if (duration > 0) handleSeek(time / duration * 100); }} />}
       </div>
-      {youtubeQualityEnabled && status === 'ready' && (
+      {dockedPlayerControls && status === 'ready' && (
         <div
           data-quality-controls-dock
           className="shrink-0"

@@ -317,9 +317,80 @@ public sealed class ContentSummaryTests
         var summary = Assert.Single(response.Data!.Packages);
         Assert.Equal(1, summary.ActiveStudents);
         Assert.Equal(4, summary.RefundOperations);
+        Assert.Equal(2, summary.Package.RefundedStudents);
+        Assert.Equal(1, summary.Term.RefundedStudents);
         Assert.Equal(1, summary.PurchasedStudents);
         Assert.Equal(0, summary.GiftStudents);
         Assert.Equal(1, summary.TotalStudents);
+    }
+
+    [Fact]
+    public async Task Summary_breakdown_shows_named_levels_and_all_time_refunds_per_item()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+
+        var teacherUser = UserFor("Teacher", "01087000001");
+        var buyer = UserFor("Buyer", "01087000002");
+        var giftStudent = UserFor("Gift", "01087000003");
+        var refundedStudent = UserFor("Refunded", "01087000004");
+        var teacher = new TeacherProfile { User = teacherUser };
+        var subject = new Subject { Name = "Math", NormalizedName = "MATH" };
+        var package = new Package { Name = "السنة", Subject = subject, Teacher = teacher };
+        var term = new Term { Title = "القسم الأول", Package = package };
+        var section = new ContentSection { Title = "سبتمبر", Term = term };
+        var lesson = new Lesson { Title = "الحصة الأولى", ContentSection = section };
+        var gift = new GiftIssuance
+        {
+            RequestId = Guid.NewGuid(), IssuedByUser = teacherUser,
+            TargetType = GiftTargetType.ContentSection, ContentSection = section, Reason = "Test"
+        };
+        var recipient = new GiftRecipient { GiftIssuance = gift, Student = giftStudent };
+        var now = DateTime.UtcNow;
+        var termPurchase = new StudentAccessGrant
+        {
+            User = buyer, GrantType = CodeType.Term, TermId = term.Id, GrantedAt = now.AddHours(-1)
+        };
+        var sectionGift = new StudentAccessGrant
+        {
+            User = giftStudent, GrantType = CodeType.Month, ContentSectionId = section.Id,
+            GiftRecipient = recipient, GrantedAt = now.AddHours(-1)
+        };
+        var oldRefund = new StudentAccessGrant
+        {
+            User = refundedStudent, GrantType = CodeType.Lesson, LessonId = lesson.Id,
+            GrantedAt = now.AddDays(-40), CancelledAt = now.AddDays(-39), IsActive = false
+        };
+        db.AddRange(teacherUser, buyer, giftStudent, refundedStudent, teacher, subject,
+            package, term, section, lesson, gift, recipient, termPurchase, sectionGift, oldRefund);
+        db.AuditLogs.Add(new AuditLog
+        {
+            EntityId = oldRefund.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+            NewValues = "{\"refundedAmount\":50}"
+        });
+        await db.SaveChangesAsync();
+
+        var allTime = await new GetContentSummaryQueryHandler(db)
+            .Handle(new GetContentSummaryQuery(teacherUser.Id, null, null), CancellationToken.None);
+        var summary = Assert.Single(allTime.Data!.Packages);
+        var termNode = Assert.Single(summary.Breakdown);
+        var sectionNode = Assert.Single(termNode.Children);
+        var lessonNode = Assert.Single(sectionNode.Children);
+        Assert.Equal("القسم الأول", termNode.Title);
+        Assert.Equal((1, 0, 0), (termNode.Counts.Purchased, termNode.Counts.Gifts, termNode.Counts.RefundedStudents));
+        Assert.Equal("سبتمبر", sectionNode.Title);
+        Assert.Equal((0, 1, 0), (sectionNode.Counts.Purchased, sectionNode.Counts.Gifts, sectionNode.Counts.RefundedStudents));
+        Assert.Equal("الحصة الأولى", lessonNode.Title);
+        Assert.Equal(1, lessonNode.Counts.RefundedStudents);
+        Assert.Equal(1, summary.Lesson.RefundedStudents);
+        Assert.Equal(1, summary.RefundOperations);
+
+        var recent = await new GetContentSummaryQueryHandler(db)
+            .Handle(new GetContentSummaryQuery(teacherUser.Id, now.AddDays(-2), now.AddDays(1)), CancellationToken.None);
+        Assert.Equal(0, Assert.Single(recent.Data!.Packages).RefundOperations);
     }
 
     private static Package PackageFor(TeacherProfile teacher, string name) => new()

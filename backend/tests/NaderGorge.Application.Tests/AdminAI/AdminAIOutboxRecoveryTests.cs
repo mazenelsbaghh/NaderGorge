@@ -46,9 +46,21 @@ public sealed class AdminAIOutboxRecoveryTests
             Status = AdminAIProposalStatus.PendingConfirmation, ExpiresAt = DateTime.UtcNow.AddMinutes(-1),
             CapabilityKey = "blocked", CapabilityVersion = "1", PayloadHash = new string('a', 64), StateFingerprint = new string('b', 64)
         });
+        var actor = new User
+        {
+            UserRoles = [new UserRole { Role = new Role { Type = RoleType.Admin } }]
+        };
+        var turn = new AdminAITurn
+        {
+            ActorAdminUserId = actor.Id,
+            Status = AdminAITurnStatus.Planning,
+            CallbackIdempotencyDigest = new string('a', 64)
+        };
+        db.AddRange(actor, turn);
         db.AdminAITurnSteps.Add(new AdminAITurnStep
         {
-            Status = AdminAITurnStepStatus.Claimed, StartedAt = DateTime.UtcNow.AddMinutes(-3), StepNumber = 1
+            TurnId = turn.Id, Status = AdminAITurnStepStatus.Claimed,
+            StartedAt = DateTime.UtcNow.AddMinutes(-3), StepNumber = 1
         });
         await db.SaveChangesAsync();
 

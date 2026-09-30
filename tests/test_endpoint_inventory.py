@@ -128,3 +128,24 @@ def test_inventory_supports_sealed_primary_constructor_and_grouped_attributes():
     assert hr_leave
     assert all(endpoint["path"].startswith("/api/hr") for endpoint in hr_leave)
     assert all(endpoint["authorization"] == "authorized" for endpoint in hr_leave)
+
+
+def test_partial_controller_absolute_cache_routes_remain_internal_and_complete():
+    routes = [
+        endpoint
+        for endpoint in load_inventory()["endpoints"]
+        if endpoint["path"] == "/api/v1/internal/video-sessions/{sessionid}/youtube-hls-source"
+    ]
+
+    assert {(route["method"], route["action"]) for route in routes} == {
+        ("GET", "GetYouTubeHlsSource"),
+        ("PUT", "PutYouTubeHlsSource"),
+    }
+    assert len(routes) == 2
+    assert all(route["controller"] == "VideoSessionController" for route in routes)
+    assert all(route["authorization"] == "internal-token" for route in routes)
+    assert all(
+        route["source"]["file"]
+        == "backend/src/NaderGorge.API/Controllers/VideoSessionController.YouTubeHlsCache.cs"
+        for route in routes
+    )

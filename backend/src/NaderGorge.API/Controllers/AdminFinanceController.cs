@@ -187,49 +187,11 @@ public class AdminFinanceController : ControllerBase
         [FromBody] ReviewTeacherEventDto dto,
         CancellationToken ct)
     {
-        if (dto.Status is not (TeacherFinancialReviewStatus.Approved or TeacherFinancialReviewStatus.Rejected))
-        {
-            return BadRequest(new { success = false, message = "حالة المراجعة يجب أن تكون Approved أو Rejected" });
-        }
-
-        var allocation = await _db.TeacherFinancialAllocations
-            .Include(a => a.TeacherFinancialEvent)
-            .FirstOrDefaultAsync(a => a.Id == allocationId, ct);
-
-        if (allocation == null)
-        {
-            return NotFound(new { success = false, message = "البند المالي غير موجود" });
-        }
-
-        if (allocation.ReviewStatus != TeacherFinancialReviewStatus.PendingReview)
-        {
-            return BadRequest(new { success = false, message = "يمكن مراجعة البنود المعلقة فقط" });
-        }
-
-        allocation.ReviewStatus = dto.Status;
-        allocation.UpdatedAt = DateTime.UtcNow;
-        allocation.PayoutStatus = dto.Status == TeacherFinancialReviewStatus.Rejected || allocation.TeacherShareAmount <= 0m
-            ? TeacherFinancialPayoutStatus.NotEligible
-            : TeacherFinancialPayoutStatus.Unpaid;
-
-        var eventAllocations = await _db.TeacherFinancialAllocations
-            .Where(a => a.TeacherFinancialEventId == allocation.TeacherFinancialEventId)
-            .ToListAsync(ct);
-
-        allocation.TeacherFinancialEvent.ReviewStatus = eventAllocations.Any(a => a.Id != allocation.Id && a.ReviewStatus == TeacherFinancialReviewStatus.PendingReview)
-            ? TeacherFinancialReviewStatus.PendingReview
-            : eventAllocations.Any(a => a.Id != allocation.Id && a.ReviewStatus == TeacherFinancialReviewStatus.Approved) || dto.Status == TeacherFinancialReviewStatus.Approved
-                ? TeacherFinancialReviewStatus.Approved
-                : TeacherFinancialReviewStatus.Rejected;
-        allocation.TeacherFinancialEvent.UpdatedAt = DateTime.UtcNow;
-
-        if (dto.Status == TeacherFinancialReviewStatus.Approved && allocation.TeacherShareAmount > 0m)
-        {
-            await CreditTeacherAccount(allocation.TeacherId, allocation.TeacherShareAmount, ct);
-        }
-
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true, data = true });
+        var result = await _mediator.Send(new ReviewTeacherFinancialAllocationCommand(
+            allocationId, dto.Status, GetUserId(), dto.Note), ct);
+        if (result.Success) return Ok(new { success = true, data = true });
+        var error = new { success = false, message = result.Message };
+        return result.Errors?.Contains("NOT_FOUND") == true ? NotFound(error) : BadRequest(error);
     }
 
     [HttpPost("teacher-events/manual-compensation")]
@@ -282,28 +244,6 @@ public class AdminFinanceController : ControllerBase
         return Ok(new { success = true, data = new { evt.Id } });
     }
 
-    private async Task CreditTeacherAccount(Guid teacherId, decimal amount, CancellationToken ct)
-    {
-        var account = await _db.TeacherAccounts.FirstOrDefaultAsync(a => a.TeacherId == teacherId, ct);
-        if (account == null)
-        {
-            var teacher = await _db.TeacherProfiles.FirstOrDefaultAsync(t => t.Id == teacherId, ct);
-            account = new TeacherAccount
-            {
-                Id = Guid.NewGuid(),
-                TeacherId = teacherId,
-                CommissionRate = teacher?.CommissionRate ?? 0m,
-                TotalEarnings = 0m,
-                CurrentBalance = 0m,
-                ReservedBalance = 0m
-            };
-            _db.TeacherAccounts.Add(account);
-        }
-
-        account.TotalEarnings += amount;
-        account.CurrentBalance += amount;
-        account.UpdatedAt = DateTime.UtcNow;
-    }
 }
 
 public class GeneratePayrollDto

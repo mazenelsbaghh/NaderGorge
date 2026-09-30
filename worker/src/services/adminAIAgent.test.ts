@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
-import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
+import { createAdminAICodexServer } from '../adminAICodexServer.js';
+import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from './adminAICallbackClient.js';
 import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, requestAdminAIGemini, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
 import { setGeminiRetryWaitForTests } from './aiProvider.js';
@@ -190,6 +194,37 @@ test('prompt labels messages and action catalog as untrusted data', () => {
   assert.match(prompt.systemInstruction, /evidenceInvocationIds/);
 });
 
+test('lost read callback response replays the identical batch without a second model request', async () => {
+  let modelRequests = 0;
+  let readRequests = 0;
+  const sentPayloads: string[] = [];
+  const provider = async () => {
+    modelRequests++;
+    return modelRequests === 1
+      ? { functionCalls: [{ id: 'lookup-one', name: 'read_0', args: { query: 'student' } }] }
+      : { text: JSON.stringify(answer) };
+  };
+  const callback = callbacks(async (_turn, _step, payload) => {
+    sentPayloads.push(JSON.stringify(payload));
+    readRequests++;
+    if (readRequests === 1) throw new AdminAICallbackError('CALLBACK_UNAVAILABLE', true);
+    if (readRequests === 2) throw new AdminAICallbackError('CALLBACK_REJECTED', false, 409);
+    return {
+      turnVersion: 5, leaseToken: 'renewed-lease',
+      results: [{ callId: 'lookup-one', status: 'Succeeded', data: { items: [] } }],
+    };
+  });
+
+  const result = await runAdminAIAgent(claim(), callback, { provider, model: 'test' });
+
+  assert.equal(result.decision.type, 'answer');
+  assert.equal(result.expectedTurnVersion, 5);
+  assert.equal(result.leaseToken, 'renewed-lease');
+  assert.equal(modelRequests, 2);
+  assert.equal(readRequests, 3);
+  assert.equal(new Set(sentPayloads).size, 1);
+});
+
 test('teacher lookup transitions to subscriber summary and a terminal answer', async () => {
   const teacherId = crypto.randomUUID();
   const readTools = [
@@ -198,6 +233,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
   ];
   let providerStep = 0;
   const requestedCapabilities: string[] = [];
+  const batchKeys: string[] = [];
   const provider = async () => {
     providerStep += 1;
     if (providerStep === 1) return { functionCalls: [{ id: 'lookup', name: 'read_0', args: { query: 'نادر' } }] };
@@ -205,6 +241,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
     return { text: JSON.stringify(answer) };
   };
   const callback = callbacks(async (_turn, _step, payload) => {
+    batchKeys.push(String(payload.batchIdempotencyKey));
     const call = (payload.calls as Array<{ callId: string; capabilityKey: string }>)[0]!;
     requestedCapabilities.push(call.capabilityKey);
     return call.capabilityKey === 'teachers.search'
@@ -216,6 +253,7 @@ test('teacher lookup transitions to subscriber summary and a terminal answer', a
 
   assert.equal(result.decision.type, 'answer');
   assert.deepEqual(requestedCapabilities, ['teachers.search', 'teacher.subscribers.summary']);
+  assert.equal(new Set(batchKeys).size, 2);
   assert.ok(!requestedCapabilities.includes('identity.users.summary'));
 });
 
@@ -420,4 +458,38 @@ test('propose_actions enforces maximum count and cannot claim risk or execution 
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, risk: 'ordinary' }] }));
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, status: 'succeeded' }] }));
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, executed: true }] }));
+});
+
+test('Codex provider follows the same backend read and decision boundary', async () => {
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'admin-ai-codex-agent-'));
+  const socket = path.join(folder, 'codex.sock');
+  const previousProvider = process.env.ADMIN_AI_PROVIDER;
+  const previousSocket = process.env.ADMIN_AI_CODEX_SOCKET;
+  let modelCalls = 0;
+  let backendReads = 0;
+  const server = createAdminAICodexServer(async () => {
+    modelCalls++;
+    return modelCalls === 1
+      ? { functionCalls: [{ id: 'lookup', name: 'read_0', args: { query: 'طلاب' } }] }
+      : { text: JSON.stringify(answer), responseId: 'codex-thread' };
+  });
+  try {
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(socket, resolve); });
+    process.env.ADMIN_AI_PROVIDER = 'codex-cli';
+    process.env.ADMIN_AI_CODEX_SOCKET = socket;
+    const completion = await runAdminAIAgent(claim(), callbacks(async () => {
+      backendReads++;
+      return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: 'lookup', status: 'Succeeded', data: { evidence: { invocationId: crypto.randomUUID() } } }] };
+    }));
+    assert.equal(completion.provider, 'codex-cli');
+    assert.equal(completion.model, 'gpt-5.6-sol');
+    assert.equal(completion.decision.type, 'answer');
+    assert.equal(backendReads, 1);
+    assert.equal(modelCalls, 2);
+  } finally {
+    if (previousProvider === undefined) delete process.env.ADMIN_AI_PROVIDER; else process.env.ADMIN_AI_PROVIDER = previousProvider;
+    if (previousSocket === undefined) delete process.env.ADMIN_AI_CODEX_SOCKET; else process.env.ADMIN_AI_CODEX_SOCKET = previousSocket;
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await rm(folder, { recursive: true, force: true });
+  }
 });

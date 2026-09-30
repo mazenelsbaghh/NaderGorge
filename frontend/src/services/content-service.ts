@@ -325,6 +325,15 @@ interface ContentApiResponse<T> {
 export interface ContentAcquisitionCountDto {
   purchased: number;
   gifts: number;
+  refundedStudents: number;
+}
+
+export interface ContentSummaryNodeDto {
+  id: string;
+  title: string;
+  kind: 'term' | 'section' | 'lesson';
+  counts: ContentAcquisitionCountDto;
+  children: ContentSummaryNodeDto[];
 }
 
 export interface ContentPackageSummaryDto {
@@ -340,6 +349,7 @@ export interface ContentPackageSummaryDto {
   totalStudents: number;
   activeStudents: number;
   refundOperations: number;
+  breakdown: ContentSummaryNodeDto[];
 }
 
 export interface PackageCombinationSummaryDto {

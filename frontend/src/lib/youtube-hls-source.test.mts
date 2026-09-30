@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getYouTubeHlsPlaylist, resolveYouTubeHlsSource, YouTubeHlsError,
   type YouTubeHlsSource } from './youtube-hls-source.ts';
-import { parseYouTubeSidx, youTubeMediaUrl, type YouTubeHlsFormat } from './youtube-hls-playlist.ts';
+import { getYouTubeHlsMediaRange, parseYouTubeSidx, youTubeMediaUrl, type YouTubeHlsFormat } from './youtube-hls-playlist.ts';
+import { relayYouTubeHlsMedia } from './youtube-hls-media.ts';
 import { createYouTubeHlsFetchFixture, youtubeIndexFixture } from './youtube-hls-test-fixtures.mts';
 
 let sequence = 0;
@@ -45,6 +46,68 @@ test('concurrent viewers share extraction and receive direct-media playlists pin
     assert.equal(headers.has('authorization'), false);
     if (request.url.hostname.endsWith('.googlevideo.com')) assert.match(headers.get('range')!, /^bytes=(0-15|16-71)$/);
   }
+});
+
+test('HLS.js playlists use session-scoped media URLs and relay only indexed byte ranges', async context => {
+  const fixture = createYouTubeHlsFetchFixture();
+  const fetchMock = context.mock.method(globalThis, 'fetch', fixture.fetch);
+  const source = await resolveYouTubeHlsSource(videoId());
+  const master = getYouTubeHlsPlaylist(source, { sessionId, playlist: 'master', relay: true });
+  const media = getYouTubeHlsPlaylist(source, { sessionId, playlist: '360', relay: true });
+  assert.match(master, /playlist=360&v=[^\n]+&relay=1/);
+  assert.match(media, /media=360&part=init/);
+  assert.match(media, /media=360&part=0/);
+  assert.doesNotMatch(media, /googlevideo|BYTERANGE/);
+  assert.deepEqual(getYouTubeHlsMediaRange(source, '360', '0').range, { start: 72, end: 171 });
+  for (const [track, part] of [['360', '../0'], ['9999', '0'], ['audio', '99999']]) {
+    assert.throws(() => getYouTubeHlsMediaRange(source, track, part), errorCode('invalid-playlist'));
+  }
+
+  const requests: { url: URL; headers: Headers; credentials: RequestCredentials | undefined }[] = [];
+  fetchMock.mock.mockImplementation(async (input: string | URL | Request, options: RequestInit = {}) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const headers = new Headers(options.headers);
+    requests.push({ url, headers, credentials: options.credentials });
+    const range = headers.get('range');
+    if (range !== 'bytes=72-171') throw new Error('Unexpected media range');
+    return new Response(new Uint8Array(100).fill(7), { status: 206, headers: {
+      'Content-Range': 'bytes 72-171/322', 'Content-Length': '100',
+    } });
+  });
+  const response = await relayYouTubeHlsMedia(source, '360', '0', new AbortController().signal);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-length'), '100');
+  assert.equal((await response.arrayBuffer()).byteLength, 100);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url.hostname, 'rr1.googlevideo.com');
+  assert.equal(requests[0].credentials, 'omit');
+  assert.equal(requests[0].headers.has('authorization'), false);
+  assert.equal(requests[0].headers.has('cookie'), false);
+});
+
+test('media relay rejects an upstream response that ignores the indexed range', async context => {
+  const fixture = createYouTubeHlsFetchFixture();
+  const fetchMock = context.mock.method(globalThis, 'fetch', fixture.fetch);
+  const source = await resolveYouTubeHlsSource(videoId());
+  let cancelled = false;
+  fetchMock.mock.mockImplementation(async () => new Response(new ReadableStream({
+    cancel() { cancelled = true; },
+  }), { status: 200 }));
+  await assert.rejects(relayYouTubeHlsMedia(source, '360', '0', new AbortController().signal), errorCode('upstream'));
+  assert.equal(cancelled, true);
+});
+
+test('media relay never follows a redirect outside the approved video host', async context => {
+  const fixture = createYouTubeHlsFetchFixture();
+  const fetchMock = context.mock.method(globalThis, 'fetch', fixture.fetch);
+  const source = await resolveYouTubeHlsSource(videoId());
+  const hosts: string[] = [];
+  fetchMock.mock.mockImplementation(async (input: string | URL | Request) => {
+    hosts.push(new URL(input instanceof Request ? input.url : String(input)).hostname);
+    return new Response(null, { status: 302, headers: { Location: 'http://127.0.0.1/private' } });
+  });
+  await assert.rejects(relayYouTubeHlsMedia(source, 'audio', '0', new AbortController().signal), errorCode('upstream'));
+  assert.deepEqual(hosts, ['rr1.googlevideo.com']);
 });
 
 test('version-one SIDX offsets include preceding boxes and first_offset without downloading segments', () => {

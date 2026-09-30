@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Tajawal } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
+import { browserCompatibleCssScript } from "@/lib/browser-compatible-css";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
@@ -94,6 +95,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {process.env.NEXT_PUBLIC_BROWSER_COMPAT_ID && (
+          <script dangerouslySetInnerHTML={{ __html: browserCompatibleCssScript(process.env.NEXT_PUBLIC_BROWSER_COMPAT_ID) }} />
+        )}
         <script dangerouslySetInnerHTML={{ __html: surfaceInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: cairoTimeInitScript }} />

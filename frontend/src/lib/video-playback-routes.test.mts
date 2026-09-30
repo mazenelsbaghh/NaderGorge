@@ -26,7 +26,7 @@ function loadModule(path: string): RouteExports {
   } }).outputText;
   vm.runInNewContext(code, {
     module: compiledModule, exports: compiledModule.exports, process, Buffer, URL, URLSearchParams, Request, Response, Headers, AbortSignal,
-    setTimeout, clearTimeout, DOMException, Uint8Array,
+    setTimeout, clearTimeout, DOMException, Uint8Array, ReadableStream,
     fetch: (...args: Parameters<typeof fetch>) => globalThis.fetch(...args),
     require: (specifier: string) => specifier.startsWith('@/') ? loadModule(resolve(root, specifier.slice(2)))
       : specifier.startsWith('.') ? loadModule(resolve(dirname(filename), specifier)) : nativeRequire(specifier),
@@ -249,6 +249,13 @@ test('authorized YouTube HLS delivers versioned playlists with Google media and 
   const sharedSources = new Map<string, object>();
   let latestSourceVersion = '';
   t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, options?: RequestInit) => {
+    if (new URL(String(input)).hostname.endsWith('.googlevideo.com') && options?.method === undefined) {
+      const range = new Headers(options?.headers).get('range');
+      if (range !== 'bytes=0-15') throw new Error('Unexpected relay range');
+      return new Response(new Uint8Array(16), { status: 206, headers: {
+        'Content-Range': 'bytes 0-15/322', 'Content-Length': '16',
+      } });
+    }
     if (String(input).includes('/youtube-hls-source')) {
       if (revoked) return new Response(null, { status: 403 });
       if (options?.method === 'PUT') {
@@ -287,6 +294,16 @@ test('authorized YouTube HLS delivers versioned playlists with Google media and 
   assert.match(mediaText, /#EXT-X-BYTERANGE:/);
   assert.match(mediaText, /https:\/\/rr1\.googlevideo\.com\/videoplayback/);
   assert.doesNotMatch(mediaText, /\/api\/video\//);
+  const relayMaster = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=master&relay=1&v=${metadata.version}`, { cookie }));
+  assert.match(await relayMaster.text(), /playlist=720&v=[^\n]+&relay=1/);
+  const relayMedia = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=720&relay=1&v=${metadata.version}`, { cookie }));
+  const relayText = await relayMedia.text();
+  assert.match(relayText, /media=720&part=0/);
+  assert.doesNotMatch(relayText, /googlevideo/);
+  const relayedInit = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&v=${metadata.version}&media=720&part=init`, { cookie }));
+  assert.equal(relayedInit.status, 200);
+  assert.equal((await relayedInit.arrayBuffer()).byteLength, 16);
+  assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&v=${metadata.version}&media=720&part=../0`, { cookie }))).status, 400);
   // A second Next process has no local source cache and must still serve this version.
   modules.clear();
   const secondRoute = loadModule(resolve(root, 'app/api/video/youtube-hls/route'));
@@ -303,4 +320,5 @@ test('authorized YouTube HLS delivers versioned playlists with Google media and 
   assert.match(renewed.headers.get('Set-Cookie') ?? '', /HttpOnly/);
   revoked = true;
   assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=audio&v=${metadata.version}`, { cookie }))).status, 403);
+  assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&v=${metadata.version}&media=720&part=0`, { cookie }))).status, 403);
 });

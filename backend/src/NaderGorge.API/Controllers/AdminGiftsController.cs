@@ -74,8 +74,9 @@ public sealed class AdminGiftsController : ControllerBase
         [FromQuery] GiftTargetType targetType,
         [FromQuery] Guid? teacherId,
         [FromQuery] string? search,
+        [FromQuery] Guid? parentId,
         CancellationToken ct)
-        => Ok(await _mediator.Send(new GetGiftTargetsLookupQuery(targetType, teacherId, search), ct));
+        => Ok(await _mediator.Send(new GetGiftTargetsLookupQuery(targetType, teacherId, search, parentId), ct));
 }
 
 public sealed record RevokeGiftRequest(string Reason);

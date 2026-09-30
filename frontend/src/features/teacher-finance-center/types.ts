@@ -99,6 +99,75 @@ export interface PagedTeacherLedger {
   pageSize: number;
 }
 
+export type TeacherStatementKind = 'Earning' | 'Payout' | 'Settlement' | 'SettlementPayment' | 'Adjustment' | 'CodeDelivery' | 'CodePayment' | 'StudentCollection' | 'CodeActivation' | 'StudentRefund';
+
+export interface TeacherStatementRow {
+  id: string;
+  kind: TeacherStatementKind;
+  occurredAt: string;
+  title: string;
+  detail: string;
+  status: string;
+  reference?: string;
+  grossAmount?: number;
+  discountAmount?: number;
+  salePaidAmount?: number;
+  teacherShareAmount?: number;
+  platformShareAmount?: number;
+  teacherPaymentAmount?: number;
+  platformDueAmount?: number;
+  platformPaymentAmount?: number;
+  studentCollectionAmount?: number;
+  adjustmentAmount?: number;
+  studentRefundAmount?: number;
+  recognized: boolean;
+  retainedByTeacher: boolean;
+}
+
+export interface TeacherStatement {
+  teacherId: string;
+  teacherName: string;
+  from?: string;
+  to?: string;
+  generatedAt: string;
+  account: TeacherFinanceSummary;
+  totals: {
+    earned: number;
+    pendingEarnings: number;
+    teacherPayments: number;
+    retainedEarnings: number;
+    platformCodeDue: number;
+    platformCodePayments: number;
+    studentCollections: number;
+    openDebtAdjustments: number;
+    platformEarned: number;
+  };
+  activity: {
+    purchasingStudents: number;
+    purchaseOperations: number;
+    purchaseValue: number;
+    rechargeStudents: number;
+    rechargeOperations: number;
+    rechargeAmount: number;
+    vodafoneCashStudents: number;
+    vodafoneCashOperations: number;
+    vodafoneCashAmount: number;
+    otherRechargeAmount: number;
+    refundedStudents: number;
+    refundOperations: number;
+    refundAmount: number;
+    activatedCodes: number;
+    codeStudents: number;
+    activatedCodeValue: number;
+  };
+  sales: Array<{ students: number; operations: number; unitPrice: number; total: number; teacherShare: number; platformShare: number; platformPercent: number | null }>;
+  codeBatches: Array<{ name: string; codes: number; value: number | null; platformDue: number | null; collected: number; remaining: number | null }>;
+  items: TeacherStatementRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface SettlementPreview {
   error?: string | null;
   allocations: TeacherLedgerLine[];

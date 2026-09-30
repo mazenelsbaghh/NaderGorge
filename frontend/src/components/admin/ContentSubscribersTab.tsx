@@ -66,8 +66,9 @@ export default function ContentSubscribersTab({
     try {
       setLoading(true);
       setError(null);
-      const subscribersService = surface === 'teacher' ? teacherService : adminService;
-      const result = await subscribersService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
+      const result = surface === 'teacher'
+        ? await teacherService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s)
+        : await adminService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
       if (requestSequence === requestSequenceRef.current && result) {
         setSubscribers(result.items ?? []);
         setTotalCount(result.totalCount ?? 0);
@@ -106,8 +107,11 @@ export default function ContentSubscribersTab({
   const handleExport = async () => {
     try {
       setExporting(true);
-      const subscribersService = surface === 'teacher' ? teacherService : adminService;
-      await subscribersService.exportContentSubscribersCsv(contentType, contentId, contentName);
+      if (surface === 'teacher') {
+        await teacherService.exportContentSubscribersCsv(contentType, contentId, contentName);
+      } else {
+        await adminService.exportContentSubscribersCsv(contentType, contentId, contentName);
+      }
       toast.success('تم تنزيل ملف المشتركين');
     } catch {
       toast.error('تعذر تنزيل الملف');

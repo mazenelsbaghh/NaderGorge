@@ -892,6 +892,70 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("admin_ai_messages", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadBatchReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchKeyDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("LeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<byte[]>("ProtectedResponse")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("RequestDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("ResponseHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<long>("ResponseTurnVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TurnStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TurnStepId");
+
+                    b.HasIndex("TurnId", "BatchKeyDigest")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_read_batch_receipts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_read_batch_receipt_version", "\"ResponseTurnVersion\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadInvocation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2166,6 +2230,51 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("PerformedByUserId", "CreatedAt");
 
                     b.ToTable("audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AuthoritativeOperationReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ResultEntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SafeResultJson")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.ToTable("authoritative_operation_receipts", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairControl", b =>
@@ -10993,6 +11102,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessGrantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -11044,6 +11156,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccessGrantId")
+                        .IsUnique()
+                        .HasFilter("\"AccessGrantId\" IS NOT NULL");
 
                     b.HasIndex("JournalEntryId");
 
@@ -13459,6 +13575,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<decimal>("ReversedAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid?>("ReviewActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ReviewOperationId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<int>("ReviewStatus")
                         .HasColumnType("integer");
 
@@ -13488,6 +13615,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PayoutId");
+
+                    b.HasIndex("ReviewOperationId")
+                        .IsUnique()
+                        .HasFilter("\"ReviewOperationId\" IS NOT NULL");
 
                     b.HasIndex("TeacherFinancialEventId");
 
@@ -14532,6 +14663,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("NewLimit")
                         .HasColumnType("integer");
 
+                    b.Property<string>("OperationId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<int>("OriginalLimit")
                         .HasColumnType("integer");
 
@@ -14548,13 +14683,22 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WatchRequestId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LessonVideoId");
 
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasFilter("\"OperationId\" IS NOT NULL");
+
                     b.HasIndex("PerformedByUserId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("WatchRequestId");
 
                     b.ToTable("video_overrides", (string)null);
                 });
@@ -15266,6 +15410,21 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadBatchReceipt", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", null)
+                        .WithMany()
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurnStep", null)
+                        .WithMany()
+                        .HasForeignKey("TurnStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadInvocation", b =>
@@ -17730,6 +17889,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformRefund", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.StudentAccessGrant", null)
+                        .WithMany()
+                        .HasForeignKey("AccessGrantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
                         .WithMany()
                         .HasForeignKey("JournalEntryId")

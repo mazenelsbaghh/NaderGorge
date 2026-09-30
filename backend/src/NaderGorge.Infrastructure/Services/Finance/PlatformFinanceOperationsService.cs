@@ -119,6 +119,7 @@ public sealed class PlatformFinanceOperationsService(
         {
             OriginalSourceId = request.OriginalSourceId,
             OriginalSourceType = request.OriginalSourceType.Trim(),
+            AccessGrantId = request.AccessGrantId,
             StudentId = request.StudentId,
             TeacherId = request.TeacherId,
             PlatformAmount = decimal.Round(request.PlatformAmount, 2),

@@ -236,9 +236,9 @@ export function TeacherFinanceCenterWorkspace({ teacher, onChanged }: { teacher:
   };
 
   return (
-    <section id="finance-panel-teacher-center" role="tabpanel" aria-label="مركز مالية المدرسين">
-      <details className="rounded-xl border border-[var(--admin-border)] p-4">
-        <summary className="min-h-9 cursor-pointer font-bold">الاتفاق على حساب الأرباح</summary>
+    <section id="finance-panel-teacher-center" aria-label="الاتفاق والأكواد والمدفوعات">
+      <details id="agreements" open className="rounded-xl border border-[var(--admin-border)] p-4">
+        <summary className="min-h-9 cursor-pointer font-bold">الاتفاق مع المدرس</summary>
         <p className="my-4 text-sm leading-6 text-[var(--admin-muted)]">الربح بيتحسب بالاتفاق الساري وقت العملية. تغيير الاتفاق بيطبق من تاريخه، والحركات القديمة بتحتفظ بحسابها المسجل.</p>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -280,7 +280,7 @@ export function TeacherFinanceCenterWorkspace({ teacher, onChanged }: { teacher:
       </details>
       <TeacherCodeBatches agreementVersion={agreements.map(agreement => agreement.id).join(',')} key={teacherId} teacherId={teacherId} teacherName={teacher.fullName} onChanged={onChanged} />
       <details className="mt-4 rounded-xl border border-[var(--admin-border)] p-4">
-        <summary className="min-h-9 cursor-pointer font-bold">صرف مستحقات أو تسجيل مرتجع</summary>
+        <summary className="min-h-9 cursor-pointer font-bold">تسجيل تحويل للمدرس أو مرتجع</summary>
           {!isLoading && !hasError && (
             <TeacherFinanceOperationsWorkspace
               teacherId={teacherId}

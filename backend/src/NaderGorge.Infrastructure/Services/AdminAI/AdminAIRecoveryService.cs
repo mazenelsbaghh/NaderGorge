@@ -5,7 +5,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services.AdminAI;
 
-public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryService
+public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter? audit = null) : IAdminAIRecoveryService
 {
     public async Task<int> ReconcileAsync(int batchSize, CancellationToken cancellationToken)
     {
@@ -14,6 +14,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
         var changed = 0;
         var cancelledTurns = await db.AdminAITurns
             .Where(x => x.CancellationRequestedAt != null && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked)
+            .Include(x => x.Steps)
             .OrderBy(x => x.CancellationRequestedAt).Take(batchSize).ToListAsync(cancellationToken);
         foreach (var turn in cancelledTurns)
         {
@@ -21,11 +22,23 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             turn.FailureCode = "CANCELLED";
             turn.CompletedAt = now;
             turn.Version++;
+            foreach (var step in turn.Steps.Where(x => x.Status is not (AdminAITurnStepStatus.Completed or AdminAITurnStepStatus.Cancelled or AdminAITurnStepStatus.Failed or AdminAITurnStepStatus.Superseded)))
+            {
+                step.Status = AdminAITurnStepStatus.Cancelled;
+                step.FailureCode = "CANCELLED";
+                step.CompletedAt = now;
+                step.Version++;
+            }
             changed++;
         }
         var remaining = batchSize - changed;
         var reads = remaining == 0 ? [] : await db.AdminAIReadInvocations.Where(x => x.ProtectedResult != null && x.ProtectedResultExpiresAt <= now).OrderBy(x => x.ProtectedResultExpiresAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var read in reads) { read.ProtectedResult = null; read.ProtectedResultHash = null; read.ProtectedResultExpiresAt = null; changed++; }
+        remaining = batchSize - changed;
+        var expiredBatches = remaining == 0 ? [] : await db.AdminAIReadBatchReceipts
+            .Where(x => x.ExpiresAt <= now).OrderBy(x => x.ExpiresAt).Take(remaining).ToListAsync(cancellationToken);
+        db.AdminAIReadBatchReceipts.RemoveRange(expiredBatches);
+        changed += expiredBatches.Count;
         remaining = batchSize - changed;
         var grants = remaining == 0 ? [] : await db.AdminAISecureInputGrants.Where(x => x.ProtectedPayload != null && x.ExpiresAt <= now).OrderBy(x => x.ExpiresAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var grant in grants) { grant.ProtectedPayload = null; grant.PayloadHash = null; grant.Status = AdminAISecureInputGrantStatus.Expired; grant.PurgedAt = now; grant.Version++; changed++; }
@@ -66,7 +79,11 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             .Where(x => (x.Status == AdminAITurnStepStatus.Claimed ||
                          x.Status == AdminAITurnStepStatus.ProviderRunning ||
                          x.Status == AdminAITurnStepStatus.ReadsCompleted) &&
-                        x.StartedAt != null && x.StartedAt < now.AddMinutes(-2))
+                        db.AdminAITurns.Any(turn => turn.Id == x.TurnId && turn.CancellationRequestedAt == null &&
+                            turn.Status != AdminAITurnStatus.Completed && turn.Status != AdminAITurnStatus.Cancelled &&
+                            turn.Status != AdminAITurnStatus.Failed && turn.Status != AdminAITurnStatus.AccessRevoked) &&
+                        x.StartedAt != null && x.StartedAt < now.AddMinutes(-2) &&
+                        (x.NextCallbackAttemptAt == null || x.NextCallbackAttemptAt <= now))
             .OrderBy(x => x.StartedAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var step in staleSteps)
         {
@@ -98,6 +115,32 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
                 turn.CompletedAt = now;
                 turn.Version++;
             }
+            changed++;
+        }
+
+        remaining = batchSize - changed;
+        var staleExecutions = remaining == 0 ? [] : await db.AdminAIActionExecutions
+            .Where(x => (x.Status == AdminAIExecutionStatus.Claimed || x.Status == AdminAIExecutionStatus.Executing) &&
+                        x.ClaimedAt < now.AddMinutes(-5))
+            .OrderBy(x => x.ClaimedAt).Take(remaining).ToListAsync(cancellationToken);
+        foreach (var execution in staleExecutions)
+        {
+            execution.Status = AdminAIExecutionStatus.RecoveryRequired;
+            execution.FailureCode = "authoritative_outcome_unknown_after_restart";
+            execution.CompletedAt = null;
+            execution.Version++;
+            var proposal = await db.AdminAIActionProposals.SingleAsync(x => x.Id == execution.ProposalId, cancellationToken);
+            if (proposal.Status is AdminAIProposalStatus.Executing or AdminAIProposalStatus.Confirming)
+            {
+                proposal.Status = AdminAIProposalStatus.RecoveryRequired;
+                proposal.CompletedAt = null;
+                proposal.Version++;
+            }
+            if (audit is not null)
+                await audit.WriteAsync("ExecutionRecoveryRequired", execution.ActorAdminUserId,
+                    proposal.ConversationId, proposal.TurnId, proposal.Id,
+                    new { ExecutionId = execution.Id, execution.CapabilityKey, execution.FailureCode, AffectedCount = 0 },
+                    cancellationToken);
             changed++;
         }
 

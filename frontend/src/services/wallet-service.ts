@@ -221,10 +221,8 @@ export const walletService = {
   },
 
   getRechargeRequests: async (status?: number) => {
-    const url = status !== undefined
-      ? `/admin/wallets/recharge-requests?status=${status}`
-      : '/admin/wallets/recharge-requests';
-    const { data } = await apiClient.get<{ success: boolean; data: AdminRechargeRequestDto[] }>(url);
+    const { data } = await apiClient.get<{ success: boolean; data: AdminRechargeRequestDto[] }>(
+      '/admin/wallets/recharge-requests', { params: status !== undefined ? { status } : {} });
     return data.data;
   },
 

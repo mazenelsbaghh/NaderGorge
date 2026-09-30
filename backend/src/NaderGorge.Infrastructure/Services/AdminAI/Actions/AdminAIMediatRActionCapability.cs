@@ -46,6 +46,7 @@ public abstract class AdminAIMediatRActionCapability<TInput, TResponse>(
 
     private static JsonSerializerOptions JsonOptions { get; } = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
@@ -94,6 +95,7 @@ public abstract class AdminAIServiceActionCapability<TInput>(IAdminAIActionPrevi
 
     private static JsonSerializerOptions JsonOptions { get; } = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
@@ -141,6 +143,7 @@ public abstract class AdminAISecureMediatRActionCapability<TInput, TResponse>(
 
     private static JsonSerializerOptions JsonOptions { get; } = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };

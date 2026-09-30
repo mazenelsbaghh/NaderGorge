@@ -18,6 +18,7 @@ export interface GiftLookupDto {
   context?: string | null;
   academicScopes?: AcademicScopeSummary[] | null;
   previouslyGiftedAt?: string | null;
+  isSystemContainer?: boolean;
 }
 
 export interface GiftRecipientResultDto {
@@ -143,7 +144,7 @@ export const adminGiftsService = {
   async teachers(search = '') {
     return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/teachers', { params: { search } }));
   },
-  async targets(targetType: GiftTargetType, teacherId?: string, search = '') {
-    return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/targets', { params: { targetType, teacherId, search } }));
+  async targets(targetType: GiftTargetType, teacherId?: string, search = '', parentId?: string) {
+    return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/targets', { params: { targetType, teacherId, search, parentId } }));
   },
 };

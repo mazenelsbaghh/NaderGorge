@@ -35,9 +35,9 @@ export default function TeacherFinanceCenterPageClient() {
   return (
     <AdminPage
       activePath="/admin/teacher-finance"
-      sectionLabel="مالية المدرسين"
-      pageTitle="مركز مالية المدرسين"
-      subtitle="اختر المدرّس لعرض أرباحه، طريقة حسابها، المدفوع والمتاح للسحب في مكان واحد."
+      sectionLabel="الحسابات"
+      pageTitle="اتفاقات المدرسين"
+      subtitle="اختار المدرس لتعديل الاتفاق من حسابه. نفس الاتفاق يحدد نصيب المدرس والمنصة في الشراء والأكواد."
     >
       {isLoading ? (
         <div className="border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-12 text-center text-sm font-bold text-[var(--admin-muted)]">
@@ -50,8 +50,8 @@ export default function TeacherFinanceCenterPageClient() {
         </div>
       ) : (
         <section className="admin-panel rounded-2xl p-6">
-          <h2 className="mb-4 text-lg font-bold">حسابات المدرسين</h2>
-          {teachers.length ? <ul className="divide-y divide-[var(--admin-border)]">{teachers.map(teacher => <li key={teacher.id}><Link href={`/admin/teachers/${teacher.id}/account`} className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-4"><span className="font-bold">{teacher.fullName}{!teacher.isActive && <span className="ms-2 text-sm text-[var(--admin-muted)]">غير نشط</span>}</span><span className="text-sm text-[var(--admin-primary)]">فتح الحساب ←</span></Link></li>)}</ul> : <p>لا يوجد مدرسون بعد.</p>}
+          <h2 className="mb-4 text-lg font-bold">اختار المدرس</h2>
+          {teachers.length ? <ul className="divide-y divide-[var(--admin-border)]">{teachers.map(teacher => <li key={teacher.id}><Link href={`/admin/teachers/${teacher.id}/account#agreements`} className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-4"><span className="font-bold">{teacher.fullName}{!teacher.isActive && <span className="ms-2 text-sm text-[var(--admin-muted)]">غير نشط</span>}</span><span className="text-sm text-[var(--admin-primary)]">عرض الاتفاق ←</span></Link></li>)}</ul> : <p>لا يوجد مدرسون بعد.</p>}
         </section>
       )}
     </AdminPage>

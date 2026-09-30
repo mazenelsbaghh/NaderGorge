@@ -47,7 +47,7 @@ public sealed class AdminAIProposalBuilder : IAdminAIProposalBuilder
         };
         _db.AdminAIActionProposals.Add(proposal); await _db.SaveChangesAsync(ct);
         var phrase = confirmation == AdminAIConfirmationType.TypedStrong ? await _challenges.IssueAsync(actorId, proposal.Id, capabilityKey, ct) : null;
-        return Dto(proposal, preview, phrase);
+        return Dto(proposal, phrase);
     }
 
     public async Task<IReadOnlyList<AdminAIProposalDto>> BuildManyAsync(Guid actorId, Guid turnId, IReadOnlyList<AdminAIActionSuggestion> suggestions, CancellationToken ct)
@@ -73,42 +73,9 @@ public sealed class AdminAIProposalBuilder : IAdminAIProposalBuilder
 
         using var inputDocument = JsonDocument.Parse(raw, new JsonDocumentOptions { MaxDepth = 16 });
         if (inputDocument.RootElement.ValueKind != JsonValueKind.Object) throw new ArgumentException("Action input must be a JSON object.", nameof(input));
-        ValidateAgainstClosedObjectSchema(inputDocument.RootElement, definition.InputSchema);
+        AdminAIActionInputValidator.Validate(inputDocument.RootElement, definition.InputSchema);
         return JsonSerializer.Deserialize<JsonElement>(Canonicalize(inputDocument.RootElement));
     }
-
-    private static void ValidateAgainstClosedObjectSchema(JsonElement input, string schemaJson)
-    {
-        using var schema = JsonDocument.Parse(schemaJson, new JsonDocumentOptions { MaxDepth = 16 });
-        var root = schema.RootElement;
-        if (root.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("Capability input schema is invalid.");
-        if (root.TryGetProperty("type", out var type) && type.ValueKind == JsonValueKind.String && type.GetString() != "object") throw new InvalidOperationException("Action capability input schema must describe an object.");
-
-        var properties = root.TryGetProperty("properties", out var p) && p.ValueKind == JsonValueKind.Object
-            ? p.EnumerateObject().ToDictionary(x => x.Name, x => x.Value.Clone(), StringComparer.Ordinal)
-            : new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-        if (root.TryGetProperty("additionalProperties", out var additional) && additional.ValueKind == JsonValueKind.False)
-            foreach (var supplied in input.EnumerateObject())
-                if (!properties.ContainsKey(supplied.Name)) throw new ArgumentException($"Unknown action input field '{supplied.Name}'.", nameof(input));
-        if (root.TryGetProperty("required", out var required) && required.ValueKind == JsonValueKind.Array)
-            foreach (var name in required.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!))
-                if (!input.TryGetProperty(name, out _)) throw new ArgumentException($"Required action input field '{name}' is missing.", nameof(input));
-        foreach (var supplied in input.EnumerateObject())
-            if (properties.TryGetValue(supplied.Name, out var propertySchema) && propertySchema.TryGetProperty("type", out var expected) && expected.ValueKind == JsonValueKind.String && !MatchesType(supplied.Value, expected.GetString()!))
-                throw new ArgumentException($"Action input field '{supplied.Name}' has the wrong type.", nameof(input));
-    }
-
-    private static bool MatchesType(JsonElement value, string expected) => expected switch
-    {
-        "string" => value.ValueKind == JsonValueKind.String,
-        "integer" => value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _),
-        "number" => value.ValueKind == JsonValueKind.Number,
-        "boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-        "object" => value.ValueKind == JsonValueKind.Object,
-        "array" => value.ValueKind == JsonValueKind.Array,
-        "null" => value.ValueKind == JsonValueKind.Null,
-        _ => throw new InvalidOperationException($"Unsupported action schema type '{expected}'.")
-    };
 
     private static string Canonicalize(JsonElement value) => value.ValueKind switch
     {
@@ -121,8 +88,13 @@ public sealed class AdminAIProposalBuilder : IAdminAIProposalBuilder
 
     private static void ValidatePreview(AdminAIActionPreview preview)
     {
-        if (string.IsNullOrWhiteSpace(preview.TargetType) || preview.TargetType.Length > 100 || string.IsNullOrWhiteSpace(preview.TargetReference) || preview.TargetReference.Length > 200 || string.IsNullOrWhiteSpace(preview.StateFingerprint) || preview.StateFingerprint.Length > 64)
+        if (string.IsNullOrWhiteSpace(preview.TargetType) || preview.TargetType.Length > 100 || string.IsNullOrWhiteSpace(preview.TargetReference) || preview.TargetReference.Length > 200 || string.IsNullOrWhiteSpace(preview.StateFingerprint) || preview.StateFingerprint.Length > 64 || !StringComparer.Ordinal.Equals(preview.StateFingerprint, preview.StateFingerprint.Trim()))
             throw new InvalidOperationException("Authoritative action preview returned an unsafe contract.");
     }
-    private static AdminAIProposalDto Dto(AdminAIActionProposal p, AdminAIActionPreview v, string? phrase) => new(p.Id, p.CapabilityKey, p.SafeTargetType, p.SafeTargetReference, p.PrimaryRisk, p.ConfirmationType, v.Current, v.Requested, v.Effect, p.ExpiresAt, p.Status, p.Version, phrase);
+    private static AdminAIProposalDto Dto(AdminAIActionProposal p, string? phrase) => new(
+        p.Id, p.CapabilityKey, p.SafeTargetType, p.SafeTargetReference, p.PrimaryRisk, p.ConfirmationType,
+        JsonSerializer.Deserialize<JsonElement>(p.SafeCurrentStateJson),
+        JsonSerializer.Deserialize<JsonElement>(p.SafeRequestedStateJson),
+        JsonSerializer.Deserialize<JsonElement>(p.SafeEffectJson),
+        p.ExpiresAt, p.Status, p.Version, phrase);
 }
