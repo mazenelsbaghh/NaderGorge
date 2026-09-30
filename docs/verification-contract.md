@@ -119,6 +119,10 @@ docker compose config -q
 
 Full `docker compose up` requires local secret values for required app secrets such as `API_CALLBACK_SECRET`, `AI_CALLBACK_SECRET`, `WORKER_ADMIN_TOKEN`, and `PARENT_REPORT_SIGNING_SECRET`.
 
+## YouTube HLS live browser preview
+
+With the frontend running in development mode, open `/dev/youtube-hls` on its local port. The page uses the platform's `SecureVideoPlayer` and a public demo video; it does not create a student session or record watch progress. Run `npm run check:youtube-hls-browser` from `frontend` (set `HLS_PREVIEW_URL` for a nondefault local port, and `HLS_CHROME_EXECUTABLE` if Chrome is not on Playwright's standard channel). This live Chrome check plays video, switches from 144p to 360p, confirms the relay serves the selected media, preserves position and 1.25× speed, and checks the narrow layout. It requires a reachable demo source and is separate from the deterministic playback/security suite. Production authorization and native Safari playback still require their own acceptance evidence.
+
 ## Admin AI Agent verification and rollback
 
 The Admin AI workspace is disabled by default. Set `ADMIN_AI_ENABLED=true` only after the active capability baseline, sensitive-data policy, PostgreSQL migration, worker readiness, and Admin-only browser checks pass. `ADMIN_AI_HMAC_KEY` must be an independent base64-encoded random value of at least 32 bytes; never place it in transcripts, logs, test snapshots, or committed configuration.
