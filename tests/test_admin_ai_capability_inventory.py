@@ -117,6 +117,17 @@ def test_staff_and_whatsapp_admin_capabilities_exclude_public_webhook():
     assert "/api/live-support/whatsapp/webhook" not in routes
 
 
+def test_shared_report_service_names_all_admin_report_operations():
+    items = json.loads(BASELINE.read_text())["items"]
+    calls = [item for item in items if item["kind"] == "frontend-call"
+             and item["source"]["file"] == "frontend/src/services/advanced-report-service.ts"
+             and item["route"].startswith("/admin/reports/")]
+
+    assert len(calls) == 9
+    assert all(item["authoritativeOperation"].startswith("diagnostic:AdminReportsController.")
+               for item in calls)
+
+
 def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
     items = json.loads(BASELINE.read_text())["items"]
     approvals = [item for item in items

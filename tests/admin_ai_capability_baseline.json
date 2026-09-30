@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "688e8120ab98d04de8505aee3640dc6399361b99d7b90d3569533929319ba379"
+      "digest": "a4bda937038014620bba9135ae897ffba4a9b52228689c8ae8490ea0f46b8f09"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -16851,6 +16851,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:delete:admin-reports-definitions-id:frontend-src-services-advanced-report-service-ts:186",
+      "kind": "frontend-call",
+      "method": "DELETE",
+      "route": "/admin/reports/definitions/{id}",
+      "effect": "mutation",
+      "domain": "reporting",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminReportsController.DeleteDefinition",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "reporting"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 186
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:delete:admin-roles-id:frontend-src-services-admin-service-ts:2409",
       "kind": "frontend-call",
       "method": "DELETE",
@@ -17151,36 +17181,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:endpointaudience-definitions-id:frontend-src-services-advanced-report-service-ts:180",
-      "kind": "frontend-call",
-      "method": "DELETE",
-      "route": "/{endpointaudience}/definitions/{id}",
-      "effect": "mutation",
-      "domain": "reporting",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "reporting"
-      ],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 180
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:delete:hr-employees-employeeid:frontend-src-services-hr-service-ts:249",
       "kind": "frontend-call",
       "method": "DELETE",
@@ -17237,6 +17237,36 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 867
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:delete:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:187",
+      "kind": "frontend-call",
+      "method": "DELETE",
+      "route": "/teacher/reports/definitions/{id}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 187
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -19320,6 +19350,114 @@
       }
     },
     {
+      "id": "fe:get:admin-reports-catalog:frontend-src-services-advanced-report-service-ts:148",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/reports/catalog",
+      "effect": "read",
+      "domain": "reporting",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminReportsController.GetCatalog",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "id": "fe:get:admin-reports-definitions:frontend-src-services-advanced-report-service-ts:167",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/reports/definitions",
+      "effect": "read",
+      "domain": "reporting",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminReportsController.GetDefinitions",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 167
+      }
+    },
+    {
+      "id": "fe:get:admin-reports-filter-options:frontend-src-services-advanced-report-service-ts:154",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/reports/filter-options",
+      "effect": "read",
+      "domain": "reporting",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminReportsController.GetFilterOptions",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 154
+      }
+    },
+    {
+      "id": "fe:get:admin-reports-student-ledger-export:frontend-src-services-advanced-report-service-ts:200",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/reports/student-ledger/export",
+      "effect": "export",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminReportsController.ExportStudentLedger",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 200
+      }
+    },
+    {
       "id": "fe:get:admin-roles:frontend-src-services-admin-service-ts:2378",
       "kind": "frontend-call",
       "method": "GET",
@@ -21102,114 +21240,6 @@
       }
     },
     {
-      "id": "fe:get:endpointaudience-catalog:frontend-src-services-advanced-report-service-ts:148",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{endpointaudience}/catalog",
-      "effect": "read",
-      "domain": "reporting",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 148
-      }
-    },
-    {
-      "id": "fe:get:endpointaudience-definitions:frontend-src-services-advanced-report-service-ts:162",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{endpointaudience}/definitions",
-      "effect": "read",
-      "domain": "reporting",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 162
-      }
-    },
-    {
-      "id": "fe:get:endpointaudience-filter-options:frontend-src-services-advanced-report-service-ts:152",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{endpointaudience}/filter-options",
-      "effect": "read",
-      "domain": "reporting",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 152
-      }
-    },
-    {
-      "id": "fe:get:endpointaudience-student-ledger-export:frontend-src-services-advanced-report-service-ts:189",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{endpointaudience}/student-ledger/export",
-      "effect": "export",
-      "domain": "identity",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 189
-      }
-    },
-    {
       "id": "fe:get:hr-admin-attendance-corrections:frontend-src-services-hr-service-ts:338",
       "kind": "frontend-call",
       "method": "GET",
@@ -22692,6 +22722,114 @@
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
         "line": 278
+      }
+    },
+    {
+      "id": "fe:get:teacher-reports-catalog:frontend-src-services-advanced-report-service-ts:149",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/teacher/reports/catalog",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 149
+      }
+    },
+    {
+      "id": "fe:get:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:168",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/teacher/reports/definitions",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 168
+      }
+    },
+    {
+      "id": "fe:get:teacher-reports-filter-options:frontend-src-services-advanced-report-service-ts:155",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/teacher/reports/filter-options",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 155
+      }
+    },
+    {
+      "id": "fe:get:teacher-reports-student-ledger-export:frontend-src-services-advanced-report-service-ts:201",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/teacher/reports/student-ledger/export",
+      "effect": "export",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 201
       }
     },
     {
@@ -25167,6 +25305,96 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:post:admin-reports-definitions:frontend-src-services-advanced-report-service-ts:174",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/reports/definitions",
+      "effect": "mutation",
+      "domain": "reporting",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminReportsController.CreateDefinition",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "reporting"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 174
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:admin-reports-execute:frontend-src-services-advanced-report-service-ts:161",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/reports/execute",
+      "effect": "mutation",
+      "domain": "reporting",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminReportsController.Execute",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "reporting"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 161
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:admin-reports-export-format:frontend-src-services-advanced-report-service-ts:193",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/reports/export/{format}",
+      "effect": "external-side-effect",
+      "domain": "reporting",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminReportsController.Export",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "reporting"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 193
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:post:admin-resources-upload:frontend-src-services-admin-service-ts:1981",
       "kind": "frontend-call",
       "method": "POST",
@@ -27293,96 +27521,6 @@
       "source": {
         "file": "frontend/src/services/code-service.ts",
         "line": 76
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:endpointaudience-definitions:frontend-src-services-advanced-report-service-ts:168",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/{endpointaudience}/definitions",
-      "effect": "mutation",
-      "domain": "reporting",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "reporting"
-      ],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 168
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:endpointaudience-execute:frontend-src-services-advanced-report-service-ts:156",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/{endpointaudience}/execute",
-      "effect": "mutation",
-      "domain": "reporting",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "reporting"
-      ],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 156
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:endpointaudience-export-format:frontend-src-services-advanced-report-service-ts:183",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/{endpointaudience}/export/{format}",
-      "effect": "external-side-effect",
-      "domain": "reporting",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "reporting"
-      ],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 183
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29727,6 +29865,96 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:post:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:175",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/teacher/reports/definitions",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 175
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:teacher-reports-execute:frontend-src-services-advanced-report-service-ts:162",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/teacher/reports/execute",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 162
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:teacher-reports-export-format:frontend-src-services-advanced-report-service-ts:194",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/teacher/reports/export/{format}",
+      "effect": "external-side-effect",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 194
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84",
       "kind": "frontend-call",
       "method": "POST",
@@ -30447,6 +30675,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:put:admin-reports-definitions-id:frontend-src-services-advanced-report-service-ts:181",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/admin/reports/definitions/{id}",
+      "effect": "mutation",
+      "domain": "reporting",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminReportsController.UpdateDefinition",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "reporting"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 181
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:put:admin-roles-id:frontend-src-services-admin-service-ts:2401",
       "kind": "frontend-call",
       "method": "PUT",
@@ -30927,36 +31185,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:endpointaudience-definitions-id:frontend-src-services-advanced-report-service-ts:174",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/{endpointaudience}/definitions/{id}",
-      "effect": "mutation",
-      "domain": "reporting",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "reporting"
-      ],
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 174
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:put:hr-admin-attendance-breaks-breakid:frontend-src-services-hr-service-ts:329",
       "kind": "frontend-call",
       "method": "PUT",
@@ -31167,6 +31395,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:put:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:182",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/teacher/reports/definitions/{id}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-advanced-report-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 182
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:38",
       "kind": "frontend-call",
       "method": "PUT",
@@ -31198,5 +31456,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "edec328fbd6464ef25a680978f6f66de9aff78c9b9a08c88fb811c4e5f00c596"
+  "digest": "d37116709975e395b88bec5a424a4f4001fc88a2078e1bace100058120f71706"
 }

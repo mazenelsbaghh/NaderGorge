@@ -2112,17 +2112,8 @@
       "route": null
     }
   ],
-  "callCount": 510,
+  "callCount": 519,
   "calls": [
-    {
-      "method": "DELETE",
-      "path": "/{endpointaudience}/definitions/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 180
-      }
-    },
     {
       "method": "DELETE",
       "path": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -2220,6 +2211,15 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1570
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 186
       }
     },
     {
@@ -2331,48 +2331,21 @@
       }
     },
     {
+      "method": "DELETE",
+      "path": "/teacher/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 187
+      }
+    },
+    {
       "method": "GET",
       "path": "/{base}/{path}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/learning-center-service.ts",
         "line": 142
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/catalog",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 148
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/definitions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 162
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/filter-options",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 152
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/{endpointaudience}/student-ledger/export",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 189
       }
     },
     {
@@ -3075,6 +3048,42 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1438
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/catalog",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 167
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/filter-options",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 154
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/student-ledger/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 200
       }
     },
     {
@@ -4078,6 +4087,42 @@
     },
     {
       "method": "GET",
+      "path": "/teacher/reports/catalog",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 149
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 168
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/reports/filter-options",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 155
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/reports/student-ledger/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 201
+      }
+    },
+    {
+      "method": "GET",
       "path": "/v1/assistant/tasks/my/{taskId}",
       "dynamic": true,
       "source": {
@@ -4281,33 +4326,6 @@
       "source": {
         "file": "frontend/src/services/api-client.ts",
         "line": 64
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/{endpointaudience}/definitions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 168
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/{endpointaudience}/execute",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 156
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/{endpointaudience}/export/{format}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 183
       }
     },
     {
@@ -4929,6 +4947,33 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2034
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 174
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/execute",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 161
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/reports/export/{format}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 193
       }
     },
     {
@@ -6175,6 +6220,33 @@
     },
     {
       "method": "POST",
+      "path": "/teacher/reports/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 175
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/reports/execute",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 162
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/reports/export/{format}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 194
+      }
+    },
+    {
+      "method": "POST",
       "path": "/v1/assistant/tasks/my/{taskId}/comments",
       "dynamic": true,
       "source": {
@@ -6306,15 +6378,6 @@
       "source": {
         "file": "frontend/src/services/code-service.ts",
         "line": 76
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/{endpointaudience}/definitions/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/advanced-report-service.ts",
-        "line": 174
       }
     },
     {
@@ -6486,6 +6549,15 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1563
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 181
       }
     },
     {
@@ -6693,6 +6765,15 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 595
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/teacher/reports/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 182
       }
     },
     {
@@ -7176,5 +7257,5 @@
       }
     }
   ],
-  "digest": "87c0313ca054127c9d2ce6a3540cd1bbd5a8a7afcb905a4e43fdb9ae109cec67"
+  "digest": "1885521e333dd42dbd05678d2ad823e1461de632e2d1cc7c1d7b61094b65c6a4"
 }
