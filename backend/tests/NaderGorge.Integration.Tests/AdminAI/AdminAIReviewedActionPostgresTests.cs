@@ -419,6 +419,38 @@ public sealed class AdminAIReviewedActionPostgresTests
             .CountAsync(item => item.Status == CommunityCommentStatus.Approved));
         Assert.Equal(2, await verifyDb.OutboxEvents.AsNoTracking()
             .CountAsync(item => item.Type == "CommunityCommentApproved"));
+        var lessonReceipts = await verifyDb.AuthoritativeOperationReceipts.AsNoTracking()
+            .Where(item => item.Scope == "lesson-comment.approve").ToListAsync();
+        var communityCommentReceipts = await verifyDb.AuthoritativeOperationReceipts.AsNoTracking()
+            .Where(item => item.Scope == "community-comment.approve").ToListAsync();
+        Assert.Equal(2, lessonReceipts.Count);
+        Assert.Equal(2, communityCommentReceipts.Count);
+        var lessonReceipt = lessonReceipts.Single(item => item.ResultEntityId == parentComment.Id);
+        var communityCommentReceipt = communityCommentReceipts.Single(item => item.ResultEntityId == communityParent.Id);
+        var lessonReplay = await new ApproveLessonCommentCommandHandler(verifyDb).Handle(
+            new ApproveLessonCommentCommand(parentComment.Id, actor.Id)
+            { OperationId = lessonReceipt.OperationId }, default);
+        var communityCommentReplay = await new ApproveCommunityCommentCommandHandler(verifyDb).Handle(
+            new ApproveCommunityCommentCommand(communityParent.Id, actor.Id)
+            { OperationId = communityCommentReceipt.OperationId }, default);
+        Assert.True(lessonReplay.Success);
+        Assert.True(communityCommentReplay.Success);
+        var lessonConflict = await new ApproveLessonCommentCommandHandler(verifyDb).Handle(
+            new ApproveLessonCommentCommand(replyComment.Id, actor.Id)
+            { OperationId = lessonReceipt.OperationId }, default);
+        var communityCommentConflict = await new ApproveCommunityCommentCommandHandler(verifyDb).Handle(
+            new ApproveCommunityCommentCommand(communityReply.Id, actor.Id)
+            { OperationId = communityCommentReceipt.OperationId }, default);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", lessonConflict.Errors!);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", communityCommentConflict.Errors!);
+        Assert.Equal(4, await verifyDb.OutboxEvents.CountAsync(item => item.Type == "LessonCommentApproved"));
+        Assert.Equal(2, await verifyDb.OutboxEvents.CountAsync(item => item.Type == "CommunityCommentApproved"));
+        var lessonRecovered = await new AdminAILessonCommentApprovalResultResolver(verifyDb)
+            .ResolveAsync(lessonReceipt.OperationId, lessonReceipt.OperationId, default);
+        var communityCommentRecovered = await new AdminAICommunityCommentApprovalResultResolver(verifyDb)
+            .ResolveAsync(communityCommentReceipt.OperationId, communityCommentReceipt.OperationId, default);
+        Assert.Equal(lessonReplay.Data, Assert.IsType<ModerateLessonCommentResponse>(lessonRecovered?.SafeResult));
+        Assert.Equal(communityCommentReplay.Data, Assert.IsType<ModerateCommunityCommentResponse>(communityCommentRecovered?.SafeResult));
         Assert.Equal(RequestStatus.Approved,
             (await verifyDb.ExtraWatchRequests.AsNoTracking()
                 .SingleAsync(item => item.Id == extraWatchRequest.Id)).Status);

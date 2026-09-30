@@ -1,3 +1,7 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -15,7 +19,10 @@ public record ModerateLessonCommentResponse(
 );
 
 public record ApproveLessonCommentCommand(Guid CommentId, Guid ReviewerUserId)
-    : IRequest<ApiResponse<ModerateLessonCommentResponse>>;
+    : IRequest<ApiResponse<ModerateLessonCommentResponse>>
+{
+    public string? OperationId { get; init; }
+}
 
 public class ApproveLessonCommentCommandHandler
     : IRequestHandler<ApproveLessonCommentCommand, ApiResponse<ModerateLessonCommentResponse>>
@@ -28,6 +35,46 @@ public class ApproveLessonCommentCommandHandler
     }
 
     public async Task<ApiResponse<ModerateLessonCommentResponse>> Handle(ApproveLessonCommentCommand request, CancellationToken cancellationToken)
+    {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<ModerateLessonCommentResponse>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await ApproveOnceAsync(request, cancellationToken);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.CommentId, request.ReviewerUserId }))));
+        await using var transaction = await _context.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var prior = await _context.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, cancellationToken);
+        if (prior is not null)
+        {
+            if (prior.Scope != "lesson-comment.approve" || prior.ActorUserId != request.ReviewerUserId
+                || prior.RequestHash != requestHash || prior.ResultEntityId != request.CommentId)
+                return ApiResponse<ModerateLessonCommentResponse>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+            var result = JsonSerializer.Deserialize<ModerateLessonCommentResponse>(prior.SafeResultJson
+                ?? throw new InvalidOperationException("Lesson comment approval receipt has no result."));
+            if (result?.Id != request.CommentId)
+                throw new InvalidOperationException("Lesson comment approval receipt result does not match its target.");
+            return ApiResponse<ModerateLessonCommentResponse>.Ok(result);
+        }
+
+        var approved = await ApproveOnceAsync(request, cancellationToken);
+        if (!approved.Success)
+            return approved;
+        _context.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+        {
+            OperationId = operationId, Scope = "lesson-comment.approve",
+            ActorUserId = request.ReviewerUserId, RequestHash = requestHash,
+            ResultEntityId = request.CommentId, SafeResultJson = JsonSerializer.Serialize(approved.Data)
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return approved;
+    }
+
+    private async Task<ApiResponse<ModerateLessonCommentResponse>> ApproveOnceAsync(
+        ApproveLessonCommentCommand request, CancellationToken cancellationToken)
     {
         var comment = await _context.LessonComments
             .Include(c => c.ParentComment)

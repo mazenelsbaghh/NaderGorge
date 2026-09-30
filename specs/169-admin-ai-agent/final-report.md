@@ -26,6 +26,8 @@ The action bridges now consume exact camelCase JSON from the worker and reject c
 
 Community-post approval now carries an optional AdminAI operation identity into the original command. Its public status, audit, outbox notification, and safe result receipt commit together. A PostgreSQL replay after later moderation returned the original result without another publication; a mismatched actor was rejected. The resolver can recover an ambiguous AdminAI outcome from that receipt. The AdminAI PostgreSQL group passed 36/36 and the application group 264/264. The production action catalog remains read-only.
 
+Lesson-comment and community-comment approvals now use the same durable operation identity through their original commands. The proposal/confirmation PostgreSQL scenario replayed both approved comments without another notification and recovered each safe result from its receipt. They remain candidate actions pending complete catalog coverage and release verification.
+
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
 
 Startup no longer auto-approves a read-only AdminAI baseline when the feature flag is enabled. It now requires a manually approved active manifest matching the running action catalog and rejecting unsupported inventory items. The activation guard passed 9/9 tests and the focused application group passed 255/255; the current catalog is still read-only, so the gate correctly prevents activation.

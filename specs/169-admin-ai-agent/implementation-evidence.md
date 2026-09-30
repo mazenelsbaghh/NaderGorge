@@ -10,6 +10,11 @@
 - The original community-post approval command now accepts an optional server-owned operation identity. For AdminAI calls, it commits the public status change, audit, outbox notification, and a payload-bound safe result receipt in one PostgreSQL transaction. Original Admin/Teacher calls without an operation identity retain their existing command path.
 - A real PostgreSQL replay after a later moderation change returned the original approval result without another publication or audit entry; actor mismatch returned an idempotency conflict. The recovery resolver uses that exact receipt. The complete AdminAI PostgreSQL group passed 36/36 and the application group passed 264/264. This covers one reviewed operation and does not activate the still read-only production catalog.
 
+## 2026-09-30 comment approval identities
+
+- The original lesson-comment and community-comment approval commands now accept the same optional server-owned operation identity. Their status changes, existing audit and outbox effects, and safe result receipts commit atomically for AdminAI calls; the existing screen paths without that identity remain available.
+- The full proposal/confirmation PostgreSQL scenario replayed both types of approved comments in a fresh context, returned the receipt-backed result, and kept the outbox counts unchanged. Both recovery resolvers returned the matching safe result. The AdminAI PostgreSQL group passed 36/36; the final changed-target conflict assertion passed on a separate focused rerun. These remain candidate adapters behind the read-only production catalog.
+
 ## 2026-09-30 concurrent worker claim
 
 - The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.

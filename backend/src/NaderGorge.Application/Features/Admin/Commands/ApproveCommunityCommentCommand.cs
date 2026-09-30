@@ -1,3 +1,7 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -14,7 +18,10 @@ public record ModerateCommunityCommentResponse(
 );
 
 public record ApproveCommunityCommentCommand(Guid CommentId, Guid ReviewerUserId)
-    : IRequest<ApiResponse<ModerateCommunityCommentResponse>>;
+    : IRequest<ApiResponse<ModerateCommunityCommentResponse>>
+{
+    public string? OperationId { get; init; }
+}
 
 public class ApproveCommunityCommentCommandHandler
     : IRequestHandler<ApproveCommunityCommentCommand, ApiResponse<ModerateCommunityCommentResponse>>
@@ -27,6 +34,46 @@ public class ApproveCommunityCommentCommandHandler
     }
 
     public async Task<ApiResponse<ModerateCommunityCommentResponse>> Handle(ApproveCommunityCommentCommand request, CancellationToken ct)
+    {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<ModerateCommunityCommentResponse>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await ApproveOnceAsync(request, ct);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.CommentId, request.ReviewerUserId }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+        {
+            if (prior.Scope != "community-comment.approve" || prior.ActorUserId != request.ReviewerUserId
+                || prior.RequestHash != requestHash || prior.ResultEntityId != request.CommentId)
+                return ApiResponse<ModerateCommunityCommentResponse>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+            var result = JsonSerializer.Deserialize<ModerateCommunityCommentResponse>(prior.SafeResultJson
+                ?? throw new InvalidOperationException("Community comment approval receipt has no result."));
+            if (result?.CommentId != request.CommentId)
+                throw new InvalidOperationException("Community comment approval receipt result does not match its target.");
+            return ApiResponse<ModerateCommunityCommentResponse>.Ok(result);
+        }
+
+        var approved = await ApproveOnceAsync(request, ct);
+        if (!approved.Success)
+            return approved;
+        _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+        {
+            OperationId = operationId, Scope = "community-comment.approve",
+            ActorUserId = request.ReviewerUserId, RequestHash = requestHash,
+            ResultEntityId = request.CommentId, SafeResultJson = JsonSerializer.Serialize(approved.Data)
+        });
+        await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return approved;
+    }
+
+    private async Task<ApiResponse<ModerateCommunityCommentResponse>> ApproveOnceAsync(
+        ApproveCommunityCommentCommand request, CancellationToken ct)
     {
         var comment = await _db.CommunityPostComments
             .Include(item => item.Post)
