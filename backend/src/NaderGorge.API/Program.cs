@@ -351,6 +351,12 @@ builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIDataProtector, NaderGorge.Infrastructure.Services.AdminAI.AdminAIDataProtector>();
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAICapabilityRegistry>(_ =>
     NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry.CreateProductionReadRegistry());
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.IAdminAIActionPreviewSource, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIIdentityContentPreviewSource>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAddStudentNoteAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateSubjectAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateSubjectAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateVideoTypeAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateVideoTypeAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIIdentitySummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSearchRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSnapshotRead>();

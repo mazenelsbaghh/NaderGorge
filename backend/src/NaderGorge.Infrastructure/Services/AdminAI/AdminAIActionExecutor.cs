@@ -3,9 +3,11 @@ using System.Text.Json;
 using System.Data;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
+using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -59,22 +61,20 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         if (!_adapters.TryGetValue(proposal.CapabilityKey, out var adapter)) throw new NotSupportedException("Authoritative action adapter is unavailable.");
         var plaintext = _protector.Unprotect("proposal-payload", new AdminAIProtectedValue(proposal.ProtectedNormalizedPayload, proposal.PayloadHash));
         var input = JsonSerializer.Deserialize<JsonElement>(plaintext);
-        var preview = await adapter.PreviewAsync(actorId, input, ct);
+        AdminAIActionPreview preview;
+        try
+        {
+            preview = await adapter.PreviewAsync(actorId, input, ct);
+        }
+        catch (AdminAIActionPreviewUnavailableException)
+        {
+            await InvalidateBeforeEffectAsync(proposal, claimTransaction, ct);
+            throw new InvalidOperationException("Proposal target changed.");
+        }
         // PostgreSQL char(64) pads a shorter opaque fingerprint on read.
         if (!StringComparer.Ordinal.Equals(preview.StateFingerprint, proposal.StateFingerprint.TrimEnd(' ')))
         {
-            proposal.Status = AdminAIProposalStatus.Invalidated;
-            proposal.InvalidatedReasonCode = "stale_state";
-            proposal.Version++;
-            try
-            {
-                await _db.SaveChangesAsync(ct);
-                if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
-            }
-            catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
-            {
-                throw new ClaimConflictException(exception);
-            }
+            await InvalidateBeforeEffectAsync(proposal, claimTransaction, ct);
             throw new InvalidOperationException("Proposal state changed.");
         }
         var execution = new AdminAIActionExecution { ProposalId = proposalId, ActorAdminUserId = actorId, CapabilityKey = proposal.CapabilityKey, CapabilityVersion = proposal.CapabilityVersion, IdempotencyDigest = digest, PayloadHash = proposal.PayloadHash, AuthoritativeOperation = adapter.GetType().FullName ?? adapter.GetType().Name, Status = AdminAIExecutionStatus.Claimed, TraceId = Guid.NewGuid().ToString("N"), ClaimedAt = DateTime.UtcNow };
@@ -157,6 +157,23 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         finally
         {
             if (securePlaintext is not null) CryptographicOperations.ZeroMemory(securePlaintext);
+        }
+    }
+
+    private async Task InvalidateBeforeEffectAsync(
+        AdminAIActionProposal proposal, IDbContextTransaction? claimTransaction, CancellationToken ct)
+    {
+        proposal.Status = AdminAIProposalStatus.Invalidated;
+        proposal.InvalidatedReasonCode = "stale_state";
+        proposal.Version++;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
+        }
+        catch (Exception exception) when (claimTransaction is not null && IsClaimConflict(exception))
+        {
+            throw new ClaimConflictException(exception);
         }
     }
 

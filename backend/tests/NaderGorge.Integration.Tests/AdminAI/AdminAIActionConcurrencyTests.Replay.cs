@@ -77,6 +77,25 @@ public sealed partial class AdminAIActionConcurrencyTests
     }
 
     [Fact]
+    public async Task RemovedTarget_PersistsInvalidationWithoutClaimOrBusinessEffect()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        var seed = await SeedProposalAsync(fixture, "test.once");
+        var adapter = new RemovedTargetAction();
+        await using (var db = fixture.CreateDbContext())
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                NewExecutor(db, seed, adapter).ExecuteAsync(seed.ActorId, seed.ProposalId, "same-intent", default));
+
+        await using var verifyDb = fixture.CreateDbContext();
+        var proposal = await verifyDb.AdminAIActionProposals.AsNoTracking()
+            .SingleAsync(item => item.Id == seed.ProposalId);
+        Assert.Equal(AdminAIProposalStatus.Invalidated, proposal.Status);
+        Assert.Equal("stale_state", proposal.InvalidatedReasonCode);
+        Assert.Empty(await verifyDb.AdminAIActionExecutions.ToListAsync());
+        Assert.Equal(0, adapter.ExecuteCount);
+    }
+
+    [Fact]
     public async Task ReusedIntentOnDifferentProposal_RejectsPayloadConflict()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
@@ -217,6 +236,19 @@ public sealed partial class AdminAIActionConcurrencyTests
             Interlocked.Increment(ref _executeCount);
             if (delayMilliseconds > 0) await Task.Delay(delayMilliseconds, ct);
             return AdminAIActionOutcomeFactory.Success(new { done = true }, 1, ["test"]);
+        }
+    }
+
+    private sealed class RemovedTargetAction : IAdminAIActionCapability
+    {
+        public string Key => "test.once";
+        public int ExecuteCount { get; private set; }
+        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) =>
+            throw new AdminAIActionPreviewUnavailableException("Target was removed after proposal preview.");
+        public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct)
+        {
+            ExecuteCount++;
+            throw new InvalidOperationException("A removed target must not be changed.");
         }
     }
 

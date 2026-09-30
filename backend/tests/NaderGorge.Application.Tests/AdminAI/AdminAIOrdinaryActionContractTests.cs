@@ -191,6 +191,35 @@ public sealed class AdminAIOrdinaryActionContractTests
     }
 
     [Fact]
+    public async Task TargetRemovedAfterPreview_InvalidatesBeforeClaimingExecution()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var protector = AdminAIStrongConfirmationTests.Protector();
+        var protectedPayload = protector.Protect("proposal-payload", "{}"u8);
+        var proposal = new AdminAIActionProposal
+        {
+            ActorAdminUserId = actor, CapabilityKey = "test.unavailable", CapabilityVersion = "1",
+            Status = AdminAIProposalStatus.Confirming, ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            ProtectedNormalizedPayload = protectedPayload.Ciphertext, PayloadHash = protectedPayload.Digest,
+            StateFingerprint = "state-v1"
+        };
+        db.Add(proposal);
+        await db.SaveChangesAsync();
+        var adapter = new UnavailableAction();
+        var executor = new AdminAIActionExecutor(db, new AdminAIConversationTests.AllowAccess(actor),
+            protector, new NoSecureInput(), [adapter]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            executor.ExecuteAsync(actor, proposal.Id, "intent", default));
+
+        Assert.Equal(AdminAIProposalStatus.Invalidated, proposal.Status);
+        Assert.Equal("stale_state", proposal.InvalidatedReasonCode);
+        Assert.Empty(db.AdminAIActionExecutions);
+        Assert.Equal(0, adapter.ExecuteCalls);
+    }
+
+    [Fact]
     public async Task ExternalTimeout_PersistsDeterministicIdentityAndRequiresRecovery()
     {
         await using var db = AdminAIStrongConfirmationTests.CreateDb(); var actor = Guid.NewGuid(); var protector = AdminAIStrongConfirmationTests.Protector();
@@ -215,6 +244,18 @@ public sealed class AdminAIOrdinaryActionContractTests
         public string Key => "test.action"; public int ExecuteCalls { get; private set; }
         public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) => Task.FromResult(new AdminAIActionPreview("user", "user:1", new { }, new { }, new { }, new { valid = true }, "state-v1"));
         public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct) { ExecuteCalls++; return Task.FromResult(new AdminAIActionOutcome(AdminAIExecutionStatus.Succeeded, new { done = true }, 1, ["users"])); }
+    }
+    private sealed class UnavailableAction : IAdminAIActionCapability
+    {
+        public string Key => "test.unavailable";
+        public int ExecuteCalls { get; private set; }
+        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) =>
+            throw new AdminAIActionPreviewUnavailableException("Target changed.");
+        public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct)
+        {
+            ExecuteCalls++;
+            throw new InvalidOperationException("No execution was expected.");
+        }
     }
     private sealed class TimeoutAction : IAdminAIActionCapability
     {
