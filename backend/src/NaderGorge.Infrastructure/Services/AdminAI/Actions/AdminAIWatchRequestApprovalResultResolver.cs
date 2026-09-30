@@ -17,7 +17,7 @@ public sealed class AdminAIWatchRequestApprovalResultResolver(IAppDbContext db) 
         var exists = await db.VideoOverrides.AsNoTracking()
             .AnyAsync(item => item.OperationId == externalOperationId, cancellationToken);
         return exists
-            ? AdminAIActionOutcomeFactory.Success(new { message = "Watch request approval persisted" },
+            ? AdminAIActionOutcomeFactory.Success(new { Message = (string?)null },
                 1, ["watch-progress", "watch-requests"])
             : null;
     }

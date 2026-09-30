@@ -427,6 +427,8 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.Equal(1, await reconciler.ReconcileAsync(100, default));
         Assert.Equal(AdminAIExecutionStatus.Succeeded, recoveringExecution.Status);
         Assert.Equal(AdminAIProposalStatus.Succeeded, recoveringProposal.Status);
+        await verifyDb.Entry(recoveringExecution).ReloadAsync();
+        Assert.Equal(approvalExecution.SafeResultJson, recoveringExecution.SafeResultJson);
         Assert.Equal(2, await verifyDb.VideoOverrides.AsNoTracking().CountAsync());
         Assert.Equal(4, await verifyDb.OutboxEvents.AsNoTracking()
             .CountAsync(item => item.Type == "ExtraWatchRequestUpdated"));
