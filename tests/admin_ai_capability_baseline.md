@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `36406d498a5ab43e359edb8ec7b9bb919cf6504b6785e91ba5f5efbddb0abc0b`
+Digest: `20d3062e6ba7a0cd8e9474371e9d42fd60320fa505454fd81e86adf7239904b8`
 
 Items: 1076; external-side-effect=80, mutation=540, read=418, export=23, preview=15.
-Reviewed non-business exclusions: 44.
+Reviewed non-business exclusions: 45.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 

@@ -2112,8 +2112,17 @@
       "route": null
     }
   ],
-  "callCount": 523,
+  "callCount": 524,
   "calls": [
+    {
+      "method": "ANY",
+      "path": "/{base}/{path}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/learning-center-service.ts",
+        "line": 155
+      }
+    },
     {
       "method": "DELETE",
       "path": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -7293,5 +7302,5 @@
       }
     }
   ],
-  "digest": "d433c32bfd1b4db1b77819163f016e6513c0daab286b4f76babc68b7561c1c35"
+  "digest": "3893d331fa6b3f8ac5934753c6edcc8d7310696a0ad4087ef39ad333fe141513"
 }

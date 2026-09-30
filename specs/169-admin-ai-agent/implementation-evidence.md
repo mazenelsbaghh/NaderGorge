@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 computed HTTP method inventory
+
+- The Admin-reachable Learning Center service sends writes through `apiClient[method]`. The frontend graph previously counted only property calls, so this write dispatcher was absent. It now emits an `ANY /{base}/{path}` diagnostic call and treats unknown verbs conservatively as mutation effects. The generic read and write dispatchers have two reviewed `non-business` exclusions because all 11 concrete Admin-accessible Learning Center backend routes remain in the baseline, including six blocked mutations.
+- The graph now has 524 calls. The baseline still has 1,076 items and 620 blocked entries, with zero unresolved retained calls and 45 reviewed exclusions. Digest: `20d3062e6ba7a0cd8e9474371e9d42fd60320fa505454fd81e86adf7239904b8`. The full capability gate passed 12/12 graph tests and 30/30 Python tests. Activation remains blocked.
+
 ## 2026-09-30 dynamic Admin frontend route reconciliation
 
 - The shared content-summary service builds `/{scope}/content/summary`; its Admin page passes `scope="admin"`, so its retained frontend call now maps to `/api/admin/content/summary`. The Learning Center `read(path)` method is a generic transport helper; all 11 concrete Admin-accessible backend routes are already inventoried, so that helper has one reviewed `non-business` exclusion.

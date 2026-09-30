@@ -9,11 +9,11 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "715beee696b8382a7f5f4d02425ec60807965e7b59cc3d6aefceaa2bab9d00be"
+      "digest": "2d8df8efdac7038711090276f9b2e6041c4b4088187258809e77401e581c06a5"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "5aa9db0c916c6c93a7af3344a40bdbef93a1097b8b8a92a130a532260abbbd6b"
+      "digest": "5597bf94fc16b70947a44528b51315217dcfa65dfb82feb423969f8a16d93358"
     }
   },
   "items": [
@@ -30932,6 +30932,11 @@
   ],
   "exclusions": [
     {
+      "id": "fe:any:base-path:frontend-src-services-learning-center-service-ts:155",
+      "reason": "non-business",
+      "detail": "Generic Learning Center read dispatcher; all concrete Admin-accessible backend routes are inventoried: ANY /{base}/{path}"
+    },
+    {
       "id": "fe:delete:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:187",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: DELETE /teacher/reports/definitions/{id}"
@@ -31152,5 +31157,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "36406d498a5ab43e359edb8ec7b9bb919cf6504b6785e91ba5f5efbddb0abc0b"
+  "digest": "20d3062e6ba7a0cd8e9474371e9d42fd60320fa505454fd81e86adf7239904b8"
 }

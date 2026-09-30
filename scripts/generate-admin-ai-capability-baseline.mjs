@@ -73,7 +73,7 @@ function semantics(method, descriptor, route) {
   const operation = `${descriptor} ${route}`;
   const external = externalTerms.test(operation);
   const reviewedReadEffect = reviewedReadOnlyPostRoutes.get(routeKey(method, route));
-  const mutation = method !== 'GET' && method !== 'ANY' && !reviewedReadEffect;
+  const mutation = method !== 'GET' && !reviewedReadEffect;
   const effect = reviewedReadEffect ?? (mutation ? (external ? 'external-side-effect' : 'mutation') :
     (/export|download/i.test(operation) ? 'export' : /preview/i.test(operation) ? 'preview' : 'read'));
   const risk = mutation && (method === 'DELETE' || strongTerms.test(operation) || reviewedStrongRoutes.has(routeKey(method, route)))
@@ -209,7 +209,7 @@ function build() {
     && item.method === 'POST' && item.route === '/{API_BASE_URL}/auth/refresh');
   const learningCenterHelperItems = frontendItems.filter((item) =>
     item.source.file === 'frontend/src/services/learning-center-service.ts'
-    && item.method === 'GET' && item.route === '/{base}/{path}');
+    && (item.method === 'GET' || item.method === 'ANY') && item.route === '/{base}/{path}');
   const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
   const teacherReportItems = frontendItems.filter((item) =>
     item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));

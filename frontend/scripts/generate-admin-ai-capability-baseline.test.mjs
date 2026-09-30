@@ -45,6 +45,14 @@ test('AdminAI graph names template route parameters after their final property',
   assert.ok(calls.every((call) => call.path === '/student/video-session/{lessonVideoId}/track-progress'));
 });
 
+test('AdminAI graph retains computed client methods instead of silently losing mutations', () => {
+  const graph = collectAdminCallGraph();
+  const helperCalls = graph.calls.filter((call) =>
+    call.source.file === 'frontend/src/services/learning-center-service.ts'
+    && call.path === '/{base}/{path}');
+  assert.deepEqual(helperCalls.map((call) => call.method).sort(), ['ANY', 'GET']);
+});
+
 test('AdminAI graph excludes unused student purchase and lesson comment service methods', () => {
   const graph = collectAdminCallGraph();
   const sharedPackageCalls = graph.calls.filter((call) =>

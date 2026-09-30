@@ -154,11 +154,16 @@ function containingMember(node, objectLiteral) {
 function callRecords(filePath, sourceFile, selectedObject = null, selectedMembers = null) {
   const calls = [];
   const visit = (node) => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-      const method = node.expression.name.text.toUpperCase();
-      const client = node.expression.expression.getText(sourceFile);
+    if (ts.isCallExpression(node) && (ts.isPropertyAccessExpression(node.expression)
+      || ts.isElementAccessExpression(node.expression))) {
+      const invocation = node.expression;
+      const method = ts.isPropertyAccessExpression(invocation)
+        ? invocation.name.text.toUpperCase()
+        : ts.isStringLiteral(invocation.argumentExpression)
+          ? invocation.argumentExpression.text.toUpperCase() : 'ANY';
+      const client = invocation.expression.getText(sourceFile);
       const member = selectedObject ? containingMember(node, selectedObject) : null;
-      if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && /(?:apiClient|axios|api)\b/.test(client)
+      if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'ANY'].includes(method) && /(?:apiClient|axios|api)\b/.test(client)
         && (!member || !selectedMembers || selectedMembers.has(member))) {
         const path = node.arguments.length ? literalPath(node.arguments[0]) : '<dynamic>';
         calls.push({

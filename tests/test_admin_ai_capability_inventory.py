@@ -63,8 +63,10 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     assert len(auth_refresh) == 1
     assert len(self_service) == len(admin_ai_transport) + len(playback) + len(auth_refresh)
     assert len(public_surface) == 4
-    assert len(helper) == 1
-    assert helper[0]["detail"].endswith("GET /{base}/{path}")
+    assert len(helper) == 2
+    assert {item["detail"].rsplit(": ", 1)[1] for item in helper} == {
+        "GET /{base}/{path}", "ANY /{base}/{path}",
+    }
     expected_public = {
         "GET /public/forms/{slug}", "POST /public/forms/{slug}/submit",
         "GET /public/settings",
