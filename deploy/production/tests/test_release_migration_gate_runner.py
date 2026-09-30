@@ -206,6 +206,17 @@ def test_runner_uses_real_primary_operation_and_emits_consumer_valid_gate(
     assert "host.docker.internal" not in remote_script
     assert "pre_target_migration_count" not in remote_script
     assert "post_migration_count - pre_migration_count" in remote_script
+    assert 'applied_additions="$(comm -13 "$pre_migration_ids" "$post_migration_ids")"' in remote_script
+    assert 'test "$applied_additions" != "$reviewed_six"' in remote_script
+    for migration in (
+        "20260930062928_AddWatchApprovalOperationIdentity",
+        "20260930070023_AddTeacherFinancialReviewOperationIdentity",
+        "20260930081150_AddAuthoritativeOperationReceipts",
+        "20260930084208_AddAuthoritativeOperationSafeResult",
+        "20260930093917_AddAdminAIReadBatchReceipts",
+        "20260930130047_AddExternalRefundGrantIdentity",
+    ):
+        assert migration in remote_script
     assert "massar_gate_refund_roles.roles" in remote_script
     assert "Refund role gate: unexpected assistant role change" in remote_script
     assert "20260921180957_BackfillAssistantRefundRolePermissions" in remote_script
