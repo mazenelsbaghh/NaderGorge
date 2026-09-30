@@ -24,7 +24,7 @@ public sealed class AdminAIApproveCommunityPostAction(IMediator mediator, IAdmin
 {
     public override string Key => "admin.assessment.community-post.approve";
     protected override IRequest<ApiResponse<ModerateCommunityPostResponse>> CreateCommand(AdminAIApproveCommunityPostInput input, Guid actorId, string operationId) =>
-        new ApproveCommunityPostCommand(input.PostId, actorId);
+        new ApproveCommunityPostCommand(input.PostId, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<ModerateCommunityPostResponse> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(response.Data!, 1, ["community-posts", "moderation"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["community-posts", "moderation"]);
