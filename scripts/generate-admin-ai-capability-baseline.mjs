@@ -89,6 +89,13 @@ function semantics(method, descriptor, route) {
 
 function includeEndpoint(endpoint) {
   return /^\/api\/admin(?:\/|$)/.test(endpoint.path) ||
+    (endpoint.controller === 'ContentController' && endpoint.method === 'GET'
+      && /^\/api\/content\/(?:packages$|packages\/[^/]+\/terms$|terms\/[^/]+\/sections$|sections\/[^/]+\/lessons$|lessons\/[^/]+$)/.test(endpoint.path)) ||
+    (endpoint.controller === 'VideoLearningController' && endpoint.action === 'Read'
+      && endpoint.method === 'GET' && endpoint.path === '/api/video-learning/{videoid}') ||
+    (endpoint.controller === 'StudentController' && endpoint.action === 'UploadStudentAudio'
+      && endpoint.method === 'POST' && endpoint.path === '/api/student/upload-audio') ||
+    endpoint.controller === 'LearningCenterController' ||
     /^\/api\/v1\/assistant\/tasks\/my(?:\/|$)/.test(endpoint.path) ||
     /^\/api\/live-support\/(?:connections|staff)(?:\/|$)/.test(endpoint.path) ||
     /^\/api\/live-support\/whatsapp\/(?:campaigns|preferences|templates)(?:\/|$)/.test(endpoint.path) ||
@@ -182,6 +189,20 @@ function build() {
   const playbackPath = 'frontend/src/services/video-session-service.ts';
   const playbackItems = frontendItems.filter((item) => item.source.file === playbackPath
     && (item.route === '/api/video/session' || item.route.startsWith('/student/video-session')));
+  const reviewedPublicCalls = new Map([
+    ['frontend/src/services/forms-service.ts', new Set([
+      'GET:/public/forms/{slug}', 'POST:/public/forms/{slug}/submit',
+    ])],
+    ['frontend/src/components/video/SecureVideoPlayer.tsx', new Set(['GET:/public/settings'])],
+    ['frontend/src/services/live-support-service.ts', new Set([
+      'GET:/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}',
+    ])],
+  ]);
+  const publicItems = frontendItems.filter((item) =>
+    reviewedPublicCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
+  const authRefreshItems = frontendItems.filter((item) =>
+    item.source.file === 'frontend/src/services/api-client.ts'
+    && item.method === 'POST' && item.route === '/{API_BASE_URL}/auth/refresh');
   const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
   const teacherReportItems = frontendItems.filter((item) =>
     item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
@@ -201,7 +222,9 @@ function build() {
   const additionalTeacherItems = frontendItems.filter((item) =>
     reviewedTeacherCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
   const teacherOnlyItems = [...teacherReportItems, ...additionalTeacherItems];
-  const excludedIds = new Set([...selfServiceItems, ...playbackItems, ...teacherOnlyItems].map((item) => item.id));
+  const excludedIds = new Set([
+    ...selfServiceItems, ...playbackItems, ...publicItems, ...authRefreshItems, ...teacherOnlyItems,
+  ].map((item) => item.id));
   const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
     .sort((left, right) => left.id.localeCompare(right.id));
   const exclusions = [
@@ -214,6 +237,16 @@ function build() {
       id: item.id,
       reason: 'self-service',
       detail: `Current-viewer playback session used by Admin lesson preview is not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...publicItems.map((item) => ({
+      id: item.id,
+      reason: 'public-surface',
+      detail: `Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: ${item.method} ${item.route}`,
+    })),
+    ...authRefreshItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Current-user authentication refresh is transport, not an Admin business capability: ${item.method} ${item.route}`,
     })),
     ...teacherOnlyItems.map((item) => ({
       id: item.id,

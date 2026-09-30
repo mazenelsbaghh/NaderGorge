@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "ebf11dc1cbcb4725dc787e8972380366fe079ed104581588704efa026c3f342a"
+      "digest": "47305658681713e07a5a75645b731dec13be13e58c46ae8de8ebbb3eb9247ed4"
     }
   },
   "items": [
@@ -4869,6 +4869,141 @@
       }
     },
     {
+      "id": "be:get:api-content-lessons-lessonid:backend-src-nadergorge-api-controllers-contentcontroller-cs:77",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/content/lessons/{lessonid}",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:ContentController.GetLessonDetail",
+      "inputSchema": "backend-endpoint:contentcontroller-getlessondetail:input:v1",
+      "outputSchema": "backend-endpoint:contentcontroller-getlessondetail:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 77
+      }
+    },
+    {
+      "id": "be:get:api-content-packages-packageid-terms:backend-src-nadergorge-api-controllers-contentcontroller-cs:45",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/content/packages/{packageid}/terms",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:ContentController.GetTerms",
+      "inputSchema": "backend-endpoint:contentcontroller-getterms:input:v1",
+      "outputSchema": "backend-endpoint:contentcontroller-getterms:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 45
+      }
+    },
+    {
+      "id": "be:get:api-content-packages:backend-src-nadergorge-api-controllers-contentcontroller-cs:36",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/content/packages",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:ContentController.GetPackages",
+      "inputSchema": "backend-endpoint:contentcontroller-getpackages:input:v1",
+      "outputSchema": "backend-endpoint:contentcontroller-getpackages:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 36
+      }
+    },
+    {
+      "id": "be:get:api-content-sections-sectionid-lessons:backend-src-nadergorge-api-controllers-contentcontroller-cs:66",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/content/sections/{sectionid}/lessons",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:ContentController.GetLessons",
+      "inputSchema": "backend-endpoint:contentcontroller-getlessons:input:v1",
+      "outputSchema": "backend-endpoint:contentcontroller-getlessons:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 66
+      }
+    },
+    {
+      "id": "be:get:api-content-terms-termid-sections:backend-src-nadergorge-api-controllers-contentcontroller-cs:59",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/content/terms/{termid}/sections",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:ContentController.GetSections",
+      "inputSchema": "backend-endpoint:contentcontroller-getsections:input:v1",
+      "outputSchema": "backend-endpoint:contentcontroller-getsections:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 59
+      }
+    },
+    {
       "id": "be:get:api-crm-reports-performance:backend-src-nadergorge-api-controllers-crmcontroller-cs:96",
       "kind": "backend-endpoint",
       "method": "GET",
@@ -6030,6 +6165,141 @@
       }
     },
     {
+      "id": "be:get:api-learning-center-follow-ups-history:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:48",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/learning-center/follow-ups/history",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LearningCenterController.History",
+      "inputSchema": "backend-endpoint:learningcentercontroller-history:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-history:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 48
+      }
+    },
+    {
+      "id": "be:get:api-learning-center-follow-ups:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:44",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/learning-center/follow-ups",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LearningCenterController.FollowUps",
+      "inputSchema": "backend-endpoint:learningcentercontroller-followups:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-followups:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 44
+      }
+    },
+    {
+      "id": "be:get:api-learning-center-options:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:17",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/learning-center/options",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LearningCenterController.Options",
+      "inputSchema": "backend-endpoint:learningcentercontroller-options:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-options:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 17
+      }
+    },
+    {
+      "id": "be:get:api-learning-center-overview:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:20",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/learning-center/overview",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LearningCenterController.Overview",
+      "inputSchema": "backend-endpoint:learningcentercontroller-overview:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-overview:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 20
+      }
+    },
+    {
+      "id": "be:get:api-learning-center-questions:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:24",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/learning-center/questions",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LearningCenterController.Questions",
+      "inputSchema": "backend-endpoint:learningcentercontroller-questions:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-questions:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 24
+      }
+    },
+    {
       "id": "be:get:api-live-support-admin-ai-active-conversations:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:53",
       "kind": "backend-endpoint",
       "method": "GET",
@@ -6972,6 +7242,33 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
         "line": 31
+      }
+    },
+    {
+      "id": "be:get:api-video-learning-videoid:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:17",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/video-learning/{videoid}",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Read",
+      "inputSchema": "backend-endpoint:videolearningcontroller-read:input:v1",
+      "outputSchema": "backend-endpoint:videolearningcontroller-read:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 17
       }
     },
     {
@@ -13944,6 +14241,126 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:post:api-learning-center-follow-ups:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:52",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/learning-center/follow-ups",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.SaveFollowUp",
+      "inputSchema": "backend-endpoint:learningcentercontroller-savefollowup:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-savefollowup:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 52
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-learning-center-forms:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:56",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/learning-center/forms",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.GenerateForms",
+      "inputSchema": "backend-endpoint:learningcentercontroller-generateforms:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-generateforms:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 56
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-learning-center-questions-import:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:28",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/learning-center/questions/import",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.ImportQuestions",
+      "inputSchema": "backend-endpoint:learningcentercontroller-importquestions:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-importquestions:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 28
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-learning-center-questions:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:32",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/learning-center/questions",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.CreateQuestion",
+      "inputSchema": "backend-endpoint:learningcentercontroller-createquestion:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-createquestion:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 32
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:post:api-live-support-admin-ai-disable:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:31",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -14801,6 +15218,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppLiveSupportController.cs",
         "line": 56
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-student-upload-audio:backend-src-nadergorge-api-controllers-studentcontroller-cs:152",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/student/upload-audio",
+      "effect": "external-side-effect",
+      "domain": "identity",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:StudentController.UploadStudentAudio",
+      "inputSchema": "backend-endpoint:studentcontroller-uploadstudentaudio:input:v1",
+      "outputSchema": "backend-endpoint:studentcontroller-uploadstudentaudio:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "identity"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 152
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -16391,6 +16838,66 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
         "line": 111
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-learning-center-questions-id-classification:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:40",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/learning-center/questions/{id}/classification",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.Classify",
+      "inputSchema": "backend-endpoint:learningcentercontroller-classify:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-classify:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 40
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-learning-center-questions-id:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:36",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/learning-center/questions/{id}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LearningCenterController.VersionQuestion",
+      "inputSchema": "backend-endpoint:learningcentercontroller-versionquestion:input:v1",
+      "outputSchema": "backend-endpoint:learningcentercontroller-versionquestion:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs",
+        "line": 36
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -21066,7 +21573,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ContentController.GetLessonDetail",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -21093,7 +21600,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ContentController.GetTerms",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -21120,7 +21627,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ContentController.GetPackages",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -21147,7 +21654,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ContentController.GetLessons",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -21174,7 +21681,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ContentController.GetSections",
       "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
       "limits": {
@@ -22326,33 +22833,6 @@
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:639",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}",
-      "effect": "read",
-      "domain": "support",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 639
-      }
-    },
-    {
       "id": "fe:get:live-support-staff-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:638",
       "kind": "frontend-call",
       "method": "GET",
@@ -22569,60 +23049,6 @@
       }
     },
     {
-      "id": "fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/public/forms/{slug}",
-      "effect": "read",
-      "domain": "other",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/forms-service.ts",
-        "line": 153
-      }
-    },
-    {
-      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/public/settings",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-components-video-securevideoplayer-tsx:input:v1",
-      "outputSchema": "frontend-call:frontend-src-components-video-securevideoplayer-tsx:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 323
-      }
-    },
-    {
       "id": "fe:get:scope-content-summary:frontend-src-services-content-service-ts:402",
       "kind": "frontend-call",
       "method": "GET",
@@ -22740,7 +23166,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Read",
       "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
       "limits": {
@@ -26763,36 +27189,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:api-base-url-auth-refresh:frontend-src-services-api-client-ts:64",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/{API_BASE_URL}/auth/refresh",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-api-client-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-api-client-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/api-client.ts",
-        "line": 64
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:chat-messages-messageid-pin:frontend-src-services-chat-service-ts:60",
       "kind": "frontend-call",
       "method": "POST",
@@ -29061,36 +29457,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:public-forms-slug-submit:frontend-src-services-forms-service-ts:161",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/public/forms/{slug}/submit",
-      "effect": "mutation",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-forms-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-forms-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/forms-service.ts",
-        "line": 161
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:student-upload-audio:frontend-src-services-student-service-ts:437",
       "kind": "frontend-call",
       "method": "POST",
@@ -29100,7 +29466,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:StudentController.UploadStudentAudio",
       "inputSchema": "frontend-call:frontend-src-services-student-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-student-service-ts:output:v1",
       "limits": {
@@ -30613,6 +30979,21 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: GET <dynamic>"
     },
     {
+      "id": "fe:get:live-support-participant-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:639",
+      "reason": "public-surface",
+      "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: GET /live-support/participant/conversations/{conversationId}/attachments/{attachmentId}"
+    },
+    {
+      "id": "fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153",
+      "reason": "public-surface",
+      "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: GET /public/forms/{slug}"
+    },
+    {
+      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323",
+      "reason": "public-surface",
+      "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: GET /public/settings"
+    },
+    {
       "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181",
       "reason": "self-service",
       "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: GET /student/video-session/{lessonVideoId}/request-status"
@@ -30678,6 +31059,11 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: PATCH <dynamic>"
     },
     {
+      "id": "fe:post:api-base-url-auth-refresh:frontend-src-services-api-client-ts:64",
+      "reason": "self-service",
+      "detail": "Current-user authentication refresh is transport, not an Admin business capability: POST /{API_BASE_URL}/auth/refresh"
+    },
+    {
       "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:151",
       "reason": "self-service",
       "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /api/video/session"
@@ -30733,6 +31119,11 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: POST <dynamic>"
     },
     {
+      "id": "fe:post:public-forms-slug-submit:frontend-src-services-forms-service-ts:161",
+      "reason": "public-surface",
+      "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: POST /public/forms/{slug}/submit"
+    },
+    {
       "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:177",
       "reason": "self-service",
       "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{lessonVideoId}/request-extra"
@@ -30783,5 +31174,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c"
+  "digest": "8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a"
 }

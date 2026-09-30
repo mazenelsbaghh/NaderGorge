@@ -2,12 +2,12 @@
 
 Current generated baseline checked on 2026-09-30:
 
-- Items: 1,064 (579 backend-endpoint entries and 485 frontend-call entries)
-- Candidate items: 449
-- Blocked mutations/external effects: 615 (339 distinct authoritative-operation labels)
-- Unresolved frontend calls: 14, including 3 mutations
-- Reviewed non-business exclusions: 38 (13 AdminAI self-service transport, 9 current-viewer playback calls, 16 Teacher-only calls)
-- Baseline digest: `80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c`
+- Items: 1,077 (597 backend-endpoint entries and 480 frontend-call entries)
+- Candidate items: 457
+- Blocked mutations/external effects: 620 (345 distinct authoritative-operation labels)
+- Unresolved frontend calls: 2, both dynamic reads
+- Reviewed non-business exclusions: 43 (13 AdminAI transport, 9 current-viewer playback, 1 auth refresh, 4 public or participant branches, 16 Teacher-only calls)
+- Baseline digest: `8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a`
 - Activation: `blocked`
 
-The generated endpoint inventory has 831 backend endpoints and 712 frontend calls. Two Admin-accessible shared task mutation routes now map to their original commands, and both frontend calls inherit those exact backend labels. Sixteen Teacher-only branches retained by shared services are excluded after checking their Teacher role restrictions; Admin alternatives for reports, code groups, and financial statements were checked. Nine current-viewer playback calls reached by Admin lesson previews are excluded after checking the Admin preview policy and session ownership. The graph suite passed 11/11 and the inventory/source suite passed 26/26. This is not zero-gap coverage: unsupported current Admin mutations remain blocked, so the production catalog and feature activation must remain fail-closed.
+The generated endpoint inventory has 831 backend endpoints and 712 frontend calls. Two Admin-accessible shared task mutation routes now map to their original commands, and both frontend calls inherit those exact backend labels. Sixteen Teacher-only branches retained by shared services are excluded after checking their Teacher role restrictions; Admin alternatives for reports, code groups, and financial statements were checked. Nine current-viewer playback calls reached by Admin lesson previews are excluded after checking the Admin preview policy and session ownership. The graph suite passed 11/11 and the inventory/source suite passed 29/29. The Admin-accessible content reads, video-learning read, question-audio upload, and all 11 Learning Center routes now have backend inventory entries; public form, public settings, auth refresh, and participant-only branches have exact reviewed exclusions. This is not zero-gap coverage: unsupported current Admin mutations remain blocked, so the production catalog and feature activation must remain fail-closed.

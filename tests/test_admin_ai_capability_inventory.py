@@ -52,12 +52,37 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     self_service = [item for item in baseline["exclusions"] if item["reason"] == "self-service"]
     admin_ai_transport = [item for item in self_service if "Admin AI conversation/proposal transport" in item["detail"]]
     playback = [item for item in self_service if "Current-viewer playback session" in item["detail"]]
+    auth_refresh = [item for item in self_service if "Current-user authentication refresh" in item["detail"]]
+    public_surface = [item for item in baseline["exclusions"] if item["reason"] == "public-surface"]
     teacher_surface = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
     teacher_reports = [item for item in teacher_surface if "/teacher/reports/" in item["detail"]]
     teacher_other = [item for item in teacher_surface if "/teacher/reports/" not in item["detail"]]
     assert len(admin_ai_transport) == 13
     assert len(playback) == 9
-    assert len(self_service) == len(admin_ai_transport) + len(playback)
+    assert len(auth_refresh) == 1
+    assert len(self_service) == len(admin_ai_transport) + len(playback) + len(auth_refresh)
+    assert len(public_surface) == 4
+    expected_public = {
+        "GET /public/forms/{slug}", "POST /public/forms/{slug}/submit",
+        "GET /public/settings",
+        "GET /live-support/participant/conversations/{conversationId}/attachments/{attachmentId}",
+    }
+    assert {item["detail"].split(": ", 1)[1] for item in public_surface} == expected_public
+    assert 'audience="staff"' in (
+        ROOT / "frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx"
+    ).read_text()
+    assert 'audience="staff"' in (
+        ROOT / "frontend/src/components/live-support/admin/ConversationInvestigation.tsx"
+    ).read_text()
+    assert 'liveSupportService.getAttachmentBlob(' in (
+        ROOT / "frontend/src/components/live-support/LiveSupportMessageContent.tsx"
+    ).read_text()
+    assert 'getPublicForm(slug)' in (
+        ROOT / "frontend/src/app/forms/[slug]/PublicFormPageClient.tsx"
+    ).read_text()
+    assert 'submitPublicForm(slug, answers)' in (
+        ROOT / "frontend/src/app/forms/[slug]/PublicFormPageClient.tsx"
+    ).read_text()
     playback_calls = [call for call in json.loads(
         (ROOT / "tests/admin_ai_frontend_reachable_calls.json").read_text())["calls"]
         if call["source"]["file"] == "frontend/src/services/video-session-service.ts"
@@ -75,7 +100,7 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     assert 'session.UserId == userId' in video_controller
     assert len(teacher_reports) == 9
     assert len(teacher_other) == 7
-    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface)
+    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface) + len(public_surface)
     assert '[Authorize(Roles = "Teacher")]' in (
         ROOT / "backend/src/NaderGorge.API/Controllers/TeacherReportsController.cs"
     ).read_text()
@@ -166,6 +191,67 @@ def test_admin_accessible_shared_task_routes_map_to_original_commands():
                     re.sub(r"\{[^}]+\}", "{}", route.removeprefix("/api").lower())]
         assert len(frontend) == 1
         assert frontend[0]["authoritativeOperation"] == f"command:{command}"
+
+
+def test_admin_page_content_reads_link_to_authenticated_backend_routes():
+    items = json.loads(BASELINE.read_text())["items"]
+    expected = {
+        "/api/content/packages": "ContentController.GetPackages",
+        "/api/content/packages/{packageid}/terms": "ContentController.GetTerms",
+        "/api/content/terms/{termid}/sections": "ContentController.GetSections",
+        "/api/content/sections/{sectionid}/lessons": "ContentController.GetLessons",
+        "/api/content/lessons/{lessonid}": "ContentController.GetLessonDetail",
+        "/api/video-learning/{videoid}": "VideoLearningController.Read",
+    }
+    for route, operation in expected.items():
+        backend = [item for item in items if item["kind"] == "backend-endpoint"
+                   and item["method"] == "GET" and item["route"].lower() == route]
+        assert len(backend) == 1
+        assert backend[0]["authoritativeOperation"] == f"diagnostic:{operation}"
+        assert backend[0]["status"] == "candidate"
+        normalized = re.sub(r"\{[^}]+\}", "{}", route.removeprefix("/api"))
+        frontend = [item for item in items if item["kind"] == "frontend-call"
+                    and item["method"] == "GET"
+                    and re.sub(r"\{[^}]+\}", "{}", item["route"].lower()) == normalized]
+        assert frontend
+        assert all(item["authoritativeOperation"] == backend[0]["authoritativeOperation"]
+                   for item in frontend)
+    assert '[Authorize]' in (
+        ROOT / "backend/src/NaderGorge.API/Controllers/ContentController.cs"
+    ).read_text()
+
+
+def test_admin_question_audio_upload_remains_a_blocked_storage_effect():
+    items = json.loads(BASELINE.read_text())["items"]
+    backend = [item for item in items if item["kind"] == "backend-endpoint"
+               and item["method"] == "POST" and item["route"] == "/api/student/upload-audio"]
+    frontend = [item for item in items if item["kind"] == "frontend-call"
+                and item["method"] == "POST" and item["route"] == "/student/upload-audio"]
+    assert len(backend) == len(frontend) == 1
+    assert backend[0]["authoritativeOperation"] == frontend[0]["authoritativeOperation"]
+    assert backend[0]["status"] == frontend[0]["status"] == "blocked"
+    assert backend[0]["effect"] == "external-side-effect"
+    assert 'studentService.uploadAudio(file)' in (
+        ROOT / "frontend/src/components/admin/QuestionEditor.tsx"
+    ).read_text()
+    assert 'SharedFileArea.Public' in (
+        ROOT / "backend/src/NaderGorge.API/Controllers/StudentController.cs"
+    ).read_text()
+
+
+def test_admin_accessible_learning_center_is_covered_despite_dynamic_frontend_builder():
+    items = json.loads(BASELINE.read_text())["items"]
+    endpoints = json.loads((ROOT / "tests/endpoint_inventory.json").read_text())["endpoints"]
+    expected = {(endpoint["method"], endpoint["path"])
+                for endpoint in endpoints if endpoint["controller"] == "LearningCenterController"}
+    actual = {(item["method"], item["route"]) for item in items
+              if item["kind"] == "backend-endpoint" and item["route"].startswith("/api/learning-center/")}
+    assert expected == actual
+    assert any(item["route"] == "/{base}/{path}" and item["status"] == "candidate"
+               for item in items if item["kind"] == "frontend-call")
+    assert '[Authorize(Roles = "Admin,Teacher")]' in (
+        ROOT / "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs"
+    ).read_text()
 
 
 def test_reviewed_read_only_posts_do_not_inherit_mutation_requirements():

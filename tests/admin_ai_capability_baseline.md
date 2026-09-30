@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c`
+Digest: `8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a`
 
-Items: 1064; external-side-effect=79, mutation=536, read=411, export=23, preview=15.
-Reviewed non-business exclusions: 38.
+Items: 1077; external-side-effect=80, mutation=540, read=419, export=23, preview=15.
+Reviewed non-business exclusions: 43.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -186,6 +186,11 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-chat-rooms-roomid-members:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:75 | GET | /api/chat/rooms/{roomid}/members | read | support | none | candidate |
 | be:get:api-chat-rooms-roomid-messages:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:47 | GET | /api/chat/rooms/{roomid}/messages | read | support | none | candidate |
 | be:get:api-chat-rooms:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:36 | GET | /api/chat/rooms | read | support | none | candidate |
+| be:get:api-content-lessons-lessonid:backend-src-nadergorge-api-controllers-contentcontroller-cs:77 | GET | /api/content/lessons/{lessonid} | read | content | none | candidate |
+| be:get:api-content-packages-packageid-terms:backend-src-nadergorge-api-controllers-contentcontroller-cs:45 | GET | /api/content/packages/{packageid}/terms | read | content | none | candidate |
+| be:get:api-content-packages:backend-src-nadergorge-api-controllers-contentcontroller-cs:36 | GET | /api/content/packages | read | content | none | candidate |
+| be:get:api-content-sections-sectionid-lessons:backend-src-nadergorge-api-controllers-contentcontroller-cs:66 | GET | /api/content/sections/{sectionid}/lessons | read | content | none | candidate |
+| be:get:api-content-terms-termid-sections:backend-src-nadergorge-api-controllers-contentcontroller-cs:59 | GET | /api/content/terms/{termid}/sections | read | content | none | candidate |
 | be:get:api-crm-reports-performance:backend-src-nadergorge-api-controllers-crmcontroller-cs:96 | GET | /api/crm/reports/performance | read | support | none | candidate |
 | be:get:api-crm-students-studentid-history:backend-src-nadergorge-api-controllers-crmcontroller-cs:82 | GET | /api/crm/students/{studentid}/history | read | identity | none | candidate |
 | be:get:api-crm-students:backend-src-nadergorge-api-controllers-crmcontroller-cs:34 | GET | /api/crm/students | read | identity | none | candidate |
@@ -229,6 +234,11 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-hr-self-leave-catalog:backend-src-nadergorge-api-controllers-hrleavecontroller-cs:19 | GET | /api/hr/self/leave/catalog | read | hr | none | candidate |
 | be:get:api-hr-self-leave-requests:backend-src-nadergorge-api-controllers-hrleavecontroller-cs:33 | GET | /api/hr/self/leave/requests | read | hr | none | candidate |
 | be:get:api-hr-self-performance-reviews:backend-src-nadergorge-api-controllers-hrperformancecasescontroller-cs:42 | GET | /api/hr/self/performance/reviews | read | hr | none | candidate |
+| be:get:api-learning-center-follow-ups-history:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:48 | GET | /api/learning-center/follow-ups/history | read | other | none | candidate |
+| be:get:api-learning-center-follow-ups:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:44 | GET | /api/learning-center/follow-ups | read | other | none | candidate |
+| be:get:api-learning-center-options:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:17 | GET | /api/learning-center/options | read | other | none | candidate |
+| be:get:api-learning-center-overview:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:20 | GET | /api/learning-center/overview | read | other | none | candidate |
+| be:get:api-learning-center-questions:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:24 | GET | /api/learning-center/questions | read | content | none | candidate |
 | be:get:api-live-support-admin-ai-active-conversations:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:53 | GET | /api/live-support/admin/ai/active-conversations | read | support | none | candidate |
 | be:get:api-live-support-admin-ai-catalogs:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:20 | GET | /api/live-support/admin/ai/catalogs | read | support | none | candidate |
 | be:get:api-live-support-admin-ai-config:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:17 | GET | /api/live-support/admin/ai/config | read | support | none | candidate |
@@ -264,6 +274,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:31 | GET | /api/v1/internal/admin-ai/readiness | read | other | none | candidate |
 | be:get:api-video-learning-videoid-author:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:19 | GET | /api/video-learning/{videoid}/author | read | identity | none | candidate |
 | be:get:api-video-learning-videoid-report:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:31 | GET | /api/video-learning/{videoid}/report | read | content | none | candidate |
+| be:get:api-video-learning-videoid:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:17 | GET | /api/video-learning/{videoid} | read | content | none | candidate |
 | be:get:api-whatsapp-admin-assessment-parent-recovery-preview:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:131 | GET | /api/whatsapp/admin/assessment-parent-recovery/preview | preview | other | none | candidate |
 | be:get:api-whatsapp-admin-assessment-parent-recovery-status-operationid:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:152 | GET | /api/whatsapp/admin/assessment-parent-recovery/status/{operationid} | read | support | none | candidate |
 | be:patch:api-admin-ai-agent-conversations-conversationid:backend-src-nadergorge-api-controllers-adminaiagentcontroller-cs:28 | PATCH | /api/admin/ai-agent/conversations/{conversationid} | mutation | other | ordinary | blocked |
@@ -497,6 +508,10 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-hr-self-leave-requests:backend-src-nadergorge-api-controllers-hrleavecontroller-cs:42 | POST | /api/hr/self/leave/requests | mutation | hr | ordinary | blocked |
 | be:post:api-hr-self-performance-reviews-reviewid-appeal:backend-src-nadergorge-api-controllers-hrperformancecasescontroller-cs:49 | POST | /api/hr/self/performance/reviews/{reviewid}/appeal | mutation | hr | ordinary | blocked |
 | be:post:api-hr-self-shift-swaps:backend-src-nadergorge-api-controllers-hrshiftscontroller-cs:152 | POST | /api/hr/self/shift-swaps | mutation | hr | ordinary | blocked |
+| be:post:api-learning-center-follow-ups:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:52 | POST | /api/learning-center/follow-ups | mutation | other | ordinary | blocked |
+| be:post:api-learning-center-forms:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:56 | POST | /api/learning-center/forms | mutation | other | strong | blocked |
+| be:post:api-learning-center-questions-import:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:28 | POST | /api/learning-center/questions/import | mutation | content | ordinary | blocked |
+| be:post:api-learning-center-questions:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:32 | POST | /api/learning-center/questions | mutation | content | ordinary | blocked |
 | be:post:api-live-support-admin-ai-disable:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:31 | POST | /api/live-support/admin/ai/disable | mutation | support | strong | blocked |
 | be:post:api-live-support-admin-ai-enable:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:45 | POST | /api/live-support/admin/ai/enable | mutation | support | ordinary | blocked |
 | be:post:api-live-support-admin-ai-knowledge-revisions:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:60 | POST | /api/live-support/admin/ai/knowledge/revisions | mutation | support | ordinary | blocked |
@@ -526,6 +541,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-live-support-whatsapp-preferences-contacts-search:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:103 | POST | /api/live-support/whatsapp/preferences/contacts/search | read | support | none | candidate |
 | be:post:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:96 | POST | /api/live-support/whatsapp/preferences | external-side-effect | support | ordinary | blocked |
 | be:post:api-live-support-whatsapp-templates-sync:backend-src-nadergorge-api-controllers-whatsapplivesupportcontroller-cs:56 | POST | /api/live-support/whatsapp/templates/sync | external-side-effect | support | ordinary | blocked |
+| be:post:api-student-upload-audio:backend-src-nadergorge-api-controllers-studentcontroller-cs:152 | POST | /api/student/upload-audio | external-side-effect | identity | ordinary | blocked |
 | be:post:api-v1-assistant-tasks-my-id-comments:backend-src-nadergorge-api-controllers-assistantcontroller-cs:89 | POST | /api/v1/assistant/tasks/my/{id}/comments | mutation | other | ordinary | blocked |
 | be:post:api-v1-assistant-tasks-my-id-status:backend-src-nadergorge-api-controllers-assistantcontroller-cs:77 | POST | /api/v1/assistant/tasks/my/{id}/status | mutation | other | ordinary | blocked |
 | be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:46 | POST | /api/v1/internal/admin-ai/turns/{turnid}/claim | mutation | other | ordinary | blocked |
@@ -579,6 +595,8 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:put:api-admin-wallets-id-limits:backend-src-nadergorge-api-controllers-adminwalletscontroller-cs:61 | PUT | /api/admin/wallets/{id}/limits | mutation | finance | strong | blocked |
 | be:put:api-chat-rooms-roomid-members:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:83 | PUT | /api/chat/rooms/{roomid}/members | mutation | support | ordinary | blocked |
 | be:put:api-hr-admin-attendance-breaks-breakid:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:111 | PUT | /api/hr/admin/attendance/breaks/{breakid} | mutation | hr | ordinary | blocked |
+| be:put:api-learning-center-questions-id-classification:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:40 | PUT | /api/learning-center/questions/{id}/classification | mutation | content | ordinary | blocked |
+| be:put:api-learning-center-questions-id:backend-src-nadergorge-api-controllers-learningcentercontroller-cs:36 | PUT | /api/learning-center/questions/{id} | mutation | content | ordinary | blocked |
 | be:put:api-live-support-admin-ai-config:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:23 | PUT | /api/live-support/admin/ai/config | mutation | support | ordinary | blocked |
 | be:put:api-live-support-admin-ai-knowledge-links:backend-src-nadergorge-api-controllers-livesupportaiadmincontroller-cs:67 | PUT | /api/live-support/admin/ai/knowledge/links | mutation | support | ordinary | blocked |
 | be:put:api-live-support-admin-canned-replies:backend-src-nadergorge-api-controllers-livesupportadmincontroller-cs:26 | PUT | /api/live-support/admin/canned-replies | mutation | support | ordinary | blocked |
@@ -795,7 +813,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:900 | GET | /live-support/admin/ratings | read | support | none | candidate |
 | fe:get:live-support-connections-conversations-id-block:frontend-src-services-live-support-service-ts:592 | GET | /live-support/connections/conversations/{id}/block | read | support | none | candidate |
 | fe:get:live-support-connections-whatsapp:frontend-src-services-live-support-service-ts:586 | GET | /live-support/connections/whatsapp | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:639 | GET | /live-support/participant/conversations/{conversationId}/attachments/{attachmentId} | read | support | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:638 | GET | /live-support/staff/conversations/{conversationId}/attachments/{attachmentId} | export | support | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:873 | GET | /live-support/staff/conversations/{conversationId}/messages | read | support | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-attachments-attachmentid:frontend-src-services-live-support-service-ts:644 | GET | /live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId} | export | support | none | candidate |
@@ -804,8 +821,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-whatsapp-campaigns:frontend-src-services-live-support-service-ts:793 | GET | /live-support/whatsapp/campaigns | read | support | none | candidate |
 | fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:822 | GET | /live-support/whatsapp/preferences | read | support | none | candidate |
 | fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:703 | GET | /live-support/whatsapp/templates | read | support | none | candidate |
-| fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153 | GET | /public/forms/{slug} | read | other | none | candidate |
-| fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323 | GET | /public/settings | read | content | none | candidate |
 | fe:get:scope-content-summary:frontend-src-services-content-service-ts:402 | GET | /{scope}/content/summary | read | content | none | candidate |
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | GET | /video-learning/{id}/author | read | identity | none | candidate |
@@ -945,7 +960,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-wallets:frontend-src-services-wallet-service-ts:204 | POST | /admin/wallets | mutation | finance | strong | blocked |
 | fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2338 | POST | /admin/watch-requests/{id}/approve | mutation | identity | strong | blocked |
 | fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2346 | POST | /admin/watch-requests/{id}/reject | mutation | identity | ordinary | blocked |
-| fe:post:api-base-url-auth-refresh:frontend-src-services-api-client-ts:64 | POST | /{API_BASE_URL}/auth/refresh | mutation | identity | ordinary | blocked |
 | fe:post:chat-messages-messageid-pin:frontend-src-services-chat-service-ts:60 | POST | /chat/messages/{messageId}/pin | mutation | support | strong | blocked |
 | fe:post:chat-rooms-roomid-archive:frontend-src-services-chat-service-ts:57 | POST | /chat/rooms/{roomId}/archive | mutation | support | ordinary | blocked |
 | fe:post:chat-rooms-roomid-read:frontend-src-services-chat-service-ts:63 | POST | /chat/rooms/{roomId}/read | mutation | support | ordinary | blocked |
@@ -1022,7 +1036,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:833 | POST | /live-support/whatsapp/preferences/contacts/search | read | support | none | candidate |
 | fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:845 | POST | /live-support/whatsapp/preferences | external-side-effect | support | ordinary | blocked |
 | fe:post:live-support-whatsapp-templates-sync:frontend-src-services-live-support-service-ts:706 | POST | /live-support/whatsapp/templates/sync | external-side-effect | support | ordinary | blocked |
-| fe:post:public-forms-slug-submit:frontend-src-services-forms-service-ts:161 | POST | /public/forms/{slug}/submit | mutation | other | ordinary | blocked |
 | fe:post:student-upload-audio:frontend-src-services-student-service-ts:437 | POST | /student/upload-audio | external-side-effect | identity | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84 | POST | /v1/assistant/tasks/my/{taskId}/comments | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-status:frontend-src-services-assistant-service-ts:78 | POST | /v1/assistant/tasks/my/{taskId}/status | mutation | other | ordinary | blocked |

@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 shared Admin read and Learning Center route coverage
+
+- Five authenticated Content reads, the shared video-learning snapshot read, and the question-audio upload used by Admin question editing now map to their backend operations. The upload remains blocked as a file-storage side effect. The Learning Center is authorized for Admin and Teacher; all 11 of its backend routes, including six mutations, now appear in the baseline even though its frontend service uses a dynamic helper path.
+- Four public or participant branches and current-user auth refresh were reviewed as non-business calls. The public form functions are invoked from the public form page; the Admin support workspace passes `audience="staff"` while the shared download method also contains a participant branch. Admin routes remain in coverage.
+- The baseline now contains 1,077 items, 620 blocked entries, two unresolved dynamic frontend reads, and 43 reviewed exclusions. Digest: `8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a`. The full capability gate passed 11/11 frontend graph tests and 29/29 Python tests. Activation remains blocked.
+
 ## 2026-09-30 current-viewer playback inventory
 
 - Admin lesson previews reach `videoSessionService`, whose routes create and consume the current viewer's session or authorize its playback source. The backend preview policy explicitly accepts Admin and binds session material to `session.UserId`; these are viewer self-service calls rather than Admin platform actions. Nine exact frontend calls are documented `self-service` exclusions. The frontend extractor now uses the final property name in a template parameter, so both progress routes correctly show `{lessonVideoId}`.
