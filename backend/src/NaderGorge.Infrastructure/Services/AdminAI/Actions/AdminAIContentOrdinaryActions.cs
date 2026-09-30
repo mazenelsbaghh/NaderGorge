@@ -26,7 +26,11 @@ public sealed class AdminAICreateSubjectAction(IMediator mediator, IAdminAIActio
 {
     public override string Key => "admin.content.subject.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateSubjectInput input, Guid actorId, string operationId) =>
-        new CreateSubjectCommand(input.Name, input.Description);
+        new CreateSubjectCommand(input.Name, input.Description)
+        {
+            ActorUserId = actorId,
+            OperationId = operationId
+        };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { subjectId = response.Data }, 1, ["subjects", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["subjects", "content"]);

@@ -6,6 +6,11 @@
 - A disposable PostgreSQL 16.10 database was migrated from the current EF model. Two new integration tests passed for replay after deletion, conflicting payload, eight concurrent requests with one resulting note, and resolver identity binding. The complete AdminAI PostgreSQL group passed 29/29 after the final code review. The focused AdminAI application group passed 258/258, `make ops-db-guard` found no pending EF model change, and the AdminAI inventory gate passed 10/10 frontend graph plus 24/24 Python checks.
 - This closes one candidate operation's durable replay gap. The production registry remains read-only and the remaining blocked Admin mutations, browser/provider/performance gates, and owner acceptance remain open.
 
+## 2026-09-30 subject-create authoritative replay slice
+
+- `CreateSubjectCommand` now uses the same unique receipt table when invoked with an AdminAI operation identity and actor. The subject and receipt commit in one serializable transaction. A replay returns the original subject ID even if that subject was later deleted; a changed request is rejected. The original Admin call still uses its existing command arguments and behavior.
+- A resolver can recover the original subject ID from the receipt without creating a second subject. The disposable-PostgreSQL replay/deletion/conflict test passed 1/1. After this change the full AdminAI PostgreSQL group passed 30/30 and the focused application group passed 259/259. The EF migration guard and capability inventory gate passed; the manifest remains blocked pending the other operations and acceptance gates.
+
 ## 2026-09-30 watch-request operation recovery
 
 - The original watch-approval command now accepts an optional operation identifier. It records that identifier and the request ID on the persisted `VideoOverride`, with a unique non-null database index. Replaying the same request, actor, reason, and view increment returns success without another view increase or notification; reuse with different inputs fails. AI approvals refuse an unbounded or missing watch event because that path cannot leave a durable override marker.

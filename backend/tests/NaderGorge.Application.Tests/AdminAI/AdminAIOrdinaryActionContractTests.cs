@@ -48,6 +48,21 @@ public sealed class AdminAIOrdinaryActionContractTests
     }
 
     [Fact]
+    public async Task SubjectCreationAdapter_BindsActorAndOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var adapter = new AdminAICreateSubjectAction(mediator, new PreviewSource());
+
+        await adapter.ExecuteAsync(actor, new AdminAICreateSubjectInput("History", "Course"),
+            "subject-execution-1", default);
+
+        var command = Assert.IsType<CreateSubjectCommand>(mediator.Request);
+        Assert.Equal(actor, command.ActorUserId);
+        Assert.Equal("subject-execution-1", command.OperationId);
+    }
+
+    [Fact]
     public async Task OrdinaryAdapters_AcceptOnlyExactCamelCaseWireFields()
     {
         var mediator = new CapturingMediator();
@@ -291,7 +306,9 @@ public sealed class AdminAIOrdinaryActionContractTests
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
             Request = request; SendCalls++;
-            object response = ApiResponse.Ok("done");
+            object response = typeof(TResponse) == typeof(ApiResponse<Guid>)
+                ? ApiResponse<Guid>.Ok(Guid.NewGuid())
+                : ApiResponse.Ok("done");
             return Task.FromResult((TResponse)response);
         }
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest => throw new NotSupportedException();
