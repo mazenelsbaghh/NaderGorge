@@ -18,6 +18,8 @@ Two PostgreSQL restart-context recovery tests passed, and the complete AdminAI P
 
 The action bridges now consume exact camelCase JSON from the worker and reject casing drift before dispatch. The AdminAI application group passed 246/246 after ordinary and secure-action wire tests. The missing production action catalog remains a release blocker.
 
+The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
+
 ## Disable and rollback
 
 Keep or restore `ADMIN_AI_ENABLED=false`; this prevents admission and worker readiness from exposing the feature. Use the normal immutable production rollback lane for the deployed release. Database changes are additive and evidence records must not be deleted during rollback.
