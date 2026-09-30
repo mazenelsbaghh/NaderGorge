@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 privacy, audit, retention, and restart verification
+
+- `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-restore --filter 'FullyQualifiedName~AdminAIAudit|FullyQualifiedName~AdminAIRetention|FullyQualifiedName~AdminAIExternalRecovery|FullyQualifiedName~AdminAIOutboxRecovery' --nologo` passed 25/25 with no skips. The covered assertions include private conversation denial to another Admin, shared redacted evidence and cursor filtering, linked correlation and hash, rejection of transcript/sensitive evidence before writing an audit event, expired versus unexpired protected read-result handling, secure-input byte purge, external outcome recovery, and outbox recovery.
+- The disposable PostgreSQL restart sweep passed 2/2 after the cancellation/step fix, as recorded in `verification/feature-tests.md`. It covers stale queue, worker lease, pending callback, uncertain execution quarantine, terminal preservation, and expired proposal/secure-input cleanup. The separate Redis restart test passed 1/1 and preserved provider completion without another inference. The combined backend/worker/Redis delivery restart test T181 remains open; these independent tests do not prove that gate or owner acceptance.
+
 ## 2026-09-30 computed HTTP method inventory
 
 - The Admin-reachable Learning Center service sends writes through `apiClient[method]`. The frontend graph previously counted only property calls, so this write dispatcher was absent. It now emits an `ANY /{base}/{path}` diagnostic call and treats unknown verbs conservatively as mutation effects. The generic read and write dispatchers have two reviewed `non-business` exclusions because all 11 concrete Admin-accessible Learning Center backend routes remain in the baseline, including six blocked mutations.
