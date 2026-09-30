@@ -165,7 +165,8 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
 /// <summary>Routes supported ordinary actions to their authoritative preview source.</summary>
 public sealed class AdminAIOrdinaryPreviewSource(
     AdminAIIdentityContentPreviewSource identityContent,
-    AdminAIOperationsPreviewSource operations) : IAdminAIActionPreviewSource
+    AdminAIOperationsPreviewSource operations,
+    AdminAIAssessmentPreviewSource assessment) : IAdminAIActionPreviewSource
 {
     public Task<AdminAIActionPreview> PreviewAsync<TInput>(
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
@@ -174,6 +175,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
             "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
+            "admin.assessment.lesson-comment.approve" or "admin.assessment.community-post.approve" =>
+                assessment.PreviewAsync(capabilityKey, actorId, input, ct),
             _ => identityContent.PreviewAsync(capabilityKey, actorId, input, ct)
         };
 }

@@ -9,6 +9,7 @@ using NaderGorge.Application.Features.AdminAI.Catalog;
 using NaderGorge.Application.Features.AdminAI.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Application.Features.AdminAI.Security;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
@@ -21,7 +22,7 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIIdentityContentPostgresTests
 {
     [Fact]
-    public async Task RealPostgres_OrdinaryIdentityContentAndOperations_PersistOneEffectPerConfirmedProposal()
+    public async Task RealPostgres_OrdinaryIdentityContentOperationsAndModeration_PersistOneEffectPerConfirmedProposal()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
         await using var db = fixture.CreateDbContext();
@@ -58,17 +59,63 @@ public sealed class AdminAIIdentityContentPostgresTests
             Title = "Review lesson", Description = "Check content", AssigneeId = actor.Id,
             CreatedById = actor.Id, MediaPipelineId = pipeline.Id
         };
+        var teacher = new TeacherProfile
+        {
+            User = new User { FullName = "Teacher", PhoneNumber = "01000000995", PasswordHash = "test" },
+            IsContentVisibleToStudents = true
+        };
+        var lesson = new Lesson
+        {
+            Title = "Discussion",
+            ContentSection = new ContentSection
+            {
+                Title = "Section",
+                Term = new Term
+                {
+                    Title = "Term",
+                    Package = new Package
+                    {
+                        Name = "Moderation", Teacher = teacher,
+                        Subject = new Subject { Name = "Moderation", NormalizedName = "MODERATION" }
+                    }
+                }
+            }
+        };
+        var parentComment = new LessonComment
+        {
+            Lesson = lesson, AuthorUser = student, Body = "Original question", Status = LessonCommentStatus.Pending
+        };
+        var replyComment = new LessonComment
+        {
+            Lesson = lesson, ParentComment = parentComment, AuthorUser = student,
+            Body = "Follow-up question", Status = LessonCommentStatus.Pending
+        };
+        var scopedPost = new CommunityPost
+        {
+            AuthorUser = student, Body = "A poll for all students", IsPoll = true,
+            Status = CommunityPostStatus.Pending
+        };
+        var pollOption = new CommunityPostPollOption { Post = scopedPost, Text = "Option A" };
+        scopedPost.PollOptions.Add(pollOption);
+        scopedPost.PollOptions.Add(new CommunityPostPollOption { Post = scopedPost, Text = "Option B" });
+        var teacherPost = new CommunityPost
+        {
+            AuthorUser = student, Teacher = teacher, Body = "A teacher post", Status = CommunityPostStatus.Pending
+        };
         db.AddRange(actor, student, baseline, policyVersion, conversation, message, turn,
-            new UserRole { User = actor, Role = adminRole }, pipeline, task);
+            new UserRole { User = actor, Role = adminRole }, pipeline, task,
+            parentComment, replyComment, scopedPost, teacherPost);
         await db.SaveChangesAsync();
 
         using var services = new ServiceCollection()
             .AddSingleton<IAppDbContext>(db)
+            .AddSingleton<IAcademicScopeService>(new AcademicScopeService(db))
             .AddMediatR(config => config.RegisterServicesFromAssembly(typeof(ApiResponse).Assembly))
             .BuildServiceProvider();
         var mediator = services.GetRequiredService<IMediator>();
         var preview = new AdminAIOrdinaryPreviewSource(
-            new AdminAIIdentityContentPreviewSource(db), new AdminAIOperationsPreviewSource(db));
+            new AdminAIIdentityContentPreviewSource(db), new AdminAIOperationsPreviewSource(db),
+            new AdminAIAssessmentPreviewSource(db, new AcademicScopeService(db)));
         IAdminAIActionCapability[] adapters =
         [
             new AdminAIAddStudentNoteAction(mediator, preview),
@@ -78,11 +125,15 @@ public sealed class AdminAIIdentityContentPostgresTests
             new AdminAIUpdateVideoTypeAction(mediator, preview),
             new AdminAIAddTaskCommentAction(mediator, preview),
             new AdminAIUpdateTaskStatusAction(mediator, preview),
-            new AdminAIResolveTaskApprovalAction(mediator, preview)
+            new AdminAIResolveTaskApprovalAction(mediator, preview),
+            new AdminAIApproveLessonCommentAction(mediator, preview),
+            new AdminAIApproveCommunityPostAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
-            [.. AdminAIIdentityContentActionCatalog.CreateCandidates(), .. AdminAIOperationsActionCatalog.CreateCandidates()]);
-        Assert.Equal(8, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
+            [.. AdminAIIdentityContentActionCatalog.CreateCandidates(),
+                .. AdminAIOperationsActionCatalog.CreateCandidates(),
+                .. AdminAIAssessmentActionCatalog.CreateCandidates()]);
+        Assert.Equal(10, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -115,7 +166,8 @@ public sealed class AdminAIIdentityContentPostgresTests
         Assert.Equal(AdminAIExecutionStatus.Succeeded, noteResult.Status);
 
         await ConfirmAsync(adapters[1].Key, new { name = "Physics", description = "New subject" });
-        var subjectId = await db.Subjects.Select(item => item.Id).SingleAsync();
+        var subjectId = await db.Subjects.Where(item => item.Name == "Physics")
+            .Select(item => item.Id).SingleAsync();
         await ConfirmAsync(adapters[2].Key,
             new { subjectId, name = "Advanced Physics", description = "Updated" });
         await ConfirmAsync(adapters[3].Key,
@@ -151,6 +203,50 @@ public sealed class AdminAIIdentityContentPostgresTests
             new { taskId = task.Id, status = (int)NaderGorge.Domain.Enums.TaskStatus.Review });
         await ConfirmAsync(adapters[7].Key,
             new { taskId = task.Id, approve = false, rejectionReason = "Needs another pass" });
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() => builder.BuildAsync(
+            actor.Id, turn.Id, adapters[8].Key, new { commentId = replyComment.Id }, default));
+        var pendingCommentProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[8].Key,
+            new { commentId = parentComment.Id }, default);
+        parentComment.Body = "Edited original question";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            pendingCommentProposal.Id, pendingCommentProposal.Version, null,
+            $"intent-{pendingCommentProposal.Id:N}", default));
+        Assert.Equal(LessonCommentStatus.Pending,
+            (await db.LessonComments.AsNoTracking().SingleAsync(item => item.Id == parentComment.Id)).Status);
+        await ConfirmAsync(adapters[8].Key, new { commentId = parentComment.Id });
+        await ConfirmAsync(adapters[8].Key, new { commentId = replyComment.Id });
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() => builder.BuildAsync(
+            actor.Id, turn.Id, adapters[9].Key, new { postId = scopedPost.Id }, default));
+        var academicScope = new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.CommunityPost,
+            OwnerId = scopedPost.Id, ScopeLevel = AcademicScopeLevel.PlatformWide
+        };
+        db.StudentFacingAcademicScopes.Add(academicScope);
+        await db.SaveChangesAsync();
+        var pendingPostProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[9].Key,
+            new { postId = scopedPost.Id }, default);
+        academicScope.ScopeLevel = AcademicScopeLevel.StageWide;
+        academicScope.EducationStage = EducationStage.Secondary;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            pendingPostProposal.Id, pendingPostProposal.Version, null,
+            $"intent-{pendingPostProposal.Id:N}", default));
+        Assert.Equal(CommunityPostStatus.Pending,
+            (await db.CommunityPosts.AsNoTracking().SingleAsync(item => item.Id == scopedPost.Id)).Status);
+        academicScope.ScopeLevel = AcademicScopeLevel.PlatformWide;
+        academicScope.EducationStage = null;
+        await db.SaveChangesAsync();
+        var pendingPollProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[9].Key,
+            new { postId = scopedPost.Id }, default);
+        pollOption.Text = "Edited option A";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            pendingPollProposal.Id, pendingPollProposal.Version, null,
+            $"intent-{pendingPollProposal.Id:N}", default));
+        await ConfirmAsync(adapters[9].Key, new { postId = scopedPost.Id });
+        await ConfirmAsync(adapters[9].Key, new { postId = teacherPost.Id });
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -166,7 +262,7 @@ public sealed class AdminAIIdentityContentPostgresTests
         Assert.Equal(student.Id, note.StudentId);
         Assert.Equal(actor.Id, note.AdminId);
         Assert.Equal("Durable note", note.Content);
-        var subject = await verifyDb.Subjects.AsNoTracking().SingleAsync();
+        var subject = await verifyDb.Subjects.AsNoTracking().SingleAsync(item => item.Id == subjectId);
         Assert.Equal("Advanced Physics", subject.Name);
         Assert.Equal("Updated", subject.Description);
         var videoType = await verifyDb.VideoTypes.AsNoTracking()
@@ -185,11 +281,21 @@ public sealed class AdminAIIdentityContentPostgresTests
         Assert.Null(finalTask.CompletedAt);
         Assert.Equal(MediaStage.Editing,
             (await verifyDb.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
+        Assert.Equal(2, await verifyDb.LessonComments.AsNoTracking()
+            .CountAsync(item => item.Status == LessonCommentStatus.Approved));
+        Assert.Equal(4, await verifyDb.OutboxEvents.AsNoTracking()
+            .CountAsync(item => item.Type == "LessonCommentApproved"));
+        Assert.Equal(2, await verifyDb.CommunityPosts.AsNoTracking()
+            .CountAsync(item => item.Status == CommunityPostStatus.Approved));
+        Assert.Equal("Edited option A", (await verifyDb.CommunityPostPollOptions.AsNoTracking()
+            .SingleAsync(item => item.Id == pollOption.Id)).Text);
+        Assert.Equal(2, await verifyDb.OutboxEvents.AsNoTracking()
+            .CountAsync(item => item.Type == "CommunityPostApproved"));
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(10, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(14, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }

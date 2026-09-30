@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 moderation candidates
+
+- Added reviewed candidate previews for lesson-comment and community-post approval through the existing Admin commands. The lesson preview requires Pending status and an approved parent before publishing. The post preview requires the same effective academic scope as the authoritative command when no teacher owns the post; it binds post text, poll options, and effective scope rows to the confirmation fingerprint.
+- A migrated PostgreSQL flow passed 1/1 with 14 confirmed executions. It blocked a reply before its parent, invalidated an edited comment, blocked an unscoped post, invalidated a changed academic scope and a changed poll option, then verified two comment approvals and two post approvals with their six notification outbox rows. The original post command used the real `AcademicScopeService` in this run. The focused AdminAI application suite passed 258/258.
+- These two actions remain candidates. No production action catalog or approved full baseline exists yet, so feature activation remains closed.
+
 ## 2026-09-30 ordinary operations candidate
 
 - The reviewed candidate set now has eight ordinary capabilities: five identity/content commands plus task comment, task status, and the Admin task approval/rejection route. The operations previews read the current task, Admin/manager role, and media-pipeline stage, then bind those values to the proposal fingerprint before the authoritative MediatR commands run.
