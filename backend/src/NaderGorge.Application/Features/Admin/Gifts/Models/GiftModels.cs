@@ -43,7 +43,8 @@ public sealed record GiftLookupDto(
     string Name,
     string? Context = null,
     IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes = null,
-    DateTime? PreviouslyGiftedAt = null);
+    DateTime? PreviouslyGiftedAt = null,
+    bool IsSystemContainer = false);
 
 public sealed record GiftListItemDto(
     Guid Id,

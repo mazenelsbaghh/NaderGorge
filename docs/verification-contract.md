@@ -134,7 +134,7 @@ npm --prefix frontend run typecheck
 cd frontend && npx playwright test tests/e2e/admin-ai-agent.spec.ts tests/e2e/route-permission-parity.spec.ts --project=chromium --project=webkit
 ```
 
-Mocked provider tests prove protocol behavior only. Production acceptance additionally requires the configured real Gemini provider with outbound secret-sentinel capture and zero destructive platform effect.
+Mocked provider tests prove protocol behavior only. Production acceptance additionally requires the configured real Codex CLI provider with outbound secret-sentinel capture and zero destructive platform effect. The Admin AI feature stays disabled until its complete capability baseline and acceptance gates pass.
 
 Safe disable/rollback sets `ADMIN_AI_ENABLED=false`, restarts backend and worker, and verifies new turns/proposals are rejected while owner history and terminal redacted evidence remain readable. Do not reset PostgreSQL, Redis, Docker volumes, conversations, proposals, executions, or audit evidence during rollback. The Admin AI worker receives claim/tool data only through the authenticated backend callback protocol and has no Admin AI database credential or direct database query path.
 

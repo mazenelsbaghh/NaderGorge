@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 525,
+  "reachableFileCount": 527,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -908,6 +908,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/components/admin/gifts/GiftContentPicker.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/components/admin/gifts/GiftDetailsPanel.tsx",
       "route": null
     },
@@ -1636,6 +1640,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/features/teacher-finance-center/TeacherStatementPanel.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/features/teacher-finance-center/types.ts",
       "route": null
     },
@@ -2104,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 620,
+  "callCount": 622,
   "calls": [
     {
       "method": "DELETE",
@@ -2175,7 +2183,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 312
+        "line": 331
       }
     },
     {
@@ -2616,7 +2624,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 360
+        "line": 379
       }
     },
     {
@@ -2634,7 +2642,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 327
+        "line": 346
       }
     },
     {
@@ -2643,7 +2651,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 282
+        "line": 301
       }
     },
     {
@@ -2652,7 +2660,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 373
+        "line": 392
       }
     },
     {
@@ -2688,7 +2696,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 125
+        "line": 126
       }
     },
     {
@@ -2697,7 +2705,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 128
+        "line": 129
       }
     },
     {
@@ -2706,7 +2714,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 139
+        "line": 140
       }
     },
     {
@@ -2715,7 +2723,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 147
+        "line": 148
       }
     },
     {
@@ -2724,7 +2732,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 144
+        "line": 145
       }
     },
     {
@@ -3219,7 +3227,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 273
+        "line": 292
       }
     },
     {
@@ -3228,7 +3236,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 250
+        "line": 269
       }
     },
     {
@@ -3237,7 +3245,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 194
+        "line": 213
       }
     },
     {
@@ -3246,7 +3254,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 223
+        "line": 242
       }
     },
     {
@@ -3255,7 +3263,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 231
+        "line": 250
       }
     },
     {
@@ -3264,7 +3272,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 335
+        "line": 354
       }
     },
     {
@@ -3273,7 +3281,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 216
+        "line": 235
       }
     },
     {
@@ -4245,7 +4253,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 319
+        "line": 323
       }
     },
     {
@@ -4497,7 +4505,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 408
+        "line": 427
       }
     },
     {
@@ -4506,7 +4514,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 430
+        "line": 449
       }
     },
     {
@@ -4515,7 +4523,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 438
+        "line": 457
       }
     },
     {
@@ -4524,7 +4532,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 446
+        "line": 465
       }
     },
     {
@@ -4533,7 +4541,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 419
+        "line": 438
       }
     },
     {
@@ -4750,6 +4758,24 @@
       "source": {
         "file": "frontend/src/services/code-service.ts",
         "line": 90
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 196
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 205
       }
     },
     {
@@ -5118,7 +5144,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 344
+        "line": 363
       }
     },
     {
@@ -5127,7 +5153,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 301
+        "line": 320
       }
     },
     {
@@ -5136,7 +5162,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 319
+        "line": 338
       }
     },
     {
@@ -5145,7 +5171,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 290
+        "line": 309
       }
     },
     {
@@ -5154,7 +5180,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 387
+        "line": 406
       }
     },
     {
@@ -5163,7 +5189,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 399
+        "line": 418
       }
     },
     {
@@ -5190,7 +5216,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 131
+        "line": 132
       }
     },
     {
@@ -5199,7 +5225,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
-        "line": 135
+        "line": 136
       }
     },
     {
@@ -5658,7 +5684,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 269
+        "line": 288
       }
     },
     {
@@ -5667,7 +5693,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 277
+        "line": 296
       }
     },
     {
@@ -5676,7 +5702,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 260
+        "line": 279
       }
     },
     {
@@ -5685,7 +5711,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 245
+        "line": 264
       }
     },
     {
@@ -5694,7 +5720,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 255
+        "line": 274
       }
     },
     {
@@ -5703,7 +5729,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 256
+        "line": 275
       }
     },
     {
@@ -5712,7 +5738,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 257
+        "line": 276
       }
     },
     {
@@ -5721,7 +5747,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 254
+        "line": 273
       }
     },
     {
@@ -5730,7 +5756,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 239
+        "line": 258
       }
     },
     {
@@ -5739,7 +5765,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 202
+        "line": 221
       }
     },
     {
@@ -7008,7 +7034,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 453
+        "line": 472
       }
     },
     {
@@ -7458,7 +7484,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 209
+        "line": 228
       }
     },
     {
@@ -7467,7 +7493,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 265
+        "line": 284
       }
     },
     {
@@ -8158,5 +8184,5 @@
       }
     }
   ],
-  "digest": "67c07d02e2999f783a349fe94b27f0536bb50735a00d2e0b8af32a164e2c99fc"
+  "digest": "e9cfbba07224b1974ceb3b90fca7ff395ac0e66a47309b34eed43364b2543401"
 }

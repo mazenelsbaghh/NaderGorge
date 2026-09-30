@@ -50,7 +50,7 @@
 ### Tests first
 
 - [X] T015 [P] Write entity/invariant/delete-behavior/version/retention model tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIModelTests.cs.
-- [ ] T016 [P] Write clean/existing-database migration, partial-unique, check-index, and no-cascade PostgreSQL tests in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIMigrationTests.cs.
+- [X] T016 [P] Write clean/existing-database migration, partial-unique, check-index, and no-cascade PostgreSQL tests in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIMigrationTests.cs.
 - [X] T017 [P] Write current Admin, non-Admin, disabled/deleted, role-removal, security-version, owner/non-owner access tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIAccessGateTests.cs.
 - [X] T018 [P] Write purpose-separated encryption/HMAC/tamper/key-unavailable/phrase-normalization tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIDataProtectionTests.cs.
 - [X] T019 [P] Write manifest schema, risk derivation, strong-confirmation, unknown capability, and sensitive-policy registration tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAICatalogTests.cs.
@@ -102,7 +102,7 @@
 - [X] T053 Register isolated ai-admin-agent-turns Worker/Queue/readiness heartbeat/concurrency in worker/src/index.ts without changing live-support queue semantics.
 - [X] T054 [P] Define frontend closed API/realtime/error/status/route-key contracts in frontend/src/services/admin-ai-agent-contract.ts and frontend/src/lib/admin-ai-agent-client-contract.ts.
 - [X] T055 [P] Create typed AbortSignal/Idempotency-Key REST methods in frontend/src/services/admin-ai-agent-service.ts without chat/live-support service imports.
-- [ ] T056 Run all Phase 2 tests plus migration on clean and representative existing PostgreSQL data, and record expected zero live-support/chat coupling and zero existing-data deletion in specs/169-admin-ai-agent/implementation-evidence.md.
+- [X] T056 Run all Phase 2 tests plus migration on clean and representative existing PostgreSQL data, and record expected zero live-support/chat coupling and zero existing-data deletion in specs/169-admin-ai-agent/implementation-evidence.md.
 
 **Checkpoint**: Persistence, access, encryption, audit, queue, protocol, rate limiting, and recovery are test-proven before any platform read or action capability.
 
@@ -119,7 +119,7 @@
 - [X] T059 [P] [US1] Generate per-read-capability schema/limit/evidence/field-allowlist/empty/truncated tests from the baseline in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIReadCapabilityContractTests.cs.
 - [X] T060 [P] [US1] Write tool batch budget, lease, access recheck, unknown capability, deterministic replay, and cancellation tests in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIToolGatewayTests.cs.
 - [X] T061 [P] [US1] Write prompt-injection and P0/P1/P2 minimization capture tests across backend claim/read/provider/transcript/audit/realtime/export in backend/tests/NaderGorge.Application.Tests/AdminAI/AdminAIRedactionTests.cs.
-- [ ] T062 [P] [US1] Write real PostgreSQL query-count/timeout/plan tests for representative high-volume read capabilities in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIReadQueryPlanTests.cs.
+- [X] T062 [P] [US1] Write real PostgreSQL query-count/timeout/plan tests for representative high-volume read capabilities in backend/tests/NaderGorge.Integration.Tests/AdminAI/AdminAIReadQueryPlanTests.cs.
 - [X] T063 [P] [US1] Write manual function-call loop, multiple read, empty/truncated/rejected, max-step/call/byte/deadline/cancel tests in worker/src/services/adminAIAgent.test.ts.
 - [X] T064 [P] [US1] Write worker job provider-completed/callback-pending crash and no-second-inference tests in worker/src/jobs/processAdminAITurn.test.ts.
 - [X] T065 [P] [US1] Write frontend conversation/snapshot/error/realtime/store/generation-guard tests in frontend/src/features/admin-ai-agent/admin-ai-agent-store.test.ts and frontend/src/services/admin-ai-agent-contract.test.ts.
@@ -356,7 +356,7 @@
 - [ ] T206 Run focused AdminAI feature tests with `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --filter FullyQualifiedName~AdminAI`, `python3 -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py`, and `cd frontend && npx playwright test tests/e2e/admin-ai-agent.spec.ts tests/e2e/route-permission-parity.spec.ts --project=chromium --project=webkit`; also run the worker/frontend contract suites from quickstart.md and record exact commands/counts/failures/skips in specs/169-admin-ai-agent/verification/feature-tests.md.
 - [ ] T207 Run make verify and git diff --check, preserve unrelated owner changes, and record exact full-repository result in specs/169-admin-ai-agent/verification/full-repository.md.
 - [ ] T208 Run docker compose config -q, make up, make migrate, make ps, backend/worker/admin health, clean/existing DB migration, and restart/recovery checks without deleting volumes; record in specs/169-admin-ai-agent/verification/docker.md.
-- [ ] T209 Run the production-equivalent real Gemini provider acceptance with outbound secret-sentinel capture and no destructive production effect; record provider/model/latency/outcomes or exact blocker in specs/169-admin-ai-agent/verification/real-provider.md.
+- [ ] T209 Run production-equivalent real Codex CLI provider acceptance with outbound secret-sentinel capture and no destructive production effect; record provider/model/latency/outcomes or exact blocker in specs/169-admin-ai-agent/verification/real-provider.md.
 - [ ] T210 Complete the owner manual QA matrix for roles, all domain reads, every capability family, ordinary/strong/secure/bulk/finance/external, privacy/audit/recovery, and 375/768/1024/1440 accessibility in specs/169-admin-ai-agent/verification/manual-qa.md.
 - [ ] T211 Re-run baseline generation after every review fix and prove source/runtime/frontend/manifest hashes match with zero missing/duplicate/stale/unsupported current Admin business mutation in specs/169-admin-ai-agent/verification/capability-coverage.md.
 - [ ] T212 Write the final implementation report with scope, hashes/counts, migration, commands/results, Docker/provider/manual evidence, risks, disable/rollback, and explicit go/no-go in specs/169-admin-ai-agent/final-report.md; do not mark complete while any mandatory gate or owner acceptance remains open.

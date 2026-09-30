@@ -13,6 +13,7 @@ import {
 import { getAcademicScopeLabel } from '@/lib/academic-labels';
 import { createClientId } from '@/lib/client-id';
 import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
+import { GiftContentPicker } from './GiftContentPicker';
 
 const targetTypes = Object.keys(giftTargetLabels) as GiftTargetType[];
 const isBalance = (type: GiftTargetType) => type === 'GeneralBalance' || type === 'TeacherBalance';
@@ -28,6 +29,7 @@ export function GiftIssueForm() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [teacherId, setTeacherId] = useState('');
   const [targetId, setTargetId] = useState('');
+  const [hierarchyTarget, setHierarchyTarget] = useState<GiftLookupDto | null>(null);
   const [amount, setAmount] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [maxUses, setMaxUses] = useState('');
@@ -58,8 +60,7 @@ export function GiftIssueForm() {
   }, [studentSearch, targetId, targetType]);
 
   useEffect(() => {
-    setTargetId('');
-    if (isBalance(targetType)) {
+    if (isBalance(targetType) || targetType === 'Lesson' || targetType === 'Video') {
       setTargets([]);
       return;
     }
@@ -75,8 +76,10 @@ export function GiftIssueForm() {
     [selectedStudents, students],
   );
   const selectedTarget = useMemo(
-    () => targets.find((target) => target.id === targetId) ?? null,
-    [targetId, targets],
+    () => targetType === 'Lesson' || targetType === 'Video'
+      ? hierarchyTarget
+      : targets.find((target) => target.id === targetId) ?? null,
+    [targetType, hierarchyTarget, targetId, targets],
   );
 
   const toggleStudent = (id: string) => {
@@ -126,7 +129,7 @@ export function GiftIssueForm() {
         <h2 className="text-base font-black text-[var(--admin-text)]">نوع الهدية</h2>
         <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
           {targetTypes.map((type) => (
-            <button key={type} type="button" onClick={() => { setTargetType(type); setTeacherId(''); setMaxUses(''); }} className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition ${targetType === type ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}>
+            <button key={type} type="button" onClick={() => { setTargetType(type); setTeacherId(''); setTargetId(''); setHierarchyTarget(null); setMaxUses(''); }} className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition ${targetType === type ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}>
               {giftTargetLabels[type]}
             </button>
           ))}
@@ -141,7 +144,14 @@ export function GiftIssueForm() {
           </label>
         ) : null}
 
-        {!isBalance(targetType) ? (
+        {(targetType === 'Lesson' || targetType === 'Video') ? (
+          <GiftContentPicker
+            key={targetType}
+            targetType={targetType}
+            teachers={teachers}
+            onSelect={(target) => { setTargetId(target?.id ?? ''); setHierarchyTarget(target); }}
+          />
+        ) : !isBalance(targetType) ? (
           <div className="mt-5 space-y-3">
             <label className="relative block">
               <Search className="absolute end-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />

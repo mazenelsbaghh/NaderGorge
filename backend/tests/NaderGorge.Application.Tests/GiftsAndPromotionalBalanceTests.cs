@@ -107,6 +107,31 @@ public sealed class GiftsAndPromotionalBalanceTests
     }
 
     [Fact]
+    public async Task GiftTargetLookups_FollowSelectedParentAndExposeSystemContainers()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var package = await SeedPackageAsync(db, 120m);
+        var directTerm = new Term { Title = "Internal term", Package = package, IsSystemContainer = true };
+        var otherTerm = new Term { Title = "Other term", Package = package };
+        var directSection = new ContentSection { Title = "Internal section", Term = directTerm, IsSystemContainer = true };
+        var otherSection = new ContentSection { Title = "Other section", Term = otherTerm };
+        var directLesson = new Lesson { Title = "The requested lesson", ContentSection = directSection };
+        var otherLesson = new Lesson { Title = "Unrelated lesson", ContentSection = otherSection };
+        db.AddRange(directTerm, otherTerm, directSection, otherSection, directLesson, otherLesson);
+        await db.SaveChangesAsync();
+
+        var handler = new GetGiftTargetsLookupQueryHandler(db);
+        var terms = await handler.Handle(new GetGiftTargetsLookupQuery(GiftTargetType.Term, ParentId: package.Id), CancellationToken.None);
+        var sections = await handler.Handle(new GetGiftTargetsLookupQuery(GiftTargetType.ContentSection, ParentId: directTerm.Id), CancellationToken.None);
+        var lessons = await handler.Handle(new GetGiftTargetsLookupQuery(GiftTargetType.Lesson, ParentId: directSection.Id), CancellationToken.None);
+
+        Assert.Contains(terms.Data!, item => item.Id == directTerm.Id && item.IsSystemContainer);
+        Assert.Equal(directSection.Id, Assert.Single(sections.Data!).Id);
+        Assert.True(Assert.Single(sections.Data!).IsSystemContainer);
+        Assert.Equal(directLesson.Id, Assert.Single(lessons.Data!).Id);
+    }
+
+    [Fact]
     public async Task StudentLookup_MarksRecipientsPreviouslyGiftedForTheSelectedTarget()
     {
         await using var db = TestAppDbContextFactory.Create();

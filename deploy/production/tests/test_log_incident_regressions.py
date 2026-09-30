@@ -78,9 +78,10 @@ def test_video_embed_material_uses_the_https_exempt_internal_route() -> None:
     assert "[InternalTokenAuthorize" in action_attributes
     assert "[DisableRateLimiting]" in action_attributes
     assert (
-        "/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material"
+        "/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/${options.resource}"
         in playback_session
     )
+    assert "resource: 'embed-material', query" in playback_session
 
 
 def test_financial_constraint_allows_an_intentional_platform_loss() -> None:

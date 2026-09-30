@@ -222,6 +222,7 @@ builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFi
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherFinanceExportService, NaderGorge.Infrastructure.Services.Finance.TeacherFinanceExportService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherStatementService, NaderGorge.Infrastructure.Services.Finance.TeacherStatementService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceMigrationService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceMigrationService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Reports.PlatformFinancialReportQueries>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.Finance.Migration.FinancialReconciliationService>();

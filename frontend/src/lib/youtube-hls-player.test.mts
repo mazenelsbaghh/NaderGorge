@@ -10,7 +10,7 @@ const flush = () => new Promise<void>(resolve => setImmediate(resolve));
 type Message = { type: string; data: Record<string, unknown> };
 type Listener = (event?: unknown) => void;
 
-async function runPlayer(options: { native?: boolean; status?: number } = {}) {
+async function runPlayer(options: { native?: boolean; status?: number; hlsjs?: boolean } = {}) {
   const messages: Message[] = [];
   const requests: string[] = [];
   const videoListeners = new Map<string, Listener[]>();
@@ -34,8 +34,33 @@ async function runPlayer(options: { native?: boolean; status?: number } = {}) {
     pause() { this.paused = true; emit('pause'); },
     play() { this.paused = false; emit('play'); emit('playing'); return Promise.resolve(); },
   };
+  const hlsInstances: Array<{
+    loadedSource: string; currentLevel: number; nextLevel: number; levels: Array<{ height: number }>;
+    emit: (event: string, data?: unknown) => void; destroyed: boolean;
+  }> = [];
+  class MockHls {
+    static Events = { MANIFEST_PARSED: 'manifest', FRAG_BUFFERED: 'fragment', LEVEL_SWITCHED: 'level', ERROR: 'error' };
+    static ErrorTypes = { MEDIA_ERROR: 'media' };
+    static isSupported() { return true; }
+    loadedSource = '';
+    currentLevel = -1;
+    nextLevel = -1;
+    levels = [{ height: 360 }, { height: 720 }];
+    destroyed = false;
+    private listeners = new Map<string, Array<(_event: string, data?: unknown) => void>>();
+    constructor() { hlsInstances.push(this); }
+    attachMedia() {}
+    loadSource(sourceUrl: string) { this.loadedSource = sourceUrl; }
+    on(event: string, listener: (_event: string, data?: unknown) => void) {
+      this.listeners.set(event, [...this.listeners.get(event) ?? [], listener]);
+    }
+    emit(event: string, data?: unknown) { for (const listener of this.listeners.get(event) ?? []) listener(event, data); }
+    recoverMediaError() {}
+    destroy() { this.destroyed = true; }
+  }
   const parentWindow = { postMessage(message: Message) { messages.push(message); } };
   const windowLike = {
+    Hls: options.hlsjs ? MockHls : undefined,
     addEventListener(name: string, listener: Listener) { windowListeners.set(name, listener); },
     setTimeout(callback: () => void) { callback(); },
     location: { origin, replace() {} },
@@ -65,7 +90,7 @@ async function runPlayer(options: { native?: boolean; status?: number } = {}) {
     windowListeners.get('message')?.({ origin: eventOrigin, source: eventSource, data: command });
   }
   return {
-    video, messages, requests, emit, send,
+    video, messages, requests, emit, send, hlsInstances,
     loaded() { video.duration = 600; emit('loadedmetadata'); },
     renew(version = metadata.version) {
       metadata = { ...metadata, version, serverNowMs: epoch + clock, expiresAt: epoch + clock + 21_600_000 };
@@ -105,6 +130,34 @@ test('native HLS loads protected playlists and exposes only platform quality mes
   player.emit('timeupdate');
   assert.equal(player.messages.at(-1)?.data.currentTime, 23);
   assert.equal(player.messages.at(-1)?.data.isPlaying, true);
+});
+
+test('HLS.js plays on browsers without native HLS and switches quality in place', async () => {
+  const player = await runPlayer({ native: false, hlsjs: true });
+  const hls = player.hlsInstances[0];
+  assert.ok(hls);
+  assert.equal(new URL(hls.loadedSource).searchParams.get('v'), 'version-one');
+  player.loaded();
+  assert.equal(player.messages.find(message => message.type === 'ready')?.data.provider, 'youtube-hls');
+  player.send({ type: 'play' });
+  player.video.currentTime = 90;
+  player.emit('timeupdate');
+  player.send({ type: 'setQuality', quality: '720' });
+  assert.equal(hls.currentLevel, 1);
+  assert.equal(hls.nextLevel, 1);
+  assert.equal(player.video.currentTime, 90);
+  assert.equal(player.messages.filter(message => message.type === 'qualityLevels').at(-1)?.data.currentQuality, '720');
+  player.advance(1_500_000);
+  await player.renew('version-two');
+  assert.equal(new URL(hls.loadedSource).searchParams.get('v'), 'version-two');
+  assert.equal(new URL(hls.loadedSource).searchParams.has('quality'), false);
+  hls.emit('manifest');
+  assert.equal(hls.currentLevel, 1);
+  hls.emit('fragment');
+  assert.equal(player.video.currentTime, 90);
+  player.send({ type: 'setQuality', quality: 'auto' });
+  assert.equal(hls.currentLevel, -1);
+  assert.equal(player.video.currentTime, 90);
 });
 
 test('quality changes preserve position, playback settings, and commands received during loading', async () => {

@@ -108,7 +108,7 @@ public sealed class AdminFinanceCenterTests
         Assert.Equal(60m, allocation.ReversedAmount);
     }
 
-    private static AdminTeacherFinanceCenterController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorId) => new(db, new NoopMediator(), new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db))
+    private static AdminTeacherFinanceCenterController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorId) => new(db, new NoopMediator(), new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db), new NaderGorge.Infrastructure.Services.Finance.TeacherStatementService(db))
     {
         ControllerContext = new ControllerContext
         {

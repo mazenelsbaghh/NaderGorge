@@ -19,6 +19,7 @@ import { resolveGenerationJob } from './queues/logicalJobResolver.js';
 import { claimStaleStreamMessages } from './queues/streamRecovery.js';
 import { readAIConfig } from './services/aiConfig.js';
 import { generateLiveSupportReply } from './services/geminiService.js';
+import { checkAdminAICodexHealth } from './services/adminAICodexProvider.js';
 import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
 import { fetchWithTimeout } from './services/workerFetch.js';
 import { createRedisConnection, redisConnectionOptions } from './config/redis.js';
@@ -39,7 +40,8 @@ validateWorkerSecurityConfig();
 let aiStartupReady = false;
 let liveSupportWorkerReady = false;
 let adminAIWorkerReady = false;
-const adminAIEnabled = process.env.ADMIN_AI_ENABLED?.trim().toLowerCase() === 'true';
+const adminAIEnabled = process.env.ADMIN_AI_ENABLED?.trim().toLowerCase() === 'true' &&
+  (!process.env.AI_ADMIN_AGENT_RUNNER_NODE || process.env.AI_ADMIN_AGENT_RUNNER_NODE === process.env.MASSAR_NODE_ID);
 
 async function validateAIStartup() {
   const config = readAIConfig();
@@ -324,6 +326,11 @@ async function startLiveSupportWorker() {
 }
 
 async function startAdminAIWorker() {
+  if (process.env.ADMIN_AI_PROVIDER === 'codex-cli') {
+    while (!await checkAdminAICodexHealth()) {
+      await new Promise(resolve => setTimeout(resolve, 2_000));
+    }
+  }
   const worker = new Worker('ai-admin-agent-turns', async (job) => {
     const processor = await import('./jobs/processAdminAITurn.js');
     return processor.default(job);
@@ -488,14 +495,15 @@ async function startWorker() {
       } catch { adminAICallbackOk = false; }
     }
 
-    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || (adminAIEnabled && (!adminAIWorkerReady || !adminAICallbackOk)) || !callbackOk) {
+    const adminAICodexOk = !adminAIEnabled || process.env.ADMIN_AI_PROVIDER !== 'codex-cli' || await checkAdminAICodexHealth();
+    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || (adminAIEnabled && (!adminAIWorkerReady || !adminAICallbackOk || !adminAICodexOk)) || !callbackOk) {
       return res.status(503).json({
         status: 'unhealthy',
         database: dbOk ? 'healthy' : 'unhealthy',
         redis: redisOk ? 'healthy' : 'unhealthy',
         ai: aiStartupReady ? 'healthy' : 'unhealthy',
         liveSupport: liveSupportWorkerReady ? 'healthy' : 'unhealthy',
-        adminAI: !adminAIEnabled ? 'disabled' : adminAIWorkerReady ? 'healthy' : 'unhealthy',
+        adminAI: !adminAIEnabled ? 'disabled' : adminAIWorkerReady && adminAICodexOk ? 'healthy' : 'unhealthy',
         callback: callbackOk ? 'healthy' : 'unhealthy',
         adminAICallback: !adminAIEnabled ? 'disabled' : adminAICallbackOk ? 'healthy' : 'unhealthy',
       });

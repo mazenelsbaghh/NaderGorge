@@ -8,6 +8,7 @@ import type {
   SettlementPreview,
   TeacherAgreement,
   TeacherFinanceSummary,
+  TeacherStatement,
   TeacherCollections,
   TeacherSettlement,
 } from '@/features/teacher-finance-center/types';
@@ -190,6 +191,24 @@ export interface AdminTeacherFinancialEventDto {
 
 export const financeService = {
   // --- Admin-only teacher finance center ---
+  getTeacherStatement: async (teacherId: string | undefined, params: { from?: string; to?: string; page: number; pageSize: number }): Promise<TeacherStatement> => {
+    const path = teacherId ? `/admin/teacher-finance-center/teachers/${teacherId}/statement` : '/teacher/finance/statement';
+    const res = await apiClient.get<ApiResponse<TeacherStatement>>(path, {
+      params: { ...params, from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) },
+    });
+    if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل كشف الحساب');
+    return res.data.data;
+  },
+
+  exportTeacherStatementPdf: async (teacherId: string | undefined, params: { from?: string; to?: string }): Promise<Blob> => {
+    const path = teacherId ? `/admin/teacher-finance-center/teachers/${teacherId}/statement/pdf` : '/teacher/finance/statement/pdf';
+    const res = await apiClient.get<Blob>(path, {
+      params: { from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) },
+      responseType: 'blob', timeout: 120_000,
+    });
+    return res.data;
+  },
+
   getTeacherAgreements: async (teacherId: string): Promise<TeacherAgreement[]> => {
     const res = await apiClient.get<ApiResponse<TeacherAgreement[]>>(
       `/admin/teacher-finance-center/teachers/${teacherId}/agreements`,

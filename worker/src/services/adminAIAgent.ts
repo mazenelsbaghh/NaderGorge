@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
 import { readAIConfig } from './aiConfig.js';
 import { executeRetriableGeminiRequest } from './aiProvider.js';
+import { requestAdminAICodex } from './adminAICodexProvider.js';
 import { AdminAIDecisionValidationError, hashAdminAIDecision, parseAdminAIDecision, type AdminAIDecision, type JsonObject } from './adminAIDecisionSchema.js';
 import { recordAdminAIMetric, safeAdminAITelemetryLabel } from './adminAITelemetry.js';
 
@@ -189,7 +190,12 @@ async function defaultProvider(request: AdminAIProviderRequest): Promise<AdminAI
 }
 
 export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: AdminAICallbackClient, options: { provider?: AdminAIProvider; model?: string; cancelled?: () => Promise<boolean>; now?: () => number; workerInstanceId?: string; leaseRenewIntervalMs?: number } = {}): Promise<AdminAIAgentResult> {
-  const provider = options.provider ?? defaultProvider; const model = options.model ?? readAIConfig().textModel; const now = options.now ?? Date.now; const cancelled = options.cancelled ?? (async () => false);
+  const configuredProvider = process.env.ADMIN_AI_PROVIDER || 'gemini';
+  if (!['gemini', 'codex-cli'].includes(configuredProvider)) throw new Error('AI_PROVIDER_UNAVAILABLE');
+  const provider = options.provider ?? (configuredProvider === 'codex-cli' ? requestAdminAICodex : defaultProvider);
+  const model = options.model ?? (configuredProvider === 'codex-cli' ? (process.env.AI_ADMIN_CODEX_MODEL || 'gpt-5.6-sol') : readAIConfig().textModel);
+  const providerName = options.provider ? 'gemini-developer' : configuredProvider === 'codex-cli' ? 'codex-cli' : 'gemini-developer';
+  const now = options.now ?? Date.now; const cancelled = options.cancelled ?? (async () => false);
   const readTools = boundedClaimTools(claim.readTools); const actionTools = boundedActionTools(claim.actionTools);
   const functionMap = new Map(readTools.map((tool, index) => [`read_${index}`, tool]));
   const prompt = assembleAdminAIPrompt(claim); const contents: unknown[] = [...prompt.contents];
@@ -259,7 +265,7 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
       contents.push({ role: 'user', parts: [{ text: `Your previous response did not match the required closed JSON contract. Return one corrected JSON object only.\n${DECISION_CONTRACT}` }] });
       continue;
     }
-    return { decision, decisionHash: hashAdminAIDecision(decision), provider: 'gemini-developer', model, providerResponseId: last.responseId ?? null, inputTokenCount: last.inputTokenCount ?? null, outputTokenCount: last.outputTokenCount ?? null, stepNumber, expectedTurnVersion, leaseToken };
+    return { decision, decisionHash: hashAdminAIDecision(decision), provider: providerName, model, providerResponseId: last.responseId ?? null, inputTokenCount: last.inputTokenCount ?? null, outputTokenCount: last.outputTokenCount ?? null, stepNumber, expectedTurnVersion, leaseToken };
     }
     throw new Error('TOOL_BUDGET_EXCEEDED');
   } catch (error) {

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import re
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -82,6 +83,12 @@ def safe_line(key: str, value: str) -> str:
 
 
 def render(source: dict[str, str], secrets: Path) -> list[str]:
+    admin_ai_provider = source.get("ADMIN_AI_PROVIDER", "gemini")
+    if admin_ai_provider not in {"gemini", "codex-cli"}:
+        raise ValueError("unsupported ADMIN_AI_PROVIDER")
+    admin_ai_codex_model = source.get("AI_ADMIN_CODEX_MODEL", "gpt-5.6-sol")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,79}", admin_ai_codex_model):
+        raise ValueError("invalid AI_ADMIN_CODEX_MODEL")
     postgres_password = read_secret(secrets, "postgres-app")
     redis_password = read_secret(secrets, "redis")
     ai_callback_secret = read_secret(secrets, "ai-callback")
@@ -121,9 +128,13 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "API_CALLBACK_SECRET": read_secret(secrets, "api-callback"),
         "AI_CALLBACK_SECRET": ai_callback_secret,
         "AI_MEDIA_RELAY_SECRET": ai_media_relay_secret,
-        "ADMIN_AI_ENABLED": "true",
+        "ADMIN_AI_ENABLED": "false",
+        "ADMIN_AI_PROVIDER": admin_ai_provider,
+        "AI_ADMIN_CODEX_MODEL": admin_ai_codex_model,
+        "AI_ADMIN_AGENT_RUNNER_NODE": "node-3" if admin_ai_provider == "codex-cli" else "",
+        "ADMIN_AI_CODEX_SOCKET": "/run/admin-ai/codex.sock",
         "ADMIN_AI_HMAC_KEY": admin_ai_hmac,
-        "AdminAI__Enabled": "true",
+        "AdminAI__Enabled": "false",
         "AdminAI__HmacKey": admin_ai_hmac,
         "AdminAI__CallbackSecret": ai_callback_secret,
         "WORKER_ADMIN_TOKEN": read_secret(secrets, "worker-admin"),

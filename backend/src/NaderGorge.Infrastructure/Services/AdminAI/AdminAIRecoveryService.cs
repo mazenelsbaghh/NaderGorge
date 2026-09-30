@@ -5,7 +5,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services.AdminAI;
 
-public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryService
+public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter? audit = null) : IAdminAIRecoveryService
 {
     public async Task<int> ReconcileAsync(int batchSize, CancellationToken cancellationToken)
     {
@@ -98,6 +98,32 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
                 turn.CompletedAt = now;
                 turn.Version++;
             }
+            changed++;
+        }
+
+        remaining = batchSize - changed;
+        var staleExecutions = remaining == 0 ? [] : await db.AdminAIActionExecutions
+            .Where(x => (x.Status == AdminAIExecutionStatus.Claimed || x.Status == AdminAIExecutionStatus.Executing) &&
+                        x.ClaimedAt < now.AddMinutes(-5))
+            .OrderBy(x => x.ClaimedAt).Take(remaining).ToListAsync(cancellationToken);
+        foreach (var execution in staleExecutions)
+        {
+            execution.Status = AdminAIExecutionStatus.RecoveryRequired;
+            execution.FailureCode = "authoritative_outcome_unknown_after_restart";
+            execution.CompletedAt = null;
+            execution.Version++;
+            var proposal = await db.AdminAIActionProposals.SingleAsync(x => x.Id == execution.ProposalId, cancellationToken);
+            if (proposal.Status is AdminAIProposalStatus.Executing or AdminAIProposalStatus.Confirming)
+            {
+                proposal.Status = AdminAIProposalStatus.RecoveryRequired;
+                proposal.CompletedAt = null;
+                proposal.Version++;
+            }
+            if (audit is not null)
+                await audit.WriteAsync("ExecutionRecoveryRequired", execution.ActorAdminUserId,
+                    proposal.ConversationId, proposal.TurnId, proposal.Id,
+                    new { ExecutionId = execution.Id, execution.CapabilityKey, execution.FailureCode, AffectedCount = 0 },
+                    cancellationToken);
             changed++;
         }
 

@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
+import { createAdminAICodexServer } from '../adminAICodexServer.js';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
 import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, requestAdminAIGemini, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
@@ -420,4 +424,38 @@ test('propose_actions enforces maximum count and cannot claim risk or execution 
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, risk: 'ordinary' }] }));
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, status: 'succeeded' }] }));
   assert.throws(() => parseAdminAIDecision({ ...decision, actions: [{ ...action, executed: true }] }));
+});
+
+test('Codex provider follows the same backend read and decision boundary', async () => {
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'admin-ai-codex-agent-'));
+  const socket = path.join(folder, 'codex.sock');
+  const previousProvider = process.env.ADMIN_AI_PROVIDER;
+  const previousSocket = process.env.ADMIN_AI_CODEX_SOCKET;
+  let modelCalls = 0;
+  let backendReads = 0;
+  const server = createAdminAICodexServer(async () => {
+    modelCalls++;
+    return modelCalls === 1
+      ? { functionCalls: [{ id: 'lookup', name: 'read_0', args: { query: 'طلاب' } }] }
+      : { text: JSON.stringify(answer), responseId: 'codex-thread' };
+  });
+  try {
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(socket, resolve); });
+    process.env.ADMIN_AI_PROVIDER = 'codex-cli';
+    process.env.ADMIN_AI_CODEX_SOCKET = socket;
+    const completion = await runAdminAIAgent(claim(), callbacks(async () => {
+      backendReads++;
+      return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: 'lookup', status: 'Succeeded', data: { evidence: { invocationId: crypto.randomUUID() } } }] };
+    }));
+    assert.equal(completion.provider, 'codex-cli');
+    assert.equal(completion.model, 'gpt-5.6-sol');
+    assert.equal(completion.decision.type, 'answer');
+    assert.equal(backendReads, 1);
+    assert.equal(modelCalls, 2);
+  } finally {
+    if (previousProvider === undefined) delete process.env.ADMIN_AI_PROVIDER; else process.env.ADMIN_AI_PROVIDER = previousProvider;
+    if (previousSocket === undefined) delete process.env.ADMIN_AI_CODEX_SOCKET; else process.env.ADMIN_AI_CODEX_SOCKET = previousSocket;
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await rm(folder, { recursive: true, force: true });
+  }
 });

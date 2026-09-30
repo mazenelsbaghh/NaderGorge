@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_SPEC = importlib.util.spec_from_file_location(
@@ -64,3 +66,23 @@ def test_messenger_pages_are_rendered_with_page_scoped_credentials(
         assert rendered[f"{prefix}__AccessToken"] == f"token-{page_number}"
         assert rendered[f"{prefix}__HumanAgentEnabled"] == "false"
     assert rendered["AI_MEDIA_RELAY_SECRET"] == "ai-media-relay-secret"
+    assert rendered["ADMIN_AI_PROVIDER"] == "gemini"
+    assert rendered["AI_ADMIN_AGENT_RUNNER_NODE"] == ""
+    assert rendered["ADMIN_AI_ENABLED"] == "false"
+    assert rendered["AdminAI__Enabled"] == "false"
+
+    source["ADMIN_AI_PROVIDER"] = "codex-cli"
+    codex_rendered = dict(
+        line.split("=", 1) for line in build_app_env.render(source, secrets)
+    )
+    assert codex_rendered["ADMIN_AI_PROVIDER"] == "codex-cli"
+    assert codex_rendered["AI_ADMIN_AGENT_RUNNER_NODE"] == "node-3"
+    assert codex_rendered["ADMIN_AI_CODEX_SOCKET"] == "/run/admin-ai/codex.sock"
+
+    source["ADMIN_AI_PROVIDER"] = "unknown"
+    with pytest.raises(ValueError, match="unsupported ADMIN_AI_PROVIDER"):
+        build_app_env.render(source, secrets)
+    source["ADMIN_AI_PROVIDER"] = "codex-cli"
+    source["AI_ADMIN_CODEX_MODEL"] = "bad model"
+    with pytest.raises(ValueError, match="invalid AI_ADMIN_CODEX_MODEL"):
+        build_app_env.render(source, secrets)

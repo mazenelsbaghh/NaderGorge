@@ -129,23 +129,29 @@ export function validateYouTubeInitialization(initialization: Uint8Array): void 
   if (offset !== bytes.length || !boxes.has('ftyp') || !boxes.has('moov')) throw new YouTubeHlsError('unsupported-source');
 }
 
-function mediaPlaylist(track: YouTubeHlsTrack): string {
+function mediaPlaylist(track: YouTubeHlsTrack, source: YouTubeHlsSource, sessionId: string, relay: boolean): string {
   const { format, segments } = track;
   // Repeating signed URLs can otherwise turn a bounded index into an enormous response.
-  if (segments.length * (format.url.length + 90) > 8 * 1024 * 1024) throw new YouTubeHlsError('unsupported-source');
+  if (!relay && segments.length * (format.url.length + 90) > 8 * 1024 * 1024) throw new YouTubeHlsError('unsupported-source');
   const targetDuration = Math.ceil(Math.max(...segments.map(segment => segment.duration)));
+  const media = format.height ? String(format.height) : 'audio';
+  const relayUri = (part: string) => `/api/video/youtube-hls?s=${encodeURIComponent(sessionId)}&v=${source.version}&media=${media}&part=${part}`;
   const lines = ['#EXTM3U', '#EXT-X-VERSION:7', `#EXT-X-TARGETDURATION:${targetDuration}`,
     '#EXT-X-MEDIA-SEQUENCE:0', '#EXT-X-PLAYLIST-TYPE:VOD',
-    `#EXT-X-MAP:URI="${format.url}",BYTERANGE="${format.initRange.end - format.initRange.start + 1}@${format.initRange.start}"`];
-  for (const segment of segments) lines.push(`#EXTINF:${segment.duration.toFixed(9)},`,
-    `#EXT-X-BYTERANGE:${segment.length}@${segment.offset}`, format.url);
+    relay ? `#EXT-X-MAP:URI="${relayUri('init')}"`
+      : `#EXT-X-MAP:URI="${format.url}",BYTERANGE="${format.initRange.end - format.initRange.start + 1}@${format.initRange.start}"`];
+  for (const [index, segment] of segments.entries()) {
+    lines.push(`#EXTINF:${segment.duration.toFixed(9)},`);
+    if (relay) lines.push(relayUri(String(index)));
+    else lines.push(`#EXT-X-BYTERANGE:${segment.length}@${segment.offset}`, format.url);
+  }
   return [...lines, '#EXT-X-ENDLIST', ''].join('\n');
 }
 
-function masterPlaylist(source: YouTubeHlsSource, sessionId: string, quality?: string): string {
+function masterPlaylist(source: YouTubeHlsSource, sessionId: string, quality?: string, relay = false): string {
   const videos = quality === undefined ? source.videos : source.videos.filter(track => String(track.format.height) === quality);
   if (!videos.length) throw new YouTubeHlsError('invalid-playlist');
-  const localUri = (playlist: string) => `/api/video/youtube-hls?s=${encodeURIComponent(sessionId)}&playlist=${playlist}&v=${source.version}`;
+  const localUri = (playlist: string) => `/api/video/youtube-hls?s=${encodeURIComponent(sessionId)}&playlist=${playlist}&v=${source.version}${relay ? '&relay=1' : ''}`;
   const lines = ['#EXTM3U', '#EXT-X-VERSION:7', '#EXT-X-INDEPENDENT-SEGMENTS',
     `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="${localUri('audio')}"`];
   for (const { format } of videos) {
@@ -155,16 +161,31 @@ function masterPlaylist(source: YouTubeHlsSource, sessionId: string, quality?: s
 }
 
 export function getYouTubeHlsPlaylist(source: YouTubeHlsSource, request: {
-  sessionId: string; playlist: string; quality?: string;
+  sessionId: string; playlist: string; quality?: string; relay?: boolean;
 }): string {
   if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(request.sessionId)
     || (request.quality !== undefined && !source.qualities.some(quality => String(quality.height) === request.quality))) {
     throw new YouTubeHlsError('invalid-playlist');
   }
   if (source.expiresAt <= Date.now()) throw new YouTubeHlsError('source-expired');
-  if (request.playlist === 'master') return masterPlaylist(source, request.sessionId, request.quality);
-  if (request.playlist === 'audio') return mediaPlaylist(source.audio);
+  if (request.playlist === 'master') return masterPlaylist(source, request.sessionId, request.quality, request.relay);
+  if (request.playlist === 'audio') return mediaPlaylist(source.audio, source, request.sessionId, Boolean(request.relay));
   const track = source.videos.find(video => String(video.format.height) === request.playlist);
   if (!track) throw new YouTubeHlsError('invalid-playlist');
-  return mediaPlaylist(track);
+  return mediaPlaylist(track, source, request.sessionId, Boolean(request.relay));
+}
+
+export function getYouTubeHlsMediaRange(source: YouTubeHlsSource, media: string, part: string): { url: URL; range: YouTubeByteRange; contentLength: number } {
+  if (source.expiresAt <= Date.now()) throw new YouTubeHlsError('source-expired');
+  const track = media === 'audio' ? source.audio : source.videos.find(video => String(video.format.height) === media);
+  if (!track || (part !== 'init' && !/^(0|[1-9]\d{0,4})$/.test(part))) throw new YouTubeHlsError('invalid-playlist');
+  const range = part === 'init' ? track.format.initRange : (() => {
+    const segment = track.segments[Number(part)];
+    if (!segment) throw new YouTubeHlsError('invalid-playlist');
+    return { start: segment.offset, end: segment.offset + segment.length - 1 };
+  })();
+  const length = range.end - range.start + 1;
+  if (!Number.isSafeInteger(length) || length <= 0 || length > 16 * 1024 * 1024
+    || range.end >= track.format.contentLength) throw new YouTubeHlsError('unsupported-source');
+  return { url: youTubeMediaUrl(track.format.url), range, contentLength: track.format.contentLength };
 }

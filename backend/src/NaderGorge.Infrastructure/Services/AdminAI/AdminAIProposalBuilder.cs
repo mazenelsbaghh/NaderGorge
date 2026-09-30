@@ -121,7 +121,7 @@ public sealed class AdminAIProposalBuilder : IAdminAIProposalBuilder
 
     private static void ValidatePreview(AdminAIActionPreview preview)
     {
-        if (string.IsNullOrWhiteSpace(preview.TargetType) || preview.TargetType.Length > 100 || string.IsNullOrWhiteSpace(preview.TargetReference) || preview.TargetReference.Length > 200 || string.IsNullOrWhiteSpace(preview.StateFingerprint) || preview.StateFingerprint.Length > 64)
+        if (string.IsNullOrWhiteSpace(preview.TargetType) || preview.TargetType.Length > 100 || string.IsNullOrWhiteSpace(preview.TargetReference) || preview.TargetReference.Length > 200 || string.IsNullOrWhiteSpace(preview.StateFingerprint) || preview.StateFingerprint.Length > 64 || !StringComparer.Ordinal.Equals(preview.StateFingerprint, preview.StateFingerprint.Trim()))
             throw new InvalidOperationException("Authoritative action preview returned an unsafe contract.");
     }
     private static AdminAIProposalDto Dto(AdminAIActionProposal p, AdminAIActionPreview v, string? phrase) => new(p.Id, p.CapabilityKey, p.SafeTargetType, p.SafeTargetReference, p.PrimaryRisk, p.ConfirmationType, v.Current, v.Requested, v.Effect, p.ExpiresAt, p.Status, p.Version, phrase);

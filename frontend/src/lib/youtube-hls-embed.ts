@@ -20,7 +20,7 @@ export function generateYouTubeHlsEmbedHtml(playlistSource: string, studentName:
 </style></head><body oncontextmenu="return false"><div id="wrap">
 <video id="video" playsinline webkit-playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noremoteplayback"></video>
 <div id="wm"><b>Massar Academy</b><br>${escapeHtml(studentName)}<br><small>${escapeHtml(studentPhone)}</small></div>
-</div><script>
+</div><script src="/vendor/hlsjs/hls.min.js"></script><script>
 (function(){
 'use strict';
 var source=${JSON.stringify(playlistSource)};
@@ -34,8 +34,8 @@ ${createDevToolsSuspensionScript('suspendYouTubeHls')}
 const youtubeHlsPlayerScript = String.raw`
 var video=document.getElementById('video');
 var serverClockStarted=performance.now(), lastRenewedAt=serverClock, expiresAt=0, sessionExpiresAt=0;
-var version='', levels=[], duration=0, quality='auto', readySent=false, terminal=false, lastMediaTime=0;
-var pendingPlayback=null, renewalPending=false, reloadAfterRenewal=false, recoveryUsed=false;
+var version='', levels=[], duration=0, quality='auto', readySent=false, terminal=false, lastMediaTime=0, hls=null;
+var pendingPlayback=null, renewalPending=false, reloadAfterRenewal=false, recoveryUsed=false, mediaErrorRecoveryUsed=false;
 var renewalTimer=null, loadTimer=null, stallTimer=null, requestController=null;
 function post(type,payload){parent.postMessage({source:'video-embed',type:type,data:payload||{}},location.origin);}
 function now(){return serverClock+Math.max(0,performance.now()-serverClockStarted);}
@@ -46,7 +46,7 @@ function stopRequests(){
   renewalTimer=loadTimer=stallTimer=null;
   if(requestController){requestController.abort();requestController=null;}
 }
-function suspendYouTubeHls(){terminal=true;stopRequests();video.pause();video.removeAttribute('src');video.load();}
+function suspendYouTubeHls(){terminal=true;stopRequests();if(hls){hls.destroy();hls=null;}video.pause();video.removeAttribute('src');video.load();}
 function fail(status,message,phase){
   if(terminal)return;
   suspendYouTubeHls();
@@ -94,10 +94,13 @@ function loadPlaylist(){
   if(terminal)return;
   pendingPlayback=pendingPlayback||capturePlayback();
   var playlist=new URL(source,location.origin);playlist.searchParams.set('v',version);
-  if(quality!=='auto')playlist.searchParams.set('quality',quality);
+  if(hls)playlist.searchParams.set('relay','1');
+  if(quality!=='auto'&&!hls)playlist.searchParams.set('quality',quality);
   post('stateChange',{provider:'youtube-hls',state:3,isPlaying:false});
   clearTimer(stallTimer);stallTimer=null;
-  armLoadDeadline();video.src=playlist.href;video.load();emitQuality();
+  armLoadDeadline();
+  if(hls)hls.loadSource(playlist.href);else{video.src=playlist.href;video.load();}
+  emitQuality();
 }
 function applyMetadata(metadata,forceReload){
   if(!metadata||!Array.isArray(metadata.qualities)||typeof metadata.version!=='string'||!metadata.version
@@ -143,8 +146,15 @@ function setQuality(selected){
   if(selected!=='auto'&&!levels.some(function(level){return level.id===selected;}))return;
   quality=selected;
   if(renewalPending||now()>=nextRenewalAt()){
-    pendingPlayback=pendingPlayback||capturePlayback();reloadAfterRenewal=true;requestRenewal();
-  }else loadPlaylist();
+    pendingPlayback=pendingPlayback||capturePlayback();reloadAfterRenewal=true;requestRenewal();return;
+  }
+  if(hls&&hls.levels&&hls.levels.length){
+    var selectedIndex=selected==='auto'?-1:hls.levels.findIndex(function(level){return String(level.height)===selected;});
+    if(selectedIndex>=0||selected==='auto'){
+      hls.currentLevel=selectedIndex;hls.nextLevel=selectedIndex;emitQuality();return;
+    }
+  }
+  loadPlaylist();
 }
 video.addEventListener('loadedmetadata',function(){
   if(terminal)return;
@@ -190,9 +200,34 @@ window.addEventListener('message',function(event){
     case'getQualityLevels':emitQuality();break;
   }
 });
-if(!video.canPlayType('application/vnd.apple.mpegurl')){
-  fail(0,'وضع الفيديو ده مش مدعوم في المتصفح الحالي. جرّب Safari على iPhone أو Mac، أو تواصل مع الدعم لتغيير وضع تشغيل الدرس.','unsupported_browser');
-}else{
+if(window.Hls&&window.Hls.isSupported()){
+  try{
+    hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,startLevel:-1});
+    hls.attachMedia(video);
+    hls.on(window.Hls.Events.MANIFEST_PARSED,function(){
+      if(quality!=='auto'){
+        var selectedIndex=hls.levels.findIndex(function(level){return String(level.height)===quality;});
+        if(selectedIndex>=0){hls.currentLevel=selectedIndex;hls.nextLevel=selectedIndex;}
+      }
+      emitQuality();
+    });
+    hls.on(window.Hls.Events.FRAG_BUFFERED,function(){
+      clearTimer(loadTimer);loadTimer=null;
+      if(pendingPlayback)restorePlayback();
+    });
+    hls.on(window.Hls.Events.LEVEL_SWITCHED,emitQuality);
+    hls.on(window.Hls.Events.ERROR,function(_,data){
+      if(!data||!data.fatal||terminal)return;
+      if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&!mediaErrorRecoveryUsed){
+        mediaErrorRecoveryUsed=true;hls.recoverMediaError();return;
+      }
+      recoverMedia();
+    });
+    post('providerLoaded',{provider:'youtube-hls'});fetchMetadata(false);
+  }catch(error){fail(0,'تعذر بدء مشغل HLS على هذا الجهاز. أعد المحاولة بعد تحديث المتصفح.','hlsjs_bootstrap');}
+}else if(video.canPlayType('application/vnd.apple.mpegurl')){
   post('providerLoaded',{provider:'youtube-hls'});fetchMetadata(false);
+}else{
+  fail(0,'المتصفح لا يدعم تشغيل HLS. حدّث المتصفح ثم أعد المحاولة.','unsupported_browser');
 }
 `;

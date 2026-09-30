@@ -26,6 +26,7 @@
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@google/genai": "^1.47.0",
+    "@openai/codex": "0.147.0",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.20.0",
     "@whiskeysockets/baileys": "7.0.0-rc13",

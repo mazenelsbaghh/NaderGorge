@@ -13,7 +13,7 @@ public sealed record GetGiftStudentsLookupQuery(
     GiftTargetType? TargetType = null,
     Guid? TargetId = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
 public sealed record GetGiftTeachersLookupQuery(string? Search = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
-public sealed record GetGiftTargetsLookupQuery(GiftTargetType TargetType, Guid? TeacherId = null, string? Search = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
+public sealed record GetGiftTargetsLookupQuery(GiftTargetType TargetType, Guid? TeacherId = null, string? Search = null, Guid? ParentId = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
 
 public sealed class GetGiftStudentsLookupQueryHandler : IRequestHandler<GetGiftStudentsLookupQuery, ApiResponse<IReadOnlyList<GiftLookupDto>>>
 {
@@ -29,7 +29,7 @@ public sealed class GetGiftStudentsLookupQueryHandler : IRequestHandler<GetGiftS
             query = query.Where(x => x.FullName.ToLower().Contains(search) || x.PhoneNumber.Contains(search));
         }
         var rows = await query.OrderBy(x => x.FullName).Take(50)
-            .Select(x => new GiftLookupDto(x.Id, x.FullName, x.PhoneNumber, null, null)).ToListAsync(ct);
+            .Select(x => new GiftLookupDto(x.Id, x.FullName, x.PhoneNumber, null, null, false)).ToListAsync(ct);
 
         if (!request.TargetType.HasValue || !request.TargetId.HasValue ||
             request.TargetType is GiftTargetType.GeneralBalance or GiftTargetType.TeacherBalance)
@@ -72,7 +72,7 @@ public sealed class GetGiftTeachersLookupQueryHandler : IRequestHandler<GetGiftT
             query = query.Where(x => x.User.FullName.ToLower().Contains(search));
         }
         var rows = await query.OrderBy(x => x.User.FullName).Take(50)
-            .Select(x => new GiftLookupDto(x.Id, x.User.FullName, x.Specialization, null, null)).ToListAsync(ct);
+            .Select(x => new GiftLookupDto(x.Id, x.User.FullName, x.Specialization, null, null, false)).ToListAsync(ct);
         return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
     }
 }
@@ -89,49 +89,39 @@ public sealed class GetGiftTargetsLookupQueryHandler : IRequestHandler<GetGiftTa
         {
             GiftTargetType.Package => await _db.Packages.AsNoTracking()
                 .Where(x => x.IsActive && x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId) && (search == null || x.Name.ToLower().Contains(search)))
-                .OrderBy(x => x.Name).Take(50).Select(x => new GiftLookupDto(x.Id, x.Name, x.Teacher.User.FullName, null, null)).ToListAsync(ct),
+                .OrderBy(x => x.Name).Take(50).Select(x => new GiftLookupDto(x.Id, x.Name, x.Teacher.User.FullName, null, null, false)).ToListAsync(ct),
             GiftTargetType.Term => await _db.Terms.AsNoTracking()
                 .Where(x => x.Package.IsActive && x.Package.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
-                    (!x.IsSystemContainer || x.Package.ContentMode == PackageContentMode.SectionWithLessons) &&
+                    (request.ParentId.HasValue || !x.IsSystemContainer || x.Package.ContentMode == PackageContentMode.SectionWithLessons) &&
+                    (!request.ParentId.HasValue || x.PackageId == request.ParentId) &&
                     (!request.TeacherId.HasValue || x.Package.TeacherId == request.TeacherId) &&
                     (search == null || x.Title.ToLower().Contains(search) || x.Package.Name.ToLower().Contains(search)))
-                .OrderBy(x => x.Package.Name).ThenBy(x => x.Order).Take(50)
-                .Select(x => new GiftLookupDto(x.Id, x.IsSystemContainer ? x.Package.Name : x.Title, x.Package.Name, null, null)).ToListAsync(ct),
+                .OrderBy(x => x.Package.Name).ThenBy(x => x.Order).Take(request.ParentId.HasValue ? 500 : 50)
+                .Select(x => new GiftLookupDto(x.Id, x.IsSystemContainer ? "محتوى الباقة" : x.Title, x.Package.Name, null, null, x.IsSystemContainer)).ToListAsync(ct),
             GiftTargetType.ContentSection => await _db.ContentSections.AsNoTracking()
                 .Where(x => x.Term.Package.IsActive && x.Term.Package.ArchiveMode == ContentArchiveMode.None && x.Term.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
-                    (!x.IsSystemContainer || x.Term.Package.ContentMode == PackageContentMode.LessonsOnly) &&
+                    (request.ParentId.HasValue || !x.IsSystemContainer || x.Term.Package.ContentMode == PackageContentMode.LessonsOnly) &&
+                    (!request.ParentId.HasValue || x.TermId == request.ParentId) &&
                     (!request.TeacherId.HasValue || x.Term.Package.TeacherId == request.TeacherId) &&
                     (search == null || x.Title.ToLower().Contains(search) || x.Term.Title.ToLower().Contains(search) || x.Term.Package.Name.ToLower().Contains(search)))
-                .OrderBy(x => x.Term.Package.Name).ThenBy(x => x.Term.Order).ThenBy(x => x.Order).Take(50)
-                .Select(x => new GiftLookupDto(x.Id, x.IsSystemContainer ? x.Term.Package.Name : x.Title, x.Term.Package.Name, null, null)).ToListAsync(ct),
+                .OrderBy(x => x.Term.Package.Name).ThenBy(x => x.Term.Order).ThenBy(x => x.Order).Take(request.ParentId.HasValue ? 500 : 50)
+                .Select(x => new GiftLookupDto(x.Id, x.IsSystemContainer ? "حصص مباشرة" : x.Title, x.Term.Package.Name, null, null, x.IsSystemContainer)).ToListAsync(ct),
             GiftTargetType.Lesson => await _db.Lessons.AsNoTracking()
-                .Where(x => x.ContentSection.Term.Package.ArchiveMode == ContentArchiveMode.None && x.ContentSection.Term.ArchiveMode == ContentArchiveMode.None && x.ContentSection.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.ContentSection.Term.Package.Name, null, null)).ToListAsync(ct),
+                .Where(x => x.ContentSection.Term.Package.IsActive && x.ContentSection.Term.Package.ArchiveMode == ContentArchiveMode.None && x.ContentSection.Term.ArchiveMode == ContentArchiveMode.None && x.ContentSection.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None && (!request.ParentId.HasValue || x.ContentSectionId == request.ParentId) && (!request.TeacherId.HasValue || x.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
+                .OrderBy(x => x.Order).ThenBy(x => x.Title).Take(request.ParentId.HasValue ? 500 : 50).Select(x => new GiftLookupDto(x.Id, x.Title, x.ContentSection.Term.Package.Name, null, null, false)).ToListAsync(ct),
             GiftTargetType.Video => await _db.LessonVideos.AsNoTracking()
-                .Where(x => x.IsActive && x.Lesson.ContentSection.Term.Package.ArchiveMode == ContentArchiveMode.None && x.Lesson.ContentSection.Term.ArchiveMode == ContentArchiveMode.None && x.Lesson.ContentSection.ArchiveMode == ContentArchiveMode.None && x.Lesson.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.Lesson.Title, null, null)).ToListAsync(ct),
+                .Where(x => x.IsActive && x.Lesson.ContentSection.Term.Package.IsActive && x.Lesson.ContentSection.Term.Package.ArchiveMode == ContentArchiveMode.None && x.Lesson.ContentSection.Term.ArchiveMode == ContentArchiveMode.None && x.Lesson.ContentSection.ArchiveMode == ContentArchiveMode.None && x.Lesson.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None && (!request.ParentId.HasValue || x.LessonId == request.ParentId) && (!request.TeacherId.HasValue || x.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
+                .OrderBy(x => x.Order).ThenBy(x => x.Title).Take(request.ParentId.HasValue ? 500 : 50).Select(x => new GiftLookupDto(x.Id, x.Title, x.Lesson.Title, null, null, false)).ToListAsync(ct),
             GiftTargetType.Exam => await _db.Exams.AsNoTracking()
                 .Where(x => x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.CreatedByTeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.CreatedByTeacher.User.FullName, null, null)).ToListAsync(ct),
+                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.CreatedByTeacher.User.FullName, null, null, false)).ToListAsync(ct),
             _ => new List<GiftLookupDto>()
         };
 
-        var rowsWithScopes = new List<GiftLookupDto>(rows.Count);
-        foreach (var row in rows)
-        {
-            rowsWithScopes.Add(row with { AcademicScopes = await ResolveScopeSummariesAsync(_db, request.TargetType, row.Id, ct) });
-        }
+        if (rows.Count == 0)
+            return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
 
-        return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rowsWithScopes);
-    }
-
-    private static async Task<IReadOnlyList<AcademicScopeSummaryDto>?> ResolveScopeSummariesAsync(
-        IAppDbContext db,
-        GiftTargetType targetType,
-        Guid targetId,
-        CancellationToken ct)
-    {
-        var ownerType = targetType switch
+        var ownerType = request.TargetType switch
         {
             GiftTargetType.Package => StudentFacingScopeOwnerType.Package,
             GiftTargetType.Term => StudentFacingScopeOwnerType.Term,
@@ -141,15 +131,18 @@ public sealed class GetGiftTargetsLookupQueryHandler : IRequestHandler<GetGiftTa
             GiftTargetType.Exam => StudentFacingScopeOwnerType.Exam,
             _ => (StudentFacingScopeOwnerType?)null
         };
-
         if (!ownerType.HasValue)
-            return null;
+            return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
 
-        var scopes = await db.StudentFacingAcademicScopes
-            .AsNoTracking()
-            .Where(x => x.OwnerType == ownerType.Value && x.OwnerId == targetId)
-            .ToListAsync(ct);
-
-        return AcademicScopeService.ToScopeSummaries(scopes);
+        var ids = rows.Select(row => row.Id).ToArray();
+        var scopesByOwner = (await _db.StudentFacingAcademicScopes.AsNoTracking()
+                .Where(scope => scope.OwnerType == ownerType.Value && ids.Contains(scope.OwnerId))
+                .ToListAsync(ct))
+            .GroupBy(scope => scope.OwnerId)
+            .ToDictionary(group => group.Key, group => AcademicScopeService.ToScopeSummaries(group));
+        return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows.Select(row => row with
+        {
+            AcademicScopes = scopesByOwner.GetValueOrDefault(row.Id) ?? []
+        }).ToList());
     }
 }

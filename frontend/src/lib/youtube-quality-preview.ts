@@ -32,7 +32,7 @@ export function youtubeQualityPreviewStyles({ bottomCoverPercent = 0, mobileBott
     #quality-start-mask { top:48px; bottom:76px; }
     body.quality-started #quality-start-mask { display:none; }
     body.quality-open #click-overlay { clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,var(--quality-gear-left,26px) 2px,calc(var(--quality-gear-left,26px) + 44px) 2px,calc(var(--quality-gear-left,26px) + 44px) 46px,var(--quality-gear-left,26px) 46px,var(--quality-gear-left,26px) 2px,0 0,var(--menu-left) 48px,calc(var(--menu-left) + var(--menu-width)) 48px,calc(var(--menu-left) + var(--menu-width)) calc(100% - 24px),var(--menu-left) calc(100% - 24px),var(--menu-left) 48px,0 0); }
-    body.quality-open #quality-bottom-mask { clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,var(--menu-left) 0,calc(var(--menu-left) + var(--menu-width)) 0,calc(var(--menu-left) + var(--menu-width)) calc(100% - 24px),var(--menu-left) calc(100% - 24px),var(--menu-left) 0); }
+    /* Keep the configured cover solid while settings are open: cutting a menu hole here also exposes native controls and links. */
   `;
 }
 
