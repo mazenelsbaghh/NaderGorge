@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 student-note authoritative replay slice
+
+- `AddStudentNoteCommand` now accepts the AdminAI execution identity while retaining the original Admin call. A PostgreSQL serializable transaction commits the note and a unique, payload-bound receipt together. The receipt stores a SHA-256 request digest and note identity, not the note text; it survives later note deletion. Reusing the identity with a different request is rejected. An AdminAI result resolver reads the receipt after an ambiguous completion without issuing another write.
+- A disposable PostgreSQL 16.10 database was migrated from the current EF model. Two new integration tests passed for replay after deletion, conflicting payload, eight concurrent requests with one resulting note, and resolver identity binding. The complete AdminAI PostgreSQL group passed 29/29 after the final code review. The focused AdminAI application group passed 258/258, `make ops-db-guard` found no pending EF model change, and the AdminAI inventory gate passed 10/10 frontend graph plus 24/24 Python checks.
+- This closes one candidate operation's durable replay gap. The production registry remains read-only and the remaining blocked Admin mutations, browser/provider/performance gates, and owner acceptance remain open.
+
 ## 2026-09-30 watch-request operation recovery
 
 - The original watch-approval command now accepts an optional operation identifier. It records that identifier and the request ID on the persisted `VideoOverride`, with a unique non-null database index. Replaying the same request, actor, reason, and view increment returns success without another view increase or notification; reuse with different inputs fails. AI approvals refuse an unbounded or missing watch event because that path cannot leave a durable override marker.

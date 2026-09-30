@@ -137,6 +137,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
     public DbSet<ParentDeviceToken> ParentDeviceTokens => Set<ParentDeviceToken>();
     public DbSet<StudentNote> StudentNotes => Set<StudentNote>();
+    public DbSet<AuthoritativeOperationReceipt> AuthoritativeOperationReceipts => Set<AuthoritativeOperationReceipt>();
 
     // Phase 2: HR Core
     public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
@@ -1719,6 +1720,16 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(ep => ep.BasicSalary).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(ep => ep.StandardStartTime).IsRequired();
             e.Property(ep => ep.TargetDailyHours).IsRequired();
+        });
+
+        modelBuilder.Entity<AuthoritativeOperationReceipt>(e =>
+        {
+            e.ToTable("authoritative_operation_receipts");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.OperationId).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Scope).HasMaxLength(100).IsRequired();
+            e.Property(item => item.RequestHash).HasMaxLength(64).IsRequired();
+            e.HasIndex(item => item.OperationId).IsUnique();
         });
 
         modelBuilder.Entity<HrIdempotencyRecord>(e =>

@@ -12,7 +12,7 @@ public sealed class AdminAIAddStudentNoteAction(IMediator mediator, IAdminAIActi
 {
     public override string Key => "admin.identity.student-note.create";
     protected override IRequest<ApiResponse> CreateCommand(AdminAIAddStudentNoteInput input, Guid actorId, string operationId) =>
-        new AddStudentNoteCommand(input.StudentId, input.Content, input.IsPinned, actorId);
+        new AddStudentNoteCommand(input.StudentId, input.Content, input.IsPinned, actorId) { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { response.Message }, 1, ["students", "student-notes"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["students", "student-notes"]);

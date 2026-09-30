@@ -1,5 +1,7 @@
 # Feature test evidence
 
+The student-note operation now has a source-bound receipt and recovery resolver. Its two disposable-PostgreSQL tests passed after the final review, and the full AdminAI PostgreSQL integration group passed 29/29. The focused AdminAI application group passed 258/258; the capability inventory gate passed 10/10 frontend graph and 24/24 Python checks. This is candidate coverage only: the production action catalog and remaining acceptance tests still block activation.
+
 Date: 2026-08-12 (Africa/Cairo)
 
 - Backend solution build: passed with 0 warnings and 0 errors.

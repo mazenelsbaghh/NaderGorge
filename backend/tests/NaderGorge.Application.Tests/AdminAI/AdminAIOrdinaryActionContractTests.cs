@@ -32,6 +32,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         var command = Assert.IsType<AddStudentNoteCommand>(mediator.Request);
         Assert.Equal(actor, command.AdminId);
         Assert.Equal(input.StudentId, command.StudentId);
+        Assert.Equal("execution-1", command.OperationId);
         Assert.Equal(1, mediator.SendCalls);
         Assert.Equal(AdminAIExecutionStatus.Succeeded, outcome.Status);
     }
@@ -73,6 +74,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         var command = Assert.IsType<AddStudentNoteCommand>(mediator.Request);
         Assert.Equal(student, command.StudentId);
         Assert.Equal(actor, command.AdminId);
+        Assert.Equal("operation-1", command.OperationId);
 
         var wrongCase = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
             $"{{\"StudentId\":\"{student:D}\",\"content\":\"safe\",\"isPinned\":true}}");
