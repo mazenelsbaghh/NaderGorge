@@ -85,6 +85,14 @@ function exportedObject(sourceFile, name) {
   return null;
 }
 
+function isTypeOnlyReference(node) {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (ts.isTypeQueryNode(parent)) return true;
+    if (ts.isStatement(parent)) return false;
+  }
+  return false;
+}
+
 export function provenServiceMembers(targetFile, exportName, sourceFiles) {
   let imported = false;
   let uncertain = false;
@@ -116,6 +124,7 @@ export function provenServiceMembers(targetFile, exportName, sourceFiles) {
     const visit = (node) => {
       if (ts.isImportDeclaration(node)) return;
       if (ts.isIdentifier(node) && aliases.has(node.text)) {
+        if (isTypeOnlyReference(node)) return;
         const parent = node.parent;
         if (ts.isPropertyAccessExpression(parent) && parent.expression === node) members.add(parent.name.text);
         else if (ts.isElementAccessExpression(parent) && parent.expression === node && ts.isStringLiteral(parent.argumentExpression)) members.add(parent.argumentExpression.text);

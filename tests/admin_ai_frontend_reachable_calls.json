@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 509,
+  "callCount": 490,
   "calls": [
     {
       "method": "DELETE",
@@ -2139,15 +2139,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1427
-      }
-    },
-    {
-      "method": "DELETE",
-      "path": "/admin/devices/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1343
       }
     },
     {
@@ -2319,15 +2310,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1818
-      }
-    },
-    {
-      "method": "DELETE",
-      "path": "/admin/videos/{videoId}/exams/{examId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2088
       }
     },
     {
@@ -2571,15 +2553,6 @@
       "source": {
         "file": "frontend/src/app/admin/emthntak/page.tsx",
         "line": 20
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/essays/pending",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1487
       }
     },
     {
@@ -3376,15 +3349,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/users/{id}/devices",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1315
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/users/students/{id}/profile",
       "dynamic": true,
       "source": {
@@ -4033,51 +3997,6 @@
     },
     {
       "method": "GET",
-      "path": "/teacher/finance/account",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 427
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/finance/calendar",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 449
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/finance/calendar/export",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 457
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/finance/payouts",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 465
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/finance/transactions",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 438
-      }
-    },
-    {
-      "method": "GET",
       "path": "/v1/assistant/tasks/my/{taskId}",
       "dynamic": true,
       "source": {
@@ -4384,15 +4303,6 @@
     },
     {
       "method": "POST",
-      "path": "/admin/bunny/videos/{assetId}/refresh-status",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1926
-      }
-    },
-    {
-      "method": "POST",
       "path": "/admin/chapters/{chapterId}/regenerate-mindmap",
       "dynamic": true,
       "source": {
@@ -4488,24 +4398,6 @@
       "source": {
         "file": "frontend/src/app/admin/emthntak/page.tsx",
         "line": 40
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/essays/{essaySubmissionId}/grade",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1498
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/exams/{examId}/questions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2159
       }
     },
     {
@@ -6112,15 +6004,6 @@
     },
     {
       "method": "POST",
-      "path": "/teacher/finance/payouts",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 472
-      }
-    },
-    {
-      "method": "POST",
       "path": "/v1/assistant/tasks/my/{taskId}/comments",
       "dynamic": true,
       "source": {
@@ -6162,15 +6045,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1095
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/whatsapp/admin/test-message",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1086
       }
     },
     {
@@ -6259,15 +6133,6 @@
       "path": "<dynamic>",
       "dynamic": true,
       "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1395
-      }
-    },
-    {
-      "method": "POST",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
         "file": "frontend/src/services/code-service.ts",
         "line": 76
       }
@@ -6333,15 +6198,6 @@
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
         "line": 62
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/exams/{examId}/questions/{examQuestionId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2215
       }
     },
     {
@@ -6432,15 +6288,6 @@
       "source": {
         "file": "frontend/src/services/media-service.ts",
         "line": 111
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/overrides/set-watch-count",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2243
       }
     },
     {
@@ -6544,15 +6391,6 @@
     },
     {
       "method": "PUT",
-      "path": "/admin/users/{id}/roles",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1223
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/admin/users/{id}/status",
       "dynamic": true,
       "source": {
@@ -6594,15 +6432,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1805
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/admin/videos/{videoId}/exam",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2081
       }
     },
     {
@@ -7167,5 +6996,5 @@
       }
     }
   ],
-  "digest": "9d943485d3476ded8048748f2c6b742949859a4aebc9e2aba44255ac591f19b6"
+  "digest": "074ee672e287499638bf47b74fb045e4ee66a2b98eec492abdde854223331def"
 }

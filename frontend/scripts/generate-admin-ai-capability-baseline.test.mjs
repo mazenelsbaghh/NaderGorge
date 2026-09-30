@@ -78,6 +78,19 @@ test('AdminAI graph keeps shared subscriber methods without unrelated teacher ac
   assert.ok(!routes.includes('POST /teacher/profile/upload-image'));
 });
 
+test('AdminAI graph excludes service methods referenced only by TypeScript types', () => {
+  const target = fileURLToPath(new URL('../src/services/student-service.ts', import.meta.url));
+  const importer = fileURLToPath(new URL('../src/components/admin/QuestionEditor.tsx', import.meta.url));
+  const source = ts.createSourceFile(importer, `
+    import { studentService } from '@/services/student-service';
+    type Result = ReturnType<typeof studentService.getProfile>;
+    void studentService.uploadAudio('sample');
+  `, ts.ScriptTarget.Latest, true);
+
+  assert.deepEqual([...provenServiceMembers(target, 'studentService', new Map([[importer, source]]))],
+    ['uploadAudio']);
+});
+
 test('AdminAI graph keeps all service methods when the imported object escapes', () => {
   const target = fileURLToPath(new URL('../src/services/student-service.ts', import.meta.url));
   const importer = fileURLToPath(new URL('../src/components/admin/QuestionEditor.tsx', import.meta.url));

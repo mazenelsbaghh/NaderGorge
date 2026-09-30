@@ -20,6 +20,13 @@ type LessonCommentsModerationTabProps = {
 
 export type LessonCommentsModerationApi = Pick<typeof adminService, 'getLessonCommentsForModeration' | 'approveLessonComment' | 'rejectLessonComment' | 'replyToLessonComment'>;
 
+const defaultModerationApi: LessonCommentsModerationApi = {
+  getLessonCommentsForModeration: adminService.getLessonCommentsForModeration,
+  approveLessonComment: adminService.approveLessonComment,
+  rejectLessonComment: adminService.rejectLessonComment,
+  replyToLessonComment: adminService.replyToLessonComment,
+};
+
 const FILTER_OPTIONS: FilterStatus[] = ['All', 'Pending', 'Approved', 'Rejected'];
 
 const filterLabel: Record<FilterStatus, string> = {
@@ -54,7 +61,7 @@ export function LessonCommentsModerationTab({
   lessonId,
   pendingCount = 0,
   onRefresh,
-  moderationApi = adminService,
+  moderationApi = defaultModerationApi,
 }: LessonCommentsModerationTabProps) {
   const [comments, setComments] = useState<ModerationLessonCommentDto[]>([]);
   const [loading, setLoading] = useState(true);

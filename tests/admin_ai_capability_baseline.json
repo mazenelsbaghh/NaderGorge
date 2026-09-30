@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "3eddeb9c7bc6d9311e4a64b21915a2acc5d4f7fb52e3e0f4b0fe75dd3d820d90"
+      "digest": "f5b70f6e0b9af17bff14db7bbd3381ac7c7b17b882c317c4aa5434bbaaf953b0"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -14631,36 +14631,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-devices-id:frontend-src-services-admin-service-ts:1343",
-      "kind": "frontend-call",
-      "method": "DELETE",
-      "route": "/admin/devices/{id}",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.RemoveDevice",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1343
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:delete:admin-exams-assessmentid-attempts-attemptid:frontend-src-components-admin-assessmentattemptreview-tsx:74",
       "kind": "frontend-call",
       "method": "DELETE",
@@ -15197,36 +15167,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1719
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:delete:admin-videos-videoid-exams-examid:frontend-src-services-admin-service-ts:2088",
-      "kind": "frontend-call",
-      "method": "DELETE",
-      "route": "/admin/videos/{videoId}/exams/{examId}",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.UnlinkVideoExam",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2088
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -15807,33 +15747,6 @@
       "source": {
         "file": "frontend/src/app/admin/emthntak/page.tsx",
         "line": 20
-      }
-    },
-    {
-      "id": "fe:get:admin-essays-pending:frontend-src-services-admin-service-ts:1487",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/admin/essays/pending",
-      "effect": "read",
-      "domain": "other",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "diagnostic:AdminController.GetPendingEssays",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1487
       }
     },
     {
@@ -18240,33 +18153,6 @@
       }
     },
     {
-      "id": "fe:get:admin-users-id-devices:frontend-src-services-admin-service-ts:1315",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/admin/users/{id}/devices",
-      "effect": "read",
-      "domain": "identity",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "diagnostic:AdminController.GetUserDevices",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1315
-      }
-    },
-    {
       "id": "fe:get:admin-users-students-id-profile:frontend-src-services-admin-service-ts:1310",
       "kind": "frontend-call",
       "method": "GET",
@@ -20616,141 +20502,6 @@
       }
     },
     {
-      "id": "fe:get:teacher-finance-account:frontend-src-services-finance-service-ts:427",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/account",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 427
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-calendar-export:frontend-src-services-finance-service-ts:457",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/calendar/export",
-      "effect": "export",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 457
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-calendar:frontend-src-services-finance-service-ts:449",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/calendar",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 449
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-payouts:frontend-src-services-finance-service-ts:465",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/payouts",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 465
-      }
-    },
-    {
-      "id": "fe:get:teacher-finance-transactions:frontend-src-services-finance-service-ts:438",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/finance/transactions",
-      "effect": "read",
-      "domain": "finance",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 438
-      }
-    },
-    {
       "id": "fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74",
       "kind": "frontend-call",
       "method": "GET",
@@ -21366,36 +21117,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-videos-assetid-refresh-status:frontend-src-services-admin-service-ts:1926",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/bunny/videos/{assetId}/refresh-status",
-      "effect": "external-side-effect",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.RefreshBunnyVideoStatus",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1926
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:admin-chapters-chapterid-regenerate-mindmap:frontend-src-services-admin-service-ts:1959",
       "kind": "frontend-call",
       "method": "POST",
@@ -21752,66 +21473,6 @@
       "source": {
         "file": "frontend/src/app/admin/emthntak/page.tsx",
         "line": 40
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:admin-essays-essaysubmissionid-grade:frontend-src-services-admin-service-ts:1498",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/essays/{essaySubmissionId}/grade",
-      "effect": "mutation",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.GradeEssay",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1498
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:admin-exams-examid-questions:frontend-src-services-admin-service-ts:2159",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/exams/{examId}/questions",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.AddQuestionsToExam",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2159
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25326,36 +24987,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:dynamic:frontend-src-services-admin-service-ts:1395",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "<dynamic>",
-      "effect": "mutation",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1395
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:dynamic:frontend-src-services-code-service-ts:76",
       "kind": "frontend-call",
       "method": "POST",
@@ -27606,36 +27237,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:teacher-finance-payouts:frontend-src-services-finance-service-ts:472",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/teacher/finance/payouts",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 472
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84",
       "kind": "frontend-call",
       "method": "POST",
@@ -27786,36 +27387,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:whatsapp-admin-test-message:frontend-src-services-admin-service-ts:1086",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/whatsapp/admin/test-message",
-      "effect": "external-side-effect",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:WhatsAppController.SendAdminTestMessage",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1086
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:put:admin-auto-repair-control:frontend-src-services-auto-repair-service-ts:35",
       "kind": "frontend-call",
       "method": "PUT",
@@ -27962,36 +27533,6 @@
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
         "line": 62
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:put:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2215",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/exams/{examId}/questions/{examQuestionId}",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.UpdateExamQuestion",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2215
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -28292,36 +27833,6 @@
       "source": {
         "file": "frontend/src/services/media-service.ts",
         "line": 111
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:put:admin-overrides-set-watch-count:frontend-src-services-admin-service-ts:2243",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/overrides/set-watch-count",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.SetWatchCount",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2243
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -28686,36 +28197,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-users-id-roles:frontend-src-services-admin-service-ts:1223",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/users/{id}/roles",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.UpdateUserRoles",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1223
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:put:admin-users-id-status:frontend-src-services-admin-service-ts:1218",
       "kind": "frontend-call",
       "method": "PUT",
@@ -28832,36 +28313,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1705
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:put:admin-videos-videoid-exam:frontend-src-services-admin-service-ts:2081",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/videos/{videoId}/exam",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AdminController.LinkVideoExam",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2081
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29227,5 +28678,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "6cb16bd3d56d7b59f4c9c826b3a37dc7da76b1e4112439f5df2203a5217da87a"
+  "digest": "5afdb75ccb1c0115d12541f94193bddecc909b25e85dd463b0fd6cece0a27fae"
 }
