@@ -157,14 +157,37 @@ public sealed class AdminAIProposalBuilderTests
         Assert.Empty(db.AdminAIActionProposals);
     }
 
+    [Fact]
+    public async Task ProposalResponse_UsesPersistedRedactedPreview()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var turn = new AdminAITurn { ActorAdminUserId = actor, ConversationId = Guid.NewGuid(), CapabilityBaselineId = Guid.NewGuid(), SensitiveDataPolicyVersionId = Guid.NewGuid() };
+        db.Add(turn); await db.SaveChangesAsync();
+        var builder = new AdminAIProposalBuilder(db, new AdminAIConversationTests.AllowAccess(actor),
+            new AdminAICapabilityRegistry([Definition("ordinary")]),
+            AdminAIStrongConfirmationTests.Protector(), new AdminAISensitiveDataPolicy(), new NoChallenge(),
+            [new PreviewOnlyAction(leak: true)], new ConfigurationBuilder().Build());
+
+        var proposal = await builder.BuildAsync(actor, turn.Id, "test.action", new { note = "safe" }, default);
+        var responseJson = System.Text.Json.JsonSerializer.Serialize(proposal);
+        var persisted = Assert.Single(db.AdminAIActionProposals);
+
+        Assert.DoesNotContain("sentinel-secret", responseJson, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", responseJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("sentinel-secret", persisted.SafeCurrentStateJson, StringComparison.Ordinal);
+    }
+
     private const string NestedSchema = """
         {"type":"object","properties":{"target":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"mode":{"type":"string","enum":["up","down"]}},"required":["id"],"additionalProperties":false},"count":{"type":"integer","minimum":1,"maximum":3},"tags":{"type":"array","maxItems":2,"items":{"type":"string","maxLength":5},"uniqueItems":true}},"required":["target"],"additionalProperties":false}
         """;
     private static AdminAICapabilityDefinition Definition(string risk) => new("test.action", "1", "action", risk, risk == "strong" ? "strong" : "ordinary", "{\"type\":\"object\",\"properties\":{\"note\":{\"type\":\"string\"},\"value\":{\"type\":\"integer\"}},\"additionalProperties\":false}", "{}", 1, 4096, 5000, "Fake.Command", ["users"]);
     private sealed class PreviewOnlyAction : IAdminAIActionCapability
     {
+        private readonly bool _leak;
+        public PreviewOnlyAction(bool leak = false) => _leak = leak;
         public string Key => "test.action"; public int PreviewCalls { get; private set; } public int ExecuteCalls { get; private set; }
-        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) { PreviewCalls++; return Task.FromResult(new AdminAIActionPreview("user", "user:1", new { note = "old" }, new { note = "new" }, new { affected = 1 }, new { valid = true }, "state-v1")); }
+        public Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken ct) { PreviewCalls++; return Task.FromResult(new AdminAIActionPreview("user", "user:1", _leak ? new { note = "old", password = "sentinel-secret" } : new { note = "old" }, new { note = "new" }, new { affected = 1 }, new { valid = true }, "state-v1")); }
         public Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken ct) { ExecuteCalls++; throw new InvalidOperationException("Preview must never execute."); }
     }
     private sealed class NoChallenge : IAdminAIConfirmationChallengeService

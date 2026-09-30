@@ -30,6 +30,27 @@ public sealed class AdminAIProposalApiTests
     }
 
     [Fact]
+    public async Task Get_ReturnsRedactedPreviewAsObjectsConsistentWithCreate()
+    {
+        await using var db = AdminAIStrongConfirmationTests.CreateDb();
+        var actor = Guid.NewGuid();
+        var proposal = Proposal(actor);
+        proposal.SafeCurrentStateJson = "{\"note\":\"old\",\"password\":\"[REDACTED]\"}";
+        proposal.SafeRequestedStateJson = "{\"note\":\"new\"}";
+        proposal.SafeEffectJson = "{\"affected\":1}";
+        db.Add(proposal);
+        await db.SaveChangesAsync();
+
+        var result = await Controller(db, actor).Proposal(proposal.Id, default);
+
+        var dto = Assert.IsType<AdminAIProposalDto>(Assert.IsType<OkObjectResult>(result).Value);
+        var json = System.Text.Json.JsonSerializer.Serialize(dto);
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, document.RootElement.GetProperty("Current").ValueKind);
+        Assert.Contains("[REDACTED]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Cancel_RequiresExpectedVersion_AndReturnsClosedConflict()
     {
         await using var db = AdminAIStrongConfirmationTests.CreateDb();

@@ -4,6 +4,7 @@
 
 - Proposal construction now validates every nested field against a closed, recursively checked action schema before invoking an authoritative preview or persisting a proposal. Unknown or duplicate fields, malformed UUIDs, enum/range/length/item-count violations, and ignored or open schema keywords fail closed. Optional nested schemas are checked even when omitted from the input.
 - Focused proposal tests passed 21/21 and the full AdminAI application group passed 242/242. Negative cases assert zero preview calls and zero persisted proposals. This validates the proposal boundary; it does not supply the missing production action catalog or complete action parity.
+- The create response and later get/cancel response now use the same redacted, persisted preview as JSON objects. A preview containing a prohibited password field kept its raw sentinel out of the response and storage. The proposal group passed 29/29 and the full AdminAI application group passed 244/244 after this correction.
 
 ## 2026-09-30 serializable confirmation claim
 

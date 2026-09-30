@@ -12,7 +12,7 @@ The action executor now commits its unique claim before an authoritative effect 
 
 On 2026-09-30, activation validation was tightened to reject every unsupported manifest item, duplicate capability identity, and a missing ready marker. A real PostgreSQL two-tab test exposed a serializable claim conflict; the executor now retries only before the authoritative effect. The concurrency group passed 7/7, and the two-tab case passed three additional independent runs. The focused AdminAI application suite passed 225/225, the generated inventory check passed 18/18 after frontend/backend route linking, and production-tooling tests passed 575 with 8 skipped. The repository-wide performance gate still lacks authentic, comparable baseline and candidate artifacts. These results do not complete the 41 open AdminAI tasks or authorize activation.
 
-Proposal input validation now enforces closed nested schemas before preview and persistence, including typed identifiers, bounds, allowed values, and duplicate-field rejection. The expanded AdminAI application group passed 242/242. The production action catalog and remaining release gates are still incomplete; the NO-GO decision remains.
+Proposal input validation now enforces closed nested schemas before preview and persistence, including typed identifiers, bounds, allowed values, and duplicate-field rejection. Create/get/cancel proposal responses now consistently return redacted preview objects; the raw-preview leak regression passed. The expanded AdminAI application group passed 244/244. The production action catalog and remaining release gates are still incomplete; the NO-GO decision remains.
 
 ## Disable and rollback
 
