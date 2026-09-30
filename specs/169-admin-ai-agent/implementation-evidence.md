@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 reviewed activation gate
+
+- Enabling AdminAI no longer manufactures or activates a read-only baseline at backend startup. Startup now requires exactly one manually approved active baseline, a catalog with actions, a matching registry hash and exact key/version list, supported unique inventory items, and no current-business exclusion. Duplicate JSON fields and stale or incomplete catalogs fail closed before policy bootstrap. The feature remains disabled in the current release configuration.
+- The new activation contract suite passed 9/9, covering read-only startup, exact approved baseline, missing or stale capabilities, blocked items, business exclusion, duplicate fields, missing approval, and two active baselines. The complete AdminAI application group passed 255/255. These are guard tests, not proof that the still-blocked production inventory has been sealed or approved.
+
 ## 2026-09-30 action wire contract
 
 - The three authoritative action bridges now deserialize exact camelCase JSON field names, matching the worker's proposed `arguments` and the closed action schemas. They still reject unknown or incorrectly cased fields before command dispatch.

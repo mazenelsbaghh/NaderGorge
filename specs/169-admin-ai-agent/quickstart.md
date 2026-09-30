@@ -2,7 +2,9 @@
 
 ## Current status
 
-Feature 169 is implemented only as a fail-closed work in progress. Its isolated persistence, worker protocol, Admin-only workspace, proposal/confirmation foundations, and verification tooling exist, but production capability registration remains empty and the feature defaults disabled. Do not deploy or claim feature availability until the capability baseline has zero gaps and every release gate in `tasks.md` passes.
+Feature 169 is implemented only as a fail-closed work in progress. Its isolated persistence, worker protocol, Admin-only workspace, proposal/confirmation foundations, and verification tooling exist, but the production registry contains reads only and the feature defaults disabled. Do not deploy or claim feature availability until the capability baseline has zero gaps and every release gate in `tasks.md` passes.
+
+The backend startup gate requires a manually approved Active baseline. Its `SafeManifestJson` must contain `activation: "ready"`, a `registryHash` equal to the running registry hash, unique supported inventory `items`, and a `capabilities` array listing every registered key and version exactly once. It rejects a read-only catalog, incomplete coverage, or two Active baselines; startup does not create a baseline automatically.
 
 The worktree also contains unrelated owner changes; all verification and remaining implementation must preserve them.
 

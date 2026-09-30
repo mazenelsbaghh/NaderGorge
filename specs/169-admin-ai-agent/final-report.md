@@ -20,6 +20,8 @@ The action bridges now consume exact camelCase JSON from the worker and reject c
 
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
 
+Startup no longer auto-approves a read-only AdminAI baseline when the feature flag is enabled. It now requires a manually approved active manifest matching the running action catalog and rejecting unsupported inventory items. The activation guard passed 9/9 tests and the focused application group passed 255/255; the current catalog is still read-only, so the gate correctly prevents activation.
+
 ## Disable and rollback
 
 Keep or restore `ADMIN_AI_ENABLED=false`; this prevents admission and worker readiness from exposing the feature. Use the normal immutable production rollback lane for the deployed release. Database changes are additive and evidence records must not be deleted during rollback.
