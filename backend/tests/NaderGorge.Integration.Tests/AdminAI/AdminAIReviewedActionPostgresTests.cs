@@ -354,9 +354,18 @@ public sealed class AdminAIReviewedActionPostgresTests
             new { requestId = extraWatchRequest.Id, addedViews = 2 });
         await ConfirmStrongAsync(adapters[11].Key,
             new { requestId = extraWatchRequest.Id, addedViews = 1 });
+        var financialInput = new { allocationId = financialAllocation.Id,
+            status = (int)TeacherFinancialReviewStatus.Approved, note = "Verified source" };
+        var staleFinanceProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[12].Key,
+            financialInput, default);
+        financialAllocation.ContentNameSnapshot = "Updated source label";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ConfirmAsync(actor.Id,
+            staleFinanceProposal.Id, staleFinanceProposal.Version, staleFinanceProposal.StrongPhrase,
+            $"intent-{staleFinanceProposal.Id:N}", default));
+        Assert.Empty(await db.TeacherAccounts.Where(item => item.TeacherId == teacher.Id).ToListAsync());
         var financeProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[12].Key,
-            new { allocationId = financialAllocation.Id, status = (int)TeacherFinancialReviewStatus.Approved,
-                note = "Verified source" }, default);
+            financialInput, default);
         Assert.Equal(AdminAIConfirmationType.TypedStrong, financeProposal.Confirmation);
         var financeResult = await commands.ConfirmAsync(actor.Id, financeProposal.Id,
             financeProposal.Version, financeProposal.StrongPhrase,
@@ -455,6 +464,21 @@ public sealed class AdminAIReviewedActionPostgresTests
                 financeResult.Id.ToString("N"), default))?.Status);
         Assert.Null(await financeResolver.ResolveAsync(reviewedAllocation.ReviewOperationId!,
             Guid.NewGuid().ToString("N"), default));
+        var recoveringFinanceExecution = await verifyDb.AdminAIActionExecutions
+            .SingleAsync(item => item.Id == financeResult.Id);
+        var recoveringFinanceProposal = await verifyDb.AdminAIActionProposals
+            .SingleAsync(item => item.Id == recoveringFinanceExecution.ProposalId);
+        recoveringFinanceExecution.Status = AdminAIExecutionStatus.RecoveryRequired;
+        recoveringFinanceExecution.CompletedAt = null;
+        recoveringFinanceProposal.Status = AdminAIProposalStatus.RecoveryRequired;
+        recoveringFinanceProposal.CompletedAt = null;
+        await verifyDb.SaveChangesAsync();
+        Assert.Equal(1, await new AdminAIExternalOperationReconciler(verifyDb, [financeResolver])
+            .ReconcileAsync(100, default));
+        Assert.Equal(AdminAIExecutionStatus.Succeeded, recoveringFinanceExecution.Status);
+        Assert.Equal(AdminAIProposalStatus.Succeeded, recoveringFinanceProposal.Status);
+        Assert.Equal(25m, (await verifyDb.TeacherAccounts.AsNoTracking()
+            .SingleAsync(item => item.TeacherId == teacher.Id)).CurrentBalance);
         var recoveringExecution = await verifyDb.AdminAIActionExecutions
             .SingleAsync(item => item.Id == approvalExecution.Id);
         var recoveringProposal = await verifyDb.AdminAIActionProposals
