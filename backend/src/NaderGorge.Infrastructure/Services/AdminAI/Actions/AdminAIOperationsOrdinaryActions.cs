@@ -37,7 +37,8 @@ public sealed class AdminAIAddTaskCommentAction(IMediator mediator, IAdminAIActi
 {
     public override string Key => "admin.operations.task-comment.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAIAddTaskCommentInput input, Guid actorId, string operationId) =>
-        new AddTaskCommentCommand(input.TaskId, actorId, input.Content, input.AttachmentUrl);
+        new AddTaskCommentCommand(input.TaskId, actorId, input.Content, input.AttachmentUrl)
+        { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { commentId = response.Data }, 1, ["operations-tasks", "task-comments"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "task-comments"]);

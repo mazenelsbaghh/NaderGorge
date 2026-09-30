@@ -15,6 +15,11 @@
 - The original lesson-comment and community-comment approval commands now accept the same optional server-owned operation identity. Their status changes, existing audit and outbox effects, and safe result receipts commit atomically for AdminAI calls; the existing screen paths without that identity remain available.
 - The full proposal/confirmation PostgreSQL scenario replayed both types of approved comments in a fresh context, returned the receipt-backed result, and kept the outbox counts unchanged. Both recovery resolvers returned the matching safe result. The AdminAI PostgreSQL group passed 36/36; the final changed-target conflict assertion passed on a separate focused rerun. These remain candidate adapters behind the read-only production catalog.
 
+## 2026-09-30 task-comment creation identity
+
+- The original task-comment command now accepts an optional server-owned operation identity and stores the new comment ID with a payload-bound receipt in one PostgreSQL transaction. A changed-payload replay fails before touching the task; a matching replay returns the original ID even if the comment was later deleted. The AdminAI action bridge passes this identity and a recovery resolver returns the same safe result.
+- The direct PostgreSQL replay and resolver test passed. The complete AdminAI PostgreSQL group passed 37/37 and the application group passed 264/264; the full proposal/confirmation scenario also passed on a focused rerun after asserting its task-comment receipt and no duplicate comment. The production action catalog remains read-only, and the remaining operations/coverage gates are open.
+
 ## 2026-09-30 concurrent worker claim
 
 - The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.

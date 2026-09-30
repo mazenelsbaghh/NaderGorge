@@ -341,6 +341,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICommunityPostApprovalResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICommunityCommentApprovalResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAILessonCommentApprovalResultResolver>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITaskCommentResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAISubjectCreateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAISubjectUpdateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>

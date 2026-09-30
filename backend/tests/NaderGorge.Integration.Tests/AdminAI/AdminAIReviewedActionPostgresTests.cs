@@ -10,6 +10,7 @@ using NaderGorge.Application.Features.AdminAI.Catalog;
 using NaderGorge.Application.Features.AdminAI.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Application.Features.AdminAI.Security;
+using NaderGorge.Application.Features.Operations.Commands;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.AdminAI;
@@ -399,6 +400,15 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.Equal(task.Id, comment.TaskId);
         Assert.Equal(actor.Id, comment.UserId);
         Assert.Contains(comments, item => item.Content.Contains("Needs another pass", StringComparison.Ordinal));
+        var taskCommentReceipt = Assert.Single(await verifyDb.AuthoritativeOperationReceipts.AsNoTracking()
+            .Where(item => item.Scope == "operations.task-comment.create").ToListAsync());
+        Assert.Equal(comment.Id, taskCommentReceipt.ResultEntityId);
+        var taskCommentReplay = await new AddTaskCommentCommandHandler(verifyDb).Handle(
+            new AddTaskCommentCommand(task.Id, actor.Id, "Reviewed the lesson")
+            { OperationId = taskCommentReceipt.OperationId }, default);
+        Assert.True(taskCommentReplay.Success);
+        Assert.Equal(comment.Id, taskCommentReplay.Data);
+        Assert.Equal(2, await verifyDb.TaskComments.CountAsync());
         var finalTask = await verifyDb.TaskItems.AsNoTracking().SingleAsync(item => item.Id == task.Id);
         Assert.Equal(NaderGorge.Domain.Enums.TaskStatus.InProgress, finalTask.Status);
         Assert.Null(finalTask.ApprovedById);
