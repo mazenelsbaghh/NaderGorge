@@ -1074,12 +1074,12 @@ No missing frontend-called backend routes.
 
 | Method | Path | Action | Auth | Source |
 |---|---|---|---|---|
-| GET | `/api/v1/internal/admin-ai/readiness` | Ready | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:28 |
-| POST | `/api/v1/internal/admin-ai/turns/{turnid}/claim` | Claim | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:43 |
-| POST | `/api/v1/internal/admin-ai/turns/{turnid}/complete` | Complete | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:154 |
-| POST | `/api/v1/internal/admin-ai/turns/{turnid}/fail` | Fail | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:181 |
-| POST | `/api/v1/internal/admin-ai/turns/{turnid}/lease/renew` | Renew | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:90 |
-| POST | `/api/v1/internal/admin-ai/turns/{turnid}/steps/{stepnumber}/reads` | ReadBatch | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:110 |
+| GET | `/api/v1/internal/admin-ai/readiness` | Ready | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:31 |
+| POST | `/api/v1/internal/admin-ai/turns/{turnid}/claim` | Claim | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:46 |
+| POST | `/api/v1/internal/admin-ai/turns/{turnid}/complete` | Complete | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:207 |
+| POST | `/api/v1/internal/admin-ai/turns/{turnid}/fail` | Fail | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:241 |
+| POST | `/api/v1/internal/admin-ai/turns/{turnid}/lease/renew` | Renew | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:96 |
+| POST | `/api/v1/internal/admin-ai/turns/{turnid}/steps/{stepnumber}/reads` | ReadBatch | anonymous | backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs:118 |
 
 ### AdminAssistantController
 

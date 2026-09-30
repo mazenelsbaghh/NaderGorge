@@ -15,6 +15,10 @@ const checkOnly = process.argv.includes('--check');
 const strongTerms = /(delete|remove|revoke|reset|password|role|permission|disable|toggle|bulk|finance|payment|wallet|refund|settlement|treasury|expense|salary|payroll|publish|cancel|migrat|transfer|generate)/i;
 const externalTerms = /(whatsapp|bunny|upload|export|download|sync|analy[sz]e)/i;
 const reviewedStrongRoutes = new Set(['POST:/admin/watch-requests/{}/approve']);
+const reviewedSharedAdminCommands = new Map([
+  ['POST:/v1/assistant/tasks/my/{}/comments', 'command:AddTaskCommentCommand'],
+  ['POST:/v1/assistant/tasks/my/{}/status', 'command:UpdateTaskStatusCommand'],
+]);
 // These POST handlers only read persisted state or calculate a response. Review
 // each handler and its callees before adding another route to this list.
 const reviewedReadOnlyPostRoutes = new Map([
@@ -85,6 +89,7 @@ function semantics(method, descriptor, route) {
 
 function includeEndpoint(endpoint) {
   return /^\/api\/admin(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/v1\/assistant\/tasks\/my(?:\/|$)/.test(endpoint.path) ||
     /^\/api\/live-support\/(?:connections|staff)(?:\/|$)/.test(endpoint.path) ||
     /^\/api\/live-support\/whatsapp\/(?:campaigns|preferences|templates)(?:\/|$)/.test(endpoint.path) ||
     /^\/api\/exams\/admin(?:\/|$)/.test(endpoint.path) ||
@@ -137,7 +142,8 @@ function build() {
   const backendItems = endpoints.map((endpoint) => createItem(
     'backend-endpoint', endpoint.method, endpoint.path, endpoint.source,
     `${endpoint.controller}.${endpoint.action}`,
-    `diagnostic:${endpoint.controller}.${endpoint.action}`,
+    reviewedSharedAdminCommands.get(routeKey(endpoint.method, endpoint.path))
+      ?? `diagnostic:${endpoint.controller}.${endpoint.action}`,
   ));
   const backendByRoute = new Map();
   for (const item of backendItems) {

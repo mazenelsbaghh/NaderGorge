@@ -1,8 +1,8 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `d4c223230e148c34dfd19494ca501c4b660593228c461b2576530c7e6959874c`
+Digest: `890be11ad9d7d3bf06bdc7a95a5059f3f4babf7e314f82c5b53b6c397675c797`
 
-Items: 1085; external-side-effect=80, mutation=546, read=419, export=25, preview=15.
+Items: 1089; external-side-effect=80, mutation=548, read=421, export=25, preview=15.
 Reviewed non-business exclusions: 13.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
@@ -259,7 +259,9 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-live-support-whatsapp-campaigns:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:19 | GET | /api/live-support/whatsapp/campaigns | read | support | none | candidate |
 | be:get:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:88 | GET | /api/live-support/whatsapp/preferences | read | support | none | candidate |
 | be:get:api-live-support-whatsapp-templates:backend-src-nadergorge-api-controllers-whatsapplivesupportcontroller-cs:51 | GET | /api/live-support/whatsapp/templates | read | support | none | candidate |
-| be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:28 | GET | /api/v1/internal/admin-ai/readiness | read | other | none | candidate |
+| be:get:api-v1-assistant-tasks-my-id:backend-src-nadergorge-api-controllers-assistantcontroller-cs:63 | GET | /api/v1/assistant/tasks/my/{id} | read | other | none | candidate |
+| be:get:api-v1-assistant-tasks-my:backend-src-nadergorge-api-controllers-assistantcontroller-cs:51 | GET | /api/v1/assistant/tasks/my | read | other | none | candidate |
+| be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:31 | GET | /api/v1/internal/admin-ai/readiness | read | other | none | candidate |
 | be:get:api-video-learning-videoid-author:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:19 | GET | /api/video-learning/{videoid}/author | read | identity | none | candidate |
 | be:get:api-video-learning-videoid-report:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:31 | GET | /api/video-learning/{videoid}/report | read | content | none | candidate |
 | be:get:api-whatsapp-admin-assessment-parent-recovery-preview:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:131 | GET | /api/whatsapp/admin/assessment-parent-recovery/preview | preview | other | none | candidate |
@@ -524,11 +526,13 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-live-support-whatsapp-preferences-contacts-search:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:103 | POST | /api/live-support/whatsapp/preferences/contacts/search | read | support | none | candidate |
 | be:post:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:96 | POST | /api/live-support/whatsapp/preferences | external-side-effect | support | ordinary | blocked |
 | be:post:api-live-support-whatsapp-templates-sync:backend-src-nadergorge-api-controllers-whatsapplivesupportcontroller-cs:56 | POST | /api/live-support/whatsapp/templates/sync | external-side-effect | support | ordinary | blocked |
-| be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:43 | POST | /api/v1/internal/admin-ai/turns/{turnid}/claim | mutation | other | ordinary | blocked |
-| be:post:api-v1-internal-admin-ai-turns-turnid-complete:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:154 | POST | /api/v1/internal/admin-ai/turns/{turnid}/complete | mutation | other | ordinary | blocked |
-| be:post:api-v1-internal-admin-ai-turns-turnid-fail:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:181 | POST | /api/v1/internal/admin-ai/turns/{turnid}/fail | mutation | other | ordinary | blocked |
-| be:post:api-v1-internal-admin-ai-turns-turnid-lease-renew:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:90 | POST | /api/v1/internal/admin-ai/turns/{turnid}/lease/renew | mutation | other | ordinary | blocked |
-| be:post:api-v1-internal-admin-ai-turns-turnid-steps-stepnumber-reads:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:110 | POST | /api/v1/internal/admin-ai/turns/{turnid}/steps/{stepnumber}/reads | mutation | other | ordinary | blocked |
+| be:post:api-v1-assistant-tasks-my-id-comments:backend-src-nadergorge-api-controllers-assistantcontroller-cs:89 | POST | /api/v1/assistant/tasks/my/{id}/comments | mutation | other | ordinary | blocked |
+| be:post:api-v1-assistant-tasks-my-id-status:backend-src-nadergorge-api-controllers-assistantcontroller-cs:77 | POST | /api/v1/assistant/tasks/my/{id}/status | mutation | other | ordinary | blocked |
+| be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:46 | POST | /api/v1/internal/admin-ai/turns/{turnid}/claim | mutation | other | ordinary | blocked |
+| be:post:api-v1-internal-admin-ai-turns-turnid-complete:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:207 | POST | /api/v1/internal/admin-ai/turns/{turnid}/complete | mutation | other | ordinary | blocked |
+| be:post:api-v1-internal-admin-ai-turns-turnid-fail:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:241 | POST | /api/v1/internal/admin-ai/turns/{turnid}/fail | mutation | other | ordinary | blocked |
+| be:post:api-v1-internal-admin-ai-turns-turnid-lease-renew:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:96 | POST | /api/v1/internal/admin-ai/turns/{turnid}/lease/renew | mutation | other | ordinary | blocked |
+| be:post:api-v1-internal-admin-ai-turns-turnid-steps-stepnumber-reads:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:118 | POST | /api/v1/internal/admin-ai/turns/{turnid}/steps/{stepnumber}/reads | mutation | other | ordinary | blocked |
 | be:post:api-video-learning-videoid-ai:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:29 | POST | /api/video-learning/{videoid}/ai | mutation | content | ordinary | blocked |
 | be:post:api-whatsapp-admin-assessment-parent-recovery-apply:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:138 | POST | /api/whatsapp/admin/assessment-parent-recovery/apply | external-side-effect | other | ordinary | blocked |
 | be:post:api-whatsapp-admin-exam-result-message:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:111 | POST | /api/whatsapp/admin/exam-result-message | external-side-effect | content | ordinary | blocked |

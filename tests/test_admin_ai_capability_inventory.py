@@ -74,6 +74,28 @@ def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operat
             assert item.get(field) == source.get(field), (item["route"], field)
 
 
+def test_admin_accessible_shared_task_routes_map_to_original_commands():
+    items = json.loads(BASELINE.read_text())["items"]
+    expected = {
+        "/api/v1/assistant/tasks/my/{id}/comments": "AddTaskCommentCommand",
+        "/api/v1/assistant/tasks/my/{id}/status": "UpdateTaskStatusCommand",
+    }
+    controller = (ROOT / "backend/src/NaderGorge.API/Controllers/AssistantController.cs").read_text()
+    for route, command in expected.items():
+        backend = [item for item in items if item["kind"] == "backend-endpoint"
+                   and item["method"] == "POST" and item["route"] == route]
+        assert len(backend) == 1
+        assert backend[0]["authoritativeOperation"] == f"command:{command}"
+        assert backend[0]["status"] == "blocked"
+        assert f"new {command}(" in controller
+        frontend = [item for item in items if item["kind"] == "frontend-call"
+                    and item["method"] == "POST"
+                    and re.sub(r"\{[^}]+\}", "{}", item["route"].lower()) ==
+                    re.sub(r"\{[^}]+\}", "{}", route.removeprefix("/api").lower())]
+        assert len(frontend) == 1
+        assert frontend[0]["authoritativeOperation"] == f"command:{command}"
+
+
 def test_reviewed_read_only_posts_do_not_inherit_mutation_requirements():
     items = json.loads(BASELINE.read_text())["items"]
     expected = {

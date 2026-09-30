@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "751bece88ac2947b2eaa6bd0b9dc3cb3f356f785d4da88112bd96bf4e79fa4e9"
+      "digest": "567794541e69363be562decd88dde682990d40462297d87af01ee57b8a3211bd"
     }
   },
   "items": [
@@ -6840,7 +6840,61 @@
       }
     },
     {
-      "id": "be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:28",
+      "id": "be:get:api-v1-assistant-tasks-my-id:backend-src-nadergorge-api-controllers-assistantcontroller-cs:63",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/v1/assistant/tasks/my/{id}",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssistantController.GetTaskDetails",
+      "inputSchema": "backend-endpoint:assistantcontroller-gettaskdetails:input:v1",
+      "outputSchema": "backend-endpoint:assistantcontroller-gettaskdetails:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 63
+      }
+    },
+    {
+      "id": "be:get:api-v1-assistant-tasks-my:backend-src-nadergorge-api-controllers-assistantcontroller-cs:51",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/v1/assistant/tasks/my",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssistantController.GetMyTasks",
+      "inputSchema": "backend-endpoint:assistantcontroller-getmytasks:input:v1",
+      "outputSchema": "backend-endpoint:assistantcontroller-getmytasks:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 51
+      }
+    },
+    {
+      "id": "be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:31",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/v1/internal/admin-ai/readiness",
@@ -6863,7 +6917,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 28
+        "line": 31
       }
     },
     {
@@ -14751,7 +14805,67 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:43",
+      "id": "be:post:api-v1-assistant-tasks-my-id-comments:backend-src-nadergorge-api-controllers-assistantcontroller-cs:89",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/v1/assistant/tasks/my/{id}/comments",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "command:AddTaskCommentCommand",
+      "inputSchema": "backend-endpoint:assistantcontroller-addcomment:input:v1",
+      "outputSchema": "backend-endpoint:assistantcontroller-addcomment:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 89
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-v1-assistant-tasks-my-id-status:backend-src-nadergorge-api-controllers-assistantcontroller-cs:77",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/v1/assistant/tasks/my/{id}/status",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "command:UpdateTaskStatusCommand",
+      "inputSchema": "backend-endpoint:assistantcontroller-updatestatus:input:v1",
+      "outputSchema": "backend-endpoint:assistantcontroller-updatestatus:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 77
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:46",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/v1/internal/admin-ai/turns/{turnid}/claim",
@@ -14776,12 +14890,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 43
+        "line": 46
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-complete:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:154",
+      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-complete:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:207",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/v1/internal/admin-ai/turns/{turnid}/complete",
@@ -14806,12 +14920,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 154
+        "line": 207
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-fail:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:181",
+      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-fail:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:241",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/v1/internal/admin-ai/turns/{turnid}/fail",
@@ -14836,12 +14950,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 181
+        "line": 241
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-lease-renew:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:90",
+      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-lease-renew:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:96",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/v1/internal/admin-ai/turns/{turnid}/lease/renew",
@@ -14866,12 +14980,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 90
+        "line": 96
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-steps-stepnumber-reads:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:110",
+      "id": "be:post:api-v1-internal-admin-ai-turns-turnid-steps-stepnumber-reads:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:118",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/v1/internal/admin-ai/turns/{turnid}/steps/{stepnumber}/reads",
@@ -14896,7 +15010,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 110
+        "line": 118
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -22899,7 +23013,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssistantController.GetTaskDetails",
       "inputSchema": "frontend-call:frontend-src-services-assistant-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assistant-service-ts:output:v1",
       "limits": {
@@ -29700,7 +29814,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "command:AddTaskCommentCommand",
       "inputSchema": "frontend-call:frontend-src-services-assistant-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assistant-service-ts:output:v1",
       "limits": {
@@ -29730,7 +29844,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "command:UpdateTaskStatusCommand",
       "inputSchema": "frontend-call:frontend-src-services-assistant-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assistant-service-ts:output:v1",
       "limits": {
@@ -31258,5 +31372,5 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: POST <dynamic>"
     }
   ],
-  "digest": "d4c223230e148c34dfd19494ca501c4b660593228c461b2576530c7e6959874c"
+  "digest": "890be11ad9d7d3bf06bdc7a95a5059f3f4babf7e314f82c5b53b6c397675c797"
 }

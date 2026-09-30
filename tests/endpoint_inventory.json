@@ -201,7 +201,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 28
+        "line": 31
       }
     },
     {
@@ -213,7 +213,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 43
+        "line": 46
       }
     },
     {
@@ -225,7 +225,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 154
+        "line": 207
       }
     },
     {
@@ -237,7 +237,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 181
+        "line": 241
       }
     },
     {
@@ -249,7 +249,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 90
+        "line": 96
       }
     },
     {
@@ -261,7 +261,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
-        "line": 110
+        "line": 118
       }
     },
     {

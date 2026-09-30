@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 shared Admin task inventory coverage
+
+- The Admin-accessible Assistant task details, status, and comments routes are now included in the diagnostic backend inventory. The two mutation routes map to their original `UpdateTaskStatusCommand` and `AddTaskCommentCommand`, and the frontend calls inherit those exact operation labels instead of remaining unresolved. The baseline now has 1,089 items, including 628 blocked mutation/external-effect entries; 39 frontend calls remain unresolved, 16 of them mutations. The production registry stays read-only.
+- The endpoint inventory was regenerated from current source (831 backend endpoints, 712 frontend calls), followed by the baseline (digest `890be11ad9d7d3bf06bdc7a95a5059f3f4babf7e314f82c5b53b6c397675c797`). The full capability gate passed 10/10 frontend graph tests and 26/26 Python endpoint/capability/source tests. This improves mapping accuracy but does not close T171/T172/T176/T177 or authorize activation.
+
 ## 2026-09-30 read-batch callback replay
 
 - A unique turn/batch receipt now binds the exact request to an encrypted response. The receipt, consumed read budget, and renewed lease commit in one PostgreSQL transaction; expired receipts are purged after 24 hours.
