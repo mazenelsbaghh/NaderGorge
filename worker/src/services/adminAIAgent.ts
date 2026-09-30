@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'node:crypto';
-import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
+import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from './adminAICallbackClient.js';
 import { readAIConfig } from './aiConfig.js';
 import { executeRetriableGeminiRequest } from './aiProvider.js';
 import { requestAdminAICodex } from './adminAICodexProvider.js';
@@ -205,6 +205,30 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
   const evidenceIds = new Set<string>();
   const workerInstanceId = options.workerInstanceId;
   const leaseRenewIntervalMs = Math.max(1, options.leaseRenewIntervalMs ?? 20_000);
+  async function readWithReplay(step: number, readCalls: Array<{ callId: string; capabilityKey: string; arguments: unknown }>) {
+    const payload = {
+      schemaVersion: '1', leaseToken, expectedTurnVersion,
+      expectedBaselineVersion: claim.capabilityBaseline.version,
+      expectedSensitivePolicyVersion: claim.sensitiveDataPolicy.version,
+      batchIdempotencyKey: `${claim.callbackIdempotencyKey}:read:${stepNumber}:${step}`,
+      calls: readCalls,
+    };
+    let responseMayHaveCommitted = false;
+    for (let attempt = 0; ; attempt++) {
+      if (await cancelled()) throw new Error('CANCELLED');
+      if (now() >= Date.parse(claim.deadlineAt)) throw new Error('AI_PROVIDER_TIMEOUT');
+      try { return await callbacks.reads(claim.turnId, stepNumber, payload); }
+      catch (error) {
+        if (!(error instanceof AdminAICallbackError)) throw error;
+        const ambiguousConflict = responseMayHaveCommitted && error.httpStatus === 409;
+        responseMayHaveCommitted ||= error.retryable;
+        if ((!error.retryable && !ambiguousConflict) || attempt >= 2) throw error;
+        const delay = 100 * (attempt + 1);
+        if (now() + delay >= Date.parse(claim.deadlineAt)) throw error;
+        await new Promise<void>(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
   async function providerWithLease(request: AdminAIProviderRequest) {
     const providerPromise = provider(request);
     if (!workerInstanceId) return providerPromise;
@@ -232,7 +256,7 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
         return { callId: call.id?.slice(0, 160) || `call-${step}-${index}-${randomUUID().slice(0, 8)}`, functionName: call.name!, capabilityKey: tool.key, arguments: call.args };
       });
       const readCalls = calls.map(({ callId, capabilityKey, arguments: callArguments }) => ({ callId, capabilityKey, arguments: callArguments }));
-      const response = await callbacks.reads(claim.turnId, stepNumber, { schemaVersion: '1', leaseToken, expectedTurnVersion, expectedBaselineVersion: (claim.capabilityBaseline as JsonObject | undefined)?.version, expectedSensitivePolicyVersion: (claim.sensitiveDataPolicy as JsonObject | undefined)?.version, batchIdempotencyKey: `${claim.callbackIdempotencyKey}:read:${stepNumber}:${step}`, calls: readCalls });
+      const response = await readWithReplay(step, readCalls);
       if (await cancelled()) throw new Error('CANCELLED'); callsUsed += calls.length; contextBytes += bytes(response);
       if (contextBytes > (budgets.remainingRedactedContextBytes ?? 65_536)) throw new Error('REDACTED_CONTEXT_LIMIT');
       if (typeof response.turnVersion === 'number') expectedTurnVersion = response.turnVersion;

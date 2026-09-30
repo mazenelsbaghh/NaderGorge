@@ -3,7 +3,7 @@
 ## 2026-09-30 read-batch callback replay
 
 - A unique turn/batch receipt now binds the exact request to an encrypted response. The receipt, consumed read budget, and renewed lease commit in one PostgreSQL transaction; expired receipts are purged after 24 hours.
-- A fresh-context lost-response retry returned the identical result without a second read on PostgreSQL 16.10. A changed-payload retry returned a conflict. The additive migration passed the EF model guard; the complete AdminAI PostgreSQL integration group passed 35/35 and the application group passed 264/264. The combined real-backend/worker/Redis restart gate and activation remain open.
+- A fresh-context lost-response retry returned the identical result without a second read on PostgreSQL 16.10. A changed-payload retry returned a conflict; an expired receipt was purged on the next recovery sweep. The additive migration passed the EF model guard; the complete AdminAI PostgreSQL integration group passed 35/35 and the application group passed 264/264. The worker now retries transient read-callback failures with the exact same batch payload, including an intermediate in-flight HTTP 409 after an ambiguous response. Its focused 20/20 tests and full 230/230 suite passed without another model request. The combined real-backend/worker/Redis restart gate and activation remain open.
 
 ## 2026-09-30 concurrent worker claim
 

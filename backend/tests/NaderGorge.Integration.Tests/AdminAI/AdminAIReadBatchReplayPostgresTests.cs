@@ -88,6 +88,12 @@ public sealed class AdminAIReadBatchReplayPostgresTests
         Assert.Equal(1, persisted.ReadInvocationCount);
         Assert.Equal(1, Assert.Single(persisted.Steps).ToolCallsRequested);
         Assert.Equal(1, await verifyDb.AdminAIReadBatchReceipts.CountAsync());
+        var receipt = await verifyDb.AdminAIReadBatchReceipts.SingleAsync();
+        receipt.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        await verifyDb.SaveChangesAsync();
+        await using var recoveryDb = fixture.CreateDbContext();
+        Assert.Equal(1, await new AdminAIRecoveryService(recoveryDb).ReconcileAsync(20, default));
+        Assert.Equal(0, await recoveryDb.AdminAIReadBatchReceipts.CountAsync());
     }
 
     private static AdminAIInternalController Controller(AppDbContext db, IConfiguration configuration,

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { createAdminAICodexServer } from '../adminAICodexServer.js';
-import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
+import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from './adminAICallbackClient.js';
 import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, requestAdminAIGemini, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
 import { setGeminiRetryWaitForTests } from './aiProvider.js';
@@ -192,6 +192,37 @@ test('prompt labels messages and action catalog as untrusted data', () => {
   assert.match(prompt.systemInstruction, /student\.note\.add/);
   assert.match(prompt.systemInstruction, /DECISION JSON CONTRACT/);
   assert.match(prompt.systemInstruction, /evidenceInvocationIds/);
+});
+
+test('lost read callback response replays the identical batch without a second model request', async () => {
+  let modelRequests = 0;
+  let readRequests = 0;
+  const sentPayloads: string[] = [];
+  const provider = async () => {
+    modelRequests++;
+    return modelRequests === 1
+      ? { functionCalls: [{ id: 'lookup-one', name: 'read_0', args: { query: 'student' } }] }
+      : { text: JSON.stringify(answer) };
+  };
+  const callback = callbacks(async (_turn, _step, payload) => {
+    sentPayloads.push(JSON.stringify(payload));
+    readRequests++;
+    if (readRequests === 1) throw new AdminAICallbackError('CALLBACK_UNAVAILABLE', true);
+    if (readRequests === 2) throw new AdminAICallbackError('CALLBACK_REJECTED', false, 409);
+    return {
+      turnVersion: 5, leaseToken: 'renewed-lease',
+      results: [{ callId: 'lookup-one', status: 'Succeeded', data: { items: [] } }],
+    };
+  });
+
+  const result = await runAdminAIAgent(claim(), callback, { provider, model: 'test' });
+
+  assert.equal(result.decision.type, 'answer');
+  assert.equal(result.expectedTurnVersion, 5);
+  assert.equal(result.leaseToken, 'renewed-lease');
+  assert.equal(modelRequests, 2);
+  assert.equal(readRequests, 3);
+  assert.equal(new Set(sentPayloads).size, 1);
 });
 
 test('teacher lookup transitions to subscriber summary and a terminal answer', async () => {
