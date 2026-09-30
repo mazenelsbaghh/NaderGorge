@@ -1,3 +1,7 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +21,10 @@ public record CreateSocialPlanCommand(
     DateTime ScheduledDate,
     Guid? MediaProductionPipelineId = null,
     Guid PerformedByUserId = default
-) : IRequest<ApiResponse<Guid>>;
+) : IRequest<ApiResponse<Guid>>
+{
+    public string? OperationId { get; init; }
+}
 
 public class CreateSocialPlanCommandValidator : AbstractValidator<CreateSocialPlanCommand>
 {
@@ -42,6 +49,38 @@ public class CreateSocialPlanCommandHandler : IRequestHandler<CreateSocialPlanCo
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateSocialPlanCommand request, CancellationToken ct)
+    {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<Guid>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await CreateOnceAsync(request, null, null, ct);
+        if (request.PerformedByUserId == Guid.Empty)
+            return ApiResponse<Guid>.Fail("Operation actor is required.", ["INVALID_OPERATION_ACTOR"]);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.Title, request.Description, request.Script,
+                request.Platform, request.Status, request.ScheduledDate,
+                request.MediaProductionPipelineId, request.PerformedByUserId }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "social-plan.create" && prior.ActorUserId == request.PerformedByUserId
+                && prior.RequestHash == requestHash
+                ? ApiResponse<Guid>.Ok(prior.ResultEntityId, "Social media plan created successfully.")
+                : ApiResponse<Guid>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+        if (request.Status is not (SocialPlanStatus.Draft or SocialPlanStatus.Scripting))
+            return ApiResponse<Guid>.Fail("Publishing or scheduling requires a high-risk action.",
+                ["RISK_REQUIRES_STRONG_CONFIRMATION"]);
+
+        var created = await CreateOnceAsync(request, operationId, requestHash, ct);
+        await transaction.CommitAsync(ct);
+        return created;
+    }
+
+    private async Task<ApiResponse<Guid>> CreateOnceAsync(CreateSocialPlanCommand request,
+        string? operationId, string? requestHash, CancellationToken ct)
     {
         if (request.MediaProductionPipelineId.HasValue && request.MediaProductionPipelineId.Value != Guid.Empty)
         {
@@ -76,6 +115,13 @@ public class CreateSocialPlanCommandHandler : IRequestHandler<CreateSocialPlanCo
             NewValues = $"Title: {plan.Title}, Platform: {plan.Platform}, Status: {plan.Status}, ScheduledDate: {plan.ScheduledDate}",
             CreatedAt = DateTime.UtcNow
         });
+
+        if (operationId is not null)
+            _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+            {
+                OperationId = operationId, Scope = "social-plan.create",
+                ActorUserId = request.PerformedByUserId, RequestHash = requestHash!, ResultEntityId = plan.Id
+            });
 
         await _db.SaveChangesAsync(ct);
 

@@ -25,6 +25,67 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIReviewedActionPostgresTests
 {
     [Fact]
+    public async Task RealPostgres_SocialPlanCreation_PreventsOrdinaryPublishingAndReplaysDraft()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var actor = new User { FullName = "Social Admin", PhoneNumber = "01000000999", PasswordHash = "test" };
+        var pipeline = new MediaProductionPipeline { Title = "Social production", Stage = MediaStage.Preparation };
+        db.AddRange(actor, pipeline);
+        await db.SaveChangesAsync();
+
+        var scheduledDate = DateTime.UtcNow.AddDays(1);
+        var input = new AdminAICreateSocialPlanInput("Lesson teaser", "Draft campaign",
+            "preview-secret-sentinel", SocialPlatform.YouTube, SocialPlanStatus.Draft,
+            scheduledDate, pipeline.Id);
+        var previewSource = new AdminAIOperationsPreviewSource(db);
+        var countBefore = await db.SocialMediaPlans.CountAsync();
+        var preview = await previewSource.PreviewAsync("admin.tools.social-plan.create", actor.Id,
+            input, CancellationToken.None);
+        Assert.Equal(countBefore, await db.SocialMediaPlans.CountAsync());
+        Assert.DoesNotContain("preview-secret-sentinel", System.Text.Json.JsonSerializer.Serialize(preview));
+        pipeline.Stage = MediaStage.Editing;
+        await db.SaveChangesAsync();
+        var changedPreview = await previewSource.PreviewAsync("admin.tools.social-plan.create", actor.Id,
+            input, CancellationToken.None);
+        Assert.NotEqual(preview.StateFingerprint, changedPreview.StateFingerprint);
+
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() =>
+            previewSource.PreviewAsync("admin.tools.social-plan.create", actor.Id,
+                input with { Status = SocialPlanStatus.Published }, CancellationToken.None));
+        var operationId = $"admin-ai-social-plan-{Guid.NewGuid():N}";
+        var request = new CreateSocialPlanCommand(input.Title, input.Description, input.Script,
+            input.Platform, input.Status, input.ScheduledDate, pipeline.Id, actor.Id)
+            { OperationId = operationId };
+        var handler = new CreateSocialPlanCommandHandler(db);
+        var rejectedPublication = await handler.Handle(request with { Status = SocialPlanStatus.Published },
+            CancellationToken.None);
+        Assert.False(rejectedPublication.Success);
+        Assert.Equal(countBefore, await db.SocialMediaPlans.CountAsync());
+
+        var created = await handler.Handle(request, CancellationToken.None);
+        Assert.True(created.Success);
+        var planId = created.Data;
+        await using var replayDb = fixture.CreateDbContext();
+        var replayHandler = new CreateSocialPlanCommandHandler(replayDb);
+        var replay = await replayHandler.Handle(request, CancellationToken.None);
+        Assert.True(replay.Success);
+        Assert.Equal(planId, replay.Data);
+        var conflict = await replayHandler.Handle(request with { Status = SocialPlanStatus.Published },
+            CancellationToken.None);
+        Assert.False(conflict.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", conflict.Errors!);
+        Assert.Equal(countBefore + 1, await replayDb.SocialMediaPlans.CountAsync());
+        Assert.Equal(SocialPlanStatus.Draft,
+            (await replayDb.SocialMediaPlans.SingleAsync(item => item.Id == planId)).Status);
+        var recovered = await new AdminAISocialPlanCreateResultResolver(replayDb)
+            .ResolveAsync(operationId, operationId, CancellationToken.None);
+        Assert.NotNull(recovered);
+        Assert.Contains(planId.ToString(), System.Text.Json.JsonSerializer.Serialize(recovered));
+    }
+
+    [Fact]
     public async Task RealPostgres_MediaPipelineCreation_HasReadOnlyPreviewAndDurableReplay()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();

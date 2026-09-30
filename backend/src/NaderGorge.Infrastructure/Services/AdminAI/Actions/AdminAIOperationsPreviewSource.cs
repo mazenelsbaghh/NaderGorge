@@ -15,6 +15,8 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
         input switch
         {
+            AdminAICreateSocialPlanInput socialPlan when capabilityKey == "admin.tools.social-plan.create" =>
+                PreviewSocialPlanCreateAsync(capabilityKey, actorId, socialPlan, ct),
             AdminAICreateMediaPipelineInput pipeline when capabilityKey == "admin.tools.media-pipeline.create" =>
                 PreviewMediaPipelineCreateAsync(capabilityKey, actorId, pipeline, ct),
             AdminAICreateTaskInput create when capabilityKey == "admin.operations.task.create" =>
@@ -27,6 +29,38 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
                 PreviewTaskApprovalAsync(capabilityKey, actorId, approval, ct),
             _ => throw new NotSupportedException("Admin AI action preview capability is unavailable.")
         };
+
+    private async Task<AdminAIActionPreview> PreviewSocialPlanCreateAsync(
+        string capabilityKey, Guid actorId, AdminAICreateSocialPlanInput input, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title) || input.Title.Length > 250
+            || input.Description?.Length > 2000 || input.Script?.Length > 10000
+            || !Enum.IsDefined(input.Platform) || input.ScheduledDate == default)
+            throw new ArgumentException("Social plan input is invalid.", nameof(input));
+        if (input.Status is not (SocialPlanStatus.Draft or SocialPlanStatus.Scripting))
+            throw new AdminAIActionPreviewUnavailableException(
+                "Scheduling or publishing requires a high-risk action.");
+        if (!await db.Users.AsNoTracking().AnyAsync(item => item.Id == actorId, ct))
+            throw new AdminAIActionPreviewUnavailableException("The actor is unavailable.");
+
+        var linkedPipelineId = input.MediaProductionPipelineId.GetValueOrDefault();
+        var pipeline = await db.MediaProductionPipelines.AsNoTracking()
+            .Where(item => item.Id == linkedPipelineId)
+            .Select(item => new { item.Id, item.Title, item.Stage })
+            .SingleOrDefaultAsync(ct);
+        if (linkedPipelineId != Guid.Empty && pipeline is null)
+            throw new AdminAIActionPreviewUnavailableException("The linked media pipeline is unavailable.");
+
+        return new AdminAIActionPreview(
+            "social-plan", linkedPipelineId == Guid.Empty ? "social-plan:new"
+                : $"media-pipeline:{linkedPipelineId:D}",
+            new { linkedPipelineTitle = pipeline?.Title, linkedPipelineStage = pipeline?.Stage },
+            new { input.Title, input.Description, input.Platform, input.Status, input.ScheduledDate,
+                input.MediaProductionPipelineId, scriptProvided = !string.IsNullOrWhiteSpace(input.Script) },
+            new { draftPlanWillBeCreated = true, affected = 1 },
+            new { valid = true },
+            Fingerprint(capabilityKey, new { actorId, pipeline?.Id, pipeline?.Title, pipeline?.Stage }));
+    }
 
     private async Task<AdminAIActionPreview> PreviewMediaPipelineCreateAsync(
         string capabilityKey, Guid actorId, AdminAICreateMediaPipelineInput input, CancellationToken ct)
@@ -257,7 +291,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
         {
             "admin.finance.teacher-event.review" =>
                 teacherFinance.PreviewAsync(capabilityKey, actorId, input, ct),
-            "admin.tools.media-pipeline.create" or "admin.operations.task.create"
+            "admin.tools.media-pipeline.create" or "admin.tools.social-plan.create"
+                or "admin.operations.task.create"
                 or "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
