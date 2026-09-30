@@ -44,7 +44,7 @@ export default function AdminRootPageClient() {
   });
 
   const allowedNavbarItems = user?.allowedNavbarItems;
-  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
+  if (!isFullAdmin(user) && allowedNavbarItems && allowedNavbarItems.length > 0) {
     filteredLinks = filteredLinks.filter((item) =>
       allowedNavbarItems.some(allowedPath =>
         allowedPath === item.href || allowedPath.startsWith(item.href + '/')

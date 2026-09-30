@@ -37,7 +37,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...(process.env.PLAYWRIGHT_CHROME_CHANNEL === '1' ? { channel: 'chrome' as const } : {}) },
     },
     {
       name: 'webkit',

@@ -71,7 +71,9 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
                 BalanceAfter = balance.CurrentBalance,
                 TransactionType = "Refund",
                 ReferenceId = grantContext.TargetId,
-                Description = $"إرجاع رصيد {contentName} بعد إلغاء الإدارة",
+                Description = string.IsNullOrWhiteSpace(request.Reason)
+                    ? $"إرجاع رصيد {contentName} بعد إلغاء الإدارة"
+                    : $"إرجاع رصيد {contentName}: {request.Reason.Trim()}",
                 CreatedAt = DateTime.UtcNow,
                 PerformedByUserId = request.AdminId
             };

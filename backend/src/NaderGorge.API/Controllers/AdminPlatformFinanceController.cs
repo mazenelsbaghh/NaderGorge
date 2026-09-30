@@ -309,6 +309,11 @@ public sealed class AdminPlatformFinanceController(
                 x.StudentId,
                 db.Users.Where(user => user.Id == x.StudentId).Select(user => user.FullName).FirstOrDefault() ?? "طالب غير معروف",
                 db.Users.Where(user => user.Id == x.StudentId).Select(user => user.PhoneNumber).FirstOrDefault() ?? string.Empty,
+                x.JournalEntryId == null
+                    ? x.CreatedByUserId
+                    : db.JournalEntries.Where(entry => entry.Id == x.JournalEntryId)
+                        .Select(entry => entry.ActorUserId).FirstOrDefault() ?? x.CreatedByUserId,
+                string.Empty,
                 x.TeacherId,
                 x.PlatformAmount,
                 x.TeacherAmount,
@@ -335,6 +340,8 @@ public sealed class AdminPlatformFinanceController(
                 x.StudentBalance.UserId,
                 x.StudentBalance.User.FullName,
                 x.StudentBalance.User.PhoneNumber,
+                x.PerformedByUserId,
+                string.Empty,
                 null,
                 x.Amount,
                 0m,
@@ -347,10 +354,21 @@ public sealed class AdminPlatformFinanceController(
                 true))
             .ToListAsync(ct);
 
-        return Ok(recordedRefunds
+        var latestRefunds = recordedRefunds
             .Concat(historicalRefunds)
             .OrderByDescending(x => x.CreatedAt)
-            .Take(500));
+            .Take(500).ToList();
+        var actorIds = latestRefunds.Where(x => x.ProcessedByUserId.HasValue)
+            .Select(x => x.ProcessedByUserId!.Value).Distinct().ToArray();
+        var actorNames = await db.Users.AsNoTracking()
+            .Where(user => actorIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.FullName, ct);
+        return Ok(latestRefunds.Select(refund => refund with
+        {
+            ProcessedByName = refund.ProcessedByUserId is { } actorId
+                ? actorNames.GetValueOrDefault(actorId, "مستخدم سابق")
+                : "غير مسجل"
+        }));
     }
 
     [HttpPost("refunds/{refundId:guid}/reverse")]
@@ -517,6 +535,8 @@ public sealed record PlatformRefundListItem(
     Guid StudentId,
     string StudentName,
     string StudentPhoneNumber,
+    Guid? ProcessedByUserId,
+    string ProcessedByName,
     Guid? TeacherId,
     decimal PlatformAmount,
     decimal TeacherAmount,

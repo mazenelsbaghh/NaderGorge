@@ -70,8 +70,8 @@ test.describe('Admin gifts workspace', () => {
 
     await login(page);
     await page.goto(`${adminBaseUrl}/admin/gifts/new`);
-    await page.getByRole('button', { name: 'رصيد ترويجي لمدرس' }).click();
-    await page.getByLabel('المدرس').selectOption('44444444-4444-4444-4444-444444444444');
+    await page.getByRole('button', { name: 'رصيد مخصص لمدرس' }).click();
+    await page.getByRole('combobox', { name: 'المدرس' }).selectOption('44444444-4444-4444-4444-444444444444');
     await page.getByLabel('قيمة الرصيد').fill('75');
     await page.getByRole('button', { name: /أحمد محمد/ }).click();
     await page.getByLabel(/عدد المشتريات/).fill('2');
@@ -81,5 +81,57 @@ test.describe('Admin gifts workspace', () => {
     await expect.poll(() => submitted).not.toBeNull();
     expect(submitted).toMatchObject({ targetType: 'TeacherBalance', teacherId: '44444444-4444-4444-4444-444444444444', amount: 75, maxUses: 2, reason: 'حملة تفوق', studentIds: ['22222222-2222-2222-2222-222222222222'] });
     await expect(page).toHaveURL(/\/admin\/gifts\/55555555-5555-5555-5555-555555555555$/);
+  });
+
+  test('selects a lesson gift through teacher, package, term and section', async ({ page }) => {
+    const ids = {
+      teacher: '44444444-4444-4444-4444-444444444444',
+      package: '55555555-5555-5555-5555-555555555555',
+      term: '66666666-6666-6666-6666-666666666666',
+      section: '77777777-7777-7777-7777-777777777777',
+      lesson: '88888888-8888-8888-8888-888888888888',
+      student: '99999999-9999-9999-9999-999999999999',
+    };
+    await page.route('**/api/admin/gifts/lookups/students**', (route) => fulfill(route, [
+      { id: ids.student, name: 'طالب تجريبي', context: '01000000001' },
+    ]));
+    await page.route('**/api/admin/gifts/lookups/teachers**', (route) => {
+      const search = new URL(route.request().url()).searchParams.get('search');
+      return fulfill(route, search && !'مستر نادر'.includes(search) ? [] : [
+        { id: ids.teacher, name: 'مستر نادر', context: 'فيزياء' },
+      ]);
+    });
+    await page.route('**/api/admin/gifts/lookups/targets**', (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      const rows: Record<string, { id: string; name: string; isSystemContainer?: boolean }[]> = {
+        Package: [{ id: ids.package, name: 'الكورس الأول' }],
+        Term: [{ id: ids.term, name: 'محتوى الباقة', isSystemContainer: true }],
+        ContentSection: [{ id: ids.section, name: 'حصص مباشرة', isSystemContainer: true }],
+        Lesson: [{ id: ids.lesson, name: 'الحصة الأولى' }],
+      };
+      const type = query.get('targetType') ?? '';
+      const expectedParent: Record<string, string> = { Term: ids.package, ContentSection: ids.term, Lesson: ids.section };
+      return fulfill(route, expectedParent[type] && query.get('parentId') !== expectedParent[type] ? [] : rows[type] ?? []);
+    });
+    let submitted: Record<string, unknown> | null = null;
+    await page.route('**/api/admin/gifts', (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      submitted = route.request().postDataJSON();
+      return fulfill(route, { id: crypto.randomUUID(), requestId: submitted?.requestId, targetType: 'Lesson', status: 'Active', recipients: [] }, 201);
+    });
+
+    await login(page);
+    await page.goto(`${adminBaseUrl}/admin/gifts/new`);
+    await page.getByRole('button', { name: 'حصة', exact: true }).click();
+    await page.getByLabel('ابحث عن المدرس').fill('نادر');
+    await page.getByRole('combobox', { name: 'المدرس' }).selectOption(ids.teacher);
+    await page.getByRole('combobox', { name: 'الباقة' }).selectOption(ids.package);
+    await page.getByRole('combobox', { name: 'الحصة' }).selectOption(ids.lesson);
+    await page.getByRole('button', { name: /طالب تجريبي/ }).click();
+    await page.getByLabel('سبب الهدية').fill('تعويض عن مشكلة تشغيل');
+    await page.getByRole('button', { name: 'إصدار الهدية' }).click();
+
+    await expect.poll(() => submitted).not.toBeNull();
+    expect(submitted).toMatchObject({ targetType: 'Lesson', targetId: ids.lesson, studentIds: [ids.student], reason: 'تعويض عن مشكلة تشغيل' });
   });
 });

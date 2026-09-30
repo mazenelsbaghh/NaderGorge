@@ -187,6 +187,13 @@ export const adminRootLinks: AdminRootLink[] = [
     icon: Wallet,
   },
   {
+    href: '/admin/platform-finance/refunds',
+    title: 'استردادات الطلاب',
+    body: 'تسجيل المبلغ المسترد ومراجعة من نفذه وسببه.',
+    icon: Coins,
+    adminOnly: true,
+  },
+  {
     href: '/admin/wallets',
     title: 'محافظ الشحن',
     body: 'إدارة المحافظ الرقمية وتطبيقات الاستماع وحدود المطابقة الآلية.',

@@ -40,9 +40,11 @@ function ContentSelect({ label, value, options, loading, error, onChange }: {
   </label>;
 }
 
-export function GiftContentPicker({ targetType, teachers, onSelect }: {
+export function GiftContentPicker({ targetType, teachers, teacherSearch, onTeacherSearchChange, onSelect }: {
   targetType: ContentType;
   teachers: GiftLookupDto[];
+  teacherSearch: string;
+  onTeacherSearchChange: (search: string) => void;
   onSelect: (target: GiftLookupDto | null) => void;
 }) {
   const [teacherId, setTeacherId] = useState('');
@@ -76,6 +78,11 @@ export function GiftContentPicker({ targetType, teachers, onSelect }: {
 
   return <div className="mt-5 space-y-4">
     <p className="text-sm text-[var(--admin-muted)]">اختر المدرس ثم الباقة، وبعدها سيظهر محتوى كل اختيار بالترتيب.</p>
+    <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن المدرس
+      <input className="admin-input mt-2" value={teacherSearch} onChange={(event) => {
+        onTeacherSearchChange(event.target.value); setTeacherId(''); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
+      }} placeholder="اسم المدرس" />
+    </label>
     <ContentSelect label="المدرس" value={teacherId} options={teachers} loading={false} error={false} onChange={(id) => {
       setTeacherId(id); setPackageSearch(''); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
     }} />

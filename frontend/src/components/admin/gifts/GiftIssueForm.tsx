@@ -25,6 +25,7 @@ export function GiftIssueForm() {
   const [teachers, setTeachers] = useState<GiftLookupDto[]>([]);
   const [targets, setTargets] = useState<GiftLookupDto[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [teacherSearch, setTeacherSearch] = useState('');
   const [targetSearch, setTargetSearch] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [teacherId, setTeacherId] = useState('');
@@ -41,23 +42,25 @@ export function GiftIssueForm() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    Promise.all([
-      adminGiftsService.students(
-        studentSearch,
-        isBalance(targetType) ? undefined : targetType,
-        isBalance(targetType) ? undefined : targetId || undefined,
-      ),
-      adminGiftsService.teachers(),
-    ])
-      .then(([studentRows, teacherRows]) => {
-        if (!active) return;
-        setStudents(studentRows);
-        setTeachers(teacherRows);
-      })
-      .catch(() => toast.error('تعذر تحميل قوائم الاختيار.'))
+    adminGiftsService.students(
+      studentSearch,
+      isBalance(targetType) ? undefined : targetType,
+      isBalance(targetType) ? undefined : targetId || undefined,
+    )
+      .then((studentRows) => { if (active) setStudents(studentRows); })
+      .catch(() => { if (active) toast.error('تعذر تحميل قائمة الطلاب.'); })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [studentSearch, targetId, targetType]);
+
+  useEffect(() => {
+    let active = true;
+    setTeachers([]);
+    adminGiftsService.teachers(teacherSearch)
+      .then((teacherRows) => { if (active) setTeachers(teacherRows); })
+      .catch(() => { if (active) toast.error('تعذر تحميل قائمة المدرسين.'); });
+    return () => { active = false; };
+  }, [teacherSearch]);
 
   useEffect(() => {
     if (isBalance(targetType) || targetType === 'Lesson' || targetType === 'Video') {
@@ -136,12 +139,17 @@ export function GiftIssueForm() {
         </div>
 
         {targetType === 'TeacherBalance' ? (
-          <label className="mt-5 block text-sm font-bold text-[var(--admin-text)]">المدرس
-            <select className="admin-input mt-2" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
-              <option value="">اختر المدرس</option>
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
-            </select>
-          </label>
+          <div className="mt-5 space-y-3">
+            <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن المدرس
+              <input className="admin-input mt-2" value={teacherSearch} onChange={(event) => { setTeacherSearch(event.target.value); setTeacherId(''); }} placeholder="اسم المدرس" />
+            </label>
+            <label className="block text-sm font-bold text-[var(--admin-text)]">المدرس
+              <select className="admin-input mt-2" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
+                <option value="">اختر المدرس</option>
+                {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+              </select>
+            </label>
+          </div>
         ) : null}
 
         {(targetType === 'Lesson' || targetType === 'Video') ? (
@@ -149,6 +157,8 @@ export function GiftIssueForm() {
             key={targetType}
             targetType={targetType}
             teachers={teachers}
+            teacherSearch={teacherSearch}
+            onTeacherSearchChange={setTeacherSearch}
             onSelect={(target) => { setTargetId(target?.id ?? ''); setHierarchyTarget(target); }}
           />
         ) : !isBalance(targetType) ? (
