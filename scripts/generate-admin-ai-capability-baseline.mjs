@@ -13,6 +13,7 @@ const checkOnly = process.argv.includes('--check');
 
 const strongTerms = /(delete|remove|revoke|reset|password|role|permission|disable|toggle|bulk|finance|payment|wallet|refund|settlement|treasury|expense|salary|payroll|publish|cancel|migrat|transfer|generate)/i;
 const externalTerms = /(whatsapp|bunny|upload|export|download|sync|analy[sz]e)/i;
+const reviewedStrongRoutes = new Set(['POST:/admin/watch-requests/{}/approve']);
 const directControllerFamilies = /^(AdminFinance|AdminPlatformFinance|AdminTeacherFinanceCenter|AdminTeacherCodeFinance|AdminSharedPackages|HrApprovals|HrDocumentsAssets|HrLeave|HrPayroll|HrPerformanceCases|HrRecruitmentLifecycle|HrShifts)$/;
 const directControllerOperations = new Set(['AdminController.GetPendingEssays']);
 
@@ -51,12 +52,13 @@ function domainFor(value) {
   return 'other';
 }
 
-function semantics(method, descriptor) {
+function semantics(method, descriptor, route) {
   const external = externalTerms.test(descriptor);
   const mutation = method !== 'GET' && method !== 'ANY';
   const effect = mutation ? (external ? 'external-side-effect' : 'mutation') :
     (/export|download/i.test(descriptor) ? 'export' : /preview/i.test(descriptor) ? 'preview' : 'read');
-  const risk = mutation && strongTerms.test(descriptor) ? 'strong' : mutation ? 'ordinary' : 'none';
+  const risk = mutation && (strongTerms.test(descriptor) || reviewedStrongRoutes.has(routeKey(method, route)))
+    ? 'strong' : mutation ? 'ordinary' : 'none';
   return {
     effect,
     risk,
@@ -74,7 +76,7 @@ function includeEndpoint(endpoint) {
 }
 
 function createItem(kind, method, route, source, descriptor, authoritativeOperation) {
-  const semantic = semantics(method, descriptor);
+  const semantic = semantics(method, descriptor, route);
   const mutation = semantic.risk !== 'none';
   const controllerName = descriptor.split('.')[0]?.replace(/Controller$/, '') ?? '';
   const directControllerWrite = mutation && (directControllerFamilies.test(controllerName) || directControllerOperations.has(descriptor));

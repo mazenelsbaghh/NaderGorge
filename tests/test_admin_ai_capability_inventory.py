@@ -58,3 +58,15 @@ def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operat
     assert matched
     assert all(item["authoritativeOperation"] == backend[route_key(item)]["authoritativeOperation"]
                for item in matched)
+
+
+def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
+    items = json.loads(BASELINE.read_text())["items"]
+    approvals = [item for item in items
+                 if item["method"] == "POST"
+                 and re.sub(r"\{[^}]+\}", "{}", item["route"].lower())
+                 in {"/api/admin/watch-requests/{}/approve", "/admin/watch-requests/{}/approve"}]
+
+    assert len(approvals) == 2
+    assert all(item["risk"] == "strong" and item["confirmation"] == "strong"
+               for item in approvals)

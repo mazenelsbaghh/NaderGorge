@@ -10497,8 +10497,8 @@
       "route": "/api/admin/watch-requests/{id}/approve",
       "effect": "mutation",
       "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
+      "risk": "strong",
+      "confirmation": "strong",
       "status": "blocked",
       "authoritativeOperation": "diagnostic:AdminController.ApproveWatchRequest",
       "inputSchema": "backend-endpoint:admincontroller-approvewatchrequest:input:v1",
@@ -25386,8 +25386,8 @@
       "route": "/admin/watch-requests/{id}/approve",
       "effect": "mutation",
       "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
+      "risk": "strong",
+      "confirmation": "strong",
       "status": "blocked",
       "authoritativeOperation": "diagnostic:AdminController.ApproveWatchRequest",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
@@ -30361,5 +30361,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "5c3b9e8396210e076185d7fb42ed39724e8b896f1cd02b7e8b5ec1bf922c4108"
+  "digest": "2aeca6d76e1576339beb8b9aca90773e3139a4ec99342099ba4416c268382bb9"
 }

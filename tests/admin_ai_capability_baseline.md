@@ -1,6 +1,6 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `5c3b9e8396210e076185d7fb42ed39724e8b896f1cd02b7e8b5ec1bf922c4108`
+Digest: `2aeca6d76e1576339beb8b9aca90773e3139a4ec99342099ba4416c268382bb9`
 
 Items: 1054; external-side-effect=26, mutation=602, read=412, export=11, preview=3.
 
@@ -377,7 +377,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-admin-wallets-recharge-requests-id-resolve:backend-src-nadergorge-api-controllers-adminwalletscontroller-cs:130 | POST | /api/admin/wallets/recharge-requests/{id}/resolve | mutation | finance | strong | blocked |
 | be:post:api-admin-wallets-recharge-requests-id-reverse-credit:backend-src-nadergorge-api-controllers-adminwalletscontroller-cs:156 | POST | /api/admin/wallets/recharge-requests/{id}/reverse-credit | mutation | finance | strong | blocked |
 | be:post:api-admin-wallets:backend-src-nadergorge-api-controllers-adminwalletscontroller-cs:35 | POST | /api/admin/wallets | mutation | finance | strong | blocked |
-| be:post:api-admin-watch-requests-id-approve:backend-src-nadergorge-api-controllers-admincontroller-cs:1172 | POST | /api/admin/watch-requests/{id}/approve | mutation | hr | ordinary | blocked |
+| be:post:api-admin-watch-requests-id-approve:backend-src-nadergorge-api-controllers-admincontroller-cs:1172 | POST | /api/admin/watch-requests/{id}/approve | mutation | hr | strong | blocked |
 | be:post:api-admin-watch-requests-id-reject:backend-src-nadergorge-api-controllers-admincontroller-cs:1183 | POST | /api/admin/watch-requests/{id}/reject | mutation | hr | ordinary | blocked |
 | be:post:api-chat-messages-messageid-pin:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:115 | POST | /api/chat/messages/{messageid}/pin | mutation | support | strong | blocked |
 | be:post:api-chat-rooms-roomid-archive:backend-src-nadergorge-api-controllers-internalchatcontroller-cs:101 | POST | /api/chat/rooms/{roomid}/archive | mutation | support | ordinary | blocked |
@@ -896,7 +896,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-wallets-recharge-requests-id-resolve:frontend-src-services-wallet-service-ts:269 | POST | /admin/wallets/recharge-requests/{id}/resolve | mutation | finance | strong | blocked |
 | fe:post:admin-wallets-recharge-requests-id-reverse-credit:frontend-src-services-wallet-service-ts:282 | POST | /admin/wallets/recharge-requests/{id}/reverse-credit | mutation | finance | strong | blocked |
 | fe:post:admin-wallets:frontend-src-services-wallet-service-ts:204 | POST | /admin/wallets | mutation | finance | strong | blocked |
-| fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2337 | POST | /admin/watch-requests/{id}/approve | mutation | other | ordinary | blocked |
+| fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2337 | POST | /admin/watch-requests/{id}/approve | mutation | other | strong | blocked |
 | fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2345 | POST | /admin/watch-requests/{id}/reject | mutation | other | ordinary | blocked |
 | fe:post:api-base-url-auth-refresh:frontend-src-services-api-client-ts:64 | POST | /{API_BASE_URL}/auth/refresh | mutation | identity | ordinary | blocked |
 | fe:post:api-video-session:frontend-src-services-video-session-service-ts:151 | POST | /api/video/session | mutation | content | ordinary | blocked |
