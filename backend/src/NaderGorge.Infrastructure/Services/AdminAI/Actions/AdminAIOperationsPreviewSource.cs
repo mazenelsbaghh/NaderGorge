@@ -166,12 +166,15 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
 public sealed class AdminAIOrdinaryPreviewSource(
     AdminAIIdentityContentPreviewSource identityContent,
     AdminAIOperationsPreviewSource operations,
-    AdminAIAssessmentPreviewSource assessment) : IAdminAIActionPreviewSource
+    AdminAIAssessmentPreviewSource assessment,
+    AdminAITeacherFinancialReviewPreviewSource teacherFinance) : IAdminAIActionPreviewSource
 {
     public Task<AdminAIActionPreview> PreviewAsync<TInput>(
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
         capabilityKey switch
         {
+            "admin.finance.teacher-event.review" =>
+                teacherFinance.PreviewAsync(capabilityKey, actorId, input, ct),
             "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),

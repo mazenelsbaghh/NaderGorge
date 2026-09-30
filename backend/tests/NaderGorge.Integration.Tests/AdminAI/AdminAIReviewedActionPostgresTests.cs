@@ -134,6 +134,22 @@ public sealed class AdminAIReviewedActionPostgresTests
             parentComment, replyComment, scopedPost, teacherPost, communityParent, communityReply,
             lessonVideo, watchEvent, extraWatchRequest);
         await db.SaveChangesAsync();
+        var financialEvent = new TeacherFinancialEvent
+        {
+            SourceType = TeacherFinancialSourceType.ManualCompensation,
+            SourceId = Guid.NewGuid(), TargetType = SalesTargetType.Package,
+            TargetId = Guid.NewGuid(), PaidAmount = 25m,
+            IdempotencyKey = $"admin-ai-review-{Guid.NewGuid():N}",
+            ReviewStatus = TeacherFinancialReviewStatus.PendingReview
+        };
+        var financialAllocation = new TeacherFinancialAllocation
+        {
+            TeacherFinancialEvent = financialEvent, TeacherId = teacher.Id,
+            TeacherShareAmount = 25m, ContentNameSnapshot = "Reviewed payment",
+            ReviewStatus = TeacherFinancialReviewStatus.PendingReview
+        };
+        db.TeacherFinancialAllocations.Add(financialAllocation);
+        await db.SaveChangesAsync();
 
         using var services = new ServiceCollection()
             .AddSingleton<IAppDbContext>(db)
@@ -143,7 +159,8 @@ public sealed class AdminAIReviewedActionPostgresTests
         var mediator = services.GetRequiredService<IMediator>();
         var preview = new AdminAIOrdinaryPreviewSource(
             new AdminAIIdentityContentPreviewSource(db), new AdminAIOperationsPreviewSource(db),
-            new AdminAIAssessmentPreviewSource(db, new AcademicScopeService(db)));
+            new AdminAIAssessmentPreviewSource(db, new AcademicScopeService(db)),
+            new AdminAITeacherFinancialReviewPreviewSource(db));
         IAdminAIActionCapability[] adapters =
         [
             new AdminAIAddStudentNoteAction(mediator, preview),
@@ -157,15 +174,17 @@ public sealed class AdminAIReviewedActionPostgresTests
             new AdminAIApproveLessonCommentAction(mediator, preview),
             new AdminAIApproveCommunityPostAction(mediator, preview),
             new AdminAIApproveCommunityCommentAction(mediator, preview),
-            new AdminAIApproveWatchRequestAction(mediator, preview)
+            new AdminAIApproveWatchRequestAction(mediator, preview),
+            new AdminAIReviewTeacherFinancialAllocationAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
             [.. AdminAIIdentityContentActionCatalog.CreateCandidates(),
                 .. AdminAIOperationsActionCatalog.CreateCandidates(),
                 .. AdminAIAssessmentActionCatalog.CreateCandidates(),
-                .. AdminAIIdentityHighRiskActionCatalog.CreateCandidates()]);
+                .. AdminAIIdentityHighRiskActionCatalog.CreateCandidates(),
+                .. AdminAITeacherFinancialReviewActionCatalog.CreateCandidates()]);
         Assert.Equal(11, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters[..11]).Count);
-        Assert.Single(AdminAIActionCapabilityRegistration.ValidateHighRiskCoverage(registry, [adapters[11]]));
+        Assert.Equal(2, AdminAIActionCapabilityRegistration.ValidateHighRiskCoverage(registry, adapters[11..]).Count);
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -335,6 +354,14 @@ public sealed class AdminAIReviewedActionPostgresTests
             new { requestId = extraWatchRequest.Id, addedViews = 2 });
         await ConfirmStrongAsync(adapters[11].Key,
             new { requestId = extraWatchRequest.Id, addedViews = 1 });
+        var financeProposal = await builder.BuildAsync(actor.Id, turn.Id, adapters[12].Key,
+            new { allocationId = financialAllocation.Id, status = (int)TeacherFinancialReviewStatus.Approved,
+                note = "Verified source" }, default);
+        Assert.Equal(AdminAIConfirmationType.TypedStrong, financeProposal.Confirmation);
+        var financeResult = await commands.ConfirmAsync(actor.Id, financeProposal.Id,
+            financeProposal.Version, financeProposal.StrongPhrase,
+            $"intent-{financeProposal.Id:N}", default);
+        Assert.Equal(AdminAIExecutionStatus.Succeeded, financeResult.Status);
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -414,6 +441,20 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.Equal(2, await verifyDb.VideoOverrides.AsNoTracking().CountAsync());
         Assert.Equal(7, (await verifyDb.VideoWatchEvents.AsNoTracking()
             .SingleAsync(item => item.Id == watchEvent.Id)).CustomMaxWatchCount);
+        var reviewedAllocation = await verifyDb.TeacherFinancialAllocations.AsNoTracking()
+            .SingleAsync(item => item.Id == financialAllocation.Id);
+        Assert.Equal(TeacherFinancialReviewStatus.Approved, reviewedAllocation.ReviewStatus);
+        Assert.Equal(actor.Id, reviewedAllocation.ReviewActorUserId);
+        Assert.Equal("Verified source", reviewedAllocation.ReviewNote);
+        Assert.Equal(financeResult.Id.ToString("N"), reviewedAllocation.ReviewOperationId);
+        Assert.Equal(25m, (await verifyDb.TeacherAccounts.AsNoTracking()
+            .SingleAsync(item => item.TeacherId == teacher.Id)).CurrentBalance);
+        var financeResolver = new AdminAITeacherFinancialReviewResultResolver(verifyDb);
+        Assert.Equal(AdminAIExecutionStatus.Succeeded,
+            (await financeResolver.ResolveAsync(reviewedAllocation.ReviewOperationId!,
+                financeResult.Id.ToString("N"), default))?.Status);
+        Assert.Null(await financeResolver.ResolveAsync(reviewedAllocation.ReviewOperationId!,
+            Guid.NewGuid().ToString("N"), default));
         var recoveringExecution = await verifyDb.AdminAIActionExecutions
             .SingleAsync(item => item.Id == approvalExecution.Id);
         var recoveringProposal = await verifyDb.AdminAIActionProposals
@@ -436,7 +477,7 @@ public sealed class AdminAIReviewedActionPostgresTests
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(18, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(19, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }

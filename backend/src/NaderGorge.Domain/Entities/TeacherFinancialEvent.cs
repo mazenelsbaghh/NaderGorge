@@ -29,6 +29,9 @@ public class TeacherFinancialEvent : BaseEntity
 
 public class TeacherFinancialAllocation : BaseEntity
 {
+    public string? ReviewOperationId { get; set; }
+    public Guid? ReviewActorUserId { get; set; }
+    public string? ReviewNote { get; set; }
     public Guid TeacherFinancialEventId { get; set; }
     public TeacherFinancialEvent TeacherFinancialEvent { get; set; } = null!;
     public bool RetainedByTeacher { get; set; }

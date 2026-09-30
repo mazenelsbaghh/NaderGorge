@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 549,
+  "callCount": 538,
   "calls": [
     {
       "method": "DELETE",
@@ -3430,15 +3430,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/wallets/recharge-requests/{id}/sms-suggestions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/wallet-service.ts",
-        "line": 242
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/wallets/recharge-shift-review",
       "dynamic": false,
       "source": {
@@ -3570,15 +3561,6 @@
       "source": {
         "file": "frontend/src/services/crm-service.ts",
         "line": 107
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/health/ready/ai-live-support",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-ai-service.ts",
-        "line": 65
       }
     },
     {
@@ -3777,15 +3759,6 @@
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
         "line": 18
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/hr/payroll/self/financial-requests",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 22
       }
     },
     {
@@ -4231,29 +4204,11 @@
     },
     {
       "method": "GET",
-      "path": "/v1/assistant/tasks/my",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 70
-      }
-    },
-    {
-      "method": "GET",
       "path": "/v1/assistant/tasks/my/{taskId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
         "line": 74
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/v1/assistant/tasks/pending{queryParams}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 59
       }
     },
     {
@@ -4290,15 +4245,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1120
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-ai-agent-service.ts",
-        "line": 132
       }
     },
     {
@@ -4344,24 +4290,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1411
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 83
-      }
-    },
-    {
-      "method": "GET",
-      "path": "<dynamic>",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 90
       }
     },
     {
@@ -5671,15 +5599,6 @@
     },
     {
       "method": "POST",
-      "path": "/codes/activate",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/code-service.ts",
-        "line": 95
-      }
-    },
-    {
-      "method": "POST",
       "path": "/crm/students/{studentId}/assign",
       "dynamic": true,
       "source": {
@@ -6000,15 +5919,6 @@
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
         "line": 19
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/hr/payroll/self/financial-requests",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 23
       }
     },
     {
@@ -6459,15 +6369,6 @@
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
         "line": 312
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/v1/assistant/tasks/{taskId}/resolve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assistant-service.ts",
-        "line": 63
       }
     },
     {
@@ -7527,5 +7428,5 @@
       }
     }
   ],
-  "digest": "5fbe6f1d88c628638219ec810287256928c25eea24e23e083f45b01191b32696"
+  "digest": "28071598fe36b4936df7bafeb42c309655a12e7d9adf1bb232d369795d1b8e43"
 }

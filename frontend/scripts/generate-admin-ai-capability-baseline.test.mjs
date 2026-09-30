@@ -57,6 +57,15 @@ test('AdminAI graph excludes participant support methods unused by Admin modules
   assert.ok(supportCalls.every((call) => !call.path.startsWith('/live-support/participant/')));
 });
 
+test('AdminAI graph excludes unused self-service mutations from imported service objects', () => {
+  const graph = collectAdminCallGraph();
+  const routes = graph.calls.map((call) => `${call.method} ${call.path}`);
+
+  assert.ok(!routes.includes('POST /codes/activate'));
+  assert.ok(!routes.includes('POST /hr/payroll/self/financial-requests'));
+  assert.ok(!routes.includes('POST /v1/assistant/tasks/{taskId}/resolve'));
+});
+
 test('AdminAI graph keeps all service methods when the imported object escapes', () => {
   const target = fileURLToPath(new URL('../src/services/student-service.ts', import.meta.url));
   const importer = fileURLToPath(new URL('../src/components/admin/QuestionEditor.tsx', import.meta.url));

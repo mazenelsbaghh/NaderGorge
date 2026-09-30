@@ -24,6 +24,9 @@ def test_baseline_has_closed_manifest_shape_and_deterministic_digest():
     assert schema["properties"]["schemaVersion"]["const"] == baseline["schemaVersion"]
     assert baseline["digest"] == _canonical_digest(baseline)
     assert baseline["activation"] in {"blocked", "reviewed", "active", "superseded"}
+    assert baseline["sources"]["semantic"]["digest"] == hashlib.sha256(
+        (ROOT / "scripts/generate-admin-ai-capability-baseline.mjs").read_bytes()
+    ).hexdigest()
 
 
 def test_baseline_has_one_disposition_per_item_without_duplicate_id_or_route_method():
@@ -70,3 +73,4 @@ def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
     assert len(approvals) == 2
     assert all(item["risk"] == "strong" and item["confirmation"] == "strong"
                for item in approvals)
+    assert all(item["domain"] == "identity" for item in approvals)

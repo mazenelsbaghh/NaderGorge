@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const endpointPath = resolve(root, 'tests/endpoint_inventory.json');
@@ -14,8 +15,6 @@ const checkOnly = process.argv.includes('--check');
 const strongTerms = /(delete|remove|revoke|reset|password|role|permission|disable|toggle|bulk|finance|payment|wallet|refund|settlement|treasury|expense|salary|payroll|publish|cancel|migrat|transfer|generate)/i;
 const externalTerms = /(whatsapp|bunny|upload|export|download|sync|analy[sz]e)/i;
 const reviewedStrongRoutes = new Set(['POST:/admin/watch-requests/{}/approve']);
-const directControllerFamilies = /^(AdminFinance|AdminPlatformFinance|AdminTeacherFinanceCenter|AdminTeacherCodeFinance|AdminSharedPackages|HrApprovals|HrDocumentsAssets|HrLeave|HrPayroll|HrPerformanceCases|HrRecruitmentLifecycle|HrShifts)$/;
-const directControllerOperations = new Set(['AdminController.GetPendingEssays']);
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -41,10 +40,12 @@ function routeKey(method, route) {
 }
 
 function domainFor(value) {
-  const input = value.toLowerCase();
+  // Preserve CamelCase word boundaries before matching short domain names.
+  // Otherwise ApproveWatchRequest contains "hr" across Watch/Request.
+  const input = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
   if (/(finance|wallet|recharge|payment|treasury|refund|expense|settlement|accounting)/.test(input)) return 'finance';
-  if (/(hr|employee|payroll|leave|recruit|attendance|shift|governance)/.test(input)) return 'hr';
-  if (/(student|user|role|auth|device|profile)/.test(input)) return 'identity';
+  if (/(\bhr\b|employee|payroll|leave|recruit|attendance|shift|governance)/.test(input)) return 'hr';
+  if (/(student|user|role|auth|device|profile|watch)/.test(input)) return 'identity';
   if (/(content|lesson|video|package|subject|teacher|code|exam|question|homework)/.test(input)) return 'content';
   if (/(gift|sale|coupon|purchase|commercial)/.test(input)) return 'commercial';
   if (/(support|chat|crm|operation)/.test(input)) return 'support';
@@ -64,7 +65,7 @@ function semantics(method, descriptor, route) {
     risk,
     confirmation: risk === 'strong' ? 'strong' : risk === 'ordinary' ? 'ordinary' : 'none',
     status: mutation ? 'blocked' : 'candidate',
-    blocker: mutation ? 'Requires a reviewed capability adapter that calls an authoritative application command/service.' : undefined,
+    blocker: mutation ? 'Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts.' : undefined,
   };
 }
 
@@ -78,8 +79,6 @@ function includeEndpoint(endpoint) {
 function createItem(kind, method, route, source, descriptor, authoritativeOperation) {
   const semantic = semantics(method, descriptor, route);
   const mutation = semantic.risk !== 'none';
-  const controllerName = descriptor.split('.')[0]?.replace(/Controller$/, '') ?? '';
-  const directControllerWrite = mutation && (directControllerFamilies.test(controllerName) || directControllerOperations.has(descriptor));
   return {
     id: `${kind === 'backend-endpoint' ? 'be' : 'fe'}:${method.toLowerCase()}:${idPart(route)}:${idPart(source.file)}:${source.line}`,
     kind,
@@ -99,9 +98,7 @@ function createItem(kind, method, route, source, descriptor, authoritativeOperat
     audit: mutation ? 'missing' : 'read-evidence',
     refreshScopes: mutation ? [domainFor(`${descriptor} ${route}`)] : [],
     source,
-    ...(semantic.blocker ? { blocker: directControllerWrite
-      ? 'Direct controller database write must be extracted into an authoritative application command/service before adaptation.'
-      : semantic.blocker } : {}),
+    ...(semantic.blocker ? { blocker: semantic.blocker } : {}),
   };
 }
 
@@ -144,7 +141,7 @@ function build() {
     sources: {
       runtime: { path: 'tests/admin_ai_runtime_endpoint_inventory.json', digest: digest(runtimeRaw) },
       frontend: { path: 'tests/admin_ai_frontend_reachable_calls.json', digest: digest(frontendRaw) },
-      semantic: { path: 'scripts/generate-admin-ai-capability-baseline.mjs', digest: digest('heuristic-v1-reviewed-required') },
+      semantic: { path: 'scripts/generate-admin-ai-capability-baseline.mjs', digest: digest(readFileSync(fileURLToPath(import.meta.url))) },
     },
     items,
     exclusions: [],

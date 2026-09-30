@@ -193,16 +193,21 @@ export function collectAdminCallGraph() {
   }
 
   const serviceSelections = new Map();
-  for (const [moduleName, exportName] of [
-    ['student-service', 'studentService'],
-    ['content-service', 'contentService'],
-    ['shared-package-service', 'sharedPackageService'],
-    ['live-support-service', 'liveSupportService'],
-    ['video-learning-service', 'videoLearningService'],
-  ]) {
-    const filePath = resolve(sourceRoot, `services/${moduleName}.ts`);
-    const sourceFile = sourceFiles.get(filePath);
-    if (!sourceFile) continue;
+  const servicesDirectory = `${resolve(sourceRoot, 'services')}/`;
+  for (const [filePath, sourceFile] of sourceFiles) {
+    if (!filePath.startsWith(servicesDirectory)) continue;
+    const exportedServices = sourceFile.statements
+      .filter((statement) => ts.isVariableStatement(statement)
+        && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
+      .flatMap((statement) => statement.declarationList.declarations)
+      .filter((declaration) => ts.isIdentifier(declaration.name)
+        && /Service$/.test(declaration.name.text)
+        && declaration.initializer && ts.isObjectLiteralExpression(declaration.initializer))
+      .map((declaration) => declaration.name.text);
+    // Multiple service objects in one file need separate call ownership analysis.
+    // Until then, keep every call from that file in the conservative inventory.
+    if (exportedServices.length !== 1) continue;
+    const exportName = exportedServices[0];
     const object = exportedObject(sourceFile, exportName);
     const members = object && provenServiceMembers(filePath, exportName, sourceFiles);
     if (object && members) serviceSelections.set(filePath, { object, members });

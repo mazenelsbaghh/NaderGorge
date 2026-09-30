@@ -2582,6 +2582,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("teacher_financial_allocations");
             e.HasKey(x => x.Id);
+            e.Property(x => x.ReviewOperationId).HasMaxLength(200);
+            e.Property(x => x.ReviewNote).HasMaxLength(1000);
+            e.HasIndex(x => x.ReviewOperationId).IsUnique().HasFilter("\"ReviewOperationId\" IS NOT NULL");
             e.Property(x => x.AllocationMode).HasConversion<int>();
             e.Property(x => x.ReviewStatus).HasConversion<int>();
             e.Property(x => x.PayoutStatus).HasConversion<int>();

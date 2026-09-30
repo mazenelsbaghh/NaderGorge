@@ -26,6 +26,13 @@
 - A migrated PostgreSQL flow passed 1/1 with ten confirmed executions: it rejected a stale comment proposal without writing a comment; then it verified task comment, status change, approval with Completed/Approved media stage, and rejection with InProgress/Editing stage and a persisted reason comment. The complete focused AdminAI application suite passed 258/258. API compilation passed with no warnings or errors.
 - These are candidate actions only. The production registry remains read-only and the baseline remains blocked; this evidence does not approve or activate the whole Admin mutation inventory.
 
+## 2026-09-30 teacher financial review extraction and candidate
+
+- `AdminFinanceController.ReviewTeacherEvent` now delegates to `ReviewTeacherFinancialAllocationCommand`. The command owns the teacher-account credit in a serializable transaction and persists a unique review operation ID, actor, and note on the allocation. A replay in a fresh context returns the same success without crediting twice; a changed payload with the same ID is rejected.
+- Two PostgreSQL tests passed: durable replay/conflict plus eight concurrent review attempts with exactly one balance effect. A third PostgreSQL test ran the AdminAI proposal, typed strong confirmation, original command, and result resolver on a migrated database. The three-test focused run passed 3/3; the full AdminAI PostgreSQL integration group passed 27/27. The focused AdminAI application group passed 258/258.
+- The frontend graph generator now recognizes direct calls through imported service objects whenever their use is proven; uncertain object escapes retain all members. Its 7/7 contract suite passed. The frontend check passed at 527 reachable files and 538 calls; the complete baseline check passed at 1,043 items, 625 blocked effects, 398 exact frontend/backend route links, and 140 unresolved frontend routes (76 mutations). All five Python inventory assertions passed. The semantic digest now tracks the generator source; watch-request approval is classified under identity.
+- The production registry remains read-only. This one finance candidate does not resolve the other blocked mutations or satisfy T151, T171, T172, T176, or release acceptance.
+
 ## 2026-09-30 reviewed activation gate
 
 - Enabling AdminAI no longer manufactures or activates a read-only baseline at backend startup. Startup now requires exactly one manually approved active baseline, a catalog with actions, a matching registry hash and exact key/version list, supported unique inventory items, and no current-business exclusion. Duplicate JSON fields and stale or incomplete catalogs fail closed before policy bootstrap. The feature remains disabled in the current release configuration.
