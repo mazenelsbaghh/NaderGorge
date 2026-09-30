@@ -1,9 +1,14 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 read-batch callback replay
+
+- A unique turn/batch receipt now binds the exact request to an encrypted response. The receipt, consumed read budget, and renewed lease commit in one PostgreSQL transaction; expired receipts are purged after 24 hours.
+- A fresh-context lost-response retry returned the identical result without a second read on PostgreSQL 16.10. A changed-payload retry returned a conflict. The additive migration passed the EF model guard; the complete AdminAI PostgreSQL integration group passed 35/35 and the application group passed 264/264. The combined real-backend/worker/Redis restart gate and activation remain open.
+
 ## 2026-09-30 concurrent worker claim
 
 - The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.
-- The worker now gives each model read batch a distinct key even when multiple batches use the same backend step; its full suite passed 229/229. The backend currently validates but does not persist `BatchIdempotencyKey`. A lost read callback response can therefore advance the turn while a retry arrives with an old version. This remains an open callback-replay gap; the claim test does not close T181.
+- The worker gives each model read batch a distinct key even when multiple batches use the same backend step; its full suite passed 229/229. The backend replay gap identified by this audit was closed by the read-batch receipt described above. The claim test alone does not close T181.
 
 ## 2026-09-30 Redis callback replay after worker replacement
 

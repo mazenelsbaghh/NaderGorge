@@ -98,7 +98,7 @@ public sealed class AdminAITurnCompletionServiceTests
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["AdminAI:Enabled"] = "true", ["AdminAI:CallbackSecret"] = "test-secret"
-            }).Build(), db, AdminAICapabilityRegistry.CreateProductionReadRegistry(), null!, null!, Service(db))
+            }).Build(), db, AdminAICapabilityRegistry.CreateProductionReadRegistry(), null!, null!, null!, Service(db))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

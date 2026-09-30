@@ -27,6 +27,11 @@ public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter
         var reads = remaining == 0 ? [] : await db.AdminAIReadInvocations.Where(x => x.ProtectedResult != null && x.ProtectedResultExpiresAt <= now).OrderBy(x => x.ProtectedResultExpiresAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var read in reads) { read.ProtectedResult = null; read.ProtectedResultHash = null; read.ProtectedResultExpiresAt = null; changed++; }
         remaining = batchSize - changed;
+        var expiredBatches = remaining == 0 ? [] : await db.AdminAIReadBatchReceipts
+            .Where(x => x.ExpiresAt <= now).OrderBy(x => x.ExpiresAt).Take(remaining).ToListAsync(cancellationToken);
+        db.AdminAIReadBatchReceipts.RemoveRange(expiredBatches);
+        changed += expiredBatches.Count;
+        remaining = batchSize - changed;
         var grants = remaining == 0 ? [] : await db.AdminAISecureInputGrants.Where(x => x.ProtectedPayload != null && x.ExpiresAt <= now).OrderBy(x => x.ExpiresAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var grant in grants) { grant.ProtectedPayload = null; grant.PayloadHash = null; grant.Status = AdminAISecureInputGrantStatus.Expired; grant.PurgedAt = now; grant.Version++; changed++; }
         remaining = batchSize - changed;

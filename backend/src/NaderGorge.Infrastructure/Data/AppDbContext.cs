@@ -266,6 +266,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<AdminAITurn> AdminAITurns => Set<AdminAITurn>();
     public DbSet<AdminAITurnStep> AdminAITurnSteps => Set<AdminAITurnStep>();
     public DbSet<AdminAIReadInvocation> AdminAIReadInvocations => Set<AdminAIReadInvocation>();
+    public DbSet<AdminAIReadBatchReceipt> AdminAIReadBatchReceipts => Set<AdminAIReadBatchReceipt>();
     public DbSet<AdminAIActionProposal> AdminAIActionProposals => Set<AdminAIActionProposal>();
     public DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges => Set<AdminAIConfirmationChallenge>();
     public DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants => Set<AdminAISecureInputGrant>();

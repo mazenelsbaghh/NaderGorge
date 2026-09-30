@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -22,6 +23,7 @@ public sealed class AdminAIInternalController(
     IAdminAICapabilityRegistry capabilities,
     IAdminAIAccessGate access,
     IAdminAIReadExecutor reads,
+    IAdminAIDataProtector protector,
     IAdminAITurnCompletionService completion) : ControllerBase
 {
     private const int MaxReadsPerBatch = 4;
@@ -122,8 +124,7 @@ public sealed class AdminAIInternalController(
         var turn = await db.AdminAITurns.Include(x => x.Steps).SingleOrDefaultAsync(x => x.Id == turnId, ct);
         if (turn is null) return NotFound(SafeError(AdminAIErrorCodes.TurnNotFound));
         var step = turn.Steps.SingleOrDefault(x => x.StepNumber == stepNumber);
-        if (step is null || turn.Version != request.ExpectedTurnVersion) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
-        if (!ValidateLease(request.LeaseToken, turnId, stepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
+        if (step is null) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
         if (TurnDeadline(turn) <= DateTime.UtcNow) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         var baseline = await db.AdminAICapabilityBaselines.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.CapabilityBaselineId && x.Status == AdminAICapabilityBaselineStatus.Active, ct);
         var policy = await db.AdminAISensitiveDataPolicyVersions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.SensitiveDataPolicyVersionId && x.Status == AdminAISensitiveDataPolicyStatus.Active, ct);
@@ -131,13 +132,45 @@ public sealed class AdminAIInternalController(
             !MatchesRuntimeInventory(baseline.RuntimeInventoryHash))
             return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
         if (policy?.Version != request.ExpectedSensitivePolicyVersion) return Conflict(SafeError(AdminAIErrorCodes.SensitivePolicyChanged));
-        if (turn.ReadInvocationCount + request.Calls.Count > 6) return UnprocessableEntity(SafeError(AdminAIErrorCodes.ReadBudgetExceeded));
         try { await access.RequireCurrentAdminAsync(turn.ActorAdminUserId, checked((int)turn.ExpectedSecurityVersion), ct); } catch { return StatusCode(403, SafeError(AdminAIErrorCodes.AccessRevoked)); }
+        var batchKeyDigest = protector.Digest("admin-ai-read-batch-key", Encoding.UTF8.GetBytes(request.BatchIdempotencyKey));
+        var requestDigest = protector.Digest("admin-ai-read-batch-request", JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            turnId, stepNumber, request.SchemaVersion, request.LeaseToken, request.ExpectedTurnVersion,
+            request.ExpectedBaselineVersion, request.ExpectedSensitivePolicyVersion, request.Calls
+        }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        var receipt = await db.AdminAIReadBatchReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TurnId == turnId && x.BatchKeyDigest == batchKeyDigest, ct);
+        if (receipt is not null)
+        {
+            if (receipt.RequestDigest != requestDigest || receipt.TurnStepId != step.Id ||
+                receipt.ResponseTurnVersion != turn.Version || receipt.ExpiresAt <= DateTime.UtcNow ||
+                receipt.LeaseExpiresAt <= DateTime.UtcNow || turn.CancellationRequestedAt is not null ||
+                turn.Status.IsTerminal() || step.CallbackStatus != "Claimed" ||
+                !FixedEquals(step.CanonicalDecisionHash, HashToken(IssueLease(turnId, stepNumber, turn.Version, receipt.LeaseExpiresAt))))
+                return Conflict(SafeError(AdminAIErrorCodes.IdempotencyPayloadConflict));
+            var replay = protector.Unprotect($"admin-ai-read-batch:{receipt.Id:N}",
+                new AdminAIProtectedValue(receipt.ProtectedResponse, receipt.ResponseHash));
+            return Ok(JsonSerializer.Deserialize<JsonElement>(replay));
+        }
+        if (turn.Version != request.ExpectedTurnVersion) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
+        if (!ValidateLease(request.LeaseToken, turnId, stepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
+        if (turn.ReadInvocationCount + request.Calls.Count > 6 || step.ToolCallsRequested + request.Calls.Count > 4)
+            return UnprocessableEntity(SafeError(AdminAIErrorCodes.ReadBudgetExceeded));
+        foreach (var call in request.Calls)
+            if (!Bounded(call.CallId, 200) || !capabilities.TryGet(call.CapabilityKey, out var definition) || definition.Kind != "read")
+                return UnprocessableEntity(SafeError(AdminAIErrorCodes.ReadCapabilityNotAllowed));
+        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        // Lock the turn before running adapters. A competing batch cannot spend the same budget.
+        turn.Version++;
+        step.Version++;
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict)); }
         var results = new List<object>(request.Calls.Count);
         for (var callIndex = 0; callIndex < request.Calls.Count; callIndex++)
         {
             var call = request.Calls[callIndex];
-            if (!Bounded(call.CallId, 200) || !capabilities.TryGet(call.CapabilityKey, out var definition) || definition.Kind != "read") return UnprocessableEntity(SafeError(AdminAIErrorCodes.ReadCapabilityNotAllowed));
+            capabilities.TryGet(call.CapabilityKey, out var definition);
             try
             {
                 var result = await reads.ExecuteAsync(turn.ActorAdminUserId, new AdminAIReadCall(
@@ -148,16 +181,27 @@ public sealed class AdminAIInternalController(
             catch (OperationCanceledException) when (!ct.IsCancellationRequested) { results.Add(new { call.CallId, call.CapabilityKey, status = "Failed", data = (object?)null, safeErrorCode = AdminAIErrorCodes.ReadTimeout }); }
             catch { results.Add(new { call.CallId, call.CapabilityKey, status = "Rejected", data = (object?)null, safeErrorCode = AdminAIErrorCodes.ReadArgumentsInvalid }); }
         }
-        turn.ReadInvocationCount += request.Calls.Count; turn.Status = AdminAITurnStatus.Retrieving; turn.Version++;
-        step.Status = AdminAITurnStepStatus.ReadsCompleted; step.ToolCallsRequested += request.Calls.Count; step.Version++;
-        await db.SaveChangesAsync(ct);
+        turn.ReadInvocationCount += request.Calls.Count; turn.Status = AdminAITurnStatus.Retrieving;
+        step.Status = AdminAITurnStepStatus.ReadsCompleted; step.ToolCallsRequested += request.Calls.Count;
         var now = DateTime.UtcNow;
         var expiry = LeaseExpiry(turn, now);
         if (expiry <= now) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         var renewedToken = IssueLease(turnId, stepNumber, turn.Version, expiry);
         step.CanonicalDecisionHash = HashToken(renewedToken); step.NextCallbackAttemptAt = expiry;
+        var response = new { schemaVersion = "1", turnId, stepNumber, turnVersion = turn.Version, leaseToken = renewedToken, leaseExpiresAt = expiry, remainingBudgets = new { readCalls = 6 - turn.ReadInvocationCount, redactedContextBytes = 65536 - turn.RedactedContextBytes }, results };
+        var receiptId = Guid.NewGuid();
+        var protectedResponse = protector.Protect($"admin-ai-read-batch:{receiptId:N}",
+            JsonSerializer.SerializeToUtf8Bytes(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        db.AdminAIReadBatchReceipts.Add(new AdminAIReadBatchReceipt
+        {
+            Id = receiptId, TurnId = turnId, TurnStepId = step.Id, BatchKeyDigest = batchKeyDigest,
+            RequestDigest = requestDigest, ProtectedResponse = protectedResponse.Ciphertext,
+            ResponseHash = protectedResponse.Digest, ResponseTurnVersion = turn.Version,
+            LeaseExpiresAt = expiry, ExpiresAt = DateTime.UtcNow.AddHours(24)
+        });
         await db.SaveChangesAsync(ct);
-        return Ok(new { schemaVersion = "1", turnId, stepNumber, turnVersion = turn.Version, leaseToken = renewedToken, leaseExpiresAt = expiry, remainingBudgets = new { readCalls = 6 - turn.ReadInvocationCount, redactedContextBytes = 65536 - turn.RedactedContextBytes }, results });
+        await transaction.CommitAsync(ct);
+        return Ok(response);
     }
 
     [HttpPost("turns/{turnId:guid}/complete")]

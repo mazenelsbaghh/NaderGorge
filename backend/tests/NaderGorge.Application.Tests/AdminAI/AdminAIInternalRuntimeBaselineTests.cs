@@ -48,6 +48,7 @@ public sealed class AdminAIInternalRuntimeBaselineTests
             registry,
             null!,
             null!,
+            null!,
             null!)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -103,7 +104,7 @@ public sealed class AdminAIInternalRuntimeBaselineTests
             ["AdminAI:TurnDeadlineSeconds"] = "120", ["AdminAI:LeaseSeconds"] = "60"
         }).Build();
         var controller = new AdminAIInternalController(configuration, db, registry,
-            new AllowAccess(actorId), null!, null!)
+            new AllowAccess(actorId), null!, null!, null!)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -184,7 +185,7 @@ public sealed class AdminAIInternalRuntimeBaselineTests
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["AdminAI:Enabled"] = "true", ["AdminAI:CallbackSecret"] = "test-secret"
-            }).Build(), db, registry, new AllowAccess(actorId), null!, null!)
+            }).Build(), db, registry, new AllowAccess(actorId), null!, null!, null!)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

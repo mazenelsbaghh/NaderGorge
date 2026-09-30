@@ -86,3 +86,16 @@ public sealed class AdminAIReadInvocation : BaseEntity
     public string TraceId { get; set; } = string.Empty;
     public DateTime? CompletedAt { get; set; }
 }
+
+public sealed class AdminAIReadBatchReceipt : BaseEntity
+{
+    public Guid TurnId { get; set; }
+    public Guid TurnStepId { get; set; }
+    public string BatchKeyDigest { get; set; } = string.Empty;
+    public string RequestDigest { get; set; } = string.Empty;
+    public byte[] ProtectedResponse { get; set; } = [];
+    public string ResponseHash { get; set; } = string.Empty;
+    public long ResponseTurnVersion { get; set; }
+    public DateTime LeaseExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+}

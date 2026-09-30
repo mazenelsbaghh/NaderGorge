@@ -248,6 +248,7 @@ public interface IAppDbContext
     DbSet<AdminAITurn> AdminAITurns { get; }
     DbSet<AdminAITurnStep> AdminAITurnSteps { get; }
     DbSet<AdminAIReadInvocation> AdminAIReadInvocations { get; }
+    DbSet<AdminAIReadBatchReceipt> AdminAIReadBatchReceipts { get; }
     DbSet<AdminAIActionProposal> AdminAIActionProposals { get; }
     DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges { get; }
     DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants { get; }

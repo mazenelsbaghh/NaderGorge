@@ -82,7 +82,7 @@ public sealed class AdminAIClaimConcurrencyPostgresTests
     private static AdminAIInternalController Controller(AppDbContext db, IConfiguration configuration,
         AdminAICapabilityRegistry registry, IAdminAIAccessGate access)
     {
-        var controller = new AdminAIInternalController(configuration, db, registry, access, null!, null!)
+        var controller = new AdminAIInternalController(configuration, db, registry, access, null!, null!, null!)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
