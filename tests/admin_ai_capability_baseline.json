@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "47305658681713e07a5a75645b731dec13be13e58c46ae8de8ebbb3eb9247ed4"
+      "digest": "5aa9db0c916c6c93a7af3344a40bdbef93a1097b8b8a92a130a532260abbbd6b"
     }
   },
   "items": [
@@ -18324,6 +18324,33 @@
       }
     },
     {
+      "id": "fe:get:admin-content-summary:frontend-src-services-content-service-ts:402",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/content/summary",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminController.GetContentSummary",
+      "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 402
+      }
+    },
+    {
       "id": "fe:get:admin-emthntak-configuration:frontend-src-app-admin-emthntak-page-tsx:20",
       "kind": "frontend-call",
       "method": "GET",
@@ -21456,33 +21483,6 @@
       }
     },
     {
-      "id": "fe:get:base-path:frontend-src-services-learning-center-service-ts:142",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{base}/{path}",
-      "effect": "read",
-      "domain": "other",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-learning-center-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-learning-center-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/learning-center-service.ts",
-        "line": 142
-      }
-    },
-    {
       "id": "fe:get:chat-rooms-roomid-members:frontend-src-components-chat-createchatgroup-tsx:21",
       "kind": "frontend-call",
       "method": "GET",
@@ -23046,33 +23046,6 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 703
-      }
-    },
-    {
-      "id": "fe:get:scope-content-summary:frontend-src-services-content-service-ts:402",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/{scope}/content/summary",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-content-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-content-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/content-service.ts",
-        "line": 402
       }
     },
     {
@@ -30964,6 +30937,11 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: DELETE /teacher/reports/definitions/{id}"
     },
     {
+      "id": "fe:get:base-path:frontend-src-services-learning-center-service-ts:142",
+      "reason": "non-business",
+      "detail": "Generic Learning Center read dispatcher; all concrete Admin-accessible backend routes are inventoried: GET /{base}/{path}"
+    },
+    {
       "id": "fe:get:dynamic:frontend-src-services-admin-ai-agent-service-ts:192",
       "reason": "self-service",
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: GET <dynamic>"
@@ -31174,5 +31152,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a"
+  "digest": "36406d498a5ab43e359edb8ec7b9bb919cf6504b6785e91ba5f5efbddb0abc0b"
 }

@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 dynamic Admin frontend route reconciliation
+
+- The shared content-summary service builds `/{scope}/content/summary`; its Admin page passes `scope="admin"`, so its retained frontend call now maps to `/api/admin/content/summary`. The Learning Center `read(path)` method is a generic transport helper; all 11 concrete Admin-accessible backend routes are already inventoried, so that helper has one reviewed `non-business` exclusion.
+- The regenerated baseline has 1,076 items, 620 blocked entries, zero unresolved frontend calls, and 44 reviewed exclusions. Digest: `36406d498a5ab43e359edb8ec7b9bb919cf6504b6785e91ba5f5efbddb0abc0b`. The full capability gate passed 11/11 frontend graph tests and 30/30 Python tests. Zero unresolved routing does not satisfy the action catalog, recovery, or release gates; activation remains blocked.
+
 ## 2026-09-30 shared Admin read and Learning Center route coverage
 
 - Five authenticated Content reads, the shared video-learning snapshot read, and the question-audio upload used by Admin question editing now map to their backend operations. The upload remains blocked as a file-storage side effect. The Learning Center is authorized for Admin and Teacher; all 11 of its backend routes, including six mutations, now appear in the baseline even though its frontend service uses a dynamic helper path.

@@ -54,6 +54,7 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     playback = [item for item in self_service if "Current-viewer playback session" in item["detail"]]
     auth_refresh = [item for item in self_service if "Current-user authentication refresh" in item["detail"]]
     public_surface = [item for item in baseline["exclusions"] if item["reason"] == "public-surface"]
+    helper = [item for item in baseline["exclusions"] if item["reason"] == "non-business"]
     teacher_surface = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
     teacher_reports = [item for item in teacher_surface if "/teacher/reports/" in item["detail"]]
     teacher_other = [item for item in teacher_surface if "/teacher/reports/" not in item["detail"]]
@@ -62,6 +63,8 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     assert len(auth_refresh) == 1
     assert len(self_service) == len(admin_ai_transport) + len(playback) + len(auth_refresh)
     assert len(public_surface) == 4
+    assert len(helper) == 1
+    assert helper[0]["detail"].endswith("GET /{base}/{path}")
     expected_public = {
         "GET /public/forms/{slug}", "POST /public/forms/{slug}/submit",
         "GET /public/settings",
@@ -100,7 +103,7 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     assert 'session.UserId == userId' in video_controller
     assert len(teacher_reports) == 9
     assert len(teacher_other) == 7
-    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface) + len(public_surface)
+    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface) + len(public_surface) + len(helper)
     assert '[Authorize(Roles = "Teacher")]' in (
         ROOT / "backend/src/NaderGorge.API/Controllers/TeacherReportsController.cs"
     ).read_text()
@@ -247,10 +250,29 @@ def test_admin_accessible_learning_center_is_covered_despite_dynamic_frontend_bu
     actual = {(item["method"], item["route"]) for item in items
               if item["kind"] == "backend-endpoint" and item["route"].startswith("/api/learning-center/")}
     assert expected == actual
-    assert any(item["route"] == "/{base}/{path}" and item["status"] == "candidate"
-               for item in items if item["kind"] == "frontend-call")
+    assert not any(item["route"] == "/{base}/{path}"
+                   for item in items if item["kind"] == "frontend-call")
     assert '[Authorize(Roles = "Admin,Teacher")]' in (
         ROOT / "backend/src/NaderGorge.API/Controllers/LearningCenterController.cs"
+    ).read_text()
+
+
+def test_admin_summary_dynamic_scope_links_to_admin_read():
+    baseline = json.loads(BASELINE.read_text())
+    graph = json.loads((ROOT / "tests/admin_ai_frontend_reachable_calls.json").read_text())
+    original = [call for call in graph["calls"]
+                if call["source"]["file"] == "frontend/src/services/content-service.ts"
+                and call["path"] == "/{scope}/content/summary"]
+    assert len(original) == 1
+    mapped = [item for item in baseline["items"] if item["kind"] == "frontend-call"
+              and item["source"] == original[0]["source"]]
+    backend = [item for item in baseline["items"] if item["kind"] == "backend-endpoint"
+               and item["method"] == "GET" and item["route"] == "/api/admin/content/summary"]
+    assert len(mapped) == len(backend) == 1
+    assert mapped[0]["route"] == "/admin/content/summary"
+    assert mapped[0]["authoritativeOperation"] == backend[0]["authoritativeOperation"]
+    assert 'scope="admin"' in (
+        ROOT / "frontend/src/app/admin/content/AdminContentPageClient.tsx"
     ).read_text()
 
 

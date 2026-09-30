@@ -159,8 +159,12 @@ function build() {
     backendByRoute.set(key, item);
   }
   const frontendItems = frontend.calls.map((call) => {
-      const backend = backendByRoute.get(routeKey(call.method, call.path));
-      const item = createItem('frontend-call', call.method, call.path, call.source,
+      // The Admin page passes scope="admin" to the shared content-summary panel.
+      const route = call.source.file === 'frontend/src/services/content-service.ts'
+        && call.method === 'GET' && call.path === '/{scope}/content/summary'
+        ? '/admin/content/summary' : call.path;
+      const backend = backendByRoute.get(routeKey(call.method, route));
+      const item = createItem('frontend-call', call.method, route, call.source,
         call.source.file, backend?.authoritativeOperation ?? 'unresolved:frontend-contract');
       // An exact route points to one authoritative operation. Its effect and risk
       // cannot be downgraded by a generic frontend service filename.
@@ -203,6 +207,9 @@ function build() {
   const authRefreshItems = frontendItems.filter((item) =>
     item.source.file === 'frontend/src/services/api-client.ts'
     && item.method === 'POST' && item.route === '/{API_BASE_URL}/auth/refresh');
+  const learningCenterHelperItems = frontendItems.filter((item) =>
+    item.source.file === 'frontend/src/services/learning-center-service.ts'
+    && item.method === 'GET' && item.route === '/{base}/{path}');
   const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
   const teacherReportItems = frontendItems.filter((item) =>
     item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
@@ -223,7 +230,8 @@ function build() {
     reviewedTeacherCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
   const teacherOnlyItems = [...teacherReportItems, ...additionalTeacherItems];
   const excludedIds = new Set([
-    ...selfServiceItems, ...playbackItems, ...publicItems, ...authRefreshItems, ...teacherOnlyItems,
+    ...selfServiceItems, ...playbackItems, ...publicItems, ...authRefreshItems,
+    ...learningCenterHelperItems, ...teacherOnlyItems,
   ].map((item) => item.id));
   const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -247,6 +255,11 @@ function build() {
       id: item.id,
       reason: 'self-service',
       detail: `Current-user authentication refresh is transport, not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...learningCenterHelperItems.map((item) => ({
+      id: item.id,
+      reason: 'non-business',
+      detail: `Generic Learning Center read dispatcher; all concrete Admin-accessible backend routes are inventoried: ${item.method} ${item.route}`,
     })),
     ...teacherOnlyItems.map((item) => ({
       id: item.id,

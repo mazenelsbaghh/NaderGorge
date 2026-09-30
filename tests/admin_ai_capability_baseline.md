@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `8fb6a092298313de02fbf8e4acf525723a25b73e11fdb2fbca0a8415bc66659a`
+Digest: `36406d498a5ab43e359edb8ec7b9bb919cf6504b6785e91ba5f5efbddb0abc0b`
 
-Items: 1077; external-side-effect=80, mutation=540, read=419, export=23, preview=15.
-Reviewed non-business exclusions: 43.
+Items: 1076; external-side-effect=80, mutation=540, read=418, export=23, preview=15.
+Reviewed non-business exclusions: 44.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -646,6 +646,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:admin-community-comments-pending:frontend-src-services-admin-service-ts:1744 | GET | /admin/community/comments/pending | read | other | none | candidate |
 | fe:get:admin-community-posts:frontend-src-services-admin-service-ts:1723 | GET | /admin/community/posts | read | other | none | candidate |
 | fe:get:admin-content-summary-teachers:frontend-src-services-content-service-ts:400 | GET | /admin/content/summary/teachers | read | content | none | candidate |
+| fe:get:admin-content-summary:frontend-src-services-content-service-ts:402 | GET | /admin/content/summary | read | content | none | candidate |
 | fe:get:admin-emthntak-configuration:frontend-src-app-admin-emthntak-page-tsx:20 | GET | /admin/emthntak/configuration | read | other | none | candidate |
 | fe:get:admin-exams-assessmentid-attempts-attemptid-assessment-review:frontend-src-components-admin-assessmentattemptreview-tsx:46 | GET | /admin/exams/{assessmentId}/attempts/{attemptId}/assessment-review | read | content | none | candidate |
 | fe:get:admin-exams-examid-dashboard:frontend-src-services-admin-service-ts:2168 | GET | /admin/exams/{examId}/dashboard | read | content | none | candidate |
@@ -762,7 +763,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:admin-wallets-unmatched-sms:frontend-src-services-wallet-service-ts:230 | GET | /admin/wallets/unmatched-sms | read | finance | none | candidate |
 | fe:get:admin-wallets:frontend-src-services-wallet-service-ts:199 | GET | /admin/wallets | read | finance | none | candidate |
 | fe:get:admin-watch-requests:frontend-src-services-admin-service-ts:2327 | GET | /admin/watch-requests | read | identity | none | candidate |
-| fe:get:base-path:frontend-src-services-learning-center-service-ts:142 | GET | /{base}/{path} | read | other | none | candidate |
 | fe:get:chat-rooms-roomid-members:frontend-src-components-chat-createchatgroup-tsx:21 | GET | /chat/rooms/{roomId}/members | read | support | none | candidate |
 | fe:get:chat-rooms-roomid-messages-page-page-pagesize-pagesize:frontend-src-services-chat-service-ts:51 | GET | /chat/rooms/{roomId}/messages?page={page}&pageSize={pageSize} | read | support | none | candidate |
 | fe:get:chat-rooms:frontend-src-services-chat-service-ts:48 | GET | /chat/rooms | read | support | none | candidate |
@@ -821,7 +821,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-whatsapp-campaigns:frontend-src-services-live-support-service-ts:793 | GET | /live-support/whatsapp/campaigns | read | support | none | candidate |
 | fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:822 | GET | /live-support/whatsapp/preferences | read | support | none | candidate |
 | fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:703 | GET | /live-support/whatsapp/templates | read | support | none | candidate |
-| fe:get:scope-content-summary:frontend-src-services-content-service-ts:402 | GET | /{scope}/content/summary | read | content | none | candidate |
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | GET | /video-learning/{id}/author | read | identity | none | candidate |
 | fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:48 | GET | /video-learning/{id}/report | read | content | none | candidate |
