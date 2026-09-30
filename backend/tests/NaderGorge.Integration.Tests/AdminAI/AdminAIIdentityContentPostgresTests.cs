@@ -21,7 +21,7 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIIdentityContentPostgresTests
 {
     [Fact]
-    public async Task RealPostgres_SixOrdinaryActions_PersistOneEffectPerConfirmedProposal()
+    public async Task RealPostgres_SevenOrdinaryActions_PersistOneEffectPerConfirmedProposal()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
         await using var db = fixture.CreateDbContext();
@@ -71,11 +71,12 @@ public sealed class AdminAIIdentityContentPostgresTests
             new AdminAIUpdateSubjectAction(mediator, preview),
             new AdminAICreateVideoTypeAction(mediator, preview),
             new AdminAIUpdateVideoTypeAction(mediator, preview),
-            new AdminAIAddTaskCommentAction(mediator, preview)
+            new AdminAIAddTaskCommentAction(mediator, preview),
+            new AdminAIUpdateTaskStatusAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
             [.. AdminAIIdentityContentActionCatalog.CreateCandidates(), .. AdminAIOperationsActionCatalog.CreateCandidates()]);
-        Assert.Equal(6, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
+        Assert.Equal(7, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -130,6 +131,8 @@ public sealed class AdminAIIdentityContentPostgresTests
         Assert.Equal(AdminAIProposalStatus.Invalidated,
             (await db.AdminAIActionProposals.AsNoTracking().SingleAsync(item => item.Id == staleCommentProposal.Id)).Status);
         await ConfirmAsync(adapters[5].Key, commentInput);
+        await ConfirmAsync(adapters[6].Key,
+            new { taskId = task.Id, status = (int)NaderGorge.Domain.Enums.TaskStatus.Review });
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -156,11 +159,13 @@ public sealed class AdminAIIdentityContentPostgresTests
         Assert.Equal(task.Id, comment.TaskId);
         Assert.Equal(actor.Id, comment.UserId);
         Assert.Equal("Reviewed the lesson", comment.Content);
+        Assert.Equal(NaderGorge.Domain.Enums.TaskStatus.Review,
+            (await verifyDb.TaskItems.AsNoTracking().SingleAsync(item => item.Id == task.Id)).Status);
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(6, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(7, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }
