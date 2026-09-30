@@ -47,14 +47,19 @@ function unwrap<T>(response: { data: ApiEnvelope<T> }): T {
   return response.data.data;
 }
 export const assessmentRevisionService = {
-  notificationTemplates: async (kind: AssessmentKind) => unwrap(await apiClient.get<ApiEnvelope<LiveSupportWhatsAppTemplate[]>>(
-    `/admin/${kind === 'exam' ? 'exams' : 'homework'}/notification-templates`)),
-  load: async (kind: AssessmentKind, id: string) => unwrap(await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`/admin/${kind === 'exam' ? 'exams' : 'homework'}/${id}/editor`)),
-  preview: async (definition: AssessmentDefinition, policy: RevisionPolicy) => unwrap(await apiClient.post<ApiEnvelope<RevisionPreview>>(
-    `/admin/${definition.kind === 'exam' ? 'exams' : 'homework'}/${definition.assessmentId}/revision-preview`, { definition, policy })),
+  notificationTemplates: async (kind: AssessmentKind) => unwrap(kind === 'exam'
+    ? await apiClient.get<ApiEnvelope<LiveSupportWhatsAppTemplate[]>>('/admin/exams/notification-templates')
+    : await apiClient.get<ApiEnvelope<LiveSupportWhatsAppTemplate[]>>('/admin/homework/notification-templates')),
+  load: async (kind: AssessmentKind, id: string) => unwrap(kind === 'exam'
+    ? await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`/admin/exams/${id}/editor`)
+    : await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`/admin/homework/${id}/editor`)),
+  preview: async (definition: AssessmentDefinition, policy: RevisionPolicy) => unwrap(definition.kind === 'exam'
+    ? await apiClient.post<ApiEnvelope<RevisionPreview>>(`/admin/exams/${definition.assessmentId}/revision-preview`, { definition, policy })
+    : await apiClient.post<ApiEnvelope<RevisionPreview>>(`/admin/homework/${definition.assessmentId}/revision-preview`, { definition, policy })),
   save: async (request: { definition: AssessmentDefinition; policy: RevisionPolicy; revisionToken: string; operationId: string; confirmPreviousAttempts: boolean; subjectId?: string }) => {
-    const saved = unwrap(await apiClient.put<ApiEnvelope<AssessmentEditorResponse>>(
-      `/admin/${request.definition.kind === 'exam' ? 'exams' : 'homework'}/${request.definition.assessmentId}/definition`, request));
+    const saved = unwrap(request.definition.kind === 'exam'
+      ? await apiClient.put<ApiEnvelope<AssessmentEditorResponse>>(`/admin/exams/${request.definition.assessmentId}/definition`, request)
+      : await apiClient.put<ApiEnvelope<AssessmentEditorResponse>>(`/admin/homework/${request.definition.assessmentId}/definition`, request));
     invalidateMany(['assessments', 'student:homeworks', 'student:exams']);
     return saved;
   },

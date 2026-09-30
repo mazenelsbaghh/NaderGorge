@@ -89,6 +89,18 @@ def test_admin_routes_are_inventoried_even_when_controller_name_is_not_admin():
                and item["risk"] == "ordinary" for item in assessment)
 
 
+def test_literal_admin_and_hr_frontend_routes_resolve_to_backend_operations():
+    items = json.loads(BASELINE.read_text())["items"]
+    calls = [item for item in items if item["kind"] == "frontend-call"
+             and item["route"].startswith(("/admin/", "/hr/"))]
+
+    assert calls
+    assert all(item["authoritativeOperation"].startswith("diagnostic:") for item in calls)
+    subscribers = [item for item in calls if "/subscribers" in item["route"]]
+    assert len(subscribers) == 8
+    assert len({item["authoritativeOperation"] for item in subscribers}) == 8
+
+
 def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
     items = json.loads(BASELINE.read_text())["items"]
     approvals = [item for item in items

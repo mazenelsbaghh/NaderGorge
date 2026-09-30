@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 490,
+  "callCount": 506,
   "calls": [
     {
       "method": "DELETE",
@@ -2386,42 +2386,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/{contentType}s/{id}/subscribers",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2569
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{contentType}s/{id}/subscribers/export",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 2581
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{kindexamexamshomework}/{id}/editor",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 52
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/{kindexamexamshomework}/notification-templates",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 50
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/assistants/{assistantId}/homework-reviews",
       "dynamic": true,
       "source": {
@@ -2575,6 +2539,24 @@
     },
     {
       "method": "GET",
+      "path": "/admin/exams/{id}/editor",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/exams/notification-templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 51
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/finance/code-accounting",
       "dynamic": false,
       "source": {
@@ -2719,6 +2701,24 @@
     },
     {
       "method": "GET",
+      "path": "/admin/homework/{id}/editor",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 55
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/homework/notification-templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 52
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/hr/attendance",
       "dynamic": false,
       "source": {
@@ -2742,6 +2742,24 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1652
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2574
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2590
       }
     },
     {
@@ -2800,11 +2818,11 @@
     },
     {
       "method": "GET",
-      "path": "/admin/operations/tasks{query}",
-      "dynamic": true,
+      "path": "/admin/operations/tasks",
+      "dynamic": false,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 103
+        "line": 102
       }
     },
     {
@@ -2832,6 +2850,24 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2530
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2571
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2585
       }
     },
     {
@@ -3115,6 +3151,24 @@
     },
     {
       "method": "GET",
+      "path": "/admin/sections/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2573
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sections/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2589
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/settings",
       "dynamic": false,
       "source": {
@@ -3327,6 +3381,24 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2541
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2572
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2587
       }
     },
     {
@@ -3722,7 +3794,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 21
+        "line": 32
       }
     },
     {
@@ -4222,15 +4294,6 @@
     },
     {
       "method": "POST",
-      "path": "/admin/{definitionkindexamexamshomework}/{definitionassessmentId}/revision-preview",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 53
-      }
-    },
-    {
-      "method": "POST",
       "path": "/admin/assessments/ocr/questions",
       "dynamic": false,
       "source": {
@@ -4402,6 +4465,15 @@
     },
     {
       "method": "POST",
+      "path": "/admin/exams/{definitionassessmentId}/revision-preview",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 57
+      }
+    },
+    {
+      "method": "POST",
       "path": "/admin/exams/inline",
       "dynamic": false,
       "source": {
@@ -4497,6 +4569,15 @@
       "source": {
         "file": "frontend/src/services/admin-gifts-service.ts",
         "line": 136
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/homework/{definitionassessmentId}/revision-preview",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 58
       }
     },
     {
@@ -4604,7 +4685,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 113
+        "line": 112
       }
     },
     {
@@ -4613,7 +4694,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
-        "line": 119
+        "line": 118
       }
     },
     {
@@ -4681,7 +4762,16 @@
     },
     {
       "method": "POST",
-      "path": "/admin/platform-finance/periods/{periodid}/{periodstatus2reopenclose}",
+      "path": "/admin/platform-finance/periods/{periodid}/close",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
+        "line": 12
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/periods/{periodid}/reopen",
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
@@ -5653,11 +5743,56 @@
     },
     {
       "method": "POST",
-      "path": "/hr/payroll/runs/{id}/{action}",
+      "path": "/hr/payroll/runs/{id}/close",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/hr-payroll-service.ts",
-        "line": 20
+        "line": 27
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/finance-approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 24
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/finance-review",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 23
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/gm-approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 25
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/pay",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 26
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/return",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 28
       }
     },
     {
@@ -6148,15 +6283,6 @@
     },
     {
       "method": "PUT",
-      "path": "/admin/{requestdefinitionkindexamexamshomework}/{requestdefinitionassessmentId}/definition",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 56
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/admin/auto-repair/control",
       "dynamic": false,
       "source": {
@@ -6211,6 +6337,15 @@
     },
     {
       "method": "PUT",
+      "path": "/admin/exams/{requestdefinitionassessmentId}/definition",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 61
+      }
+    },
+    {
+      "method": "PUT",
       "path": "/admin/forms/{id}",
       "dynamic": true,
       "source": {
@@ -6243,6 +6378,15 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2101
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/homework/{requestdefinitionassessmentId}/definition",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 62
       }
     },
     {
@@ -6996,5 +7140,5 @@
       }
     }
   ],
-  "digest": "074ee672e287499638bf47b74fb045e4ee66a2b98eec492abdde854223331def"
+  "digest": "108b1c7da99392a09b4893557d59724fd72345d3cb3f45026f5d5abc5e7dab63"
 }

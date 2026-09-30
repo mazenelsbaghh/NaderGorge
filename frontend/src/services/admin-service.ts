@@ -2566,11 +2566,13 @@ export const adminService = {
     pageSize = 20,
     search = ''
   ) => {
-    const res = await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(
-      `/admin/${contentType}s/${id}/subscribers`,
-      { params: { page, pageSize, ...(search ? { search } : {}) } }
-    );
-    return res.data?.data;
+    const options = { params: { page, pageSize, ...(search ? { search } : {}) } };
+    switch (contentType) {
+      case 'package': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/packages/${id}/subscribers`, options)).data?.data;
+      case 'term': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/terms/${id}/subscribers`, options)).data?.data;
+      case 'section': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/sections/${id}/subscribers`, options)).data?.data;
+      case 'lesson': return (await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(`/admin/lessons/${id}/subscribers`, options)).data?.data;
+    }
   },
 
   exportContentSubscribersCsv: async (
@@ -2578,12 +2580,14 @@ export const adminService = {
     id: string,
     contentName: string
   ) => {
-    const res = await apiClient.get(
-      `/admin/${contentType}s/${id}/subscribers/export`,
-      {
-        responseType: 'blob',
-      }
-    );
+    const options = { responseType: 'blob' as const };
+    const res = contentType === 'package'
+      ? await apiClient.get(`/admin/packages/${id}/subscribers/export`, options)
+      : contentType === 'term'
+        ? await apiClient.get(`/admin/terms/${id}/subscribers/export`, options)
+        : contentType === 'section'
+          ? await apiClient.get(`/admin/sections/${id}/subscribers/export`, options)
+          : await apiClient.get(`/admin/lessons/${id}/subscribers/export`, options);
     const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

@@ -99,8 +99,7 @@ export const assistantService = {
         if (filters?.status) params.append('status', filters.status.toString());
         if (filters?.priority) params.append('priority', filters.priority.toString());
 
-        const query = params.toString() ? `?${params.toString()}` : '';
-        return apiClient.get<BackendResponse<TaskItemDto[]>>(`/admin/operations/tasks${query}`);
+        return apiClient.get<BackendResponse<TaskItemDto[]>>('/admin/operations/tasks', { params });
     },
 
     createAdminOperationsTask: async (taskData: {
