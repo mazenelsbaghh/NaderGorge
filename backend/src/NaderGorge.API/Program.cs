@@ -346,6 +346,14 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIMediaPipelineCreateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAISocialPlanCreateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>
+    new NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIFormResultResolver(
+        services.GetRequiredService<NaderGorge.Domain.Interfaces.IAppDbContext>(),
+        "admin.commercial.form.create", "form.create", false));
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>
+    new NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIFormResultResolver(
+        services.GetRequiredService<NaderGorge.Domain.Interfaces.IAppDbContext>(),
+        "admin.commercial.form.update", "form.update", true));
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>
     new NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITaskOperationResultResolver(
         services.GetRequiredService<NaderGorge.Domain.Interfaces.IAppDbContext>(),
         "admin.operations.task.status.update", "operations.task.status.update", ["operations-tasks"]));
@@ -382,6 +390,7 @@ builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces
     NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry.CreateProductionReadRegistry());
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIIdentityContentPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIOperationsPreviewSource>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICommercialPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAssessmentPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITeacherFinancialReviewPreviewSource>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.AdminAI.Actions.IAdminAIActionPreviewSource, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIOrdinaryPreviewSource>();
@@ -395,6 +404,8 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateTaskAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateMediaPipelineAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateSocialPlanAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICreateFormAction>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateFormAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIAddTaskCommentAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIUpdateTaskStatusAction>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionCapability, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIResolveTaskApprovalAction>();

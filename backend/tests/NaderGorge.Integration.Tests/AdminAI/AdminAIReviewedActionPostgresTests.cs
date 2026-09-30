@@ -25,6 +25,100 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIReviewedActionPostgresTests
 {
     [Fact]
+    public async Task RealPostgres_FormDraft_CreateAndUpdate_ReplayWithoutActivationOrSubmissionEdits()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var actor = new User { FullName = "Form Admin", PhoneNumber = "01000001001", PasswordHash = "test" };
+        db.Users.Add(actor);
+        await db.SaveChangesAsync();
+        var previewSource = new AdminAICommercialPreviewSource(db);
+        var createInput = new AdminAICreateFormInput("Draft form", "Private description", "Apply-2026", false,
+            "https://storage.example/cover?token=preview-secret-sentinel", null, null,
+            "[{\"id\":\"preview-secret-sentinel\"}]");
+        var countBefore = await db.CustomForms.CountAsync();
+        var createPreview = await previewSource.PreviewAsync("admin.commercial.form.create", actor.Id,
+            createInput, CancellationToken.None);
+        Assert.Equal(countBefore, await db.CustomForms.CountAsync());
+        Assert.DoesNotContain("preview-secret-sentinel", System.Text.Json.JsonSerializer.Serialize(createPreview));
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() =>
+            previewSource.PreviewAsync("admin.commercial.form.create", actor.Id,
+                createInput with { IsActive = true }, CancellationToken.None));
+
+        var createId = $"admin-ai-form-create-{Guid.NewGuid():N}";
+        var create = new CreateFormCommand(createInput.Title, createInput.Description,
+            createInput.Slug, false, createInput.CoverImageUrl, null, null, createInput.FieldsJson)
+            { PerformedByUserId = actor.Id, OperationId = createId };
+        var createHandler = new CreateFormCommandHandler(db);
+        Assert.False((await createHandler.Handle(create with { IsActive = true, OperationId = "activate-new" },
+            CancellationToken.None)).Success);
+        var created = await createHandler.Handle(create, CancellationToken.None);
+        Assert.True(created.Success);
+        var formId = created.Data;
+        Assert.Equal("apply-2026", (await db.CustomForms.SingleAsync(item => item.Id == formId)).Slug);
+
+        await using var replayDb = fixture.CreateDbContext();
+        Assert.Equal(formId, (await new CreateFormCommandHandler(replayDb)
+            .Handle(create, CancellationToken.None)).Data);
+        var createConflict = await new CreateFormCommandHandler(replayDb)
+            .Handle(create with { Title = "Different form" }, CancellationToken.None);
+        Assert.False(createConflict.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", createConflict.Errors!);
+        Assert.NotNull(await new AdminAIFormResultResolver(replayDb,
+            "admin.commercial.form.create", "form.create", false)
+            .ResolveAsync(createId, createId, CancellationToken.None));
+
+        var updateInput = new AdminAIUpdateFormInput(formId, "Revised draft", "Updated",
+            "Apply-2026", false, null, null, null, "[]");
+        var firstUpdatePreview = await previewSource.PreviewAsync("admin.commercial.form.update", actor.Id,
+            updateInput, CancellationToken.None);
+        var trackedForm = await db.CustomForms.SingleAsync(item => item.Id == formId);
+        trackedForm.Description = "Changed after preview";
+        await db.SaveChangesAsync();
+        var changedUpdatePreview = await previewSource.PreviewAsync("admin.commercial.form.update", actor.Id,
+            updateInput, CancellationToken.None);
+        Assert.NotEqual(firstUpdatePreview.StateFingerprint, changedUpdatePreview.StateFingerprint);
+
+        var updateId = $"admin-ai-form-update-{Guid.NewGuid():N}";
+        var update = new UpdateFormCommand(formId, updateInput.Title, updateInput.Description,
+            updateInput.Slug, false, null, null, null, updateInput.FieldsJson)
+            { PerformedByUserId = actor.Id, OperationId = updateId };
+        Assert.True((await new UpdateFormCommandHandler(db).Handle(update, CancellationToken.None)).Success);
+        trackedForm.Title = "Later edit";
+        await db.SaveChangesAsync();
+        await using var afterUpdateDb = fixture.CreateDbContext();
+        var updateHandler = new UpdateFormCommandHandler(afterUpdateDb);
+        Assert.True((await updateHandler.Handle(update, CancellationToken.None)).Success);
+        Assert.Equal("Later edit", (await afterUpdateDb.CustomForms.AsNoTracking()
+            .SingleAsync(item => item.Id == formId)).Title);
+        var updateConflict = await updateHandler.Handle(update with { Title = "Conflicting edit" },
+            CancellationToken.None);
+        Assert.False(updateConflict.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", updateConflict.Errors!);
+        Assert.NotNull(await new AdminAIFormResultResolver(afterUpdateDb,
+            "admin.commercial.form.update", "form.update", true)
+            .ResolveAsync(updateId, updateId, CancellationToken.None));
+
+        trackedForm.IsActive = true;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() =>
+            previewSource.PreviewAsync("admin.commercial.form.update", actor.Id,
+                updateInput, CancellationToken.None));
+        Assert.False((await new UpdateFormCommandHandler(db)
+            .Handle(update with { OperationId = "active-edit" }, CancellationToken.None)).Success);
+        trackedForm.IsActive = false;
+        db.FormSubmissions.Add(new FormSubmission { CustomFormId = formId, SubmittedDataJson = "{}" });
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() =>
+            previewSource.PreviewAsync("admin.commercial.form.update", actor.Id,
+                updateInput, CancellationToken.None));
+        Assert.False((await new UpdateFormCommandHandler(db)
+            .Handle(update with { OperationId = "submitted-edit" }, CancellationToken.None)).Success);
+        Assert.Equal(countBefore + 1, await db.CustomForms.CountAsync());
+    }
+
+    [Fact]
     public async Task RealPostgres_SocialPlanCreation_PreventsOrdinaryPublishingAndReplaysDraft()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
@@ -329,7 +423,8 @@ public sealed class AdminAIReviewedActionPostgresTests
         var preview = new AdminAIOrdinaryPreviewSource(
             new AdminAIIdentityContentPreviewSource(db), new AdminAIOperationsPreviewSource(db),
             new AdminAIAssessmentPreviewSource(db, new AcademicScopeService(db)),
-            new AdminAITeacherFinancialReviewPreviewSource(db));
+            new AdminAITeacherFinancialReviewPreviewSource(db),
+            new AdminAICommercialPreviewSource(db));
         IAdminAIActionCapability[] adapters =
         [
             new AdminAIAddStudentNoteAction(mediator, preview),

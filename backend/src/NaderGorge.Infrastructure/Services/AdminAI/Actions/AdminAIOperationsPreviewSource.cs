@@ -283,7 +283,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
     AdminAIIdentityContentPreviewSource identityContent,
     AdminAIOperationsPreviewSource operations,
     AdminAIAssessmentPreviewSource assessment,
-    AdminAITeacherFinancialReviewPreviewSource teacherFinance) : IAdminAIActionPreviewSource
+    AdminAITeacherFinancialReviewPreviewSource teacherFinance,
+    AdminAICommercialPreviewSource commercial) : IAdminAIActionPreviewSource
 {
     public Task<AdminAIActionPreview> PreviewAsync<TInput>(
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
@@ -291,6 +292,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
         {
             "admin.finance.teacher-event.review" =>
                 teacherFinance.PreviewAsync(capabilityKey, actorId, input, ct),
+            "admin.commercial.form.create" or "admin.commercial.form.update" =>
+                commercial.PreviewAsync(capabilityKey, actorId, input, ct),
             "admin.tools.media-pipeline.create" or "admin.tools.social-plan.create"
                 or "admin.operations.task.create"
                 or "admin.operations.task-comment.create" or "admin.operations.task.status.update"
