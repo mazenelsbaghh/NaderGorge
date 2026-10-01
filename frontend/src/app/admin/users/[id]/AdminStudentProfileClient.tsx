@@ -913,7 +913,9 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                               CodeRedemption: 'شحن كود',
                               ContentPurchase: 'شراء باقة',
                               AdminAdjustment: 'تعديل إداري',
-                              Refund: 'استرجاع رصيد'
+                              Refund: 'استرجاع رصيد',
+                              PlatformRefund: 'استرداد رصيد',
+                              PlatformRefundReversal: 'عكس استرداد الرصيد'
                             };
                             return (
                               <span className="font-bold text-[var(--admin-text)]">

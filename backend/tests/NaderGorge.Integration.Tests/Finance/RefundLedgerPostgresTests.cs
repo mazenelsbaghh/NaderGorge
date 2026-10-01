@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NaderGorge.API.Controllers;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
@@ -19,6 +20,100 @@ namespace NaderGorge.Integration.Tests.Finance;
 
 public sealed class RefundLedgerPostgresTests
 {
+    [Fact]
+    public async Task LegacyBalanceCancellation_RejectsAStaleActiveGrantWithoutSecondCredit()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var student = new User { FullName = "Cancellation student", PhoneNumber = "01000000051", PasswordHash = "test" };
+        var actor = new User { FullName = "Cancellation operator", PhoneNumber = "01000000052", PasswordHash = "test" };
+        var teacherUser = new User { FullName = "Cancellation teacher", PhoneNumber = "01000000053", PasswordHash = "test" };
+        var teacher = new TeacherProfile { User = teacherUser };
+        var subject = new Subject { Name = "Cancellation subject", NormalizedName = "cancellation subject" };
+        var package = new Package
+        {
+            Name = "Cancellation package", Description = "Balance cancellation overlap", Price = 100m,
+            Subject = subject, Teacher = teacher, TargetGrade = "SecondSecondary"
+        };
+        var grant = new StudentAccessGrant { User = student, GrantType = CodeType.Package, PackageId = package.Id, IsActive = true };
+        db.AddRange(student, actor, teacherUser, teacher, subject, package, grant,
+            new StudentBalance { UserId = student.Id, CurrentBalance = 20m });
+        await db.SaveChangesAsync();
+        await using var overlappingDb = fixture.CreateDbContext();
+        // A second request already read the active grant before the first cancellation committed.
+        await overlappingDb.StudentAccessGrants.SingleAsync(item => item.Id == grant.Id);
+        var request = new CancelPackageGrantCommand(grant.Id, true, actor.Id, "طلب رد الرصيد");
+        var first = await new CancelPackageGrantCommandHandler(db, new TeacherAccountingService(db)).Handle(request, default);
+        var repeated = await new CancelPackageGrantCommandHandler(overlappingDb, new TeacherAccountingService(overlappingDb)).Handle(request, default);
+
+        Assert.True(first.Success);
+        Assert.False(repeated.Success);
+        await using var verifyDb = fixture.CreateDbContext();
+        Assert.Equal(120m, (await verifyDb.StudentBalances.SingleAsync()).CurrentBalance);
+        var credit = await verifyDb.BalanceTransactions.SingleAsync();
+        Assert.Equal(100m, credit.Amount);
+        Assert.Equal(actor.Id, credit.PerformedByUserId);
+        Assert.Contains("طلب رد الرصيد", credit.Description);
+        Assert.False((await verifyDb.StudentAccessGrants.SingleAsync()).IsActive);
+    }
+
+    [Fact]
+    public async Task StudentBalanceRefund_CreditsOnceAndPersistsBalancedJournal()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var student = new User { FullName = "Balance refund student", PhoneNumber = "01000000041", PasswordHash = "test" };
+        var actor = new User { FullName = "Balance refund operator", PhoneNumber = "01000000042", PasswordHash = "test" };
+        var balanceAccount = new FinancialAccount
+        {
+            Code = "1100", Name = "Student balance", Type = FinancialAccountType.Liability,
+            NormalSide = FinancialNormalSide.Credit, Role = FinancialAccountRole.GeneralStudentLiability
+        };
+        var refundAccount = new FinancialAccount
+        {
+            Code = "4100", Name = "Refunds", Type = FinancialAccountType.ContraRevenue,
+            NormalSide = FinancialNormalSide.Debit, Role = FinancialAccountRole.Refunds
+        };
+        var purchaseId = Guid.NewGuid();
+        db.AddRange(student, actor, balanceAccount, refundAccount,
+            new StudentBalance { UserId = student.Id, CurrentBalance = 20m },
+            new SalesFinancialEffect
+            {
+                PurchaseOperationId = purchaseId, StudentId = student.Id,
+                TargetType = SalesTargetType.Package, TargetId = Guid.NewGuid(),
+                GrossAmount = 100m, PaidAmount = 100m, PlatformShareImpact = 100m
+            });
+        await db.SaveChangesAsync();
+        var operations = new PlatformFinanceOperationsService(db, new FinancialPostingService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var refund = await operations.CreateRefundAsync(new(purchaseId, "PurchaseOperation", student.Id,
+            null, 75m, 0m, (int)PlatformRefundMethod.StudentBalance, null,
+            "طلب رد الرصيد", null, actor.Id), default);
+
+        await operations.PostRefundAsync(refund.Id, "balance-refund-check", actor.Id, default);
+
+        await using var replayDb = fixture.CreateDbContext();
+        var replayOperations = new PlatformFinanceOperationsService(replayDb, new FinancialPostingService(replayDb),
+            new BalanceService(replayDb, NullLogger<BalanceService>.Instance));
+        var repeated = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            replayOperations.PostRefundAsync(refund.Id, "balance-refund-check", actor.Id, default));
+        Assert.Equal("FINANCE_ALREADY_POSTED", repeated.Message);
+        Assert.Equal(95m, (await replayDb.StudentBalances.AsNoTracking().SingleAsync()).CurrentBalance);
+        var credit = await replayDb.BalanceTransactions.AsNoTracking().SingleAsync();
+        Assert.Equal(75m, credit.Amount);
+        Assert.Equal(95m, credit.BalanceAfter);
+        Assert.Equal(refund.Id, credit.ReferenceId);
+        Assert.Contains("طلب رد الرصيد", credit.Description);
+        var journal = await replayDb.JournalEntries.Include(item => item.Lines).SingleAsync();
+        Assert.Equal(actor.Id, journal.ActorUserId);
+        Assert.Equal(75m, journal.Lines.Sum(line => line.Debit));
+        Assert.Equal(75m, journal.Lines.Sum(line => line.Credit));
+        Assert.Contains(journal.Lines, line => line.FinancialAccountId == balanceAccount.Id && line.Credit == 75m);
+        Assert.Equal(PlatformRefundStatus.Posted, (await replayDb.PlatformRefunds.SingleAsync()).Status);
+    }
+
     [Fact]
     public async Task ExternalPackageRefund_RevokesAccessAndPostsCashWithActorAndReason()
     {

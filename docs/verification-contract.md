@@ -34,6 +34,16 @@ If full backend solution tests require unavailable local services, run the focus
 - `npm test`: Playwright browser test suite.
 - `npm run test:e2e`: Playwright browser test suite alias.
 
+## Financial refund checks
+
+Set `ConnectionStrings__DefaultConnection` to an isolated PostgreSQL test instance with database-creation permission and `REFUND_TEST_REDIS` to an isolated Redis test instance. The refund fixtures create and drop disposable databases and apply the real migration chain. Do not point these variables at production services.
+
+```bash
+dotnet test backend/tests/NaderGorge.Integration.Tests/NaderGorge.Integration.Tests.csproj --filter FullyQualifiedName~Refund
+```
+
+This suite covers cash and balance refunds, duplicate requests, amount limits, rollback after failed cancellation/posting, refund reversal, and HTTP permissions through real JWT validation and Redis. The HTTP host disables background services; successful local HTTP tests do not establish that the published production version contains the same changes. The Chrome tests in `frontend/tests/e2e/admin-platform-refunds.spec.ts` separately exercise the refund UI with synthetic HTTP responses.
+
 ## Phase 1 E2E Auth/Session Gate
 
 The browser auth flow must use one same-site local domain family. `localhost` and `app.localhost` do not share the backend refresh cookie reliably.

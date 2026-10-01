@@ -691,6 +691,21 @@ const GROUP_CONFIG = [
     ],
   },
   {
+    id: 'finance_details',
+    label: 'تفاصيل الحسابات',
+    icon: ChartNoAxesCombined,
+    hrefs: [
+      '/admin/platform-finance',
+      '/admin/platform-finance/operations',
+      '/admin/platform-finance/planning',
+      '/admin/platform-finance/expenses',
+      '/admin/platform-finance/reports',
+      '/admin/platform-finance/wallets',
+      '/admin/platform-finance/treasury',
+      '/admin/platform-finance/migration',
+    ],
+  },
+  {
     id: 'payments',
     label: 'الشحن والمحافظ',
     icon: Wallet,

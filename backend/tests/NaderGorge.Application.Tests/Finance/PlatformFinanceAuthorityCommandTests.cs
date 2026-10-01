@@ -121,7 +121,7 @@ public sealed class PlatformFinanceAuthorityCommandTests
             null, 75m, 0m, (int)PlatformRefundMethod.Cash, treasury.Id, "Customer refund", null,
             Guid.NewGuid()), CancellationToken.None);
         await operations.PostRefundAsync(refund.Id, "refund-reversal-source", Guid.NewGuid(), CancellationToken.None);
-        var handler = new ReversePlatformRefundCommandHandler(db, posting);
+        var handler = new ReversePlatformRefundCommandHandler(db, posting, new BalanceService(db, NullLogger<BalanceService>.Instance));
         var command = new ReversePlatformRefundCommand(refund.Id, Guid.NewGuid(), "Refund correction");
 
         var first = await handler.Handle(command, CancellationToken.None);

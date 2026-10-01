@@ -6,8 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace NaderGorge.Application.Services;
 
+public sealed record BalanceDebitRequest(
+    Guid UserId, decimal Amount, string Description, Guid? ReferenceId,
+    string TransactionType, Guid? PerformedByUserId = null);
+
 /// <summary>
-/// Manages student balance operations: credit from code redemption, debit for purchases.
+/// Applies balance credits, purchase debits and refund-reversal debits.
 /// All balance mutations are atomic and guarded by the Balance >= 0 invariant.
 /// </summary>
 public class BalanceService
@@ -226,13 +230,20 @@ public class BalanceService
     /// <summary>
     /// Deduct balance for a purchase. Throws if insufficient balance.
     /// </summary>
-    public async Task<BalanceTransaction> DeductBalance(
+    public Task<BalanceTransaction> DeductBalance(
         Guid userId,
         decimal amount,
         string description,
         Guid? referenceId = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        DebitAsync(new(userId, amount, description, referenceId, "ContentPurchase"), ct);
+
+    public async Task<BalanceTransaction> DebitAsync(BalanceDebitRequest request, CancellationToken ct = default)
     {
+        var userId = request.UserId;
+        var amount = request.Amount;
+        var description = request.Description;
+        var referenceId = request.ReferenceId;
         if (amount <= 0) throw new ArgumentException("Deduction amount must be positive", nameof(amount));
 
         var transaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null
@@ -279,9 +290,10 @@ public class BalanceService
                 StudentBalanceId = balance.Id,
                 Amount = -amount, // Negative for debit
                 BalanceAfter = balance.CurrentBalance,
-                TransactionType = "ContentPurchase",
+                TransactionType = request.TransactionType,
                 ReferenceId = referenceId,
-                Description = description
+                Description = description,
+                PerformedByUserId = request.PerformedByUserId
             };
 
             _db.BalanceTransactions.Add(tx);

@@ -211,19 +211,50 @@ public sealed class ReversePlatformExpenseCommandHandler(IAppDbContext db, IFina
             ?? throw new InvalidOperationException("FINANCE_REVERSAL_JOURNAL_NOT_FOUND");
 }
 
-public sealed class ReversePlatformRefundCommandHandler(IAppDbContext db, IFinancialPostingService posting)
+public sealed class ReversePlatformRefundCommandHandler(IAppDbContext db, IFinancialPostingService posting, BalanceService balances)
     : IRequestHandler<ReversePlatformRefundCommand, PlatformFinanceReversalResult>
 {
     public async Task<PlatformFinanceReversalResult> Handle(ReversePlatformRefundCommand command, CancellationToken ct)
+    {
+        if (db is not DbContext context || context.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL"
+            || context.Database.CurrentTransaction is not null)
+            return await ReverseRefundAsync(command, ct);
+
+        await using var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var reversal = await ReverseRefundAsync(command, ct);
+        await transaction.CommitAsync(ct);
+        return reversal;
+    }
+
+    private async Task<PlatformFinanceReversalResult> ReverseRefundAsync(ReversePlatformRefundCommand command, CancellationToken ct)
     {
         var refund = await db.PlatformRefunds.SingleOrDefaultAsync(x => x.Id == command.RefundId, ct)
             ?? throw new InvalidOperationException("FINANCE_REFUND_NOT_FOUND");
         var journalId = refund.JournalEntryId ?? throw new InvalidOperationException("FINANCE_REFUND_NOT_POSTED");
         if (refund.Status == PlatformRefundStatus.Reversed)
             return new(refund.Id, await ReversePlatformExpenseCommandHandler.ReversalIdAsync(db, journalId, ct), true);
+
+        if (!await ClaimPostedRefundAsync(refund, ct))
+            return new(refund.Id, await ReversePlatformExpenseCommandHandler.ReversalIdAsync(db, journalId, ct), true);
+
+        if (refund.Method == PlatformRefundMethod.StudentBalance)
+            await balances.DebitAsync(new(refund.StudentId, refund.TotalAmount, $"عكس استرداد الرصيد: {command.Reason}",
+                refund.Id, "PlatformRefundReversal", command.ActorUserId), ct);
         var reversal = await posting.ReverseAsync(journalId, command.ActorUserId, command.Reason, ct);
         refund.Status = PlatformRefundStatus.Reversed;
         await db.SaveChangesAsync(ct);
         return new(refund.Id, reversal.Id);
+    }
+
+    private async Task<bool> ClaimPostedRefundAsync(PlatformRefund refund, CancellationToken ct)
+    {
+        if (db is not DbContext context || context.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL") return true;
+        // Only the request that claims the posted refund may remove its balance credit.
+        var claimed = await db.PlatformRefunds.Where(candidate => candidate.Id == refund.Id && candidate.Status == PlatformRefundStatus.Posted)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(candidate => candidate.Status, PlatformRefundStatus.Reversed), ct);
+        if (claimed == 1) return true;
+        await db.Entry(refund).ReloadAsync(ct);
+        if (refund.Status != PlatformRefundStatus.Reversed) throw new InvalidOperationException("FINANCE_REFUND_NOT_POSTED");
+        return false;
     }
 }

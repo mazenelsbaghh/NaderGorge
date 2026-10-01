@@ -27,12 +27,36 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
 
     public async Task<ApiResponse> Handle(CancelPackageGrantCommand request, CancellationToken cancellationToken)
     {
+        if (_context is not DbContext dbContext
+            || dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL"
+            || dbContext.Database.CurrentTransaction != null)
+            return await CancelGrantAsync(request, cancellationToken);
+
+        await using var transaction = await _context.BeginTransactionAsync(
+            System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+        var cancellation = await CancelGrantAsync(request, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return cancellation;
+    }
+
+    private async Task<ApiResponse> CancelGrantAsync(CancelPackageGrantCommand request, CancellationToken cancellationToken)
+    {
         var grant = await _context.StudentAccessGrants
             .Include(g => g.User)
             .FirstOrDefaultAsync(g => g.Id == request.AccessGrantId, cancellationToken);
 
         if (grant == null) return ApiResponse.Fail("Access grant not found.");
         if (!grant.IsActive) return ApiResponse.Fail("Subscription is already inactive/canceled.");
+
+        if (_context is DbContext dbContext
+            && dbContext.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            // Claim the active grant in the same transaction as its credit and teacher reversal.
+            var claimed = await _context.StudentAccessGrants
+                .Where(activeGrant => activeGrant.Id == request.AccessGrantId && activeGrant.IsActive)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(activeGrant => activeGrant.IsActive, false), cancellationToken);
+            if (claimed == 0) return ApiResponse.Fail("Subscription is already inactive/canceled.");
+        }
 
         grant.IsActive = false;
         grant.CancelledByUserId = request.AdminId;

@@ -127,7 +127,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
         purchaseOperationId: refundablePurchaseOperationId(selectedPackage),
         studentId: student.id,
         teacherId: selectedPackage.teacherId || undefined,
-        platformAmount: amount - teacherAmount,
+        platformAmount: Number((amount - teacherAmount).toFixed(2)),
         teacherAmount,
         treasuryAccountId: treasuryId,
         reason: reason.trim(),
