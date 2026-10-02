@@ -109,8 +109,8 @@ public static class TeacherDetailedReportPdf
                 page.Content().PaddingTop(12).PaddingBottom(30).Column(column =>
                 {
                     column.Item().PaddingBottom(11.25f).Text(first
-                        ? "الحساب بعد التصحيح. المدفوع بيتحسب حسب اتفاق المستر، والمجاني والهدايا من غير عمولة. كل الأرقام بالجنيه."
-                        : "نفس الاتفاق على كل الكورسات. عدد الشراء ممكن يزيد عن عدد الطلاب لأن الطالب ممكن يشتري أكتر من مرة.").FontSize(9).LineHeight(1.85f);
+                        ? "الشراء حسب الاتفاق وقت الشراء، والكروت للاتفاق الحالي. المجاني والهدايا من غير عمولة. الأرقام بالجنيه."
+                        : "كل شراء بيتحسب حسب الاتفاق الخاص بيه. عدد الشراء ممكن يزيد عن عدد الطلاب لأن الطالب ممكن يشتري أكتر من مرة.").FontSize(9).LineHeight(1.85f);
                     if (first && report.Agreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report));
                     if (chunk.Length > 0)
                         column.Item().PaddingBottom(4.5f).Text($"الكورسات {index * 2 + 1}" + (chunk.Length > 1 ? $" و{index * 2 + 2}" : "") + $" من {courseIds.Length}").Bold().FontColor(Teal).FontSize(8.25f);
@@ -142,7 +142,16 @@ public static class TeacherDetailedReportPdf
         var current = CurrentAgreements(report);
         var primary = current.Where(agreement => new[] { "الحصة:", "الشهر:", "الترم / الكورس:", "السنة / الباقة:" }
             .Any(scope => agreement.StartsWith(scope, StringComparison.Ordinal))).ToArray();
-        var agreements = primary.Length > 0 ? primary : current;
+        var candidates = primary.Length > 0 ? primary : current;
+        var agreements = candidates.GroupBy(agreement => agreement.Split(":", 2)[0])
+            .SelectMany(group =>
+            {
+                // The service orders agreements by effective start. A later general
+                // agreement overrides an older open-ended agreement for the same scope.
+                var general = group.Where(agreement => !agreement.Contains("(اتفاق لمحتوى محدد)", StringComparison.Ordinal)).LastOrDefault();
+                var scoped = group.Where(agreement => agreement.Contains("(اتفاق لمحتوى محدد)", StringComparison.Ordinal));
+                return general is null ? scoped : scoped.Prepend(general);
+            });
         var rules = agreements.Select(text =>
         {
             var parts = text.Split(":", 2); var detail = parts.Length == 2 ? parts[1].Split(" · ")[0].Trim() : text;
@@ -167,7 +176,7 @@ public static class TeacherDetailedReportPdf
                 foreach (var rule in chunk)
                     row.RelativeItem().Background("#f2f8f8").Border(.75f).BorderColor("#d9eeed").CornerRadius(4.5f).Padding(6.75f).Column(card =>
                     {
-                        card.Item().AlignCenter().Text((rule.Platform ? "عمولتنا في " : "نصيب المستر في ") + rule.Scope).FontSize(8.25f).LineHeight(1.2f);
+                        card.Item().AlignCenter().Text((rule.Platform ? "عمولتنا الحالية في " : "نصيب المستر الحالي في ") + rule.Scope).FontSize(8.25f).LineHeight(1.2f);
                         card.Item().PaddingTop(3).AlignCenter().Text(rule.Value).Bold().FontColor(Teal).FontSize(12).LineHeight(1.2f);
                     });
             });
