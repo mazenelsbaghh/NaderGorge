@@ -88,6 +88,7 @@ interface SecureVideoPlayerProps {
   lessonVideoId: string;
   localYouTubeQualityPreview?: boolean;
   localYouTubeHlsPreview?: boolean;
+  localVcdnHlsPreview?: boolean;
   isExamLocked?: boolean;
   blockingExamId?: string;
   videoExamId?: string;
@@ -172,6 +173,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   lessonVideoId, 
   localYouTubeQualityPreview = false,
   localYouTubeHlsPreview = false,
+  localVcdnHlsPreview = false,
   isExamLocked = false,
   blockingExamId,
   videoExamId,
@@ -188,7 +190,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   lessonId
 }, ref) => {
   const isLocalQualityPreview = process.env.NODE_ENV === 'development' && localYouTubeQualityPreview;
-  const isLocalHlsPreview = process.env.NODE_ENV === 'development' && localYouTubeHlsPreview;
+  const isLocalVcdnPreview = process.env.NODE_ENV === 'development' && localVcdnHlsPreview;
+  const isLocalHlsPreview = process.env.NODE_ENV === 'development' && (localYouTubeHlsPreview || localVcdnHlsPreview);
+  const localHlsPreviewEndpoint = isLocalVcdnPreview ? '/api/dev/vcdn' : '/api/dev/youtube-hls';
   const isLocalPreview = isLocalQualityPreview || isLocalHlsPreview;
   const [qualityGear, setQualityGear] = useState({ left: 26, top: 2, size: 44 });
   const [touchQualityControls, setTouchQualityControls] = useState(false);
@@ -287,7 +291,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [shadowOpacity, setShadowOpacity] = useState({ top: 0.70, bottom: 0.98 });
   const [shadowCoverage, setShadowCoverage] = useState({ top: 40, bottom: 38 });
   const [shadowSolid, setShadowSolid] = useState({ top: 10, bottom: 12 });
-  const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive']);
+  const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive', 'vcdn']);
   const loadingSessionRef = useRef(false);
   const securitySuspendedRef = useRef(false);
   const domShieldsCleanupRef = useRef<(() => void) | null>(null);
@@ -534,7 +538,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     setNativeProviderSurfaceLoaded(false);
 
     const iframe = createVideoEmbedIframe(sessionId);
-    if (isLocalHlsPreview) iframe.src = '/api/dev/youtube-hls?player=1';
+    if (isLocalHlsPreview) iframe.src = `${localHlsPreviewEndpoint}?player=1`;
     qualityPreviewStartedRef.current = false;
     setQualityPreviewStarted(false);
     setNativeQualityMenuOpen(false);
@@ -551,7 +555,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setStatus('error');
       setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
     });
-  }, [fitQualityPreview, isLocalHlsPreview, isLocalQualityPreview, youtubeQualityEnabled]);
+  }, [fitQualityPreview, isLocalHlsPreview, isLocalQualityPreview, localHlsPreviewEndpoint, youtubeQualityEnabled]);
 
   const scheduleBunnyPlaybackRecovery = useCallback(() => {
     if (bunnyRecoveryTimerRef.current) return true;
@@ -748,14 +752,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         }
         case 'renewSourceRequired': {
           if (isLocalHlsPreview) {
-            void fetch('/api/dev/youtube-hls?info=1', { cache: 'no-store' })
+            void fetch(`${localHlsPreviewEndpoint}?info=1`, { cache: 'no-store' })
               .then(async response => {
                 if (!response.ok) throw new Error('Preview source unavailable');
                 const metadata = await response.json();
                 sendCommand('renewSource', {
-                  source: '/api/dev/youtube-hls?s=11111111-1111-4111-8111-111111111111&playlist=master',
+                  source: metadata.source ?? '/api/dev/youtube-hls?s=11111111-1111-4111-8111-111111111111&playlist=master',
                   serverNowMs: metadata.serverNowMs,
                   sessionExpiresAtMs: metadata.expiresAt,
+                  signedSourceExpiresAtMs: metadata.expiresAt,
                 });
               })
               .catch(() => sendCommand('sourceRenewalFailed', { status: 503 }));
@@ -1087,7 +1092,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLocalHlsPreview, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
+  }, [isLocalHlsPreview, localHlsPreviewEndpoint, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);

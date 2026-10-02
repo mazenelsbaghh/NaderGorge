@@ -299,7 +299,7 @@ export default function StudentTeachersPageClient() {
           </div>
           <Link
             href={`/student/teachers/${activeTeacher.id}`}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-black text-white"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-black text-[var(--admin-primary-contrast)]"
           >
             فتح بروفايل المدرس
           </Link>
@@ -366,7 +366,7 @@ export default function StudentTeachersPageClient() {
                     className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary-30)] hover:shadow-md hover:scale-[1.02]"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-10)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-white transition-colors">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-10)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-[var(--admin-primary-contrast)] transition-colors">
                         <GraduationCap className="h-6 w-6" />
                       </div>
                       <div>

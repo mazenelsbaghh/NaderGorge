@@ -37,8 +37,14 @@ function loadModule(path: string): RouteExports {
 const sessionId = '11111111-1111-4111-8111-111111111111';
 const origin = 'https://app.massar-academy.net';
 const originalSecret = process.env.API_CALLBACK_SECRET;
-before(() => { process.env.API_CALLBACK_SECRET = 'synthetic-route-tests-secret'; });
+const originalVcdnKey = process.env.VCDN_API_KEY;
+const originalVcdnProtection = process.env.VCDN_REFERRER_PROTECTION_ENABLED;
+const originalVcdnPlatformPlayback = process.env.VCDN_PLATFORM_SESSION_PLAYBACK_ENABLED;
+before(() => { process.env.API_CALLBACK_SECRET = 'synthetic-route-tests-secret'; process.env.VCDN_API_KEY = 'synthetic-vcdn-key'; process.env.VCDN_REFERRER_PROTECTION_ENABLED = 'true'; });
 after(() => {
+  if (originalVcdnKey === undefined) delete process.env.VCDN_API_KEY; else process.env.VCDN_API_KEY = originalVcdnKey;
+  if (originalVcdnProtection === undefined) delete process.env.VCDN_REFERRER_PROTECTION_ENABLED; else process.env.VCDN_REFERRER_PROTECTION_ENABLED = originalVcdnProtection;
+  if (originalVcdnPlatformPlayback === undefined) delete process.env.VCDN_PLATFORM_SESSION_PLAYBACK_ENABLED; else process.env.VCDN_PLATFORM_SESSION_PLAYBACK_ENABLED = originalVcdnPlatformPlayback;
   if (originalSecret === undefined) delete process.env.API_CALLBACK_SECRET;
   else process.env.API_CALLBACK_SECRET = originalSecret;
 });
@@ -321,4 +327,89 @@ test('authorized YouTube HLS delivers versioned playlists with Google media and 
   revoked = true;
   assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=audio&v=${metadata.version}`, { cookie }))).status, 403);
   assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&v=${metadata.version}&media=720&part=0`, { cookie }))).status, 403);
+});
+
+test('VCDN material and renewal mint short signed sources after current authorization without fetching media', async t => {
+  const serverRequests: string[] = [];
+  let revoked = false;
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, options?: RequestInit) => {
+    const url = String(input);
+    serverRequests.push(url);
+    if (url.startsWith('https://cdn.vcdn.me/')) {
+      assert.equal(url, `https://cdn.vcdn.me/api/v1/videos/${sessionId}/playback-token`);
+      assert.equal(new Headers(options?.headers).get('X-API-Key'), 'synthetic-vcdn-key');
+      assert.equal(new Headers(options?.headers).get('Referer'), origin + '/');
+      assert.equal(JSON.parse(String(options?.body)).ttlSeconds, 600);
+      assert.equal(options?.redirect, 'error');
+      return Response.json({videoId: sessionId, token: 'signed-test', exp: Math.floor(Date.now()/1000) + 600,
+        streamUrl: `https://stream.vcdn.me/${sessionId}/master.m3u8?token=signed-test`});
+    }
+    assert.match(new URL(url).pathname, new RegExp(`/v1/internal/video-sessions/${sessionId}/embed-material$`));
+    return revoked ? new Response('revoked', {status:403}) : Response.json(backendMaterial('طالب تجربة', 'vcdn', sessionId));
+  });
+  const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+  const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
+  const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+  assert.equal(started.status, 200);
+  const cookie = started.headers.get('Set-Cookie')!;
+  assert.equal((await materialRoute.GET(browserRequest(`material?s=${sessionId}`))).status, 401);
+  const actual = await materialRoute.GET(browserRequest(`material?s=${sessionId}`, { cookie }));
+  assert.equal(actual.status, 200);
+  const html = await actual.text();
+  assert.match(html, /master\.m3u8\?token=signed-test/);
+  assert.match(html, /<video id="video"/);
+  assert.match(html, /var provider="vcdn"/);
+  assert.doesNotMatch(html, /synthetic-vcdn-key|youtube\.com|youtube-nocookie\.com/);
+  assert.equal(serverRequests.length, 3);
+  const renewal = await sessionRoute.POST(browserRequest('session', {method:'POST',body:{sessionId,purpose:'renew'}}));
+  assert.equal(renewal.status,200);
+  const body = await renewal.json();
+  assert.match(body.data.source, /token=signed-test/);
+  assert.ok(body.data.signedSourceExpiresAtMs <= Date.now() + 600_000);
+  assert.doesNotMatch(JSON.stringify(body), /synthetic-vcdn-key/);
+  const tokenCalls = serverRequests.filter(url => url.startsWith('https://cdn.vcdn.me/')).length;
+  revoked = true;
+  assert.equal((await sessionRoute.POST(browserRequest('session', {method:'POST',body:{sessionId,purpose:'renew'}}))).status,403);
+  assert.equal(serverRequests.filter(url => url.startsWith('https://cdn.vcdn.me/')).length, tokenCalls);
+});
+
+test('VCDN platform-session playback rejects copied material and revoked access before contacting VCDN', async t => {
+  process.env.VCDN_REFERRER_PROTECTION_ENABLED = 'false';
+  process.env.VCDN_PLATFORM_SESSION_PLAYBACK_ENABLED = 'true';
+  const providerRequests: string[] = [];
+  let revoked = false;
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, options?: RequestInit) => {
+    const url = String(input);
+    if (url === `https://cdn.vcdn.me/api/v1/videos/${sessionId}`) {
+      providerRequests.push(url);
+      assert.equal(new Headers(options?.headers).get('X-API-Key'), 'synthetic-vcdn-key');
+      return Response.json({ id: sessionId, status: 'ready' });
+    }
+    if (url === `https://embed.vcdn.me/api/bff/player-config/${sessionId}`) {
+      providerRequests.push(url);
+      assert.equal(new Headers(options?.headers).get('X-API-Key'), null);
+      return Response.json({ videoId: sessionId, mode: 'hls', expires: Math.floor(Date.now()/1000) + 600,
+        streamUrl: `https://cdn.vcdn.me/stream/${sessionId}/providers/p1/master.m3u8?token=platform-test` });
+    }
+    assert.match(new URL(url).pathname, new RegExp(`/v1/internal/video-sessions/${sessionId}/embed-material$`));
+    return revoked ? new Response('revoked', { status: 403 }) : Response.json(backendMaterial('طالب تجربة', 'vcdn', sessionId));
+  });
+  try {
+    const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+    const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
+    const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+    assert.equal(started.status, 200);
+    const cookie = started.headers.get('Set-Cookie')!;
+    assert.equal((await materialRoute.GET(browserRequest(`material?s=${sessionId}`))).status, 401);
+    assert.equal(providerRequests.length, 0);
+    const actual = await materialRoute.GET(browserRequest(`material?s=${sessionId}`, { cookie }));
+    assert.equal(actual.status, 200);
+    const html = await actual.text();
+    assert.match(html, /vcdn-hls-transport\.js/);
+    assert.doesNotMatch(html, /synthetic-vcdn-key/);
+    assert.equal(providerRequests.length, 2);
+    revoked = true;
+    assert.equal((await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'renew' } }))).status, 403);
+    assert.equal(providerRequests.length, 2);
+  } finally { process.env.VCDN_REFERRER_PROTECTION_ENABLED = 'true'; }
 });

@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/Tajawal-Regular.ttf" />
+    <EmbeddedResource Include="Assets/MassarLogo.svg" />
   </ItemGroup>
 
   <ItemGroup>

@@ -608,6 +608,7 @@ public sealed class WhatsAppLiveSupportService(
         {
             if (campaignHandled) return;
             await StorePendingReceiptAsync(receipt, ct);
+            await AssessmentParentDeliveryReceipts.ReconcileAsync(db, metaMessageId, ct);
             await ReconcilePendingReceiptAsync(metaMessageId, ct);
             await campaigns.ReconcilePendingReceiptAsync(metaMessageId, ct);
             return;

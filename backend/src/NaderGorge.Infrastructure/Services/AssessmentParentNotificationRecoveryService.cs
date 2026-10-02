@@ -183,7 +183,7 @@ public sealed class AssessmentParentNotificationRecoveryService(
         var preferences = await db.WhatsAppContactPreferences.AsNoTracking()
             .Where(x => x.DestinationHash == delivery.DestinationHash && x.EffectiveAt <= DateTime.UtcNow).ToListAsync(ct);
         if (!WhatsAppCampaignService.DestinationAllowsCampaign(preferences, "UTILITY")) return null;
-        var parameters = await AssessmentParentResultReader.ParametersAsync(db, result, ct);
+        var parameters = await AssessmentParentResultReader.ParametersAsync(db, result, ct, template);
         var validated = WhatsAppDirectTemplatePolicy.Validate(template, parameters);
         if (validated is null) return null;
         var request = new WhatsAppCloudService.TemplateMessageRequest(phone, template.Name, template.Language,

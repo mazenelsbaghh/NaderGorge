@@ -5476,6 +5476,23 @@
     "permissions": []
   },
   {
+    "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/reports/detailed.pdf",
+    "controller": "AdminTeacherReports",
+    "action": "Download",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/settlements",
     "controller": "AdminTeacherFinanceCenter",
     "action": "ListSettlements",
@@ -14788,6 +14805,66 @@
       {
         "Policy": null,
         "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/whatsapp/admin/exams/{examId:guid}/parent-messages",
+    "controller": "ExamParentMessages",
+    "action": "Summary",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/whatsapp/admin/exams/{examId:guid}/parent-messages/retry",
+    "controller": "ExamParentMessages",
+    "action": "Retry",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/whatsapp/admin/exams/parent-messages",
+    "controller": "ExamParentMessages",
+    "action": "List",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
         "AuthenticationSchemes": null
       }
     ],

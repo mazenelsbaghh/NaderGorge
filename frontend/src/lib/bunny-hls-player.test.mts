@@ -1,20 +1,32 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
 import { isExpiredHlsSourceError } from './video-playback-recovery.ts';
 
-import { generateBunnyHlsEmbedHtml } from './bunny-hls-embed.ts';
+import { generateVcdnEmbedHtml } from './vcdn-embed.ts';
+import { generateBunnyHlsEmbedHtml, generateDirectHlsEmbedHtml } from './bunny-hls-embed.ts';
 
 type PlayerMessage = {
   source?: string;
   type?: string;
-  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number; native?: boolean; sourceRenewal?: string };
+  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number; currentTime?: number; duration?: number; native?: boolean; sourceRenewal?: string; levels?: Array<{ id: string; label: string }>; currentQuality?: string };
 };
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
+const vcdnTransport = createRequire(import.meta.url)('../../public/vendor/vcdn/vcdn-hls-transport.js');
 
-async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '', signedSource = 'https://vz-example.b-cdn.net/signed/video/playlist.m3u8') {
-  const html = generateBunnyHlsEmbedHtml(signedSource, 'Test student', '', { relaySource, serverNowMs: 0 });
+async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '', sourceOptions: string | { platformSource: string } = 'https://vz-example.b-cdn.net/signed/video/playlist.m3u8') {
+  const platformSession = typeof sourceOptions === 'object';
+  const signedSource = platformSession ? sourceOptions.platformSource : sourceOptions;
+  let html: string;
+  if (platformSession || signedSource.startsWith('https://stream.vcdn.me/')) {
+    html = relaySource
+      ? generateDirectHlsEmbedHtml({ playlistUrl: new URL(signedSource), provider: 'vcdn', studentName: 'Test student', studentPhone: '', relaySource, sourceExpiresAtMs: 600_000, serverNowMs: 0 })
+      : generateVcdnEmbedHtml('11111111-1111-4111-8111-111111111111', 'Test student', '', {source: signedSource, expiresAt: platformSession ? 180_000 : 600_000, serverNowMs: 0, ...(platformSession ? { protection: 'platform-session' as const } : {})});
+  } else {
+    html = generateBunnyHlsEmbedHtml(signedSource, 'Test student', '', { relaySource, serverNowMs: 0 });
+  }
   const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
   assert.doesNotMatch(playerScript, /\$\{/);
 
@@ -25,8 +37,10 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   let now = 0;
   let deviceClockOffset = 0;
   let nativeRequests = 0;
+  const nativeRequestUrls: string[] = [];
   const timers: Array<{ callback: () => void; active: boolean; due: number }> = [];
   const video = {
+    error: null as { code: number } | null,
     currentTime: 0,
     readyState: 4,
     duration: Number.NaN,
@@ -41,6 +55,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     addEventListener(eventName: string, callback: () => void) {
       videoListeners.set(eventName, callback);
     },
+    removeEventListener(eventName: string, callback: () => void) { if (videoListeners.get(eventName) === callback) videoListeners.delete(eventName); },
     canPlayType() { return runtime === 'native-apple' ? 'probably' : ''; },
     load() { this.loadCalls += 1; this.currentTime = 0; this.paused = true; },
     pause() { this.paused = true; },
@@ -85,11 +100,13 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   let receiveCommand: ((event: unknown) => void) | undefined;
   const windowLike: {
     Hls: typeof FakeHls | undefined;
+    MassarVcdnTransport: typeof vcdnTransport;
     addEventListener: (name: string, listener: (event: unknown) => void) => void;
     location: { origin: string };
     parent: typeof parentWindow;
   } = {
     Hls: runtime === 'hlsjs' ? FakeHls : undefined,
+    MassarVcdnTransport: vcdnTransport,
     addEventListener(name, listener) { if (name === 'message') receiveCommand = listener; },
     location: { origin: 'https://app.massar-academy.net' },
     parent: parentWindow,
@@ -114,8 +131,9 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
         return id === 'video' ? video : { style: { transform: '' } };
       },
     },
-    fetch() {
+    fetch(url: string) {
       if (runtime === 'hlsjs') throw new Error('Native HLS fetch must not run when Hls.js is supported.');
+      nativeRequestUrls.push(url);
       nativeRequests += 1;
       if (nativeManifestStatus === -1 && nativeRequests === 1) return Promise.reject(new TypeError('Network unavailable'));
       const status = nativeManifestStatus === -1 ? 200 : nativeManifestStatus;
@@ -164,6 +182,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     hlsInstances,
     nativeSource: () => video.src,
     nativeRequests: () => nativeRequests,
+    nativeRequestUrls,
     interact(type: string) { documentListeners.get(type)?.({ type }); },
     messages,
     video,
@@ -195,8 +214,38 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     triggerLoadDeadline() {
       for (const timer of timers) if (timer.active) timer.callback();
     },
-  };
+};
 }
+
+test('portrait quality choices use the short resolution dimension and retain the actual HLS level IDs', async () => {
+  const player = await runHlsPlayer();
+  player.hls()!.levels = [
+    { width: 360, height: 640, bitrate: 928000 },
+    { width: 720, height: 1280, bitrate: 2628000 },
+    { width: 1080, height: 1920, bitrate: 5128000 },
+  ];
+  player.emitManifestParsed();
+  const levels = player.messages.findLast(message => message.type === 'qualityLevels')?.data?.levels;
+  assert.deepEqual(levels?.map(level => [level.id, level.label]), [['0', '360p'], ['1', '720p'], ['2', '1080p']]);
+  player.video.currentTime = 12;
+  player.command('setQuality', { quality: '1' });
+  assert.equal(player.hls()?.currentLevel, 1);
+  assert.equal(player.hls()?.nextLevel, 1);
+  assert.equal(player.video.currentTime, 12);
+  player.command('setQuality', { quality: 'auto' });
+  assert.equal(player.hls()?.currentLevel, -1);
+  assert.equal(player.hls()?.nextLevel, -1);
+});
+
+test('VCDN decoder failure gives a file compatibility message instead of suggesting a domain restriction', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', { platformSource: 'https://cdn.vcdn.me/stream/11111111-1111-4111-8111-111111111111/providers/p1/master.m3u8?token=test' });
+  player.video.error = { code: 3 };
+  player.triggerVideoEvent('error');
+  const failure = player.messages.find(message => message.type === 'error');
+  assert.equal(failure?.data?.phase, 'media_error');
+  assert.match(failure?.data?.message ?? '', /فك ترميز/);
+  assert.doesNotMatch(failure?.data?.message ?? '', /النطاق/);
+});
 
 test('2026-09-11 Nader signed path expiry reaches the parent and permits renewal after CDN rejection', async () => {
   const videoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
@@ -585,6 +634,48 @@ test('recovery after metadata still has a bounded startup deadline', async () =>
 });
 
 const renewableVideoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
+const vcdnPlatformSource = 'https://cdn.vcdn.me/stream/11111111-1111-4111-8111-111111111111/providers/p1/master.m3u8?token=initial';
+
+test('VCDN platform sessions stop buffered playback at the grant deadline even without more network requests', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', { platformSource: vcdnPlatformSource });
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.paused = false;
+  player.advanceTime(60_000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+  player.advanceTime(120_000);
+  assert.equal(player.video.paused, true);
+  assert.equal(player.messages.find(message => message.type === 'error')?.data?.code, 410);
+  player.command('play');
+  assert.equal(player.video.paused, true);
+});
+
+test('VCDN platform renewal preserves playback and expires the renewed grant instead of the original one', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', { platformSource: vcdnPlatformSource });
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 12;
+  player.video.playbackRate = 1.5;
+  player.advanceTime(60_000);
+  const replacement = vcdnPlatformSource.replace('token=initial', 'token=renewed');
+  player.command('renewSource', { source: replacement, signedSourceExpiresAtMs: 240_000 });
+  const segment = 'https://edge.vcdn.me/seg/0123456789abcdefghijklmnop';
+  player.requestResource(segment);
+  assert.equal(player.networkRequests.at(-1), segment);
+  player.requestResource(vcdnPlatformSource.replace('master.m3u8', '720p/playlist.m3u8'));
+  assert.equal(player.networkRequests.at(-1), replacement.replace('master.m3u8', '720p/playlist.m3u8'));
+  assert.equal(player.video.currentTime, 12);
+  assert.equal(player.video.playbackRate, 1.5);
+  player.advanceTime(120_000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(60_000);
+  assert.equal(player.messages.find(message => message.type === 'error')?.data?.code, 410);
+});
+
+test('VCDN PNG delivery rejects native-only browsers rather than silently loading undecodable carrier bytes', async () => {
+  const player = await runHlsPlayer('native-apple', 200, '', { platformSource: vcdnPlatformSource });
+  assert.equal(player.nativeRequests(), 0);
+  assert.equal(player.messages.find(message => message.type === 'error')?.data?.phase, 'vcdn_transport_unsupported');
+});
+
 function signedPlaylist(expires: number, token = 'initial', videoId = renewableVideoId) {
   return `https://vz-example.b-cdn.net/bcdn_token=${token}&expires=${expires}&token_path=%2F${videoId}%2F/${videoId}/playlist.m3u8`;
 }
@@ -882,3 +973,94 @@ for (const status of [401, 403, 404, 409, 410, 429]) {
     assert.equal(player.hlsInstances.at(-1)?.startLoadCalls, 0);
   });
 }
+
+for (const runtime of ['hlsjs', 'native-apple'] as const) {
+  test(`VCDN ${runtime} loads the canonical stream and obeys platform controls with a signed direct stream`, async () => {
+    const source = 'https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/master.m3u8?token=initial';
+    const player = await runHlsPlayer(runtime, 200, '', source);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(runtime === 'hlsjs' ? player.hls()?.source : player.nativeSource(), source);
+    if (runtime === 'hlsjs') {
+      const segment = 'https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/720p/video0.ts';
+      player.requestResource(segment);
+      assert.deepEqual(player.networkRequests, [segment + '?token=initial']);
+    } else {
+      assert.deepEqual(player.nativeRequestUrls, [source]);
+    }
+    assert.equal(player.messages.find(message => message.type === 'providerLoaded')?.data?.provider, 'vcdn');
+    player.command('play');
+    assert.equal(player.video.paused, false);
+    player.command('seekTo', { time: 30 });
+    assert.equal(player.video.currentTime, 30);
+    player.command('setPlaybackRate', { rate: 1.5 });
+    assert.equal(player.video.playbackRate, 1.5);
+    player.video.duration = 120;
+    player.triggerVideoEvent('loadedmetadata');
+    assert.equal(player.messages.find(message => message.type === 'ready')?.data?.provider, 'vcdn');
+    player.triggerVideoEvent('timeupdate');
+    assert.equal(player.messages.findLast(message => message.type === 'timeUpdate')?.data?.currentTime, 30);
+    player.command('pause');
+    assert.equal(player.video.paused, true);
+    assert.equal(player.messages.some(message => message.type === 'renewSourceRequired'), false);
+  });
+}
+
+for (const runtime of ['hlsjs', 'native-apple'] as const) {
+  test(`VCDN ${runtime} network failure stops playback without routing media through the application`, async () => {
+    const source = 'https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/master.m3u8?token=initial';
+    const player = await runHlsPlayer(runtime, -1, '/api/video/hls?s=test-session', source);
+    if (runtime === 'hlsjs') player.emitFatalNetworkError(0);
+    await new Promise(resolve => setImmediate(resolve));
+    const errors = player.messages.filter(message => message.type === 'error');
+    assert.equal(errors.length, 1);
+    assert.equal(errors[0].data?.provider, 'vcdn');
+    assert.equal(player.messages.some(message => message.type === 'renewSourceRequired'), false);
+    if (runtime === 'hlsjs') assert.deepEqual(player.hlsInstances.map(instance => instance.source), [source]);
+    else assert.deepEqual(player.nativeRequestUrls, [source]);
+  });
+}
+
+const vcdnSource = 'https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/master.m3u8?token=initial';
+for (const status of [401, 403]) {
+  test(`VCDN renews a rejected ${status} grant in place and signs segment requests with the new token`, async () => {
+    const player = await runHlsPlayer('hlsjs', 200, '', vcdnSource);
+    player.triggerVideoEvent('loadedmetadata');
+    player.video.currentTime = 30;
+    player.emitFatalNetworkError(status);
+    assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+    player.command('renewSource', {source:vcdnSource.replace('initial', 'renewed'), signedSourceExpiresAtMs:900_000, serverNowMs:300_000, sessionExpiresAtMs:3_600_000});
+    player.requestResource(vcdnSource.replace('master.m3u8?token=initial', '720p/segment.ts?token=initial'));
+    assert.match(player.networkRequests[0], /segment\.ts\?token=renewed$/);
+    assert.equal(player.video.currentTime, 30);
+    assert.equal(player.hlsInstances.length, 1);
+    assert.equal(player.hls()?.startLoadCalls, 1);
+    assert.equal(player.networkRequests.some(url => url.includes('/api/video/')), false);
+  });
+}
+
+test('VCDN never sends its token to resources or renewal sources outside the current video', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', vcdnSource);
+  for (const resource of ['https://attacker.test/segment.ts', vcdnSource.replace('11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222')]) {
+    assert.equal(player.requestResource(resource).rejectedStatus(), 403);
+  }
+  player.command('renewSource', {source:'https://attacker.test/master.m3u8?token=stolen', signedSourceExpiresAtMs:900_000});
+  assert.equal(player.hls()?.source, vcdnSource);
+  assert.deepEqual(player.networkRequests, []);
+});
+
+test('VCDN native HLS renews directly and preserves playhead, rate and playing state', async () => {
+  const player = await runHlsPlayer('native-apple', 200, '', vcdnSource);
+  await new Promise(resolve => setImmediate(resolve));
+  player.video.duration = 360;
+  player.triggerVideoEvent('loadedmetadata');
+  player.command('seekTo', {time:30});
+  player.command('setPlaybackRate', {rate:1.5});
+  player.command('play');
+  player.command('renewSource', {source:vcdnSource.replace('initial', 'renewed'), signedSourceExpiresAtMs:780_000, serverNowMs:180_000, sessionExpiresAtMs:3_600_000});
+  player.triggerVideoEvent('loadedmetadata');
+  assert.match(player.nativeSource(), /token=renewed$/);
+  assert.equal(player.video.currentTime, 30);
+  assert.equal(player.video.playbackRate, 1.5);
+  assert.equal(player.video.paused, false);
+});

@@ -35,6 +35,7 @@ export function generateVideoEmbedHtml(provider: string, videoId: string, option
 } = {}): string {
   const { studentName = 'Massar Academy', studentPhone = '', bunnyEmbedQuery } = options;
   const normalizedProvider = provider.toLowerCase();
+  if (normalizedProvider === 'vcdn') return embedErrorHtml('يلزم فتح فيديو VCDN من جلسة مشاهدة معتمدة.');
   if (normalizedProvider === 'vk') {
     const match = videoId.match(/oid=([^&]+)&id=([^&]+)/);
     return match ? generateVkEmbedHtml(match[1], match[2], studentName, studentPhone) : '';

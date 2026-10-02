@@ -44,7 +44,7 @@ export interface TeacherProfileStatsDto {
   }>;
 }
 
-export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
+export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny' | 'vcdn';
 
 export type ContentArchiveMode = 'None' | 'ActiveSubscribersOnly' | 'HiddenFromEveryone';
 export type ContentArchiveTargetType =
@@ -267,6 +267,33 @@ export interface WhatsAppExamResultPreview {
 
 export interface WhatsAppExamResultMessageResult extends WhatsAppTestMessageResult {
   preview?: WhatsAppExamResultPreview | null;
+}
+
+export interface ExamParentMessageState {
+  attemptId: string;
+  status: string;
+  failureCode: string | null;
+  canRetry: boolean;
+}
+
+export interface ExamParentMessageSummary {
+  enabled: boolean;
+  configurationError: string | null;
+  retryableCount: number;
+  pendingCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  notSentCount: number;
+  awaitingDeliveryCount: number;
+  uncertainCount: number;
+  attempts: ExamParentMessageState[];
+}
+
+export interface ExamGradeMessageList {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: { examId: string; title: string; teacherName: string; createdAt: string; finalResultCount: number }[];
 }
 
 export interface AssessmentParentRecoveryPreview {
@@ -1097,6 +1124,24 @@ export const adminService = {
       payload
     );
     return res.data;
+  },
+  listExamGradeMessages: async (search: string, page: number, signal?: AbortSignal) => {
+    const response = await apiClient.get<ExamGradeMessageList>('/whatsapp/admin/exams/parent-messages', {
+      params: { search, page }, signal, suppressErrorToast: true
+    });
+    return response.data;
+  },
+  getExamParentMessages: async (examId: string, signal?: AbortSignal) => {
+    const response = await apiClient.get<ExamParentMessageSummary>(
+      `/whatsapp/admin/exams/${examId}/parent-messages`, { signal, suppressErrorToast: true }
+    );
+    return response.data;
+  },
+  retryExamParentMessages: async (examId: string, operationId: string, attemptId?: string, failedOnly = false) => {
+    const response = await apiClient.post<{ operationId: string; queuedCount: number; alreadyQueued: boolean }>(
+      `/whatsapp/admin/exams/${examId}/parent-messages/retry`, { operationId, attemptId, failedOnly }
+    );
+    return response.data;
   },
   previewAssessmentParentRecovery: async (maxBatchSize = 10) => {
     const res = await apiClient.get<AssessmentParentRecoveryPreview>(

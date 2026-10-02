@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 526,
+  "reachableFileCount": 530,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -900,6 +900,14 @@
       "route": null
     },
     {
+      "file": "frontend/src/components/admin/ExamGradeMessagesSettings.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ExamParentMessagesPanel.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/components/admin/FacebookMessengerSettingsPanel.tsx",
       "route": null
     },
@@ -1636,6 +1644,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/features/teacher-finance-center/TeacherReportDownload.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/features/teacher-finance-center/TeacherStatementPanel.tsx",
       "route": null
     },
@@ -1853,6 +1865,10 @@
     },
     {
       "file": "frontend/src/lib/utils.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/vcdn-video-reference.ts",
       "route": null
     },
     {
@@ -2108,7 +2124,7 @@
       "route": null
     }
   ],
-  "callCount": 524,
+  "callCount": 528,
   "calls": [
     {
       "method": "ANY",
@@ -2125,7 +2141,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1892
+        "line": 1937
       }
     },
     {
@@ -2134,7 +2150,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1428
+        "line": 1473
       }
     },
     {
@@ -2152,7 +2168,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2199
+        "line": 2244
       }
     },
     {
@@ -2161,7 +2177,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2193
+        "line": 2238
       }
     },
     {
@@ -2170,7 +2186,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 331
+        "line": 338
       }
     },
     {
@@ -2197,7 +2213,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2205
+        "line": 2250
       }
     },
     {
@@ -2215,7 +2231,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1571
+        "line": 1616
       }
     },
     {
@@ -2233,7 +2249,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2410
+        "line": 2455
       }
     },
     {
@@ -2260,7 +2276,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1275
+        "line": 1320
       }
     },
     {
@@ -2269,7 +2285,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1596
+        "line": 1641
       }
     },
     {
@@ -2278,7 +2294,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2320
+        "line": 2365
       }
     },
     {
@@ -2287,7 +2303,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1336
+        "line": 1381
       }
     },
     {
@@ -2296,7 +2312,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1329
+        "line": 1374
       }
     },
     {
@@ -2305,7 +2321,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1720
+        "line": 1765
       }
     },
     {
@@ -2314,7 +2330,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1819
+        "line": 1864
       }
     },
     {
@@ -2368,7 +2384,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2508
+        "line": 2553
       }
     },
     {
@@ -2377,7 +2393,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2486
+        "line": 2531
       }
     },
     {
@@ -2386,7 +2402,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2497
+        "line": 2542
       }
     },
     {
@@ -2395,7 +2411,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2519
+        "line": 2564
       }
     },
     {
@@ -2422,7 +2438,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1851
+        "line": 1896
       }
     },
     {
@@ -2431,7 +2447,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1858
+        "line": 1903
       }
     },
     {
@@ -2440,7 +2456,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1950
+        "line": 1995
       }
     },
     {
@@ -2458,7 +2474,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1404
+        "line": 1449
       }
     },
     {
@@ -2467,7 +2483,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1412
+        "line": 1457
       }
     },
     {
@@ -2476,7 +2492,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1771
+        "line": 1816
       }
     },
     {
@@ -2485,7 +2501,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1744
+        "line": 1789
       }
     },
     {
@@ -2494,7 +2510,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1723
+        "line": 1768
       }
     },
     {
@@ -2530,7 +2546,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2168
+        "line": 2213
       }
     },
     {
@@ -2557,7 +2573,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 379
+        "line": 386
       }
     },
     {
@@ -2566,7 +2582,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2471
+        "line": 2516
       }
     },
     {
@@ -2575,7 +2591,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 346
+        "line": 353
       }
     },
     {
@@ -2584,7 +2600,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 301
+        "line": 308
       }
     },
     {
@@ -2593,7 +2609,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 392
+        "line": 399
       }
     },
     {
@@ -2683,7 +2699,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2174
+        "line": 2219
       }
     },
     {
@@ -2737,7 +2753,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1653
+        "line": 1698
       }
     },
     {
@@ -2746,7 +2762,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2575
+        "line": 2620
       }
     },
     {
@@ -2755,7 +2771,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2591
+        "line": 2636
       }
     },
     {
@@ -2764,7 +2780,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1762
+        "line": 1807
       }
     },
     {
@@ -2773,7 +2789,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1659
+        "line": 1704
       }
     },
     {
@@ -2827,7 +2843,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1544
+        "line": 1589
       }
     },
     {
@@ -2836,7 +2852,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1555
+        "line": 1600
       }
     },
     {
@@ -2845,7 +2861,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2531
+        "line": 2576
       }
     },
     {
@@ -2854,7 +2870,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2572
+        "line": 2617
       }
     },
     {
@@ -2863,7 +2879,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2586
+        "line": 2631
       }
     },
     {
@@ -2872,7 +2888,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1211
+        "line": 1256
       }
     },
     {
@@ -3070,7 +3086,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1439
+        "line": 1484
       }
     },
     {
@@ -3115,7 +3131,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2379
+        "line": 2424
       }
     },
     {
@@ -3169,7 +3185,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1604
+        "line": 1649
       }
     },
     {
@@ -3178,7 +3194,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2553
+        "line": 2598
       }
     },
     {
@@ -3187,7 +3203,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2574
+        "line": 2619
       }
     },
     {
@@ -3196,7 +3212,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2590
+        "line": 2635
       }
     },
     {
@@ -3205,7 +3221,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2367
+        "line": 2412
       }
     },
     {
@@ -3259,7 +3275,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 292
+        "line": 299
       }
     },
     {
@@ -3268,7 +3284,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 269
+        "line": 276
       }
     },
     {
@@ -3277,7 +3293,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 213
+        "line": 220
       }
     },
     {
@@ -3286,7 +3302,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 242
+        "line": 249
       }
     },
     {
@@ -3295,7 +3311,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 250
+        "line": 257
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/reports/detailed.pdf",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 195
       }
     },
     {
@@ -3304,7 +3329,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 354
+        "line": 361
       }
     },
     {
@@ -3313,7 +3338,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 197
+        "line": 204
       }
     },
     {
@@ -3322,7 +3347,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 207
+        "line": 214
       }
     },
     {
@@ -3331,7 +3356,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 235
+        "line": 242
       }
     },
     {
@@ -3340,7 +3365,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1252
+        "line": 1297
       }
     },
     {
@@ -3367,7 +3392,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2460
+        "line": 2505
       }
     },
     {
@@ -3376,7 +3401,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1244
+        "line": 1289
       }
     },
     {
@@ -3385,7 +3410,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2449
+        "line": 2494
       }
     },
     {
@@ -3394,7 +3419,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1259
+        "line": 1304
       }
     },
     {
@@ -3403,7 +3428,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2416
+        "line": 2461
       }
     },
     {
@@ -3412,7 +3437,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2430
+        "line": 2475
       }
     },
     {
@@ -3421,7 +3446,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1600
+        "line": 1645
       }
     },
     {
@@ -3430,7 +3455,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2542
+        "line": 2587
       }
     },
     {
@@ -3439,7 +3464,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2573
+        "line": 2618
       }
     },
     {
@@ -3448,7 +3473,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2588
+        "line": 2633
       }
     },
     {
@@ -3457,7 +3482,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1140
+        "line": 1185
       }
     },
     {
@@ -3466,7 +3491,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1322
+        "line": 1367
       }
     },
     {
@@ -3475,7 +3500,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1310
+        "line": 1355
       }
     },
     {
@@ -3484,7 +3509,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1690
+        "line": 1735
       }
     },
     {
@@ -3547,7 +3572,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2327
+        "line": 2372
       }
     },
     {
@@ -4096,7 +4121,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 323
+        "line": 327
       }
     },
     {
@@ -4114,7 +4139,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1403
+        "line": 1448
       }
     },
     {
@@ -4123,7 +4148,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1411
+        "line": 1456
       }
     },
     {
@@ -4159,7 +4184,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 198
+        "line": 205
       }
     },
     {
@@ -4168,7 +4193,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 208
+        "line": 215
       }
     },
     {
@@ -4249,7 +4274,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1102
+        "line": 1147
       }
     },
     {
@@ -4258,7 +4283,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1120
+        "line": 1165
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/admin/exams/{examId}/parent-messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1135
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/admin/exams/parent-messages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1129
       }
     },
     {
@@ -4294,7 +4337,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1884
+        "line": 1929
       }
     },
     {
@@ -4303,7 +4346,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1352
+        "line": 1397
       }
     },
     {
@@ -4312,7 +4355,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1713
+        "line": 1758
       }
     },
     {
@@ -4321,7 +4364,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1813
+        "line": 1858
       }
     },
     {
@@ -4375,7 +4418,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2182
+        "line": 2227
       }
     },
     {
@@ -4393,7 +4436,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1865
+        "line": 1910
       }
     },
     {
@@ -4402,7 +4445,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1912
+        "line": 1957
       }
     },
     {
@@ -4411,7 +4454,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1906
+        "line": 1951
       }
     },
     {
@@ -4420,7 +4463,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1920
+        "line": 1965
       }
     },
     {
@@ -4429,7 +4472,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1899
+        "line": 1944
       }
     },
     {
@@ -4438,7 +4481,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1939
+        "line": 1984
       }
     },
     {
@@ -4447,7 +4490,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1960
+        "line": 2005
       }
     },
     {
@@ -4465,7 +4508,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1783
+        "line": 1828
       }
     },
     {
@@ -4474,7 +4517,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1793
+        "line": 1838
       }
     },
     {
@@ -4483,7 +4526,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1789
+        "line": 1834
       }
     },
     {
@@ -4492,7 +4535,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1750
+        "line": 1795
       }
     },
     {
@@ -4501,7 +4544,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1756
+        "line": 1801
       }
     },
     {
@@ -4510,7 +4553,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1732
+        "line": 1777
       }
     },
     {
@@ -4519,7 +4562,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1738
+        "line": 1783
       }
     },
     {
@@ -4528,7 +4571,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1526
+        "line": 1571
       }
     },
     {
@@ -4537,7 +4580,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2023
+        "line": 2068
       }
     },
     {
@@ -4564,7 +4607,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2135
+        "line": 2180
       }
     },
     {
@@ -4573,7 +4616,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 363
+        "line": 370
       }
     },
     {
@@ -4582,7 +4625,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 320
+        "line": 327
       }
     },
     {
@@ -4591,7 +4634,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 338
+        "line": 345
       }
     },
     {
@@ -4600,7 +4643,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 309
+        "line": 316
       }
     },
     {
@@ -4609,7 +4652,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 406
+        "line": 413
       }
     },
     {
@@ -4618,7 +4661,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 418
+        "line": 425
       }
     },
     {
@@ -4636,7 +4679,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1298
+        "line": 1343
       }
     },
     {
@@ -4690,7 +4733,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1625
+        "line": 1670
       }
     },
     {
@@ -4699,7 +4742,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1682
+        "line": 1727
       }
     },
     {
@@ -4708,7 +4751,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1666
+        "line": 1711
       }
     },
     {
@@ -4717,7 +4760,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1674
+        "line": 1719
       }
     },
     {
@@ -4789,7 +4832,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2232
+        "line": 2277
       }
     },
     {
@@ -4798,7 +4841,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1512
+        "line": 1557
       }
     },
     {
@@ -4951,7 +4994,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2058
+        "line": 2103
       }
     },
     {
@@ -4978,7 +5021,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1462
+        "line": 1507
       }
     },
     {
@@ -4987,7 +5030,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1475
+        "line": 1520
       }
     },
     {
@@ -4996,7 +5039,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2035
+        "line": 2080
       }
     },
     {
@@ -5032,7 +5075,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1972
+        "line": 2017
       }
     },
     {
@@ -5041,7 +5084,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1982
+        "line": 2027
       }
     },
     {
@@ -5050,7 +5093,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2389
+        "line": 2434
       }
     },
     {
@@ -5104,7 +5147,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1608
+        "line": 1653
       }
     },
     {
@@ -5158,7 +5201,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 288
+        "line": 295
       }
     },
     {
@@ -5167,7 +5210,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 296
+        "line": 303
       }
     },
     {
@@ -5176,7 +5219,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 279
+        "line": 286
       }
     },
     {
@@ -5185,7 +5228,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 264
+        "line": 271
       }
     },
     {
@@ -5194,7 +5237,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 274
+        "line": 281
       }
     },
     {
@@ -5203,7 +5246,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 275
+        "line": 282
       }
     },
     {
@@ -5212,7 +5255,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 276
+        "line": 283
       }
     },
     {
@@ -5221,7 +5264,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 273
+        "line": 280
       }
     },
     {
@@ -5230,7 +5273,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 258
+        "line": 265
       }
     },
     {
@@ -5239,7 +5282,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 221
+        "line": 228
       }
     },
     {
@@ -5248,7 +5291,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1232
+        "line": 1277
       }
     },
     {
@@ -5266,7 +5309,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1268
+        "line": 1313
       }
     },
     {
@@ -5275,7 +5318,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1286
+        "line": 1331
       }
     },
     {
@@ -5284,7 +5327,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1582
+        "line": 1627
       }
     },
     {
@@ -5293,7 +5336,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1200
+        "line": 1245
       }
     },
     {
@@ -5302,7 +5345,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2300
+        "line": 2345
       }
     },
     {
@@ -5311,7 +5354,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2304
+        "line": 2349
       }
     },
     {
@@ -5320,7 +5363,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2262
+        "line": 2307
       }
     },
     {
@@ -5329,7 +5372,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2312
+        "line": 2357
       }
     },
     {
@@ -5338,7 +5381,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2292
+        "line": 2337
       }
     },
     {
@@ -5347,7 +5390,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1377
+        "line": 1422
       }
     },
     {
@@ -5356,7 +5399,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1365
+        "line": 1410
       }
     },
     {
@@ -5365,7 +5408,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2359
+        "line": 2404
       }
     },
     {
@@ -5374,7 +5417,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1699
+        "line": 1744
       }
     },
     {
@@ -5383,7 +5426,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1799
+        "line": 1844
       }
     },
     {
@@ -5392,7 +5435,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1823
+        "line": 1868
       }
     },
     {
@@ -5401,7 +5444,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1839
+        "line": 1884
       }
     },
     {
@@ -5410,7 +5453,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1845
+        "line": 1890
       }
     },
     {
@@ -5419,7 +5462,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1832
+        "line": 1877
       }
     },
     {
@@ -5482,7 +5525,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2338
+        "line": 2383
       }
     },
     {
@@ -5491,7 +5534,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2346
+        "line": 2391
       }
     },
     {
@@ -5572,7 +5615,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2225
+        "line": 2270
       }
     },
     {
@@ -6328,7 +6371,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1113
+        "line": 1158
       }
     },
     {
@@ -6337,7 +6380,16 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1095
+        "line": 1122
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/admin/exams/{examId}/parent-messages/retry",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1141
       }
     },
     {
@@ -6436,7 +6488,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1876
+        "line": 1921
       }
     },
     {
@@ -6445,7 +6497,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1420
+        "line": 1465
       }
     },
     {
@@ -6454,7 +6506,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1077
+        "line": 1104
       }
     },
     {
@@ -6481,7 +6533,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2095
+        "line": 2140
       }
     },
     {
@@ -6526,7 +6578,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2102
+        "line": 2147
       }
     },
     {
@@ -6535,7 +6587,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1635
+        "line": 1680
       }
     },
     {
@@ -6544,7 +6596,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2075
+        "line": 2120
       }
     },
     {
@@ -6553,7 +6605,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1645
+        "line": 1690
       }
     },
     {
@@ -6580,7 +6632,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1548
+        "line": 1593
       }
     },
     {
@@ -6589,7 +6641,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1564
+        "line": 1609
       }
     },
     {
@@ -6607,7 +6659,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2402
+        "line": 2447
       }
     },
     {
@@ -6625,7 +6677,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1618
+        "line": 1663
       }
     },
     {
@@ -6634,7 +6686,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2372
+        "line": 2417
       }
     },
     {
@@ -6652,7 +6704,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 228
+        "line": 235
       }
     },
     {
@@ -6661,7 +6713,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 284
+        "line": 291
       }
     },
     {
@@ -6679,7 +6731,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1592
+        "line": 1637
       }
     },
     {
@@ -6688,7 +6740,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1218
+        "line": 1263
       }
     },
     {
@@ -6697,7 +6749,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2284
+        "line": 2329
       }
     },
     {
@@ -6706,7 +6758,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2273
+        "line": 2318
       }
     },
     {
@@ -6715,7 +6767,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1706
+        "line": 1751
       }
     },
     {
@@ -6724,7 +6776,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1806
+        "line": 1851
       }
     },
     {
@@ -7298,5 +7350,5 @@
       }
     }
   ],
-  "digest": "62d8938ee98e2a8b8570d326fdaf8a66369c09c9752d306ebd73aa59cad87161"
+  "digest": "6c3b8f31a40c275ff47cd36ed11f4ddd20104a3e0aa14bfd90525f9204c4b56b"
 }

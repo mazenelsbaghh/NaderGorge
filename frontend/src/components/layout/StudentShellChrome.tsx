@@ -135,6 +135,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const {
     isDark,
     toggleTheme,
+    isReady,
+    isSavingPreferences,
   } = useStudentTheme();
   const isFocusMode = useLessonFocusStore((state) => state.isFocusMode);
   const shouldReduceMotion = useReducedMotion();
@@ -337,6 +339,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}
+                  disabled={!isReady || isSavingPreferences}
                   aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
@@ -423,6 +426,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <AnimatedThemeToggler
                       checked={isDark}
                       onToggle={toggleTheme}
+                      disabled={!isReady || isSavingPreferences}
                       aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                     />
@@ -563,6 +567,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <AnimatedThemeToggler
                       checked={isDark}
                       onToggle={toggleTheme}
+                      disabled={!isReady || isSavingPreferences}
                       aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                       className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                     />

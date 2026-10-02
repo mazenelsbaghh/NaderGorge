@@ -157,6 +157,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             return Fail("Progress sequence gap", "PROGRESS_SEQUENCE_GAP");
 
         watchEvent ??= CreateWatchEvent(request, now);
+        watchEvent.LearningDurationSeconds = effectiveDurationSeconds;
 
         if (watchEvent.TimeWatchedInSeconds < 0)
             watchEvent.TimeWatchedInSeconds = watchEvent.WatchCount * thresholdSeconds;

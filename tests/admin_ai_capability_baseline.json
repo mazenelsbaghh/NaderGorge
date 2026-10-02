@@ -5,11 +5,11 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "ec27889bec24c7cd6cf546e2b5ab99d1afe39041945d6cfd3685a3c473481ff2"
+      "digest": "2a923169b6fbe454d4ad3f9cd6cf11a0bd3b8d348737f99377a03b89b20037ca"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "5a24da8b205ebbd68b1ac37cef4ff0678e566476317a7d0677291975aa7a3438"
+      "digest": "58992cbe11b6b372d16a4122b61e9846a4f1704a3d55daa288ec252ee8a32485"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -4002,6 +4002,33 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
         "line": 152
+      }
+    },
+    {
+      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-reports-detailed-pdf:backend-src-nadergorge-api-controllers-adminteacherreportscontroller-cs:13",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/reports/detailed.pdf",
+      "effect": "export",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminTeacherReportsController.Download",
+      "inputSchema": "backend-endpoint:adminteacherreportscontroller-download:input:v1",
+      "outputSchema": "backend-endpoint:adminteacherreportscontroller-download:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherReportsController.cs",
+        "line": 13
       }
     },
     {
@@ -17172,7 +17199,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1892",
+      "id": "fe:delete:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1937",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -17197,12 +17224,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1892
+        "line": 1937
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-codes-groups-id-unused:frontend-src-services-admin-service-ts:1428",
+      "id": "fe:delete:admin-codes-groups-id-unused:frontend-src-services-admin-service-ts:1473",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/codes/groups/{id}/unused",
@@ -17227,7 +17254,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1428
+        "line": 1473
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17262,7 +17289,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-exams-examid-attempts-attemptid:frontend-src-services-admin-service-ts:2199",
+      "id": "fe:delete:admin-exams-examid-attempts-attemptid:frontend-src-services-admin-service-ts:2244",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/exams/{examId}/attempts/{attemptId}",
@@ -17287,12 +17314,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2199
+        "line": 2244
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2193",
+      "id": "fe:delete:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2238",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/exams/{examId}/questions/{examQuestionId}",
@@ -17317,12 +17344,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2193
+        "line": 2238
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:331",
+      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:338",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/finance/payroll/{payrollId}/adjustments/{adjustmentId}",
@@ -17347,7 +17374,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 331
+        "line": 338
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17412,7 +17439,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-homework-homeworkid-submissions-submissionid:frontend-src-services-admin-service-ts:2205",
+      "id": "fe:delete:admin-homework-homeworkid-submissions-submissionid:frontend-src-services-admin-service-ts:2250",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/homework/{homeworkId}/submissions/{submissionId}",
@@ -17437,7 +17464,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2205
+        "line": 2250
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17472,7 +17499,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1571",
+      "id": "fe:delete:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1616",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/packages/{id}/code-profile",
@@ -17497,7 +17524,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1571
+        "line": 1616
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17532,7 +17559,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-roles-id:frontend-src-services-admin-service-ts:2410",
+      "id": "fe:delete:admin-roles-id:frontend-src-services-admin-service-ts:2455",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/roles/{id}",
@@ -17557,7 +17584,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2410
+        "line": 2455
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17622,7 +17649,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-teachers-teacherid-photos-photoid:frontend-src-services-admin-service-ts:1275",
+      "id": "fe:delete:admin-teachers-teacherid-photos-photoid:frontend-src-services-admin-service-ts:1320",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/teachers/{teacherId}/photos/{photoId}",
@@ -17647,12 +17674,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1275
+        "line": 1320
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-terms-id:frontend-src-services-admin-service-ts:1596",
+      "id": "fe:delete:admin-terms-id:frontend-src-services-admin-service-ts:1641",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/terms/{id}",
@@ -17677,12 +17704,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1596
+        "line": 1641
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-users-students-studentid-notes-noteid:frontend-src-services-admin-service-ts:2320",
+      "id": "fe:delete:admin-users-students-studentid-notes-noteid:frontend-src-services-admin-service-ts:2365",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{studentId}/notes/{noteId}",
@@ -17707,12 +17734,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2320
+        "line": 2365
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-users-students-userid-devices-deviceid:frontend-src-services-admin-service-ts:1329",
+      "id": "fe:delete:admin-users-students-userid-devices-deviceid:frontend-src-services-admin-service-ts:1374",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{userId}/devices/{deviceId}",
@@ -17737,12 +17764,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1329
+        "line": 1374
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-users-students-userid-devices:frontend-src-services-admin-service-ts:1336",
+      "id": "fe:delete:admin-users-students-userid-devices:frontend-src-services-admin-service-ts:1381",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{userId}/devices",
@@ -17767,12 +17794,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1336
+        "line": 1381
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-video-types-id:frontend-src-services-admin-service-ts:1720",
+      "id": "fe:delete:admin-video-types-id:frontend-src-services-admin-service-ts:1765",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/video-types/{id}",
@@ -17797,12 +17824,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1720
+        "line": 1765
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1819",
+      "id": "fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1864",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/videos/{videoId}",
@@ -17827,7 +17854,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1819
+        "line": 1864
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17892,7 +17919,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2508",
+      "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2553",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/homework-reviews",
@@ -17915,11 +17942,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2508
+        "line": 2553
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2486",
+      "id": "fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2531",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/stats",
@@ -17942,11 +17969,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2486
+        "line": 2531
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2497",
+      "id": "fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2542",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/tasks",
@@ -17969,11 +17996,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2497
+        "line": 2542
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-warnings:frontend-src-services-admin-service-ts:2519",
+      "id": "fe:get:admin-assistants-assistantid-warnings:frontend-src-services-admin-service-ts:2564",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/warnings",
@@ -17996,7 +18023,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2519
+        "line": 2564
       }
     },
     {
@@ -18054,7 +18081,7 @@
       }
     },
     {
-      "id": "fe:get:admin-bunny-libraries-available:frontend-src-services-admin-service-ts:1858",
+      "id": "fe:get:admin-bunny-libraries-available:frontend-src-services-admin-service-ts:1903",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/libraries/available",
@@ -18077,11 +18104,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1858
+        "line": 1903
       }
     },
     {
-      "id": "fe:get:admin-bunny-libraries:frontend-src-services-admin-service-ts:1851",
+      "id": "fe:get:admin-bunny-libraries:frontend-src-services-admin-service-ts:1896",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/libraries",
@@ -18104,11 +18131,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1851
+        "line": 1896
       }
     },
     {
-      "id": "fe:get:admin-bunny-reports-costs:frontend-src-services-admin-service-ts:1950",
+      "id": "fe:get:admin-bunny-reports-costs:frontend-src-services-admin-service-ts:1995",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/reports/costs",
@@ -18131,7 +18158,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1950
+        "line": 1995
       }
     },
     {
@@ -18162,7 +18189,7 @@
       }
     },
     {
-      "id": "fe:get:admin-codes-groups-id-details:frontend-src-services-admin-service-ts:1412",
+      "id": "fe:get:admin-codes-groups-id-details:frontend-src-services-admin-service-ts:1457",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/codes/groups/{id}/details",
@@ -18185,11 +18212,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1412
+        "line": 1457
       }
     },
     {
-      "id": "fe:get:admin-codes-groups:frontend-src-services-admin-service-ts:1404",
+      "id": "fe:get:admin-codes-groups:frontend-src-services-admin-service-ts:1449",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/codes/groups",
@@ -18212,11 +18239,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1404
+        "line": 1449
       }
     },
     {
-      "id": "fe:get:admin-comments:frontend-src-services-admin-service-ts:1771",
+      "id": "fe:get:admin-comments:frontend-src-services-admin-service-ts:1816",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/comments",
@@ -18239,11 +18266,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1771
+        "line": 1816
       }
     },
     {
-      "id": "fe:get:admin-community-comments-pending:frontend-src-services-admin-service-ts:1744",
+      "id": "fe:get:admin-community-comments-pending:frontend-src-services-admin-service-ts:1789",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/community/comments/pending",
@@ -18266,11 +18293,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1744
+        "line": 1789
       }
     },
     {
-      "id": "fe:get:admin-community-posts:frontend-src-services-admin-service-ts:1723",
+      "id": "fe:get:admin-community-posts:frontend-src-services-admin-service-ts:1768",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/community/posts",
@@ -18293,7 +18320,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1723
+        "line": 1768
       }
     },
     {
@@ -18405,7 +18432,7 @@
       }
     },
     {
-      "id": "fe:get:admin-exams-examid-dashboard:frontend-src-services-admin-service-ts:2168",
+      "id": "fe:get:admin-exams-examid-dashboard:frontend-src-services-admin-service-ts:2213",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/exams/{examId}/dashboard",
@@ -18428,7 +18455,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2168
+        "line": 2213
       }
     },
     {
@@ -18486,7 +18513,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:379",
+      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:386",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/code-accounting",
@@ -18509,11 +18536,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 379
+        "line": 386
       }
     },
     {
-      "id": "fe:get:admin-finance-payouts:frontend-src-services-admin-service-ts:2471",
+      "id": "fe:get:admin-finance-payouts:frontend-src-services-admin-service-ts:2516",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payouts",
@@ -18536,11 +18563,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2471
+        "line": 2516
       }
     },
     {
-      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:346",
+      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:353",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payouts",
@@ -18563,11 +18590,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 346
+        "line": 353
       }
     },
     {
-      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:301",
+      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:308",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payroll",
@@ -18590,11 +18617,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 301
+        "line": 308
       }
     },
     {
-      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:392",
+      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:399",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/teacher-events",
@@ -18617,7 +18644,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 392
+        "line": 399
       }
     },
     {
@@ -18864,7 +18891,7 @@
       }
     },
     {
-      "id": "fe:get:admin-homework-homeworkid-dashboard:frontend-src-services-admin-service-ts:2174",
+      "id": "fe:get:admin-homework-homeworkid-dashboard:frontend-src-services-admin-service-ts:2219",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/homework/{homeworkId}/dashboard",
@@ -18887,7 +18914,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2174
+        "line": 2219
       }
     },
     {
@@ -19026,7 +19053,7 @@
       }
     },
     {
-      "id": "fe:get:admin-lessons-id-cockpit:frontend-src-services-admin-service-ts:1653",
+      "id": "fe:get:admin-lessons-id-cockpit:frontend-src-services-admin-service-ts:1698",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{id}/cockpit",
@@ -19049,11 +19076,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1653
+        "line": 1698
       }
     },
     {
-      "id": "fe:get:admin-lessons-id-subscribers-export:frontend-src-services-admin-service-ts:2591",
+      "id": "fe:get:admin-lessons-id-subscribers-export:frontend-src-services-admin-service-ts:2636",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{id}/subscribers/export",
@@ -19076,11 +19103,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2591
+        "line": 2636
       }
     },
     {
-      "id": "fe:get:admin-lessons-id-subscribers:frontend-src-services-admin-service-ts:2575",
+      "id": "fe:get:admin-lessons-id-subscribers:frontend-src-services-admin-service-ts:2620",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{id}/subscribers",
@@ -19103,11 +19130,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2575
+        "line": 2620
       }
     },
     {
-      "id": "fe:get:admin-lessons-lessonid-comments:frontend-src-services-admin-service-ts:1762",
+      "id": "fe:get:admin-lessons-lessonid-comments:frontend-src-services-admin-service-ts:1807",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{lessonId}/comments",
@@ -19130,11 +19157,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1762
+        "line": 1807
       }
     },
     {
-      "id": "fe:get:admin-lessons-lessonid-mim-game:frontend-src-services-admin-service-ts:1659",
+      "id": "fe:get:admin-lessons-lessonid-mim-game:frontend-src-services-admin-service-ts:1704",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{lessonId}/mim-game",
@@ -19157,7 +19184,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1659
+        "line": 1704
       }
     },
     {
@@ -19296,7 +19323,7 @@
       }
     },
     {
-      "id": "fe:get:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1555",
+      "id": "fe:get:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1600",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/code-profile",
@@ -19319,11 +19346,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1555
+        "line": 1600
       }
     },
     {
-      "id": "fe:get:admin-packages-id-stats:frontend-src-services-admin-service-ts:2531",
+      "id": "fe:get:admin-packages-id-stats:frontend-src-services-admin-service-ts:2576",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/stats",
@@ -19346,11 +19373,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2531
+        "line": 2576
       }
     },
     {
-      "id": "fe:get:admin-packages-id-subscribers-export:frontend-src-services-admin-service-ts:2586",
+      "id": "fe:get:admin-packages-id-subscribers-export:frontend-src-services-admin-service-ts:2631",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/subscribers/export",
@@ -19373,11 +19400,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2586
+        "line": 2631
       }
     },
     {
-      "id": "fe:get:admin-packages-id-subscribers:frontend-src-services-admin-service-ts:2572",
+      "id": "fe:get:admin-packages-id-subscribers:frontend-src-services-admin-service-ts:2617",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/subscribers",
@@ -19400,11 +19427,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2572
+        "line": 2617
       }
     },
     {
-      "id": "fe:get:admin-packages-id:frontend-src-services-admin-service-ts:1544",
+      "id": "fe:get:admin-packages-id:frontend-src-services-admin-service-ts:1589",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}",
@@ -19427,11 +19454,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1544
+        "line": 1589
       }
     },
     {
-      "id": "fe:get:admin-packages-list:frontend-src-services-admin-service-ts:1211",
+      "id": "fe:get:admin-packages-list:frontend-src-services-admin-service-ts:1256",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/list",
@@ -19454,7 +19481,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1211
+        "line": 1256
       }
     },
     {
@@ -20025,7 +20052,7 @@
       }
     },
     {
-      "id": "fe:get:admin-questions:frontend-src-services-admin-service-ts:1439",
+      "id": "fe:get:admin-questions:frontend-src-services-admin-service-ts:1484",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/questions",
@@ -20048,7 +20075,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1439
+        "line": 1484
       }
     },
     {
@@ -20160,7 +20187,7 @@
       }
     },
     {
-      "id": "fe:get:admin-roles:frontend-src-services-admin-service-ts:2379",
+      "id": "fe:get:admin-roles:frontend-src-services-admin-service-ts:2424",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/roles",
@@ -20183,7 +20210,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2379
+        "line": 2424
       }
     },
     {
@@ -20322,7 +20349,7 @@
       }
     },
     {
-      "id": "fe:get:admin-sections-id-stats:frontend-src-services-admin-service-ts:2553",
+      "id": "fe:get:admin-sections-id-stats:frontend-src-services-admin-service-ts:2598",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}/stats",
@@ -20345,11 +20372,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2553
+        "line": 2598
       }
     },
     {
-      "id": "fe:get:admin-sections-id-subscribers-export:frontend-src-services-admin-service-ts:2590",
+      "id": "fe:get:admin-sections-id-subscribers-export:frontend-src-services-admin-service-ts:2635",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}/subscribers/export",
@@ -20372,11 +20399,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2590
+        "line": 2635
       }
     },
     {
-      "id": "fe:get:admin-sections-id-subscribers:frontend-src-services-admin-service-ts:2574",
+      "id": "fe:get:admin-sections-id-subscribers:frontend-src-services-admin-service-ts:2619",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}/subscribers",
@@ -20399,11 +20426,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2574
+        "line": 2619
       }
     },
     {
-      "id": "fe:get:admin-sections-id:frontend-src-services-admin-service-ts:1604",
+      "id": "fe:get:admin-sections-id:frontend-src-services-admin-service-ts:1649",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}",
@@ -20426,7 +20453,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1604
+        "line": 1649
       }
     },
     {
@@ -20457,7 +20484,7 @@
       }
     },
     {
-      "id": "fe:get:admin-settings:frontend-src-services-admin-service-ts:2367",
+      "id": "fe:get:admin-settings:frontend-src-services-admin-service-ts:2412",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/settings",
@@ -20480,7 +20507,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2367
+        "line": 2412
       }
     },
     {
@@ -20592,7 +20619,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-code-groups-codegroupid-account:frontend-src-services-finance-service-ts:292",
+      "id": "fe:get:admin-teacher-finance-center-code-groups-codegroupid-account:frontend-src-services-finance-service-ts:299",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/account",
@@ -20615,11 +20642,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 292
+        "line": 299
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:269",
+      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:276",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}",
@@ -20642,11 +20669,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 269
+        "line": 276
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:213",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:220",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -20669,11 +20696,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 213
+        "line": 220
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-collections:frontend-src-services-finance-service-ts:242",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-collections:frontend-src-services-finance-service-ts:249",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/collections",
@@ -20696,11 +20723,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 242
+        "line": 249
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:250",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:257",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/ledger",
@@ -20723,11 +20750,38 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 250
+        "line": 257
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-settlements:frontend-src-services-finance-service-ts:354",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-reports-detailed-pdf:frontend-src-services-finance-service-ts:195",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/teacher-finance-center/teachers/{teacherId}/reports/detailed.pdf",
+      "effect": "export",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminTeacherReportsController.Download",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 195
+      }
+    },
+    {
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-settlements:frontend-src-services-finance-service-ts:361",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/settlements",
@@ -20750,11 +20804,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 354
+        "line": 361
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement-pdf:frontend-src-services-finance-service-ts:207",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement-pdf:frontend-src-services-finance-service-ts:214",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/statement/pdf",
@@ -20777,11 +20831,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 207
+        "line": 214
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement:frontend-src-services-finance-service-ts:197",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement:frontend-src-services-finance-service-ts:204",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/statement",
@@ -20804,11 +20858,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 197
+        "line": 204
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:235",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:242",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/summary",
@@ -20831,7 +20885,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 235
+        "line": 242
       }
     },
     {
@@ -20862,7 +20916,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-activations:frontend-src-services-admin-service-ts:2460",
+      "id": "fe:get:admin-teachers-teacherid-activations:frontend-src-services-admin-service-ts:2505",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/activations",
@@ -20885,11 +20939,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2460
+        "line": 2505
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-active-photo:frontend-src-services-admin-service-ts:1244",
+      "id": "fe:get:admin-teachers-teacherid-active-photo:frontend-src-services-admin-service-ts:1289",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/active-photo",
@@ -20912,11 +20966,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1244
+        "line": 1289
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-essays:frontend-src-services-admin-service-ts:2449",
+      "id": "fe:get:admin-teachers-teacherid-essays:frontend-src-services-admin-service-ts:2494",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/essays",
@@ -20939,11 +20993,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2449
+        "line": 2494
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-photos:frontend-src-services-admin-service-ts:1259",
+      "id": "fe:get:admin-teachers-teacherid-photos:frontend-src-services-admin-service-ts:1304",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/photos",
@@ -20966,11 +21020,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1259
+        "line": 1304
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-stats:frontend-src-services-admin-service-ts:2416",
+      "id": "fe:get:admin-teachers-teacherid-stats:frontend-src-services-admin-service-ts:2461",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/stats",
@@ -20993,11 +21047,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2416
+        "line": 2461
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-students:frontend-src-services-admin-service-ts:2430",
+      "id": "fe:get:admin-teachers-teacherid-students:frontend-src-services-admin-service-ts:2475",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/students",
@@ -21020,11 +21074,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2430
+        "line": 2475
       }
     },
     {
-      "id": "fe:get:admin-teachers:frontend-src-services-admin-service-ts:1252",
+      "id": "fe:get:admin-teachers:frontend-src-services-admin-service-ts:1297",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers",
@@ -21047,7 +21101,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1252
+        "line": 1297
       }
     },
     {
@@ -21078,7 +21132,7 @@
       }
     },
     {
-      "id": "fe:get:admin-terms-id-stats:frontend-src-services-admin-service-ts:2542",
+      "id": "fe:get:admin-terms-id-stats:frontend-src-services-admin-service-ts:2587",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}/stats",
@@ -21101,11 +21155,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2542
+        "line": 2587
       }
     },
     {
-      "id": "fe:get:admin-terms-id-subscribers-export:frontend-src-services-admin-service-ts:2588",
+      "id": "fe:get:admin-terms-id-subscribers-export:frontend-src-services-admin-service-ts:2633",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}/subscribers/export",
@@ -21128,11 +21182,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2588
+        "line": 2633
       }
     },
     {
-      "id": "fe:get:admin-terms-id-subscribers:frontend-src-services-admin-service-ts:2573",
+      "id": "fe:get:admin-terms-id-subscribers:frontend-src-services-admin-service-ts:2618",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}/subscribers",
@@ -21155,11 +21209,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2573
+        "line": 2618
       }
     },
     {
-      "id": "fe:get:admin-terms-id:frontend-src-services-admin-service-ts:1600",
+      "id": "fe:get:admin-terms-id:frontend-src-services-admin-service-ts:1645",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}",
@@ -21182,11 +21236,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1600
+        "line": 1645
       }
     },
     {
-      "id": "fe:get:admin-users-id-audit-logs:frontend-src-services-admin-service-ts:1322",
+      "id": "fe:get:admin-users-id-audit-logs:frontend-src-services-admin-service-ts:1367",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users/{id}/audit-logs",
@@ -21209,11 +21263,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1322
+        "line": 1367
       }
     },
     {
-      "id": "fe:get:admin-users-students-id-profile:frontend-src-services-admin-service-ts:1310",
+      "id": "fe:get:admin-users-students-id-profile:frontend-src-services-admin-service-ts:1355",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users/students/{id}/profile",
@@ -21236,11 +21290,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1310
+        "line": 1355
       }
     },
     {
-      "id": "fe:get:admin-users:frontend-src-services-admin-service-ts:1140",
+      "id": "fe:get:admin-users:frontend-src-services-admin-service-ts:1185",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users",
@@ -21263,11 +21317,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1140
+        "line": 1185
       }
     },
     {
-      "id": "fe:get:admin-video-types:frontend-src-services-admin-service-ts:1690",
+      "id": "fe:get:admin-video-types:frontend-src-services-admin-service-ts:1735",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/video-types",
@@ -21290,7 +21344,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1690
+        "line": 1735
       }
     },
     {
@@ -21456,7 +21510,7 @@
       }
     },
     {
-      "id": "fe:get:admin-watch-requests:frontend-src-services-admin-service-ts:2327",
+      "id": "fe:get:admin-watch-requests:frontend-src-services-admin-service-ts:2372",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/watch-requests",
@@ -21479,7 +21533,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2327
+        "line": 2372
       }
     },
     {
@@ -23157,7 +23211,7 @@
       }
     },
     {
-      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-preview:frontend-src-services-admin-service-ts:1102",
+      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-preview:frontend-src-services-admin-service-ts:1147",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/whatsapp/admin/assessment-parent-recovery/preview",
@@ -23180,11 +23234,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1102
+        "line": 1147
       }
     },
     {
-      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-status-encodeuricomponentoperationid:frontend-src-services-admin-service-ts:1120",
+      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-status-encodeuricomponentoperationid:frontend-src-services-admin-service-ts:1165",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/whatsapp/admin/assessment-parent-recovery/status/{encodeURIComponentoperationId}",
@@ -23207,11 +23261,65 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1120
+        "line": 1165
       }
     },
     {
-      "id": "fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1884",
+      "id": "fe:get:whatsapp-admin-exams-examid-parent-messages:frontend-src-services-admin-service-ts:1135",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/whatsapp/admin/exams/{examId}/parent-messages",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1135
+      }
+    },
+    {
+      "id": "fe:get:whatsapp-admin-exams-parent-messages:frontend-src-services-admin-service-ts:1129",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/whatsapp/admin/exams/parent-messages",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1129
+      }
+    },
+    {
+      "id": "fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1929",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}/status",
@@ -23236,12 +23344,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1884
+        "line": 1929
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:patch:admin-users-students-userid-status:frontend-src-services-admin-service-ts:1352",
+      "id": "fe:patch:admin-users-students-userid-status:frontend-src-services-admin-service-ts:1397",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/users/students/{userId}/status",
@@ -23266,12 +23374,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1352
+        "line": 1397
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:patch:admin-video-types-id-status:frontend-src-services-admin-service-ts:1713",
+      "id": "fe:patch:admin-video-types-id-status:frontend-src-services-admin-service-ts:1758",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/video-types/{id}/status",
@@ -23296,12 +23404,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1713
+        "line": 1758
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:patch:admin-videos-videoid-toggle-active:frontend-src-services-admin-service-ts:1813",
+      "id": "fe:patch:admin-videos-videoid-toggle-active:frontend-src-services-admin-service-ts:1858",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/videos/{videoId}/toggle-active",
@@ -23326,7 +23434,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1813
+        "line": 1858
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -23421,7 +23529,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-assessments-ocr-questions:frontend-src-services-admin-service-ts:2182",
+      "id": "fe:post:admin-assessments-ocr-questions:frontend-src-services-admin-service-ts:2227",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/assessments/ocr/questions",
@@ -23446,7 +23554,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2182
+        "line": 2227
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -23481,7 +23589,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-libraries:frontend-src-services-admin-service-ts:1865",
+      "id": "fe:post:admin-bunny-libraries:frontend-src-services-admin-service-ts:1910",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/libraries",
@@ -23506,12 +23614,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1865
+        "line": 1910
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-assetid-cancel-replacement:frontend-src-services-admin-service-ts:1912",
+      "id": "fe:post:admin-bunny-uploads-assetid-cancel-replacement:frontend-src-services-admin-service-ts:1957",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/{assetId}/cancel-replacement",
@@ -23536,12 +23644,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1912
+        "line": 1957
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-assetid-complete:frontend-src-services-admin-service-ts:1906",
+      "id": "fe:post:admin-bunny-uploads-assetid-complete:frontend-src-services-admin-service-ts:1951",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/{assetId}/complete",
@@ -23566,12 +23674,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1906
+        "line": 1951
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-fetch:frontend-src-services-admin-service-ts:1920",
+      "id": "fe:post:admin-bunny-uploads-fetch:frontend-src-services-admin-service-ts:1965",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/fetch",
@@ -23596,12 +23704,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1920
+        "line": 1965
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-tus:frontend-src-services-admin-service-ts:1899",
+      "id": "fe:post:admin-bunny-uploads-tus:frontend-src-services-admin-service-ts:1944",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/tus",
@@ -23626,12 +23734,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1899
+        "line": 1944
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-bunny-usage-sync:frontend-src-services-admin-service-ts:1939",
+      "id": "fe:post:admin-bunny-usage-sync:frontend-src-services-admin-service-ts:1984",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/usage/sync",
@@ -23656,12 +23764,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1939
+        "line": 1984
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-chapters-chapterid-regenerate-mindmap:frontend-src-services-admin-service-ts:1960",
+      "id": "fe:post:admin-chapters-chapterid-regenerate-mindmap:frontend-src-services-admin-service-ts:2005",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/chapters/{chapterId}/regenerate-mindmap",
@@ -23686,7 +23794,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1960
+        "line": 2005
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -23721,7 +23829,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-comments-commentid-approve:frontend-src-services-admin-service-ts:1783",
+      "id": "fe:post:admin-comments-commentid-approve:frontend-src-services-admin-service-ts:1828",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/comments/{commentId}/approve",
@@ -23746,12 +23854,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1783
+        "line": 1828
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-comments-commentid-reject:frontend-src-services-admin-service-ts:1793",
+      "id": "fe:post:admin-comments-commentid-reject:frontend-src-services-admin-service-ts:1838",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/comments/{commentId}/reject",
@@ -23776,12 +23884,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1793
+        "line": 1838
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-comments-commentid-reply:frontend-src-services-admin-service-ts:1789",
+      "id": "fe:post:admin-comments-commentid-reply:frontend-src-services-admin-service-ts:1834",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/comments/{commentId}/reply",
@@ -23806,12 +23914,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1789
+        "line": 1834
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-community-comments-commentid-approve:frontend-src-services-admin-service-ts:1750",
+      "id": "fe:post:admin-community-comments-commentid-approve:frontend-src-services-admin-service-ts:1795",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/comments/{commentId}/approve",
@@ -23836,12 +23944,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1750
+        "line": 1795
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-community-comments-commentid-reject:frontend-src-services-admin-service-ts:1756",
+      "id": "fe:post:admin-community-comments-commentid-reject:frontend-src-services-admin-service-ts:1801",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/comments/{commentId}/reject",
@@ -23866,12 +23974,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1756
+        "line": 1801
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-community-posts-postid-approve:frontend-src-services-admin-service-ts:1732",
+      "id": "fe:post:admin-community-posts-postid-approve:frontend-src-services-admin-service-ts:1777",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/posts/{postId}/approve",
@@ -23896,12 +24004,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1732
+        "line": 1777
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-community-posts-postid-reject:frontend-src-services-admin-service-ts:1738",
+      "id": "fe:post:admin-community-posts-postid-reject:frontend-src-services-admin-service-ts:1783",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/posts/{postId}/reject",
@@ -23926,12 +24034,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1738
+        "line": 1783
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-content-contenttype-id-image:frontend-src-services-admin-service-ts:1526",
+      "id": "fe:post:admin-content-contenttype-id-image:frontend-src-services-admin-service-ts:1571",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/content/{contentType}/{id}/image",
@@ -23956,12 +24064,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1526
+        "line": 1571
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-content-lessons-lessonid-homework:frontend-src-services-admin-service-ts:2023",
+      "id": "fe:post:admin-content-lessons-lessonid-homework:frontend-src-services-admin-service-ts:2068",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/content/lessons/{lessonId}/homework",
@@ -23986,7 +24094,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2023
+        "line": 2068
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -24048,7 +24156,7 @@
       }
     },
     {
-      "id": "fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2135",
+      "id": "fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2180",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/exams/inline",
@@ -24073,12 +24181,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2135
+        "line": 2180
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:363",
+      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:370",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payouts/{payoutId}/resolve",
@@ -24103,12 +24211,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 363
+        "line": 370
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:309",
+      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:316",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/generate",
@@ -24133,12 +24241,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 309
+        "line": 316
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:320",
+      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:327",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/adjustments",
@@ -24163,12 +24271,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 320
+        "line": 327
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:338",
+      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:345",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/approve",
@@ -24193,12 +24301,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 338
+        "line": 345
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:406",
+      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:413",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/{allocationId}/review",
@@ -24223,12 +24331,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 406
+        "line": 413
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:418",
+      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:425",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/manual-compensation",
@@ -24253,12 +24361,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 418
+        "line": 425
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-forms-cover-upload:frontend-src-services-admin-service-ts:1298",
+      "id": "fe:post:admin-forms-cover-upload:frontend-src-services-admin-service-ts:1343",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/forms/cover/upload",
@@ -24283,7 +24391,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1298
+        "line": 1343
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -24465,7 +24573,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-lessons-lessonid-mim-game-disable:frontend-src-services-admin-service-ts:1682",
+      "id": "fe:post:admin-lessons-lessonid-mim-game-disable:frontend-src-services-admin-service-ts:1727",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/lessons/{lessonId}/mim-game/disable",
@@ -24490,12 +24598,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1682
+        "line": 1727
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-lessons-lessonid-mim-game-generate:frontend-src-services-admin-service-ts:1666",
+      "id": "fe:post:admin-lessons-lessonid-mim-game-generate:frontend-src-services-admin-service-ts:1711",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/lessons/{lessonId}/mim-game/generate",
@@ -24520,12 +24628,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1666
+        "line": 1711
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-lessons-lessonid-mim-game-publish-enable:frontend-src-services-admin-service-ts:1674",
+      "id": "fe:post:admin-lessons-lessonid-mim-game-publish-enable:frontend-src-services-admin-service-ts:1719",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/lessons/{lessonId}/mim-game/publish-enable",
@@ -24550,12 +24658,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1674
+        "line": 1719
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-lessons:frontend-src-services-admin-service-ts:1625",
+      "id": "fe:post:admin-lessons:frontend-src-services-admin-service-ts:1670",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/lessons",
@@ -24580,7 +24688,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1625
+        "line": 1670
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -24795,7 +24903,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-overrides-reset-watch:frontend-src-services-admin-service-ts:2232",
+      "id": "fe:post:admin-overrides-reset-watch:frontend-src-services-admin-service-ts:2277",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/overrides/reset-watch",
@@ -24820,12 +24928,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2232
+        "line": 2277
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-packages:frontend-src-services-admin-service-ts:1512",
+      "id": "fe:post:admin-packages:frontend-src-services-admin-service-ts:1557",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/packages",
@@ -24850,7 +24958,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1512
+        "line": 1557
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25335,7 +25443,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-popup-image:frontend-src-services-admin-service-ts:2058",
+      "id": "fe:post:admin-popup-image:frontend-src-services-admin-service-ts:2103",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/popup/image",
@@ -25360,7 +25468,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2058
+        "line": 2103
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25425,7 +25533,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-questions-image:frontend-src-services-admin-service-ts:2035",
+      "id": "fe:post:admin-questions-image:frontend-src-services-admin-service-ts:2080",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions/image",
@@ -25450,12 +25558,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2035
+        "line": 2080
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-questions-questionid-audio:frontend-src-services-admin-service-ts:1475",
+      "id": "fe:post:admin-questions-questionid-audio:frontend-src-services-admin-service-ts:1520",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions/{questionId}/audio",
@@ -25480,12 +25588,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1475
+        "line": 1520
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-questions:frontend-src-services-admin-service-ts:1462",
+      "id": "fe:post:admin-questions:frontend-src-services-admin-service-ts:1507",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions",
@@ -25510,7 +25618,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1462
+        "line": 1507
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25605,7 +25713,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-resources-upload:frontend-src-services-admin-service-ts:1982",
+      "id": "fe:post:admin-resources-upload:frontend-src-services-admin-service-ts:2027",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/resources/upload",
@@ -25630,12 +25738,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1982
+        "line": 2027
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-resources:frontend-src-services-admin-service-ts:1972",
+      "id": "fe:post:admin-resources:frontend-src-services-admin-service-ts:2017",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/resources",
@@ -25660,12 +25768,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1972
+        "line": 2017
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-roles:frontend-src-services-admin-service-ts:2389",
+      "id": "fe:post:admin-roles:frontend-src-services-admin-service-ts:2434",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/roles",
@@ -25690,7 +25798,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2389
+        "line": 2434
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25845,7 +25953,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sections:frontend-src-services-admin-service-ts:1608",
+      "id": "fe:post:admin-sections:frontend-src-services-admin-service-ts:1653",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sections",
@@ -25870,7 +25978,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1608
+        "line": 1653
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -26025,7 +26133,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:288",
+      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:295",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/confirm-delivery",
@@ -26050,12 +26158,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 288
+        "line": 295
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-payments:frontend-src-services-finance-service-ts:296",
+      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-payments:frontend-src-services-finance-service-ts:303",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/payments",
@@ -26080,12 +26188,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 296
+        "line": 303
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:279",
+      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:286",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/reversals",
@@ -26110,12 +26218,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 279
+        "line": 286
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:258",
+      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:265",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/preview",
@@ -26138,11 +26246,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 258
+        "line": 265
       }
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:274",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:281",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/approve",
@@ -26167,12 +26275,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 274
+        "line": 281
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:275",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:282",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/cancel",
@@ -26197,12 +26305,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 275
+        "line": 282
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:276",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:283",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/pay",
@@ -26227,12 +26335,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 276
+        "line": 283
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:273",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:280",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/review",
@@ -26257,12 +26365,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 273
+        "line": 280
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:264",
+      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:271",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements",
@@ -26287,12 +26395,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 264
+        "line": 271
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:221",
+      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:228",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -26317,12 +26425,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 221
+        "line": 228
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-photos-upload:frontend-src-services-admin-service-ts:1232",
+      "id": "fe:post:admin-teacher-photos-upload:frontend-src-services-admin-service-ts:1277",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-photos/upload",
@@ -26347,12 +26455,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1232
+        "line": 1277
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teachers-teacherid-photos-photoid-active:frontend-src-services-admin-service-ts:1268",
+      "id": "fe:post:admin-teachers-teacherid-photos-photoid-active:frontend-src-services-admin-service-ts:1313",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teachers/{teacherId}/photos/{photoId}/active",
@@ -26377,12 +26485,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1268
+        "line": 1313
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teachers-upload-profile-image:frontend-src-services-admin-service-ts:1286",
+      "id": "fe:post:admin-teachers-upload-profile-image:frontend-src-services-admin-service-ts:1331",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teachers/upload-profile-image",
@@ -26407,7 +26515,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1286
+        "line": 1331
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -26442,7 +26550,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-terms:frontend-src-services-admin-service-ts:1582",
+      "id": "fe:post:admin-terms:frontend-src-services-admin-service-ts:1627",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/terms",
@@ -26467,12 +26575,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1582
+        "line": 1627
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-admins-adminid-reset-password:frontend-src-services-admin-service-ts:2300",
+      "id": "fe:post:admin-users-admins-adminid-reset-password:frontend-src-services-admin-service-ts:2345",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/admins/{adminId}/reset-password",
@@ -26497,12 +26605,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2300
+        "line": 2345
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-staff-staffid-archive:frontend-src-services-admin-service-ts:2304",
+      "id": "fe:post:admin-users-staff-staffid-archive:frontend-src-services-admin-service-ts:2349",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/staff/{staffId}/archive",
@@ -26527,12 +26635,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2304
+        "line": 2349
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-balance-adjust:frontend-src-services-admin-service-ts:2262",
+      "id": "fe:post:admin-users-students-studentid-balance-adjust:frontend-src-services-admin-service-ts:2307",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/balance/adjust",
@@ -26557,12 +26665,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2262
+        "line": 2307
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-notes:frontend-src-services-admin-service-ts:2312",
+      "id": "fe:post:admin-users-students-studentid-notes:frontend-src-services-admin-service-ts:2357",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/notes",
@@ -26587,12 +26695,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2312
+        "line": 2357
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-reset-password:frontend-src-services-admin-service-ts:2292",
+      "id": "fe:post:admin-users-students-studentid-reset-password:frontend-src-services-admin-service-ts:2337",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/reset-password",
@@ -26617,12 +26725,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2292
+        "line": 2337
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-userid-gamification-adjust:frontend-src-services-admin-service-ts:1377",
+      "id": "fe:post:admin-users-students-userid-gamification-adjust:frontend-src-services-admin-service-ts:1422",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/gamification/adjust",
@@ -26647,12 +26755,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1377
+        "line": 1422
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-userid-overrides:frontend-src-services-admin-service-ts:1365",
+      "id": "fe:post:admin-users-students-userid-overrides:frontend-src-services-admin-service-ts:1410",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/overrides",
@@ -26677,12 +26785,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1365
+        "line": 1410
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users-students-userid-packages-accessgrantid-cancel:frontend-src-services-admin-service-ts:2359",
+      "id": "fe:post:admin-users-students-userid-packages-accessgrantid-cancel:frontend-src-services-admin-service-ts:2404",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/packages/{accessGrantId}/cancel",
@@ -26707,12 +26815,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2359
+        "line": 2404
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-users:frontend-src-services-admin-service-ts:1200",
+      "id": "fe:post:admin-users:frontend-src-services-admin-service-ts:1245",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users",
@@ -26737,12 +26845,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1200
+        "line": 1245
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-video-types:frontend-src-services-admin-service-ts:1699",
+      "id": "fe:post:admin-video-types:frontend-src-services-admin-service-ts:1744",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/video-types",
@@ -26767,12 +26875,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1699
+        "line": 1744
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-videos-videoid-analyze-ai:frontend-src-services-admin-service-ts:1823",
+      "id": "fe:post:admin-videos-videoid-analyze-ai:frontend-src-services-admin-service-ts:1868",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/analyze-ai",
@@ -26797,12 +26905,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1823
+        "line": 1868
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-videos-videoid-cancel-ai:frontend-src-services-admin-service-ts:1839",
+      "id": "fe:post:admin-videos-videoid-cancel-ai:frontend-src-services-admin-service-ts:1884",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/cancel-ai",
@@ -26827,12 +26935,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1839
+        "line": 1884
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-videos-videoid-cancel-mindmap:frontend-src-services-admin-service-ts:1845",
+      "id": "fe:post:admin-videos-videoid-cancel-mindmap:frontend-src-services-admin-service-ts:1890",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/cancel-mindmap",
@@ -26857,12 +26965,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1845
+        "line": 1890
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-videos-videoid-generate-mindmaps:frontend-src-services-admin-service-ts:1832",
+      "id": "fe:post:admin-videos-videoid-generate-mindmaps:frontend-src-services-admin-service-ts:1877",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/generate-mindmaps",
@@ -26887,12 +26995,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1832
+        "line": 1877
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-videos:frontend-src-services-admin-service-ts:1799",
+      "id": "fe:post:admin-videos:frontend-src-services-admin-service-ts:1844",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos",
@@ -26917,7 +27025,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1799
+        "line": 1844
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27102,7 +27210,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2338",
+      "id": "fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2383",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/watch-requests/{id}/approve",
@@ -27127,12 +27235,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2338
+        "line": 2383
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2346",
+      "id": "fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2391",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/watch-requests/{id}/reject",
@@ -27157,7 +27265,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2346
+        "line": 2391
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27342,7 +27450,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:exams-admin-lessons-lessonid-students-studentid-unlock:frontend-src-services-admin-service-ts:2225",
+      "id": "fe:post:exams-admin-lessons-lessonid-students-studentid-unlock:frontend-src-services-admin-service-ts:2270",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/exams/admin/lessons/{lessonId}/students/{studentId}/unlock",
@@ -27367,7 +27475,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2225
+        "line": 2270
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29550,7 +29658,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:whatsapp-admin-assessment-parent-recovery-apply:frontend-src-services-admin-service-ts:1113",
+      "id": "fe:post:whatsapp-admin-assessment-parent-recovery-apply:frontend-src-services-admin-service-ts:1158",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/whatsapp/admin/assessment-parent-recovery/apply",
@@ -29575,12 +29683,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1113
+        "line": 1158
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1095",
+      "id": "fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1122",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/whatsapp/admin/exam-result-message",
@@ -29605,7 +29713,37 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1095
+        "line": 1122
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:whatsapp-admin-exams-examid-parent-messages-retry:frontend-src-services-admin-service-ts:1141",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/whatsapp/admin/exams/{examId}/parent-messages/retry",
+      "effect": "external-side-effect",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1141
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29640,7 +29778,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1876",
+      "id": "fe:put:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1921",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -29665,12 +29803,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1876
+        "line": 1921
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-codes-groups-id-settings:frontend-src-services-admin-service-ts:1420",
+      "id": "fe:put:admin-codes-groups-id-settings:frontend-src-services-admin-service-ts:1465",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/codes/groups/{id}/settings",
@@ -29695,12 +29833,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1420
+        "line": 1465
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-content-targettype-id-archive:frontend-src-services-admin-service-ts:1077",
+      "id": "fe:put:admin-content-targettype-id-archive:frontend-src-services-admin-service-ts:1104",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/content/{targetType}/{id}/archive",
@@ -29725,7 +29863,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1077
+        "line": 1104
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29790,7 +29928,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2095",
+      "id": "fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2140",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/exams/{examId}/status",
@@ -29815,7 +29953,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2095
+        "line": 2140
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29940,7 +30078,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-homework-homeworkid-status:frontend-src-services-admin-service-ts:2102",
+      "id": "fe:put:admin-homework-homeworkid-status:frontend-src-services-admin-service-ts:2147",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/homework/{homeworkId}/status",
@@ -29965,12 +30103,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2102
+        "line": 2147
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-lessons-id:frontend-src-services-admin-service-ts:1635",
+      "id": "fe:put:admin-lessons-id:frontend-src-services-admin-service-ts:1680",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{id}",
@@ -29995,12 +30133,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1635
+        "line": 1680
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-lessons-lessonid-exam:frontend-src-services-admin-service-ts:2075",
+      "id": "fe:put:admin-lessons-lessonid-exam:frontend-src-services-admin-service-ts:2120",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{lessonId}/exam",
@@ -30025,12 +30163,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2075
+        "line": 2120
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-lessons-lessonid-homework-coming-soon:frontend-src-services-admin-service-ts:1645",
+      "id": "fe:put:admin-lessons-lessonid-homework-coming-soon:frontend-src-services-admin-service-ts:1690",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{lessonId}/homework-coming-soon",
@@ -30055,7 +30193,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1645
+        "line": 1690
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30120,7 +30258,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1564",
+      "id": "fe:put:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1609",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/packages/{id}/code-profile",
@@ -30145,12 +30283,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1564
+        "line": 1609
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-packages-id:frontend-src-services-admin-service-ts:1548",
+      "id": "fe:put:admin-packages-id:frontend-src-services-admin-service-ts:1593",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/packages/{id}",
@@ -30175,7 +30313,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1548
+        "line": 1593
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30210,7 +30348,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-roles-id:frontend-src-services-admin-service-ts:2402",
+      "id": "fe:put:admin-roles-id:frontend-src-services-admin-service-ts:2447",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/roles/{id}",
@@ -30235,7 +30373,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2402
+        "line": 2447
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30270,7 +30408,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-sections-id:frontend-src-services-admin-service-ts:1618",
+      "id": "fe:put:admin-sections-id:frontend-src-services-admin-service-ts:1663",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/sections/{id}",
@@ -30295,12 +30433,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1618
+        "line": 1663
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-settings:frontend-src-services-admin-service-ts:2372",
+      "id": "fe:put:admin-settings:frontend-src-services-admin-service-ts:2417",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/settings",
@@ -30325,7 +30463,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2372
+        "line": 2417
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30360,7 +30498,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:228",
+      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:235",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/agreements/{agreementId}",
@@ -30385,12 +30523,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 228
+        "line": 235
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:284",
+      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:291",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/financial-terms",
@@ -30415,7 +30553,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 284
+        "line": 291
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30450,7 +30588,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-terms-id:frontend-src-services-admin-service-ts:1592",
+      "id": "fe:put:admin-terms-id:frontend-src-services-admin-service-ts:1637",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/terms/{id}",
@@ -30475,12 +30613,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1592
+        "line": 1637
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-users-id-status:frontend-src-services-admin-service-ts:1218",
+      "id": "fe:put:admin-users-id-status:frontend-src-services-admin-service-ts:1263",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/{id}/status",
@@ -30505,12 +30643,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1218
+        "line": 1263
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-users-staff-staffid-profile:frontend-src-services-admin-service-ts:2284",
+      "id": "fe:put:admin-users-staff-staffid-profile:frontend-src-services-admin-service-ts:2329",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/staff/{staffId}/profile",
@@ -30535,12 +30673,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2284
+        "line": 2329
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-users-students-studentid-profile:frontend-src-services-admin-service-ts:2273",
+      "id": "fe:put:admin-users-students-studentid-profile:frontend-src-services-admin-service-ts:2318",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/students/{studentId}/profile",
@@ -30565,12 +30703,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2273
+        "line": 2318
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-video-types-id:frontend-src-services-admin-service-ts:1706",
+      "id": "fe:put:admin-video-types-id:frontend-src-services-admin-service-ts:1751",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/video-types/{id}",
@@ -30595,12 +30733,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1706
+        "line": 1751
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-videos-videoid:frontend-src-services-admin-service-ts:1806",
+      "id": "fe:put:admin-videos-videoid:frontend-src-services-admin-service-ts:1851",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/videos/{videoId}",
@@ -30625,7 +30763,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1806
+        "line": 1851
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30972,7 +31110,7 @@
       "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: GET /public/forms/{slug}"
     },
     {
-      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323",
+      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:327",
       "reason": "public-surface",
       "detail": "Public or participant route retained by a shared Admin frontend file; Admin uses its own workflow: GET /public/settings"
     },
@@ -30982,12 +31120,12 @@
       "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: GET /student/video-session/{lessonVideoId}/request-status"
     },
     {
-      "id": "fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1411",
+      "id": "fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1456",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/codes/groups/{id}/details"
     },
     {
-      "id": "fe:get:teacher-codes-groups:frontend-src-services-admin-service-ts:1403",
+      "id": "fe:get:teacher-codes-groups:frontend-src-services-admin-service-ts:1448",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/codes/groups"
     },
@@ -31007,12 +31145,12 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/context"
     },
     {
-      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:208",
+      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:215",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement/pdf"
     },
     {
-      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:198",
+      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:205",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement"
     },
@@ -31157,5 +31295,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "b4db9539f89baf109622b8254f86dabc1acfd68ca742221ad0ed9a6c3fba743f"
+  "digest": "48b333395b1a76fe40a846527a1dc9b583c0b31bdb0c664232f3b69461210b13"
 }

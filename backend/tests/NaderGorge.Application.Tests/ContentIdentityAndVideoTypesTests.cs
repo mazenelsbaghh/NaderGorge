@@ -20,6 +20,45 @@ namespace NaderGorge.Application.Tests;
 
 public class ContentIdentityAndVideoTypesTests
 {
+    [Theory]
+    [InlineData("https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/master.m3u8", true)]
+    [InlineData("<iframe src=\"https://embed.vcdn.me/11111111-1111-4111-8111-111111111111\"></iframe>", true)]
+    [InlineData("https://embed.vcdn.me.evil.test/11111111-1111-4111-8111-111111111111", false)]
+    [InlineData("https://stream.vcdn.me/11111111-1111-4111-8111-111111111111/master.m3u8?token=secret", false)]
+    public async Task Vcdn_CreateAndEditValidateSourcesBeforePersisting(string source, bool accepted)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var type = new VideoType { Name = "شرح", NormalizedName = "شرح", IsActive = true };
+        var lesson = new Lesson { Title = "Lesson", Summary = "Summary" };
+        db.AddRange(type, lesson);
+        await db.SaveChangesAsync();
+        var auth = new TeacherAuthorizationService(db);
+        var bunny = new RecordingBunnyClient(740733);
+        var libraries = new StaticBunnyLibraryAccessService(new BunnyStreamLibraryAccess(Guid.NewGuid(), "Default", bunny.LibraryId, "api-key", true));
+        var clients = new RecordingBunnyClientFactory(bunny);
+        var create = new CreateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth, libraries, clients);
+        var created = await create.Handle(new CreateVideoCommand("Video", "vcdn", source, 1, 3, lesson.Id, type.Id), default);
+        Assert.Equal(accepted, created.Success);
+        if (accepted)
+        {
+            var saved = await db.LessonVideos.SingleAsync(video => video.Id == created.Data);
+            Assert.Equal("vcdn", saved.Provider);
+            Assert.Equal("11111111-1111-4111-8111-111111111111", saved.ProviderVideoId);
+        }
+        else
+        {
+            Assert.Contains("VCDN_SOURCE_INVALID", created.Errors!);
+            Assert.Empty(await db.LessonVideos.ToListAsync());
+        }
+        var baseline = await create.Handle(new CreateVideoCommand("Existing", "youtube", "dQw4w9WgXcQ", 1, 3, lesson.Id, type.Id), default);
+        var update = new UpdateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth, libraries, clients);
+        var updated = await update.Handle(new UpdateVideoCommand(baseline.Data, "Edited", "vcdn", source, 1, 3, type.Id), default);
+        Assert.Equal(accepted, updated.Success);
+        var existing = await db.LessonVideos.SingleAsync(video => video.Id == baseline.Data);
+        Assert.Equal(accepted ? "vcdn" : "youtube", existing.Provider);
+        Assert.Equal(accepted ? "11111111-1111-4111-8111-111111111111" : "dQw4w9WgXcQ", existing.ProviderVideoId);
+    }
+
     [Fact]
     public async Task SaveChanges_AssignsGloballyNamespacedContentCodes()
     {

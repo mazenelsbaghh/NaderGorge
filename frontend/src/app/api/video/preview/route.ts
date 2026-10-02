@@ -12,6 +12,8 @@ export function GET(request: NextRequest) {
     return NextResponse.redirect(`https://www.youtube-nocookie.com/embed/${videoId}`);
   }
 
+  if (provider === 'vcdn') return new NextResponse('Use an authorized lesson playback session', { status: 403 });
+
   if (provider === 'bunny') {
     if (!videoId || !isBunnyVideoGuid(videoId)) {
       return new NextResponse('Invalid Bunny video identifier', { status: 400 });

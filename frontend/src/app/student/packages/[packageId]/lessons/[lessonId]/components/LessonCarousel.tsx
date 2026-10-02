@@ -320,7 +320,7 @@ export function LessonCarousel({
                                                 "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-[1.02] shadow-sm w-fit mt-2",
                                                 activeVideo.examPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                                    : "bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] border border-[var(--admin-primary)]/20 hover:bg-[var(--admin-primary)] hover:text-white"
+                                                    : "bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] border border-[var(--admin-primary)]/20 hover:bg-[var(--admin-primary)] hover:text-[var(--admin-primary-contrast)]"
                                             )}
                                         >
                                             <Award className="h-3.5 w-3.5 shrink-0" />

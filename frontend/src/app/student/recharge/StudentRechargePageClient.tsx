@@ -560,21 +560,21 @@ export default function StudentRechargePageClient() {
       <div className="flex items-center justify-center gap-2 max-w-md mx-auto">
         <div className={`flex flex-col items-center gap-2 ${step >= 1 ? 'text-[var(--admin-primary)]' : 'text-[var(--admin-muted)]'}`}>
           <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-sm ${
-            step === 1 ? 'bg-[var(--admin-primary)] text-white border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
+            step === 1 ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
           }`}>1</div>
           <span className="text-xs font-bold">تحديد المبلغ</span>
         </div>
         <div className="h-[1px] w-12 bg-[var(--admin-border)] mb-6" />
         <div className={`flex flex-col items-center gap-2 ${step >= 2 ? 'text-[var(--admin-primary)]' : 'text-[var(--admin-muted)]'}`}>
           <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-sm ${
-            step === 2 ? 'bg-[var(--admin-primary)] text-white border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
+            step === 2 ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
           }`}>2</div>
           <span className="text-xs font-bold">التحويل ورفع الإثبات</span>
         </div>
         <div className="h-[1px] w-12 bg-[var(--admin-border)] mb-6" />
         <div className={`flex flex-col items-center gap-2 ${step >= 3 ? 'text-[var(--admin-primary)]' : 'text-[var(--admin-muted)]'}`}>
           <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-sm ${
-            step === 3 ? 'bg-[var(--admin-primary)] text-white border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
+            step === 3 ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] border-[var(--admin-primary)]' : 'bg-transparent border-[var(--admin-border)]'
           }`}>3</div>
           <span className="text-xs font-bold">اكتمال الشحن</span>
         </div>
@@ -1015,7 +1015,7 @@ export default function StudentRechargePageClient() {
               <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">نوع الرصيد</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.teacherName ? `للأستاذ ${pendingRequest.teacherName}` : 'عام'}</dd></div>
             </dl>
             {!pendingRequest.screenshotUrl ? (
-              <button type="button" disabled={cancelling || !pendingRequest.walletPhoneNumber} onClick={resumePendingRecharge} className="min-h-11 w-full rounded-xl bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+              <button type="button" disabled={cancelling || !pendingRequest.walletPhoneNumber} onClick={resumePendingRecharge} className="min-h-11 w-full rounded-xl bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-[var(--admin-primary-contrast)] disabled:opacity-50">
                 استكمال الطلب ورفع الإثبات
               </button>
             ) : null}

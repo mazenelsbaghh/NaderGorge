@@ -43,7 +43,7 @@ export const json = (route: Route, data: unknown, status = 200) =>
 export async function openLesson(
   page: Page,
   beforeNavigate?: () => Promise<void>,
-  options: { trackProgress?: boolean } = {},
+  options: { trackProgress?: boolean; progressByVideo?: Record<string, { durationSeconds: number; learningWatchedSeconds: number }> } = {},
 ) {
   const user = {
     id: '96000000-0000-0000-0000-000000000099',
@@ -61,6 +61,7 @@ export async function openLesson(
     localStorage.setItem('user', JSON.stringify(authUser));
   }, user);
   await page.route('**/api/**', (route) => json(route, []));
+  await page.route('**/api/student/welcome/claim', route => json(route, null));
   await page.route('**/api/video-learning/*', route => json(route, {
     version: '00000000-0000-0000-0000-000000000000', sourceRevision: 0, stale: false,
     document: { tools: { notes: true, bookmarks: true }, activities: [] }, entries: [], density: [],
@@ -80,6 +81,7 @@ export async function openLesson(
     })
   );
   let lesson = lessonFixture();
+  lesson.videos = lesson.videos.map(video => ({ ...video, ...options.progressByVideo?.[video.id] }));
   await page.route(lessonApi, (route) => json(route, lesson));
 
   const sessions: string[] = [];
@@ -91,7 +93,7 @@ export async function openLesson(
       expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       provider: 'bunny',
       videoTitle: videoId,
-      durationSeconds: 600,
+      durationSeconds: options.progressByVideo?.[videoId]?.durationSeconds ?? 600,
       thresholdPercentage: 80,
       isPreview: !options.trackProgress,
       watchInfo: {
@@ -99,6 +101,7 @@ export async function openLesson(
         maxCount: 5,
         isLocked: false,
         totalTrackedSeconds: 0,
+        learningWatchedSeconds: options.progressByVideo?.[videoId]?.learningWatchedSeconds ?? 0,
       },
     });
   });

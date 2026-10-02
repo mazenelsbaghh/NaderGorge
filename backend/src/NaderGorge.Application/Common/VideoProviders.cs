@@ -6,12 +6,14 @@ public static class VideoProviders
     public const string YouTubeHls = "youtube-hls";
     public const string Vk = "vk";
     public const string Bunny = "bunny";
+    public const string Vcdn = "vcdn";
 
     private static readonly HashSet<string> SupportedProviders = new(StringComparer.OrdinalIgnoreCase)
     {
         YouTube,
         Vk,
-        Bunny
+        Bunny,
+        Vcdn
     };
 
     public static bool IsSupported(string? provider)

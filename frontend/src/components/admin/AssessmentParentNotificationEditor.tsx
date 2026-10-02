@@ -8,7 +8,7 @@ import { inspectDirectWhatsAppTemplate, renderWhatsAppTemplatePreview } from '@/
 import { getApiErrorSummary } from '@/lib/api-errors';
 
 const sources = [
-  ['ParentName', 'اسم ولي الأمر', 'ولي أمر أحمد'], ['StudentName', 'اسم الطالب', 'أحمد محمد'],
+  ['ParentName', 'اسم ولي الأمر', 'ولي أمر أحمد محمد'], ['StudentName', 'اسم الطالب (أول اسمين)', 'أحمد محمد'],
   ['ParentTrackingCode', 'رقم متابعة الطالب', '123456789'],
   ['AssessmentName', 'اسم الامتحان أو الواجب', 'واجب الحصة الأولى'], ['Score', 'درجة الطالب', '35'],
   ['TotalScore', 'الدرجة النهائية', '40'], ['Percentage', 'النسبة المئوية', '87.5%'],

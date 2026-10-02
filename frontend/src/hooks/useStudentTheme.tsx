@@ -25,12 +25,16 @@ import {
 } from '@/lib/student-theme-vars';
 import { useStudentThemePreferences } from '@/hooks/useStudentThemePreferences';
 import { studentThemePalettes, type StudentThemeMode } from '@/lib/student-theme-palettes';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth-store';
 
 type StudentThemeContextValue = {
   mode: AdminThemeMode;
   isDark: boolean;
   toggleTheme: () => void;
+  updateMode: (mode: StudentThemeMode) => Promise<void>;
+  preferencesError: string | null;
+  retryPreferences: () => void;
   isReady: boolean;
   isLoadingPreferences: boolean;
   isSavingPreferences: boolean;
@@ -49,7 +53,7 @@ export function StudentThemeProvider({ children }: { children: ReactNode }) {
     getStoredAdminThemeMode,
     getAdminThemeModeServerSnapshot,
   );
-  const { preferences, isLoading, isSaving, updatePaletteForMode, updateCurrentMode, updatePreferences } = useStudentThemePreferences();
+  const { preferences, isLoading, isSaving, updatePaletteForMode, updateCurrentMode, updatePreferences, loadError, retryPreferences } = useStudentThemePreferences();
   const hasSyncedInitialMode = useRef(false);
 
   const selectedLightPaletteId = preferences?.selectedLightPaletteId ?? getDefaultStudentThemePalette('light').id;
@@ -85,6 +89,8 @@ export function StudentThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+      document.documentElement.dataset.themeMode = mode;
       document.documentElement.dataset.studentThemeSurface = 'student';
       document.documentElement.dataset.studentThemePalette = currentPalette.id;
     }
@@ -98,20 +104,35 @@ export function StudentThemeProvider({ children }: { children: ReactNode }) {
       }
       resetStudentThemeTokens();
     };
-  }, [currentPalette]);
+  }, [currentPalette, mode]);
 
-  const value = useMemo<StudentThemeContextValue>(() => ({
-    mode,
-    isDark: mode === 'dark',
-    toggleTheme: () => {
-      const nextMode = mode === 'dark' ? 'light' : 'dark';
-      setStoredAdminThemeMode(nextMode);
-      void updateCurrentMode(nextMode, {
+  const updateMode = async (nextMode: StudentThemeMode) => {
+    if (isLoading || isSaving || !preferences || nextMode === mode) return;
+    setStoredAdminThemeMode(nextMode);
+    try {
+      await updateCurrentMode(nextMode, {
         lightPaletteId: selectedLightPaletteId,
         darkPaletteId: selectedDarkPaletteId,
       });
+    } catch (error) {
+      setStoredAdminThemeMode(mode);
+      throw error;
+    }
+  };
+
+  const value: StudentThemeContextValue = {
+    mode,
+    isDark: mode === 'dark',
+    toggleTheme: () => {
+      if (isLoading || isSaving || !preferences) return;
+      void updateMode(mode === 'dark' ? 'light' : 'dark').catch(() => {
+        toast.error('تعذر حفظ وضع العرض. حاول مرة أخرى.');
+      });
     },
-    isReady: !isLoading,
+    updateMode,
+    preferencesError: loadError,
+    retryPreferences,
+    isReady: !isLoading && !!preferences,
     isLoadingPreferences: isLoading,
     isSavingPreferences: isSaving,
     selectedLightPaletteId,
@@ -130,19 +151,8 @@ export function StudentThemeProvider({ children }: { children: ReactNode }) {
         currentMode: mode === 'dark' ? 'dark' : 'light',
         avatarSlug,
       });
-      useAuthStore.getState().updateAvatar(avatarSlug);
     },
-  }), [
-    currentPalette.previewAccent,
-    isLoading,
-    isSaving,
-    mode,
-    selectedDarkPaletteId,
-    selectedLightPaletteId,
-    updateCurrentMode,
-    updatePaletteForMode,
-    updatePreferences,
-  ]);
+  };
 
   return (
     <StudentThemeContext.Provider value={value}>

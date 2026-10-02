@@ -1,9 +1,12 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -18,7 +21,7 @@ internal static class AssessmentParentResultReader
     public static async Task<AssessmentParentResult?> ReadAsync(IAppDbContext db, OutboxEvent notification, CancellationToken ct)
     {
         using var payload = JsonDocument.Parse(notification.PayloadJson);
-        var kind = notification.Type is "ExamGraded" or "AssessmentParentRecovery" ? "exam" : "homework";
+        var kind = notification.Type is "ExamGraded" or "AssessmentParentRecovery" or "AssessmentParentRetry" ? "exam" : "homework";
         Guid attemptId;
         if (notification.Type == "AssessmentParentRecovery")
         {
@@ -75,15 +78,16 @@ internal static class AssessmentParentResultReader
             scale.ScoreAchieved, definition.TotalScore, attempt.Evaluation, lessonId);
     }
 
-    public static async Task<string[]> ParametersAsync(IAppDbContext db, AssessmentParentResult result, CancellationToken ct)
+    public static async Task<string[]> ParametersAsync(IAppDbContext db, AssessmentParentResult result, CancellationToken ct,
+        LiveSupportWhatsAppTemplate? template = null)
     {
         var lesson = await db.Lessons.AsNoTracking().Where(lesson => lesson.Id == result.LessonId)
             .Select(lesson => new { lesson.Title, Subject = lesson.ContentSection.Term.Package.Subject.Name,
                 Teacher = lesson.ContentSection.Term.Package.Teacher.User.FullName }).SingleOrDefaultAsync(ct);
-        return result.Settings.Parameters.Select(parameter => parameter.Source switch
+        var parameters = result.Settings.Parameters.Select(parameter => parameter.Source switch
         {
-            "ParentName" => $"ولي أمر {result.Student.FullName}",
-            "StudentName" => result.Student.FullName,
+            "ParentName" => $"ولي أمر {AssessmentResultNames.StudentName(result.Student.FullName)}",
+            "StudentName" => AssessmentResultNames.StudentName(result.Student.FullName),
             "ParentTrackingCode" => result.Student.StudentProfile?.ParentTrackingCode ?? string.Empty,
             "AssessmentName" => result.Title,
             "Score" => Number(result.Score),
@@ -96,6 +100,44 @@ internal static class AssessmentParentResultReader
             "Literal" => parameter.Literal!,
             _ => throw new InvalidOperationException("Unsupported assessment result parameter.")
         }).ToArray();
+        if (template is not null) FitHeaderNames(template, result.Settings.Parameters, parameters);
+        return parameters;
+    }
+
+    private static void FitHeaderNames(LiveSupportWhatsAppTemplate template,
+        AssessmentResultParameter[] sources, string[] parameters)
+    {
+        using var components = JsonDocument.Parse(template.ComponentsJson);
+        var offset = 0;
+        foreach (var component in components.RootElement.EnumerateArray())
+        {
+            var type = component.GetProperty("type").GetString();
+            if (type is not ("HEADER" or "BODY") || !component.TryGetProperty("text", out var text)) continue;
+            var content = text.GetString()!;
+            var placeholders = Regex.Matches(content, @"\{\{\d+\}\}");
+            var count = placeholders.Select(match => match.Value).Distinct().Count();
+            if (type == "HEADER" && placeholders.Count == 1 && placeholders[0].Value == "{{1}}"
+                && offset < parameters.Length && sources[offset].Source is "StudentName" or "ParentName")
+            {
+                var budget = 60 - (content.Length - "{{1}}".Length);
+                if (budget > 0 && parameters[offset].Length > budget)
+                {
+                    var name = parameters[offset];
+                    var words = name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                    while (words.Length > 1 && string.Join(' ', words).Length > budget)
+                        words = words[..^1];
+                    var shortName = string.Join(' ', words);
+                    if (shortName.Length > budget)
+                    {
+                        var end = StringInfo.ParseCombiningCharacters(shortName)
+                            .LastOrDefault(index => index <= budget);
+                        shortName = shortName[..end];
+                    }
+                    if (shortName.Length > 0) parameters[offset] = shortName;
+                }
+            }
+            offset += count;
+        }
     }
 
     private static string Number(decimal number) => number.ToString("0.##", CultureInfo.InvariantCulture);

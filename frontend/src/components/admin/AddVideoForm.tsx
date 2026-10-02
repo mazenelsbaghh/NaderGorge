@@ -13,6 +13,7 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { Dropdown } from '@/components/ui/dropdown';
 import * as tus from 'tus-js-client';
 import { getApiErrorSummary } from '@/lib/api-errors';
+import { parseVcdnVideoId } from '@/lib/vcdn-video-reference';
 import { parseBunnyVideoReference } from '@/lib/bunny-video-reference';
 import type { BunnyTusUploadSession } from '@/services/admin-service';
 import { BunnyLibrarySelect } from './BunnyLibrarySelect';
@@ -44,6 +45,8 @@ function videoProviderForForm(provider?: string): VideoProvider {
       return 'bunny';
     case 'vk':
       return 'vk';
+    case 'vcdn':
+      return 'vcdn';
     default:
       return 'YouTube';
   }
@@ -116,7 +119,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     : bunnyMode === 'fetch'
       ? Boolean(bunnySourceUrl.trim())
       : Boolean(bunnyReference);
-  const sourceReady = isBunny ? bunnyModeReady : Boolean(urlOrEmbedCode.trim());
+  const sourceReady = isBunny ? bunnyModeReady : provider === 'vcdn' ? Boolean(parseVcdnVideoId(urlOrEmbedCode)) : Boolean(urlOrEmbedCode.trim());
   const canSubmit = Boolean(
     title.trim() &&
     videoTypeId &&
@@ -322,6 +325,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
               { value: 'YouTube', label: 'YouTube' },
               { value: 'vk', label: 'VK (فيكونتاكتي)' },
               { value: 'bunny', label: 'Bunny.net' },
+              { value: 'vcdn', label: 'VCDN (HLS)' },
             ]}
           />
         </div>
@@ -337,18 +341,22 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
                   selectProvider('vk');
                 } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
                   selectProvider('YouTube');
+                } else if (val.includes('vcdn.me') && parseVcdnVideoId(val)) {
+                  selectProvider('vcdn');
                 } else if (val.includes('mediadelivery.net')) {
                   selectProvider('bunny');
                 }
                 setUrlOrEmbedCode(val);
               }}
-              placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : 'رابط الفيديو'}
+              placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : provider === 'vcdn' ? 'https://embed.vcdn.me/embed/11111111-1111-4111-8111-111111111111' : 'رابط الفيديو'}
               className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
               required
             />
           </div>
         )}
       </div>
+      {provider === 'vcdn' && <p className="text-xs font-semibold text-[var(--admin-muted)]">أدخل رابط HLS أو embed من VCDN، أو معرّف الفيديو. يعمل بمشغل المنصة ببث HLS مباشر من VCDN إلى جهاز الطالب.</p>}
+      {provider === 'vcdn' && urlOrEmbedCode.trim() && !parseVcdnVideoId(urlOrEmbedCode) && <p className="text-xs font-bold text-red-600 dark:text-red-400" role="alert">رابط VCDN غير صالح. استخدم رابط HLS أو embed من الموقع.</p>}
       {provider === 'YouTube' && <YouTubePlaybackOptions hlsEnabled={youTubeHlsEnabled} qualityEnabled={youTubeQualityEnabled}
         onHlsChange={setYouTubeHlsEnabled} onQualityChange={setYouTubeQualityEnabled} />}
       {isBunny && (

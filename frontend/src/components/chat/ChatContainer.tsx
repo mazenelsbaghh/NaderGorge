@@ -29,7 +29,7 @@ export const ChatContainer: React.FC = () => {
     } finally {
       setLoadingRooms(false);
     }
-  }, [selectedRoomId]);
+  }, []);
 
   useEffect(() => {
     void loadRooms();

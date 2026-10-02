@@ -69,7 +69,7 @@ public sealed record CachedPlatformSettings(
         5,
         40,
         38,
-        "youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive",
+        "youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive,vcdn",
         10,
         12
     );

@@ -1,11 +1,13 @@
 'use client';
 
 import { StudentWelcomeStats } from '@/components/admin/StudentWelcomeStats';
+import { ExamGradeMessagesSettings } from '@/components/admin/ExamGradeMessagesSettings';
 import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
 import { WhatsAppQrSettings } from '@/components/live-support/admin/WhatsAppQrSettings';
 import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
 import { watermarkDefaults } from '@/lib/video-watermark';
 import { permissionsForRefundPage } from '@/lib/refund-role-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -433,7 +435,8 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
 ];
 
 export default function AdminSettingsPageClient() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles' | 'welcome'>('settings');
+  const isAdmin = useAuthStore(state => state.user?.roles.includes('Admin') ?? false);
+  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles' | 'welcome' | 'exams'>('settings');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -468,7 +471,7 @@ export default function AdminSettingsPageClient() {
     BunnyPlayerShadowHideDelaySeconds: '5',
     PlayerShadowTopCoverage: '40',
     PlayerShadowBottomCoverage: '38',
-    EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive',
+    EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive,vcdn',
     PlayerShadowTopSolid: '10',
     PlayerShadowBottomSolid: '12',
     YouTubeQualityBottomCoverPercent: '0',
@@ -703,6 +706,13 @@ export default function AdminSettingsPageClient() {
           >
             إعدادات المنصة
           </button>
+          {isAdmin && <button type="button" aria-pressed={activeTab === 'exams'}
+            onClick={() => setActiveTab('exams')}
+            className={`min-h-11 rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'exams'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >الامتحانات</button>}
           <button
             onClick={() => setActiveTab('welcome')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'welcome'
@@ -1203,7 +1213,7 @@ export default function AdminSettingsPageClient() {
                       <div className="space-y-3 pt-3 border-t border-[var(--admin-border)]">
                         <span className="block text-sm font-bold text-[var(--admin-text)]">تفعيل الظل على المزودين:</span>
                         <div className="grid grid-cols-2 gap-2 text-right">
-                          {(['youtube', 'bunny', 'vk', 'telegram', 'rutube', 'google-drive'] as const).map((prov) => {
+                          {(['youtube', 'bunny', 'vk', 'telegram', 'rutube', 'google-drive', 'vcdn'] as const).map((prov) => {
                             const enabledProviders = (settings.EnabledPlayerShadowProviders || '')
                               .toLowerCase()
                               .split(',')
@@ -1217,7 +1227,8 @@ export default function AdminSettingsPageClient() {
                               'vk': 'VK Video',
                               'telegram': 'Telegram',
                               'rutube': 'Rutube',
-                              'google-drive': 'Google Drive'
+                              'google-drive': 'Google Drive',
+                              'vcdn': 'VCDN'
                             };
 
                             const handleToggle = () => {
@@ -1251,6 +1262,8 @@ export default function AdminSettingsPageClient() {
                 </section>
                 <div className="flex justify-end"><button onClick={handleSaveSettings} disabled={isSaving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-7 font-bold text-white disabled:opacity-50"><Save size={18}/>{isSaving ? 'جاري الحفظ...' : 'حفظ إعدادات المشغل'}</button></div>
               </motion.div>
+            ) : activeTab === 'exams' ? (
+              <ExamGradeMessagesSettings />
             ) : activeTab === 'whatsapp' ? (
               <div className="space-y-6">
                 <ParentWhatsAppPrioritySettings value={settings.ParentWhatsAppPhonePriority} onChange={priority => handleSettingChange('ParentWhatsAppPhonePriority', priority)} disabled={isSaving} />

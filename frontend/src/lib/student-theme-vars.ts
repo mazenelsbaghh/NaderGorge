@@ -21,6 +21,8 @@ const THEME_VAR_KEYS = [
   '--admin-footer',
   '--admin-shadow',
   '--admin-primary-15',
+  '--admin-accent',
+  '--admin-accent-soft',
 ] as const;
 
 export function getStudentThemePaletteById(paletteId: string): StudentThemePalette | undefined {
@@ -56,7 +58,11 @@ export function isStudentPaletteAllowedForMode(mode: StudentThemeMode, paletteId
 export function applyStudentThemeTokens(tokens: StudentThemeTokens) {
   if (typeof document === 'undefined') return;
 
-  for (const [key, value] of Object.entries(tokens)) {
+  for (const [key, value] of Object.entries({
+    ...tokens,
+    '--admin-accent': tokens['--admin-primary'],
+    '--admin-accent-soft': tokens['--admin-primary-15'],
+  })) {
     document.documentElement.style.setProperty(key, value);
     document.body.style.setProperty(key, value);
   }

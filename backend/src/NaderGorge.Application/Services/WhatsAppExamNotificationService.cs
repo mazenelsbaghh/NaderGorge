@@ -168,7 +168,7 @@ public sealed class WhatsAppExamNotificationService
             ?? lessonVideo?.Lesson.Title
             ?? attempt.Exam.Title;
 
-        var studentName = attempt.User.FullName;
+        var studentName = AssessmentResultNames.StudentName(attempt.User.FullName);
         var isResultReady = !string.IsNullOrWhiteSpace(attempt.Evaluation)
             && !string.Equals(attempt.Evaluation, "قيد التصحيح", StringComparison.Ordinal);
 

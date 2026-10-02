@@ -9,6 +9,7 @@ import { adminService, type TeacherProfileStatsDto, type UserAuditLogDto } from 
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { TeacherAccountSummary } from '@/features/teacher-finance-center/TeacherAccountSummary';
 import { TeacherCollectionsPanel } from '@/features/teacher-finance-center/TeacherCollectionsPanel';
+import { TeacherReportDownload } from '@/features/teacher-finance-center/TeacherReportDownload';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
@@ -454,7 +455,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       pageTitle="ملف المعلم الشامل"
       subtitle="تفاصيل شاملة للمحتوى، الطلاب، المالية، والموارد البشرية"
       action={
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          {teacher && <TeacherReportDownload key={id} teacherId={id} teacherName={teacher.fullName} />}
           <button
             onClick={handleOpenModal}
             className="flex items-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-4 py-2 text-[var(--admin-primary-contrast)] transition-transform hover:-translate-y-0.5 font-bold text-sm shadow-sm cursor-pointer"

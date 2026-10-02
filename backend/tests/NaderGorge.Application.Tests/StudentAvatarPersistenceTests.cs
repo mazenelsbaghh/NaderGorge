@@ -42,8 +42,12 @@ public sealed class StudentAvatarPersistenceTests
             Assert.Single(Assert.IsType<PagedResult<AdminUserListDto>>(adminPage.Data).Items).AvatarSlug);
     }
 
-    [Fact]
-    public async Task ThemeOnlyUpdate_DoesNotClearPreviouslySelectedAvatar()
+    [Theory]
+    [InlineData("massar-light", "massar-dark", "dark")]
+    [InlineData("ruby-light", "ember-dark", "light")]
+    [InlineData("scholar-light", "scholar-dark", "light")]
+    public async Task ThemeOnlyUpdate_PersistsColorsAndPreservesPreviouslySelectedAvatar(
+        string lightPaletteId, string darkPaletteId, string currentMode)
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await SeedStudentAsync(db, "ronaldo");
@@ -51,9 +55,9 @@ public sealed class StudentAvatarPersistenceTests
         var result = await new UpdateStudentThemePreferencesCommandHandler(db).Handle(
             new UpdateStudentThemePreferencesCommand(
                 user.Id,
-                "ruby-light",
-                "ember-dark",
-                "light",
+                lightPaletteId,
+                darkPaletteId,
+                currentMode,
                 null),
             CancellationToken.None);
 
@@ -62,6 +66,13 @@ public sealed class StudentAvatarPersistenceTests
         Assert.Equal(
             "ronaldo",
             db.StudentProfiles.Single(profile => profile.UserId == user.Id).AvatarSlug);
+
+        db.ChangeTracker.Clear();
+        var reloaded = await new GetStudentThemePreferencesQueryHandler(db).Handle(
+            new GetStudentThemePreferencesQuery(user.Id), CancellationToken.None);
+        Assert.Equal(lightPaletteId, reloaded.Data?.SelectedLightPaletteId);
+        Assert.Equal(darkPaletteId, reloaded.Data?.SelectedDarkPaletteId);
+        Assert.Equal(currentMode, reloaded.Data?.CurrentMode);
     }
 
     private static async Task<User> SeedStudentAsync(

@@ -12,6 +12,35 @@ namespace NaderGorge.Application.Tests;
 public sealed class AssessmentNotificationTrackingCodeTests
 {
     [Theory]
+    [InlineData("StudentName")]
+    [InlineData("ParentName")]
+    public async Task September30ResultUsesFirstTwoNamesAndPreservesScore(string headerSource)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        const string fullName = "أحمد محمد محمود عبد الرحمن إبراهيم مصطفى حسن علي";
+        var template = new LiveSupportWhatsAppTemplate
+        {
+            Status = "APPROVED", Fingerprint = new string('a', 64),
+            ComponentsJson = """[{"type":"HEADER","format":"TEXT","text":"مساء الخير ي ولي امر الطالب/الطالبة الطالب {{1}}"},{"type":"BODY","text":"الطالب {{1}} درجته {{2}} من {{3}}"}]"""
+        };
+        var settings = new AssessmentParentNotificationSettings(true, template.Id, template.Fingerprint,
+            [new(headerSource), new("StudentName"), new("Score"), new("TotalScore")]);
+        var result = new AssessmentParentResult("exam", Guid.NewGuid(), Guid.NewGuid(),
+            new User { FullName = fullName }, settings, DateTime.UtcNow, "امتحان", 35, 40, "ممتاز", null);
+
+        var parameters = await AssessmentParentResultReader.ParametersAsync(db, result, default, template);
+        var validated = WhatsAppDirectTemplatePolicy.Validate(template, parameters);
+
+        Assert.NotNull(validated);
+        Assert.StartsWith(headerSource == "ParentName" ? "ولي أمر أحمد" : "أحمد", parameters[0]);
+        Assert.Equal("أحمد محمد", parameters[1]);
+        Assert.Equal("35", parameters[2]);
+        Assert.Equal("40", parameters[3]);
+        Assert.Contains("أحمد محمد", validated.Preview);
+        Assert.DoesNotContain("محمود", validated.Preview);
+    }
+
+    [Theory]
     [InlineData(60, true)]
     [InlineData(61, false)]
     public void HydratedHeaderEnforcesMetaLimit(int length, bool accepted)

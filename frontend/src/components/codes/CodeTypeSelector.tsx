@@ -60,9 +60,9 @@ const CODE_TYPES: { type: CodeTypeOption; label: string; icon: LucideIcon; descr
 
 
 export function CodeTypeSelector({ value, onChange, errors = {}, packages, selectedTeacherId, publicExams = [] }: CodeTypeSelectorProps) {
-  const [terms, setTerms] = useState<TermDto[]>([]);
-  const [sections, setSections] = useState<ContentSectionDto[]>([]);
-  const [lessons, setLessons] = useState<LessonSummaryDto[]>([]);
+  const [terms, setTerms] = useState<{ packageId: string; rows: TermDto[] } | null>(null);
+  const [sections, setSections] = useState<{ termId: string; rows: ContentSectionDto[] } | null>(null);
+  const [lessons, setLessons] = useState<{ sectionId: string; rows: LessonSummaryDto[] } | null>(null);
   const [lessonDetail, setLessonDetail] = useState<LessonDetailDto | null>(null);
 
   // Handlers
@@ -84,25 +84,21 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     [filteredPackages, value.packageId]
   );
 
-  const canSelectTerms = !!value.packageId && !['Package', 'Balance'].includes(value.codeType);
-  const canSelectSections = !!value.termId && ['Month', 'Lesson', 'Video', 'VideoType', 'Exam'].includes(value.codeType);
+  const contentMode = selectedPackage?.contentMode ?? 'TermWithSections';
+  const showTermSelect = contentMode === 'TermWithSections';
+  const showSectionSelect = contentMode === 'TermWithSections' || contentMode === 'SectionWithLessons';
+  const canSelectTerms = showTermSelect && !!value.packageId && !['Package', 'Balance'].includes(value.codeType);
+  const canSelectSections = showSectionSelect && !!value.termId && ['Month', 'Lesson', 'Video', 'VideoType', 'Exam'].includes(value.codeType);
   const canSelectLessons = !!value.contentSectionId && ['Lesson', 'Video', 'VideoType', 'Exam'].includes(value.codeType);
   const canLoadLessonDetail = !!value.lessonId && ['Video', 'Exam'].includes(value.codeType);
 
-  const visibleTerms = useMemo(() => (canSelectTerms ? terms : []), [canSelectTerms, terms]);
-  const visibleSections = useMemo(() => (canSelectSections ? sections : []), [canSelectSections, sections]);
-  const visibleLessons = useMemo(() => (canSelectLessons ? lessons : []), [canSelectLessons, lessons]);
-  const activeLessonDetail = canLoadLessonDetail ? lessonDetail : null;
+  const visibleTerms = canSelectTerms && terms && terms.packageId === value.packageId ? terms.rows : [];
+  const visibleSections = canSelectSections && sections && sections.termId === value.termId ? sections.rows : [];
+  const visibleLessons = canSelectLessons && lessons && lessons.sectionId === value.contentSectionId ? lessons.rows : [];
+  const activeLessonDetail = canLoadLessonDetail && lessonDetail?.id === value.lessonId ? lessonDetail : null;
 
-  const selectedTerm = useMemo(
-    () => visibleTerms.find((term) => term.id === value.termId) ?? null,
-    [visibleTerms, value.termId]
-  );
-
-  const selectedSection = useMemo(
-    () => visibleSections.find((section) => section.id === value.contentSectionId) ?? null,
-    [visibleSections, value.contentSectionId]
-  );
+  const selectedTerm = visibleTerms.find((term) => term.id === value.termId) ?? null;
+  const selectedSection = visibleSections.find((section) => section.id === value.contentSectionId) ?? null;
 
   const shouldPreserveVideoType =
     value.codeType === 'VideoType';
@@ -115,9 +111,9 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     let cancelled = false;
     contentService.getTerms(value.packageId!).then((response) => {
       if (cancelled) return;
-      setTerms((response.data?.data || []) as TermDto[]);
+      setTerms({ packageId: value.packageId!, rows: response.data?.data || [] });
     }).catch(() => {
-      if (!cancelled) setTerms([]);
+      if (!cancelled) setTerms(null);
     });
 
     return () => {
@@ -133,9 +129,9 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     let cancelled = false;
     contentService.getSections(value.termId!).then((response) => {
       if (cancelled) return;
-      setSections((response.data?.data || []) as ContentSectionDto[]);
+      setSections({ termId: value.termId!, rows: response.data?.data || [] });
     }).catch(() => {
-      if (!cancelled) setSections([]);
+      if (!cancelled) setSections(null);
     });
 
     return () => {
@@ -151,9 +147,9 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     let cancelled = false;
     contentService.getLessons(value.contentSectionId!).then((response) => {
       if (cancelled) return;
-      setLessons((response.data?.data || []) as LessonSummaryDto[]);
+      setLessons({ sectionId: value.contentSectionId!, rows: response.data?.data || [] });
     }).catch(() => {
-      if (!cancelled) setLessons([]);
+      if (!cancelled) setLessons(null);
     });
 
     return () => {
@@ -189,11 +185,14 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
   }, [activeLessonDetail?.examId, onChange, value]);
 
   const handlePackageChange = (packageId: string) => {
+    const pkg = filteredPackages.find((candidate) => candidate.id === packageId);
+    const mode = pkg?.contentMode ?? 'TermWithSections';
+    // Direct content keeps hidden parent containers; use their IDs without asking the user to select them.
     onChange({
       ...value,
       packageId: packageId || undefined,
-      termId: undefined,
-      contentSectionId: undefined,
+      termId: mode !== 'TermWithSections' && value.codeType !== 'Package' ? pkg?.rootTermId : undefined,
+      contentSectionId: (mode === 'LessonsOnly' || mode === 'SingleLesson') && value.codeType !== 'Package' ? pkg?.rootSectionId : undefined,
       lessonId: undefined,
       examId: undefined,
       videoTargetIds: undefined,
@@ -257,7 +256,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     </div>
   );
 
-  const renderTermSelect = () => (
+  const renderTermSelect = () => showTermSelect && (
     <div className="col-span-1 md:col-span-2">
       <Dropdown
         label="اختر الترم"
@@ -272,7 +271,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
     </div>
   );
 
-  const renderSectionSelect = () => (
+  const renderSectionSelect = () => showSectionSelect && (
     <div className="col-span-1 md:col-span-2">
       <Dropdown
         label="اختر الشهر / القسم"

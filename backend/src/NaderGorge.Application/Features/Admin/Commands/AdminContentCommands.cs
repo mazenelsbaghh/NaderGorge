@@ -903,7 +903,7 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
 
         if (!VideoProviders.IsSupported(request.Provider))
         {
-            return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk, bunny");
+            return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk, bunny, vcdn");
         }
 
         if (!await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, ct))
@@ -946,6 +946,12 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
         }
 
         var youTubeHlsEnabled = normalizedProvider == VideoProviders.YouTube && request.YouTubeHlsEnabled;
+        if (normalizedProvider == VideoProviders.Vcdn)
+        {
+            var vcdnId = VcdnVideoReference.ExtractVideoId(request.UrlOrEmbedCode);
+            if (vcdnId is null) return ApiResponse<Guid>.Fail("أدخل رابط VCDN من نوع HLS أو embed، أو معرّف فيديو صالحاً.", ["VCDN_SOURCE_INVALID"]);
+            extractedId = vcdnId;
+        }
         if (youTubeHlsEnabled && !VideoProviders.IsYouTubeVideoId(extractedId))
             return ApiResponse<Guid>.Fail("أدخل رابط يوتيوب أو معرّف فيديو صالحاً لتشغيل HLS.", ["YOUTUBE_HLS_SOURCE_INVALID"]);
 
@@ -1057,7 +1063,7 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
         if (!VideoProviders.IsSupported(request.Provider))
         {
-            return ApiResponse.Fail("Invalid provider. Supported: youtube, vk, bunny");
+            return ApiResponse.Fail("Invalid provider. Supported: youtube, vk, bunny, vcdn");
         }
 
         if (video.VideoTypeId != request.VideoTypeId && !await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, ct))
@@ -1148,6 +1154,12 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
         var youTubeHlsEnabled = normalizedProvider == VideoProviders.YouTube
             && (request.YouTubeHlsEnabled ?? (VideoProviders.Normalize(video.Provider) == VideoProviders.YouTube && video.YouTubeHlsEnabled));
+        if (normalizedProvider == VideoProviders.Vcdn)
+        {
+            var vcdnId = VcdnVideoReference.ExtractVideoId(request.UrlOrEmbedCode);
+            if (vcdnId is null) return ApiResponse.Fail("أدخل رابط VCDN من نوع HLS أو embed، أو معرّف فيديو صالحاً.", ["VCDN_SOURCE_INVALID"]);
+            extractedId = vcdnId;
+        }
         if (youTubeHlsEnabled && !VideoProviders.IsYouTubeVideoId(extractedId))
             return ApiResponse.Fail("أدخل رابط يوتيوب أو معرّف فيديو صالحاً لتشغيل HLS.", ["YOUTUBE_HLS_SOURCE_INVALID"]);
         var playbackModeChanged = video.YouTubeHlsEnabled != youTubeHlsEnabled;

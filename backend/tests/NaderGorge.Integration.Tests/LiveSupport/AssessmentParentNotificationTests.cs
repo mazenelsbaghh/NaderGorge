@@ -97,6 +97,53 @@ public sealed class AssessmentParentNotificationTests
             (await fixture.Db.AssessmentParentDeliveries.AsNoTracking().SingleAsync()).Status);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task September30ProviderFailureIsRecordedWhetherReceiptPrecedesOrFollowsAcceptance(bool receiptFirst)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        await fixture.Db.LiveSupportWhatsAppPendingReceipts.Where(item => item.MetaMessageId == "wamid.test").ExecuteDeleteAsync();
+        var seed = await Seed(fixture.Db);
+        var handler = new RecordingMetaHandler();
+        var dispatcher = Dispatcher(fixture.Db, handler);
+        var receipt = new LiveSupportWhatsAppPendingReceipt
+        {
+            MetaMessageId = "wamid.test", Status = "Failed", ProviderTimestamp = DateTime.UtcNow,
+            FailureCode = "WHATSAPP_CLOUD_131042", Version = 1
+        };
+        if (receiptFirst)
+        {
+            fixture.Db.LiveSupportWhatsAppPendingReceipts.Add(receipt);
+            await fixture.Db.SaveChangesAsync();
+        }
+        await dispatcher.DispatchAsync(Event(seed, "exam"), default);
+        if (!receiptFirst)
+        {
+            fixture.Db.LiveSupportWhatsAppPendingReceipts.Add(receipt);
+            await fixture.Db.SaveChangesAsync();
+            await AssessmentParentDeliveryReceipts.ReconcileAsync(fixture.Db, "wamid.test", default);
+        }
+
+        var failed = await fixture.Db.AssessmentParentDeliveries.AsNoTracking().SingleAsync();
+        Assert.Equal(AssessmentParentDeliveryStatus.Failed, failed.Status);
+        Assert.Equal("WHATSAPP_CLOUD_131042", failed.FailureCode);
+        await dispatcher.DispatchAsync(Event(seed, "exam"), default);
+        Assert.Single(handler.Requests);
+
+        receipt.Status = "Read";
+        receipt.FailureCode = null;
+        receipt.Version++;
+        receipt.ReadAt = DateTime.UtcNow;
+        receipt.DeliveredAt = receipt.ReadAt;
+        await fixture.Db.SaveChangesAsync();
+        await AssessmentParentDeliveryReceipts.ReconcileAsync(fixture.Db, "wamid.test", default);
+        var confirmed = await fixture.Db.AssessmentParentDeliveries.AsNoTracking().SingleAsync();
+        Assert.Equal(AssessmentParentDeliveryStatus.Sent, confirmed.Status);
+        Assert.Null(confirmed.FailureCode);
+    }
+
     [Fact]
     public async Task ConcurrentGradingEventsClaimOneProviderSend()
     {
@@ -133,6 +180,218 @@ public sealed class AssessmentParentNotificationTests
             new(seed.Template.Id, filters, [new("BODY", 1, "Literal", "score", ComponentIndex: 0),
                 new("BODY", 2, "Literal", "total", ComponentIndex: 0)]), default);
         Assert.Equal(1, preview.EligibleCount);
+    }
+
+    [Fact]
+    public async Task SettingsExamCatalogSearchesTeacherAndTitlePagesLatestFirstAndCountsOnlyFinalResults()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        seed.Attempt.Exam.Title = "آخر امتحان نادر";
+        seed.Attempt.Exam.CreatedByTeacher.User.FullName = "نادر";
+        fixture.Db.StudentExamAttempts.AddRange(RetryAttempt(seed, "ممتاز"), RetryAttempt(seed, "قيد التصحيح"));
+        for (var index = 0; index < 21; index++)
+            fixture.Db.Exams.Add(new Exam { Title = $"امتحان قديم {index}",
+                CreatedByTeacherId = seed.Attempt.Exam.CreatedByTeacherId,
+                CreatedAt = DateTime.UtcNow.AddDays(-index - 1) });
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        var first = await service.ListAsync(admin.Id, " نادر ", 1, default);
+        Assert.Equal(22, first.TotalCount);
+        Assert.Equal(20, first.Items.Count);
+        Assert.Equal(seed.Attempt.ExamId, first.Items[0].ExamId);
+        Assert.Equal(2, first.Items[0].FinalResultCount);
+        var second = await service.ListAsync(admin.Id, "نادر", 2, default);
+        Assert.Equal(2, second.Items.Count);
+        Assert.Empty(first.Items.Select(exam => exam.ExamId).Intersect(second.Items.Select(exam => exam.ExamId)));
+        Assert.Single((await service.ListAsync(admin.Id, "آخر امتحان", 1, default)).Items);
+        Assert.Empty((await service.ListAsync(admin.Id, "%", 1, default)).Items);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ListAsync(admin.Id, null, 0, default));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ListAsync(seed.Attempt.UserId, null, 1, default));
+    }
+
+    [Fact]
+    public async Task RetryButtonQueuesFailedAndPreviouslyUnsentResultsOnceAndExcludesDeliveredUncertainAndPendingGrades()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        var unsent = RetryAttempt(seed, "ناجح");
+        var delivered = RetryAttempt(seed, "ناجح");
+        var uncertain = RetryAttempt(seed, "ناجح");
+        var pendingGrade = RetryAttempt(seed, "قيد التصحيح");
+        fixture.Db.StudentExamAttempts.AddRange(unsent, delivered, uncertain, pendingGrade);
+        fixture.Db.AssessmentParentDeliveries.AddRange(
+            RetryDelivery(seed.Attempt, seed.Template, AssessmentParentDeliveryStatus.Failed),
+            RetryDelivery(delivered, seed.Template, AssessmentParentDeliveryStatus.Sent, "wamid.delivered"),
+            RetryDelivery(uncertain, seed.Template, AssessmentParentDeliveryStatus.Uncertain));
+        fixture.Db.LiveSupportWhatsAppPendingReceipts.Add(new()
+        { MetaMessageId = "wamid.delivered", Status = "Read", ProviderTimestamp = DateTime.UtcNow });
+        foreach (var attempt in new[] { seed.Attempt, unsent, delivered, uncertain, pendingGrade })
+            fixture.Db.OutboxEvents.Add(PersistedGrade(attempt));
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        var summary = await service.SummaryAsync(admin.Id, seed.Attempt.ExamId, default);
+        Assert.Equal(2, summary.RetryableCount);
+        Assert.Equal(1, summary.DeliveredCount);
+        Assert.Equal(1, summary.UncertainCount);
+        var operationId = Guid.NewGuid();
+        var first = await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(operationId), default);
+        var repeated = await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(operationId), default);
+        var anotherClick = await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default);
+        Assert.Equal(2, first.QueuedCount);
+        Assert.True(repeated.AlreadyQueued);
+        Assert.Equal(0, anotherClick.QueuedCount);
+        var queued = await fixture.Db.OutboxEvents.AsNoTracking().Where(item => item.Type == ExamParentMessageRetryService.EventType).ToListAsync();
+        Assert.Equal(2, queued.Count);
+        var handler = new RecordingMetaHandler("""{"messages":[{"id":"wamid.retry-button"}]}""");
+        var dispatcher = Dispatcher(fixture.Db, handler);
+        foreach (var notification in queued)
+        {
+            await dispatcher.DispatchAsync(notification, default);
+            await dispatcher.DispatchAsync(notification, default);
+        }
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(AssessmentParentDeliveryStatus.Sent,
+            (await fixture.Db.AssessmentParentDeliveries.AsNoTracking().SingleAsync(item => item.AttemptId == unsent.Id)).Status);
+    }
+
+    [Fact]
+    public async Task FailedOnlyButtonLeavesUnsentResultsForTheSendGradesButtonAndBindsIdempotencyToTheFilter()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        var unsent = RetryAttempt(seed, "ناجح");
+        fixture.Db.StudentExamAttempts.Add(unsent);
+        fixture.Db.AssessmentParentDeliveries.Add(RetryDelivery(seed.Attempt, seed.Template, AssessmentParentDeliveryStatus.Failed));
+        fixture.Db.OutboxEvents.AddRange(PersistedGrade(seed.Attempt), PersistedGrade(unsent));
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        var operation = Guid.NewGuid();
+        var result = await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(operation, FailedOnly: true), default);
+        Assert.Equal(1, result.QueuedCount);
+        var queued = await fixture.Db.OutboxEvents.AsNoTracking()
+            .SingleAsync(item => item.Type == ExamParentMessageRetryService.EventType);
+        Assert.Equal(seed.Attempt.Id, JsonSerializer.Deserialize<ExamParentMessageRetryEnvelope>(queued.PayloadJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AttemptId);
+        Assert.True((await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(operation, FailedOnly: true), default)).AlreadyQueued);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(operation), default));
+        var summary = await service.SummaryAsync(admin.Id, seed.Attempt.ExamId, default);
+        Assert.Equal(1, summary.PendingCount);
+        Assert.Equal(1, summary.NotSentCount);
+        Assert.Equal(1, summary.RetryableCount);
+        Assert.Equal(1, (await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default)).QueuedCount);
+    }
+
+    [Fact]
+    public async Task RetryButtonUsesFailedProviderReceiptAndDoesNotResendWhenTheSameQueuedEventIsReplayed()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        const string beforeId = "wamid.retry-before";
+        const string afterId = "wamid.retry-after";
+        await fixture.Db.LiveSupportWhatsAppPendingReceipts.Where(item => item.MetaMessageId == beforeId || item.MetaMessageId == afterId).ExecuteDeleteAsync();
+        fixture.Db.AssessmentParentDeliveries.Add(RetryDelivery(seed.Attempt, seed.Template, AssessmentParentDeliveryStatus.Sent, beforeId));
+        fixture.Db.LiveSupportWhatsAppPendingReceipts.Add(new()
+        { MetaMessageId = beforeId, Status = "Failed", FailureCode = "WHATSAPP_CLOUD_131042", ProviderTimestamp = DateTime.UtcNow });
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        var summary = await service.SummaryAsync(admin.Id, seed.Attempt.ExamId, default);
+        Assert.Equal(1, summary.FailedCount);
+        Assert.True(Assert.Single(summary.Attempts).CanRetry);
+        var queued = await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default);
+        Assert.Equal(1, queued.QueuedCount);
+        var notification = await fixture.Db.OutboxEvents.AsNoTracking().SingleAsync(item => item.Type == ExamParentMessageRetryService.EventType);
+        var handler = new RecordingMetaHandler("""{"messages":[{"id":"wamid.retry-after"}]}""");
+        var dispatcher = Dispatcher(fixture.Db, handler);
+        await dispatcher.DispatchAsync(notification, default);
+        fixture.Db.LiveSupportWhatsAppPendingReceipts.Add(new()
+        { MetaMessageId = afterId, Status = "Failed", FailureCode = "WHATSAPP_CLOUD_131042", ProviderTimestamp = DateTime.UtcNow });
+        await fixture.Db.SaveChangesAsync();
+        await AssessmentParentDeliveryReceipts.ReconcileAsync(fixture.Db, afterId, default);
+        await dispatcher.DispatchAsync(notification, default);
+        Assert.Single(handler.Requests);
+        var delivery = await fixture.Db.AssessmentParentDeliveries.AsNoTracking().SingleAsync();
+        Assert.Equal(AssessmentParentDeliveryStatus.Failed, delivery.Status);
+        Assert.Equal(afterId, delivery.MetaMessageId);
+    }
+
+    [Fact]
+    public async Task ConcurrentRetryClicksQueueOneMessageAndNonAdminCannotQueue()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        fixture.Db.OutboxEvents.Add(PersistedGrade(seed.Attempt));
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.QueueAsync(seed.Attempt.UserId, seed.Attempt.ExamId, new(Guid.NewGuid()), default));
+        await using var secondDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(fixture.ConnectionString).Options);
+        var results = await Task.WhenAll(service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default),
+            new ExamParentMessageRetryService(secondDb).QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default));
+        Assert.Equal(1, results.Sum(item => item.QueuedCount));
+        Assert.Single(await fixture.Db.OutboxEvents.Where(item => item.Type == ExamParentMessageRetryService.EventType).ToListAsync());
+    }
+
+    private static StudentExamAttempt RetryAttempt(SeedData seed, string evaluation) => new()
+    {
+        Exam = seed.Attempt.Exam, User = seed.Attempt.User, Evaluation = evaluation,
+        DefinitionSnapshotJson = seed.Attempt.DefinitionSnapshotJson, ScoreAchieved = 8
+    };
+
+    [Theory]
+    [InlineData("disabled")]
+    [InlineData("pending")]
+    public async Task QueuedRetryRechecksCurrentNotificationConsentAndFinalGradingBeforeSending(string change)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var admin = await SeedAdmin(fixture.Db);
+        fixture.Db.OutboxEvents.Add(PersistedGrade(seed.Attempt));
+        await fixture.Db.SaveChangesAsync();
+        var service = new ExamParentMessageRetryService(fixture.Db);
+        Assert.Equal(1, (await service.QueueAsync(admin.Id, seed.Attempt.ExamId, new(Guid.NewGuid()), default)).QueuedCount);
+        if (change == "disabled") seed.Attempt.Exam.ParentNotificationSettingsJson = null;
+        else seed.Attempt.Evaluation = "قيد التصحيح";
+        await fixture.Db.SaveChangesAsync();
+        var handler = new RecordingMetaHandler();
+        var notification = await fixture.Db.OutboxEvents.AsNoTracking().SingleAsync(item => item.Type == ExamParentMessageRetryService.EventType);
+        await Dispatcher(fixture.Db, handler).DispatchAsync(notification, default);
+        Assert.Empty(handler.Requests);
+        Assert.Empty(await fixture.Db.AssessmentParentDeliveries.ToListAsync());
+    }
+
+    private static AssessmentParentDelivery RetryDelivery(StudentExamAttempt attempt, LiveSupportWhatsAppTemplate template,
+        AssessmentParentDeliveryStatus status, string? messageId = null) => new()
+    {
+        AssessmentKind = "exam", AssessmentId = attempt.ExamId, AttemptId = attempt.Id, StudentUserId = attempt.UserId,
+        TemplateId = template.Id, TemplateFingerprint = template.Fingerprint, Status = status, MetaMessageId = messageId,
+        FailureCode = status == AssessmentParentDeliveryStatus.Failed ? "132005" : null
+    };
+
+    private static OutboxEvent PersistedGrade(StudentExamAttempt attempt) => new()
+    {
+        Type = "ExamGraded", TargetUserId = attempt.UserId.ToString(), ProcessedAt = DateTime.UtcNow,
+        PayloadJson = JsonSerializer.Serialize(new { examId = attempt.Exam.Id, attemptId = attempt.Id })
+    };
+
+    private static async Task<User> SeedAdmin(AppDbContext db)
+    {
+        var admin = new User { FullName = "أدمن الاختبار", PasswordHash = "test-only", PhoneNumber = $"015{Random.Shared.NextInt64(10000000, 99999999)}" };
+        admin.UserRoles.Add(new() { RoleId = await db.Roles.Where(role => role.Type == RoleType.Admin).Select(role => role.Id).FirstAsync() });
+        db.Users.Add(admin);
+        await db.SaveChangesAsync();
+        return admin;
     }
 
     private static AssessmentParentNotificationDispatcher Dispatcher(AppDbContext db, RecordingMetaHandler handler) => new(db,

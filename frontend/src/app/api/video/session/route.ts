@@ -1,6 +1,7 @@
 import { decryptVideoEmbedMaterial } from '@/lib/video-embed-material';
 import { validateVideoMediaRequest } from '@/lib/video-embed-request-guard';
 import { createPlaybackCookie, fetchPlaybackMaterial, isPlaybackSessionId, playbackCookieName, playbackErrorResponse, PlaybackRequestError } from '@/lib/video-playback-session';
+import { mintVcdnPlaybackSource } from '@/lib/vcdn-playback-source';
 import { resolveSessionYouTubeHlsSource } from '@/lib/youtube-hls-session-source';
 
 export async function POST(request: Request) {
@@ -20,6 +21,10 @@ export async function POST(request: Request) {
     const headers = { 'Cache-Control': 'no-store, private', 'Set-Cookie': createPlaybackCookie(request, sessionId, expiresAt) };
     if (purpose === 'start') return Response.json({ data: { expiresAt } }, { headers });
     const video = decryptVideoEmbedMaterial(material);
+    if (video.Provider?.toLowerCase() === 'vcdn') {
+      const grant = await mintVcdnPlaybackSource(request, video.VideoId, Date.parse(expiresAt));
+      return Response.json({ data: { source: grant.source, serverNowMs: grant.serverNowMs, signedSourceExpiresAtMs: grant.expiresAt, sessionExpiresAtMs: Date.parse(expiresAt) } }, { headers });
+    }
     if (video.Provider?.toLowerCase() === 'youtube-hls') {
       const source = await resolveSessionYouTubeHlsSource(request, {
         sessionId, videoId: video.VideoId, authorization, surface: request.headers.get('x-app-surface') ?? '',

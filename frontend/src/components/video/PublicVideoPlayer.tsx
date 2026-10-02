@@ -34,7 +34,7 @@ const defaultAppearance: PlayerAppearance = {
   bottomSolid: 12,
   youtubeShadowDelayMs: 5000,
   bunnyShadowDelayMs: 5000,
-  enabledProviders: ['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive'],
+  enabledProviders: ['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive', 'vcdn'],
 };
 
 const clamp = (value: unknown, fallback: number, max: number) => {

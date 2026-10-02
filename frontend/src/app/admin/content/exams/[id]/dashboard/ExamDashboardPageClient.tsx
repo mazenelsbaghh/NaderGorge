@@ -1,7 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/services/admin-service';
+import { adminService, ExamDashboardDto, StudentExamResultSummaryDto, type ExamParentMessageState } from '@/services/admin-service';
+import { ExamParentMessagesPanel, ExamParentMessageStatus } from '@/components/admin/ExamParentMessagesPanel';
+import { useAuthStore } from '@/stores/auth-store';
+import { getApiErrorSummary } from '@/lib/api-errors';
+import { createClientId } from '@/lib/client-id';
 import { usePathname, useRouter } from 'next/navigation';
 import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus, Copy, Search, Send } from 'lucide-react';
@@ -15,6 +19,9 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
   const examId = params.id;
   const router = useRouter();
   const pathname = usePathname();
+  const isAdmin = useAuthStore(state => state.user?.roles.includes('Admin') ?? false);
+  const [parentMessageStates, setParentMessageStates] = useState<Record<string, ExamParentMessageState>>({});
+  const [parentMessageRefresh, setParentMessageRefresh] = useState(0);
 
   const [dashboard, setDashboard] = useState<ExamDashboardDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,11 +90,11 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
 
     setSendingWhatsAppAttemptId(attempt.attemptId);
     try {
-      await adminService.sendWhatsAppExamResultMessage({ attemptId: attempt.attemptId });
-      toast.success(`تم إرسال نتيجة ${attempt.studentName} على واتساب`);
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'فشل إرسال واتساب لهذه المحاولة';
-      toast.error(message);
+      const result = await adminService.retryExamParentMessages(examId, createClientId(), attempt.attemptId);
+      toast.success(result.queuedCount ? 'تمت إضافة رسالة النتيجة لقائمة الإرسال' : 'الرسالة وصلت بالفعل أو قيد الإرسال أو تحتاج مراجعة');
+      setParentMessageRefresh(current => current + 1);
+    } catch (cause) {
+      toast.error(getApiErrorSummary(cause, 'فشل تجهيز رسالة واتساب لهذه المحاولة'));
     } finally {
       setSendingWhatsAppAttemptId(null);
     }
@@ -172,6 +179,8 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
             variant="light" 
           />
         </div>
+
+        {isAdmin && <ExamParentMessagesPanel key={examId} examId={examId} refreshKey={parentMessageRefresh} onStatesChange={setParentMessageStates} />}
 
         {/* Questions List */}
         <div className="space-y-4">
@@ -290,9 +299,9 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                 label: 'إجراءات',
                 render: (row) => (
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
+                    {isAdmin && <button
                       type="button"
-                      disabled={sendingWhatsAppAttemptId === row.attemptId || !isAttemptResultReady(row)}
+                      disabled={sendingWhatsAppAttemptId !== null || !parentMessageStates[row.attemptId]?.canRetry}
                       onClick={() => handleSendAttemptWhatsApp(row)}
                       className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
                     >
@@ -301,8 +310,8 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                       ) : (
                         <Send className="h-3.5 w-3.5" />
                       )}
-                      واتساب
-                    </button>
+                      إعادة إرسال واتساب
+                    </button>}
                     <button
                       type="button"
                       onClick={() => {
@@ -326,6 +335,10 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                   </div>
                 )
               },
+              ...(isAdmin ? [{
+                key: 'whatsapp', label: 'واتساب ولي الأمر',
+                render: (row: StudentExamResultSummaryDto) => <ExamParentMessageStatus state={parentMessageStates[row.attemptId]} />,
+              }] : []),
               {
                 key: 'time',
                 label: 'التوقيت',

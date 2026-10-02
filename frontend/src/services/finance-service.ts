@@ -191,6 +191,13 @@ export interface AdminTeacherFinancialEventDto {
 
 export const financeService = {
   // --- Admin-only teacher finance center ---
+  exportTeacherDetailedReport: async (teacherId: string, period: { from?: string; to: string }, signal?: AbortSignal): Promise<Blob> => {
+    const response = await apiClient.get<Blob>(
+      `/admin/teacher-finance-center/teachers/${teacherId}/reports/detailed.pdf`,
+      { params: period, responseType: 'blob', timeout: 120_000, signal, headers: { Accept: 'application/pdf' } },
+    );
+    return response.data;
+  },
   getTeacherStatement: async (teacherId: string | undefined, params: { from?: string; to?: string; page: number; pageSize: number }): Promise<TeacherStatement> => {
     const options = { params: { ...params, from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) } };
     const res = teacherId

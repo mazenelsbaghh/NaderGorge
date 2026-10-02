@@ -183,7 +183,7 @@ public class OutboxProcessorBackgroundService : BackgroundService
         IServiceProvider services,
         CancellationToken ct)
     {
-        if (@event.Type == "AssessmentParentRecovery")
+        if (@event.Type is "AssessmentParentRecovery" or ExamParentMessageRetryService.EventType)
         {
             await services.GetRequiredService<AssessmentParentNotificationDispatcher>().DispatchAsync(@event, ct);
             return;

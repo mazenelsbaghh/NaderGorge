@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseVcdnVideoId } from '@/lib/vcdn-video-reference';
 import { parseBunnyPlayerPath } from '@/lib/bunny-video-reference';
 import { generateVideoEmbedHtml } from '@/lib/video-embed-html';
 
@@ -19,6 +20,8 @@ function parseVideoUrl(value: string) {
   let url: URL;
   try { url = new URL(value); } catch { return null; }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+  const vcdnId = parseVcdnVideoId(value);
+  if (vcdnId) return { provider: 'vcdn', id: vcdnId };
   const host = url.hostname.toLowerCase().replace(/^www\./, '');
 
   if (host === 'youtu.be' || host.endsWith('youtube.com')) {
@@ -47,7 +50,9 @@ export async function GET(request: NextRequest) {
   const source = request.nextUrl.searchParams.get('url');
   if (!source) return errorPage('Missing video URL');
   const parsed = parseVideoUrl(source);
-  if (!parsed) return errorPage('رابط الفيديو غير مدعوم. استخدم رابط YouTube أو VK أو Bunny صحيح.');
+  if (!parsed) return errorPage('رابط الفيديو غير مدعوم. استخدم رابط YouTube أو VK أو Bunny أو VCDN صحيح.');
+
+  if (parsed.provider === 'vcdn') return errorPage('VCDN يتطلب جلسة مشاهدة درس مصرح بها.', 403);
 
   const html = generateVideoEmbedHtml(parsed.provider, parsed.id);
   return new NextResponse(html, {

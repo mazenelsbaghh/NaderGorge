@@ -20,24 +20,26 @@ public record StudentThemePreferencesDto(
 
 public static class StudentThemeCatalog
 {
-    public const string DefaultLightPaletteId = "scholar-light";
-    public const string DefaultDarkPaletteId = "scholar-dark";
+    public const string DefaultLightPaletteId = "massar-light";
+    public const string DefaultDarkPaletteId = "massar-dark";
 
     private static readonly IReadOnlyList<StudentThemePaletteOptionDto> LightPalettes =
     [
-        new("scholar-light", "ذهبي أكاديمي", "light", "#c79b46"),
-        new("oasis-light", "واحة هادئة", "light", "#2d8f7b"),
-        new("ruby-light", "نحاس وردي", "light", "#a35352"),
-        new("blossom-light", "زهر الربيع", "light", "#e83e8c"),
-        new("winter-sky-light", "سماء شتوية", "light", "#64748b"),
+        new("massar-light", "مسار نهاري", "light", "#0A1D3D"),
+        new("scholar-light", "رمادي هادئ", "light", "#475569"),
+        new("oasis-light", "واحة هادئة", "light", "#1e6d5f"),
+        new("ruby-light", "نحاس وردي", "light", "#904847"),
+        new("blossom-light", "زهر الربيع", "light", "#ad1457"),
+        new("winter-sky-light", "سماء شتوية", "light", "#475569"),
     ];
 
     private static readonly IReadOnlyList<StudentThemePaletteOptionDto> DarkPalettes =
     [
-        new("scholar-dark", "ذهبي ليلي", "dark", "#c5a059"),
-        new("midnight-teal", "تركواز ليلي", "dark", "#4bb5a6"),
-        new("ember-dark", "عنبر دافئ", "dark", "#d17f49"),
-        new("rainy-night", "ليلة ممطرة", "dark", "#94a3b8"),
+        new("massar-dark", "مسار ليلي", "dark", "#26a8a2"),
+        new("scholar-dark", "رمادي ليلي", "dark", "#94a3b8"),
+        new("midnight-teal", "تركواز ليلي", "dark", "#58c8b8"),
+        new("ember-dark", "عنبر دافئ", "dark", "#e59a5d"),
+        new("rainy-night", "أزرق ليلي", "dark", "#8cb6ed"),
     ];
 
     public static IReadOnlyList<StudentThemePaletteOptionDto> GetLightPalettes() => LightPalettes;

@@ -42,6 +42,24 @@ function lesson(overrides: Partial<MyLessonDto>): MyLessonDto {
   };
 }
 
+// Exact percentages such as 29% used to lose a point through floating-point division.
+for (const percent of [0, 25, 29, 50, 57, 58, 75, 100]) {
+  test(`partial ${percent}% stays consistent in video, lesson and course progress`, () => {
+    const video = { durationSeconds: 100, learningWatchedSeconds: percent };
+    assert.equal(videoProgressPercent(video), percent);
+    assert.equal(lessonProgressPercent([video]), percent);
+    assert.equal(learningSummary([lesson({ recordedWatchSeconds: percent, totalVideoSeconds: 100, isCompleted: percent === 100 })]).percent, percent);
+  });
+}
+
+test('fractional playback preserves exact percentage boundaries without rounding genuinely partial time up', () => {
+  for (const [durationSeconds, learningWatchedSeconds, expected] of [[7, 2.03, 29], [100, 28.999, 28], [600, 299.5, 49], [600, 300, 50]]) {
+    const video = { durationSeconds, learningWatchedSeconds };
+    assert.equal(videoProgressPercent(video), expected);
+    assert.equal(lessonProgressPercent([video]), expected);
+  }
+});
+
 test('home summary counts completed parts independently and weights time across lessons', () => {
   assert.deepEqual(learningSummary([
     lesson({ isCompleted: true, watchedVideoCount: 1, recordedWatchSeconds: 60, totalVideoSeconds: 60 }),

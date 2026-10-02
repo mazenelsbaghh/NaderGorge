@@ -84,12 +84,15 @@ public sealed class StudentDashboardVideoCompletionTests
     }
 
     [Theory]
-    [InlineData(10, 3, false)]
-    [InlineData(99.999, 4, true)]
-    public async Task ParentAndStudentAgreeOnCompletedParts(double watchedSeconds, int completedParts, bool completed)
+    [InlineData(10, 3, false, 310)]
+    [InlineData(10.9, 3, false, 310)]
+    [InlineData(99.999, 4, true, 400)]
+    public async Task ParentAndStudentAgreeOnCompletedParts(double watchedSeconds, int completedParts, bool completed, int expectedWatchedSeconds)
     {
         await using var db = TestAppDbContextFactory.Create();
         var fixture = await SeedDashboardAsync(db);
+        foreach (var part in db.VideoWatchEvents.Where(watch => watch.LessonVideo.LessonId == fixture.FourPartLessonId))
+            part.LearningWatchedSeconds = 99.999m;
         db.VideoWatchEvents.Add(new VideoWatchEvent
         {
             UserId = fixture.StudentId, LessonVideoId = fixture.FourthActiveVideoId,
@@ -110,7 +113,9 @@ public sealed class StudentDashboardVideoCompletionTests
         Assert.Equal(studentLesson.WatchedVideoCount, parentLesson.WatchedVideos);
         Assert.Equal(completed, parentLesson.IsCompleted);
         Assert.Equal(studentLesson.IsCompleted, parentLesson.IsCompleted);
-        Assert.Equal(completed ? 400 : 310, parentLesson.WatchedSeconds);
+        Assert.Equal(expectedWatchedSeconds, parentLesson.WatchedSeconds);
+        Assert.Equal(parentLesson.WatchedSeconds, studentLesson.RecordedWatchSeconds);
+        Assert.Equal(completed ? 100 : 77, studentLesson.WatchProgressPercent);
     }
 
     private static async Task<DashboardFixture> SeedDashboardAsync(AppDbContext db)

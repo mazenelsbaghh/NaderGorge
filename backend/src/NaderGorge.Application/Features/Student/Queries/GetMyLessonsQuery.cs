@@ -151,7 +151,7 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
                 lessonVideos.Count,
                 StudentWatchProgressReader.CalculatePercent(lessonVideos),
                 lessonVideos.Count(video => video.IsCompleted),
-                lessonVideos.Sum(video => (long)Math.Min(video.WatchedSeconds, video.DurationSeconds ?? 0)),
+                (long)Math.Floor(lessonVideos.Sum(video => video.CompletionWatchedSeconds)),
                 lessonVideos.Count > 0 && lessonVideos.All(video => video.DurationSeconds is > 0)
                     ? lessonVideos.Sum(video => (long)video.DurationSeconds!.Value) : null,
                 lessonVideos.Select(video => video.LastWatchedAt).DefaultIfEmpty().Max()));

@@ -5,5 +5,5 @@ export function usesNativeProviderControls(provider: string): boolean {
 }
 
 export function usesRenewableHlsSource(provider: string): boolean {
-  return provider === 'bunny-hls' || provider === 'youtube-hls';
+  return provider === 'bunny-hls' || provider === 'youtube-hls' || provider === 'vcdn';
 }

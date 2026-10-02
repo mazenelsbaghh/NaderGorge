@@ -149,6 +149,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.HR.Retention.HrRetent
 builder.Services.AddScoped<NaderGorge.Application.Features.HR.Reporting.WorkforceReportService>();
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
+builder.Services.AddScoped<IVideoProvider, VcdnVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
 builder.Services.AddHttpClient("EmthntakAdmin", client => client.Timeout = TimeSpan.FromSeconds(25))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
@@ -223,6 +224,7 @@ builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFi
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherFinanceExportService, NaderGorge.Infrastructure.Services.Finance.TeacherFinanceExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherStatementService, NaderGorge.Infrastructure.Services.Finance.TeacherStatementService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherDetailedReportService, NaderGorge.Infrastructure.Services.Finance.TeacherDetailedReportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceMigrationService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceMigrationService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Reports.PlatformFinancialReportQueries>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.Finance.Migration.FinancialReconciliationService>();
@@ -301,6 +303,8 @@ builder.Services.AddScoped<FacebookMessengerLiveSupportService>();
 builder.Services.AddScoped<FacebookMessengerAdminService>();
 builder.Services.AddSingleton<IWhatsAppCampaignDataProtector, WhatsAppCampaignDataProtector>();
 builder.Services.AddScoped<AssessmentParentNotificationDispatcher>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Assessments.IExamParentMessageRetryService,
+    ExamParentMessageRetryService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Assessments.IAssessmentParentNotificationRecoveryService,
     AssessmentParentNotificationRecoveryService>();
 builder.Services.AddScoped<WhatsAppCampaignService>();

@@ -12,6 +12,6 @@ test('Bunny videos use the provider player without platform chrome', () => {
 });
 
 test('only custom HLS providers request protected source renewals', () => {
-  for (const provider of ['bunny-hls', 'youtube-hls']) assert.equal(usesRenewableHlsSource(provider), true);
+  for (const provider of ['bunny-hls', 'youtube-hls', 'vcdn']) assert.equal(usesRenewableHlsSource(provider), true);
   for (const provider of ['bunny', 'youtube', 'vk']) assert.equal(usesRenewableHlsSource(provider), false);
 });

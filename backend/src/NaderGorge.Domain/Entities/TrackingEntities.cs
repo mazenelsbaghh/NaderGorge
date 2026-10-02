@@ -16,7 +16,7 @@ public class VideoWatchEvent : BaseEntity
     // Media-time learning progress continues after the session's quota view.
     public decimal LearningWatchedSeconds { get; set; }
 
-    // Duration evidence retained for an audited historical progress correction.
+    // Duration evidence retained with learning progress, including historical corrections.
     // Live asset/session durations remain authoritative when available.
     public int? LearningDurationSeconds { get; set; }
 

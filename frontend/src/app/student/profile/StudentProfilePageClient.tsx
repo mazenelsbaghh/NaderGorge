@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Smartphone, MapPin, School, Phone, CheckCircle2, AlertCircle, Sparkles, Palette, Check, Loader2 } from "lucide-react";
+import { User, Smartphone, MapPin, School, Phone, CheckCircle2, AlertCircle, Sparkles, Palette } from "lucide-react";
 import Image from "next/image";
 import { studentService, StudentProfileDto, UpdateStudentProfileDto } from "@/services/student-service";
-import { useStudentTheme, getAvailableStudentThemePalettes } from "@/hooks/useStudentTheme";
+import { useStudentTheme } from "@/hooks/useStudentTheme";
+import { StudentColorSettings } from "@/components/student/StudentColorSettings";
+import toast from "react-hot-toast";
 import { fadeSlideUp } from "@/lib/motion";
 import { AVATAR_LIST } from "@/data/avatars";
 import { cn } from "@/lib/utils";
@@ -25,14 +27,10 @@ import {
 export default function StudentProfilePageClient() {
   const {
     isSavingPreferences,
-    selectedLightPaletteId,
-    selectedDarkPaletteId,
-    updatePalette,
+    isReady,
     updateAvatar,
   } = useStudentTheme();
   const user = useAuthStore((state) => state.user);
-  const lightPalettes = getAvailableStudentThemePalettes('light');
-  const darkPalettes = getAvailableStudentThemePalettes('dark');
 
   const [profile, setProfile] = useState<StudentProfileDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +150,7 @@ export default function StudentProfilePageClient() {
               إعدادات حسابك الشخصي
             </h1>
             <p className="mt-2 text-sm text-[var(--admin-muted)]">
-              راجع وعدّل بياناتك الشخصية والدراسية، ومعلومات الاتصال والمدرسة.
+              عدّل بياناتك الشخصية واختار ألوان المنصة والشخصية المناسبة لك.
             </p>
           </div>
         </div>
@@ -172,7 +170,7 @@ export default function StudentProfilePageClient() {
       )}
 
       {/* Tab Navigation */}
-      <div className="flex w-fit gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1.5">
+      <div className="flex w-full flex-wrap gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1.5">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
@@ -477,8 +475,10 @@ export default function StudentProfilePageClient() {
               تخصيص مظهر حسابك وألوانه
             </h3>
 
+            <StudentColorSettings />
+
             {/* Avatar Selection Section */}
-            <section className="space-y-4">
+            <section className="space-y-4 border-t border-[var(--admin-border)] pt-6">
               <h4 className="text-xs font-black text-[var(--admin-muted)]">
                 شخصيتك الكارتونية (كورة وعلوم وفن)
               </h4>
@@ -489,8 +489,8 @@ export default function StudentProfilePageClient() {
                     <button
                       key={avatar.slug}
                       type="button"
-                      onClick={() => void updateAvatar(avatar.slug)}
-                      disabled={isSavingPreferences}
+                      onClick={() => void updateAvatar(avatar.slug).catch(() => toast.error("تعذر حفظ الشخصية. حاول مرة أخرى."))}
+                      disabled={!isReady || isSavingPreferences}
                       className={cn(
                         'relative flex flex-col items-center gap-2 p-3 rounded-2xl border transition duration-300',
                         'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)] hover:scale-105',
@@ -540,120 +540,7 @@ export default function StudentProfilePageClient() {
               )}
             </section>
 
-            {/* Themes / Palettes Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[var(--admin-border)]">
-              {/* Light Mode Palettes */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-[var(--admin-muted)]">
-                  ألوان الوضع الفاتح
-                </h4>
-                <div className="grid grid-cols-1 gap-3">
-                  {lightPalettes.map((palette) => {
-                    const isSelected = palette.id === selectedLightPaletteId;
 
-                    return (
-                      <button
-                        key={palette.id}
-                        type="button"
-                        onClick={() => void updatePalette('light', palette.id)}
-                        disabled={isSavingPreferences}
-                        className={cn(
-                          'flex items-center justify-between rounded-2xl border p-3.5 text-right transition duration-300 w-full',
-                          'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)]',
-                          isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-md ring-1 ring-[var(--admin-primary)]',
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-10 w-10 rounded-xl border border-white/10 shadow-inner shrink-0"
-                            style={{
-                              background: `linear-gradient(135deg, ${palette.previewAccent}, ${palette.tokens['--admin-primary-strong'] ?? palette.previewAccent})`,
-                            }}
-                          />
-                          <div className="space-y-0.5">
-                            <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
-                            <p className="text-xs text-[var(--admin-muted)]">
-                              مخصص للوضع الفاتح
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                          {isSavingPreferences && isSelected ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
-                          ) : isSelected ? (
-                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
-                              <Check className="h-3 w-3" />
-                              مفعل
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
-                              اختيار
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Dark Mode Palettes */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-[var(--admin-muted)]">
-                  ألوان الوضع الداكن
-                </h4>
-                <div className="grid grid-cols-1 gap-3">
-                  {darkPalettes.map((palette) => {
-                    const isSelected = palette.id === selectedDarkPaletteId;
-
-                    return (
-                      <button
-                        key={palette.id}
-                        type="button"
-                        onClick={() => void updatePalette('dark', palette.id)}
-                        disabled={isSavingPreferences}
-                        className={cn(
-                          'flex items-center justify-between rounded-2xl border p-3.5 text-right transition duration-300 w-full',
-                          'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)]',
-                          isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-md ring-1 ring-[var(--admin-primary)]',
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-10 w-10 rounded-xl border border-white/10 shadow-inner shrink-0"
-                            style={{
-                              background: `linear-gradient(135deg, ${palette.previewAccent}, ${palette.tokens['--admin-primary-strong'] ?? palette.previewAccent})`,
-                            }}
-                          />
-                          <div className="space-y-0.5">
-                            <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
-                            <p className="text-xs text-[var(--admin-muted)]">
-                              مخصص للوضع الداكن
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                          {isSavingPreferences && isSelected ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
-                          ) : isSelected ? (
-                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
-                              <Check className="h-3.5 w-3.5" />
-                              مفعل
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
-                              اختيار
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
