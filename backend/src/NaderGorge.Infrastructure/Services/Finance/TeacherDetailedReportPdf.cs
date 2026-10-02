@@ -111,7 +111,7 @@ public static class TeacherDetailedReportPdf
                     column.Item().PaddingBottom(11.25f).Text(first
                         ? "الحساب بعد التصحيح. المدفوع بيتحسب حسب اتفاق المستر، والمجاني والهدايا من غير عمولة. كل الأرقام بالجنيه."
                         : "نفس الاتفاق على كل الكورسات. عدد الشراء ممكن يزيد عن عدد الطلاب لأن الطالب ممكن يشتري أكتر من مرة.").FontSize(9).LineHeight(1.85f);
-                    if (first && report.Agreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report.Agreements));
+                    if (first && report.Agreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report));
                     if (chunk.Length > 0)
                         column.Item().PaddingBottom(4.5f).Text($"الكورسات {index * 2 + 1}" + (chunk.Length > 1 ? $" و{index * 2 + 2}" : "") + $" من {courseIds.Length}").Bold().FontColor(Teal).FontSize(8.25f);
                     foreach (var id in chunk) column.Item().PaddingBottom(13.5f).PreventPageBreak().Element(x => Course(x, report, id));
@@ -128,15 +128,29 @@ public static class TeacherDetailedReportPdf
         }
     }
 
-    private static void Rules(IContainer container, IReadOnlyList<string> agreements)
+    private static IReadOnlyList<string> CurrentAgreements(TeacherDetailedReport report) => report.Agreements.Where(agreement =>
     {
+        var dates = agreement.Split(" · من ", 2);
+        if (dates.Length < 2) return true;
+        var range = dates[1].Split(" لحد ", 2);
+        if (DateOnly.TryParseExact(range[0], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from) && from > report.Period.To) return false;
+        return range.Length < 2 || !DateOnly.TryParseExact(range[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var to) || to >= report.Period.To;
+    }).ToArray();
+
+    private static void Rules(IContainer container, TeacherDetailedReport report)
+    {
+        var current = CurrentAgreements(report);
+        var primary = current.Where(agreement => new[] { "الحصة:", "الشهر:", "الترم / الكورس:", "السنة / الباقة:" }
+            .Any(scope => agreement.StartsWith(scope, StringComparison.Ordinal))).ToArray();
+        var agreements = primary.Length > 0 ? primary : current;
         var rules = agreements.Select(text =>
         {
             var parts = text.Split(":", 2); var detail = parts.Length == 2 ? parts[1].Split(" · ")[0].Trim() : text;
             var platform = detail.Contains(" لينا", StringComparison.Ordinal);
             var value = platform ? detail.Split(" لينا")[0] : detail;
             return (Scope: parts[0], Value: value, Platform: platform);
-        }).Distinct().ToList();
+        }).Distinct().GroupBy(rule => rule.Scope).Select(group => group.Count() == 1 ? group.First()
+            : (Scope: group.Key, Value: "حسب المحتوى", Platform: group.All(rule => rule.Platform))).ToList();
         var term = rules.FindIndex(x => x.Scope == "الترم / الكورس");
         var year = rules.FindIndex(x => x.Scope == "السنة / الباقة");
         if (term >= 0 && year >= 0 && rules[term].Value == rules[year].Value && rules[term].Platform == rules[year].Platform)
@@ -315,6 +329,13 @@ public static class TeacherDetailedReportPdf
         Appendix(document, report, ("اشتراكات الهدايا", "الهدايا مجانية وعمولتها صفر. نفس الطالب ممكن يظهر في الشراء وفي الهدية.", new(
             ["الطالب","الكورس","نوع الاشتراك","البند","وقت الهدية","الحالة"], [25,21,12,22,14,6],
             report.Gifts.Select(x => new[] { x.Student, CourseLabel(x.Course), x.Kind, x.Content, Date(x.At), x.Status }).ToArray())));
+        if (report.Agreements.Count > 0)
+            Appendix(document, report, ("تفاصيل اتفاقات المستر", "الكروت في أول الكشف بتعرض الاتفاقات السارية في نهاية المدة. هنا كل الاتفاقات وتواريخها؛ الحسبة حسب الاتفاق المسجل لكل عملية.", new(
+                ["نوع الاشتراك", "الاتفاق ومدة سريانه"], [22,78], report.Agreements.Select(agreement =>
+                {
+                    var parts = agreement.Split(":", 2);
+                    return new[] { parts[0], parts.Length == 2 ? parts[1].Trim() : agreement };
+                }).ToArray())));
         if (report.Payments.Count > 0)
             Appendix(document, report, ("السداد المسجل للمستر", "صرف الأرباح المسجل في الفترة المختارة.", new(["المبلغ","وقت السداد","طريقة السداد","المرجع"], [20,25,25,30],
                 report.Payments.Select(x => new[] { Money(x.Amount), Date(x.At), x.Method, x.Reference ?? "مش مسجل" })
