@@ -22,7 +22,10 @@ public sealed record TeacherDetailedReport(string TeacherName, TeacherReportPeri
     IReadOnlyList<TeacherReportPurchase> Purchases, IReadOnlyList<TeacherReportGift> Gifts,
     IReadOnlyList<TeacherReportRecharge> Recharges, IReadOnlyList<TeacherReportFunding> Funding,
     IReadOnlyList<TeacherReportRefund> Refunds, IReadOnlyList<TeacherReportPayment> Payments,
-    IReadOnlyList<TeacherReportPurchase> Cancellations, IReadOnlyList<TeacherReportMovement> Movements);
+    IReadOnlyList<TeacherReportPurchase> Cancellations, IReadOnlyList<TeacherReportMovement> Movements)
+{
+    public IReadOnlyList<string> CurrentAgreements { get; init; } = [];
+}
 
 public interface ITeacherDetailedReportService
 {

@@ -53,11 +53,11 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             notes.Add("الباكدج المشترك ظاهر بسعر الشراء كامل؛ نصيب المستر وعمولتنا هنا تخص المستر ده فقط، مش كل المدرسين في الباكدج.");
         var agreements = await ReadAgreements(teacherId, start, end, ct);
         if (snapshot is not null) await snapshot.CommitAsync(ct);
-        return new(name, period, summary, agreements, notes,
+        return new(name, period, summary, agreements.History, notes,
             purchases, BuildGifts(grants, content, start, end), recharges, funding,
             allRefunds.Where(x => InPeriod(x.At, start)).ToArray(), payments.Where(x => InPeriod(x.At, start)).ToArray(),
             allPurchases.Where(x => x.CancelledAt.HasValue && x.CancelledAt < end && InPeriod(x.CancelledAt.Value, start)).ToArray(),
-            BuildMovements(sources, adjustments, start));
+            BuildMovements(sources, adjustments, start)) { CurrentAgreements = agreements.Current };
     }
 
     private async Task<List<StudentAccessGrant>> ReadGrants(
@@ -213,17 +213,21 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             .OrderBy(x => x.ResolvedAt ?? x.CreatedAt).ThenBy(x => x.Id)
             .Select(x => new TeacherReportRecharge(x.UserId, x.User.FullName, x.Amount, x.ResolvedAt ?? x.CreatedAt)).ToArrayAsync(ct);
 
-    private async Task<string[]> ReadAgreements(Guid teacherId, DateTime? start, DateTime end, CancellationToken ct)
+    private async Task<(string[] History, string[] Current)> ReadAgreements(Guid teacherId, DateTime? start, DateTime end, CancellationToken ct)
     {
         var agreements = await db.TeacherFinancialAgreements.AsNoTracking().Where(x => x.TeacherId == teacherId
             && x.EffectiveFrom < end && (!start.HasValue || !x.EffectiveTo.HasValue || x.EffectiveTo >= start))
             .OrderBy(x => x.ScopeType).ThenBy(x => x.EffectiveFrom).ToListAsync(ct);
-        return agreements.Select(x => $"{AgreementScope(x.ScopeType)}: {AgreementRule(x)}"
+        var cutoff = end.AddTicks(-1);
+        return (agreements.Select(AgreementDescription).Distinct().ToArray(),
+            agreements.Where(x => x.IsActive && x.EffectiveFrom <= cutoff && (!x.EffectiveTo.HasValue || x.EffectiveTo > cutoff))
+                .Select(AgreementDescription).Distinct().ToArray());
+    }
+
+    private static string AgreementDescription(TeacherFinancialAgreement x) => $"{AgreementScope(x.ScopeType)}: {AgreementRule(x)}"
             + (x.ScopeId.HasValue ? " (اتفاق لمحتوى محدد)" : "")
             + $" · من {CairoTime.ToLocal(x.EffectiveFrom):yyyy-MM-dd}"
-            + (x.EffectiveTo.HasValue ? $" لحد {CairoTime.ToLocal(x.EffectiveTo.Value):yyyy-MM-dd}" : ""))
-            .Distinct().ToArray();
-    }
+            + (x.EffectiveTo.HasValue ? $" لحد {CairoTime.ToLocal(x.EffectiveTo.Value):yyyy-MM-dd}" : "");
 
     private static string AgreementScope(TeacherAgreementScopeType scope) => scope switch
     {

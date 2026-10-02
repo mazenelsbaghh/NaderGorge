@@ -111,7 +111,7 @@ public static class TeacherDetailedReportPdf
                     column.Item().PaddingBottom(11.25f).Text(first
                         ? "الشراء حسب الاتفاق وقت الشراء، والكروت للاتفاق الحالي. المجاني والهدايا من غير عمولة. الأرقام بالجنيه."
                         : "كل شراء بيتحسب حسب الاتفاق الخاص بيه. عدد الشراء ممكن يزيد عن عدد الطلاب لأن الطالب ممكن يشتري أكتر من مرة.").FontSize(9).LineHeight(1.85f);
-                    if (first && report.Agreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report));
+                    if (first && report.CurrentAgreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report));
                     if (chunk.Length > 0)
                         column.Item().PaddingBottom(4.5f).Text($"الكورسات {index * 2 + 1}" + (chunk.Length > 1 ? $" و{index * 2 + 2}" : "") + $" من {courseIds.Length}").Bold().FontColor(Teal).FontSize(8.25f);
                     foreach (var id in chunk) column.Item().PaddingBottom(13.5f).PreventPageBreak().Element(x => Course(x, report, id));
@@ -128,18 +128,9 @@ public static class TeacherDetailedReportPdf
         }
     }
 
-    private static IReadOnlyList<string> CurrentAgreements(TeacherDetailedReport report) => report.Agreements.Where(agreement =>
-    {
-        var dates = agreement.Split(" · من ", 2);
-        if (dates.Length < 2) return true;
-        var range = dates[1].Split(" لحد ", 2);
-        if (DateOnly.TryParseExact(range[0], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from) && from > report.Period.To) return false;
-        return range.Length < 2 || !DateOnly.TryParseExact(range[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var to) || to >= report.Period.To;
-    }).ToArray();
-
     private static void Rules(IContainer container, TeacherDetailedReport report)
     {
-        var current = CurrentAgreements(report);
+        var current = report.CurrentAgreements;
         var primary = current.Where(agreement => new[] { "الحصة:", "الشهر:", "الترم / الكورس:", "السنة / الباقة:" }
             .Any(scope => agreement.StartsWith(scope, StringComparison.Ordinal))).ToArray();
         var candidates = primary.Length > 0 ? primary : current;

@@ -193,6 +193,41 @@ public sealed class TeacherDetailedReportTests : IAsyncLifetime
         Assert.Equal(0, report.Summary.Closing);
     }
 
+    [Fact]
+    public async Task Current_agreement_cards_ignore_inactive_and_expired_terms_but_preserve_history_and_recorded_allocations()
+    {
+        var end = CairoTime.GetDayRangeUtc(Cutoff.ToDateTime(TimeOnly.MinValue)).EndUtc;
+        TeacherFinancialAgreement Agreement(TeacherAgreementScopeType scope, decimal fee, DateTime from) => new()
+        {
+            Teacher = teacher, ScopeType = scope, AllocationMode = TeacherAgreementAllocationMode.PlatformFixedPerUnit,
+            AllocationValue = fee, EffectiveFrom = from, CreatedByUserId = teacher.UserId
+        };
+        var lessonRule = Agreement(TeacherAgreementScopeType.Lesson, 10, At(1));
+        var monthRule = Agreement(TeacherAgreementScopeType.ContentSection, 40, At(1));
+        var inactiveLesson = Agreement(TeacherAgreementScopeType.Lesson, 15, At(24));
+        var inactiveMonth = Agreement(TeacherAgreementScopeType.ContentSection, 60, At(24));
+        inactiveLesson.IsActive = false;
+        inactiveMonth.IsActive = false;
+        var expired = Agreement(TeacherAgreementScopeType.Lesson, 20, At(25));
+        expired.EffectiveTo = At(30);
+        var future = Agreement(TeacherAgreementScopeType.Lesson, 30, end);
+        db.AddRange(lessonRule, monthRule, inactiveLesson, inactiveMonth, expired, future);
+        Purchase(At(26), 100, 90, 10);
+        await db.SaveChangesAsync();
+
+        var report = (await new TeacherDetailedReportService(db).ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+        Assert.Equal(2, report.CurrentAgreements.Count);
+        Assert.Contains(report.CurrentAgreements, x => x.StartsWith("الحصة: 10 جنيه"));
+        Assert.Contains(report.CurrentAgreements, x => x.StartsWith("الشهر: 40 جنيه"));
+        Assert.Equal(5, report.Agreements.Count);
+        Assert.Contains(report.Agreements, x => x.StartsWith("الحصة: 15 جنيه"));
+        Assert.Contains(report.Agreements, x => x.StartsWith("الشهر: 60 جنيه"));
+        Assert.Equal(new TeacherReportSummary(0, 90, 10, 0, 0, 0, 90), report.Summary);
+        Assert.Equal(9999, await db.TeacherAccounts.Select(x => x.CurrentBalance).SingleAsync());
+        Assert.False(db.ChangeTracker.HasChanges());
+        await File.WriteAllBytesAsync(Path.Combine(Path.GetTempPath(), "massar-teacher-report-active-agreements.pdf"), TeacherDetailedReportPdf.Generate(report));
+    }
+
     private TeacherFinancialEvent Purchase(DateTime at, decimal paid, decimal teacherShare, decimal fee)
     {
         var target = purchaseCount++ == 0 ? lesson : new Lesson { Title = "حصة أخرى", ContentSectionId = lesson.ContentSectionId };
