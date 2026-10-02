@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Xml.Linq;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Interfaces.Finance;
 using QuestPDF.Drawing;
@@ -16,13 +17,21 @@ public static class TeacherDetailedReportPdf
         using var stream = typeof(TeacherDetailedReportPdf).Assembly.GetManifestResourceStream("NaderGorge.Infrastructure.Assets.MassarLogo.svg")
             ?? throw new InvalidOperationException("Massar report logo is missing");
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        // The PDF SVG renderer does not apply CSS classes; preserve the original logo colors as SVG attributes.
+        var svg = XDocument.Parse(reader.ReadToEnd());
+        var colors = new Dictionary<string, string> { ["st0"] = "none", ["st1"] = "#cb951e", ["st2"] = Navy, ["st3"] = Teal };
+        foreach (var shape in svg.Descendants())
+            if (shape.Attribute("class") is { } css && colors.TryGetValue(css.Value, out var fill)) shape.SetAttributeValue("fill", fill);
+        return svg.ToString(SaveOptions.DisableFormatting);
     });
     private static readonly Lazy<bool> Font = new(() =>
     {
-        using var stream = typeof(TeacherDetailedReportPdf).Assembly.GetManifestResourceStream("NaderGorge.Infrastructure.Assets.Tajawal-Regular.ttf")
-            ?? throw new InvalidOperationException("Massar report font is missing");
-        FontManager.RegisterFontWithCustomName("Massar Report", stream);
+        foreach (var file in new[] { "ReportTahoma.ttf", "ReportTahomaBold.ttf", "ReportArial.ttf", "ReportArialBold.ttf" })
+        {
+            using var stream = typeof(TeacherDetailedReportPdf).Assembly.GetManifestResourceStream("NaderGorge.Infrastructure.Assets." + file)
+                ?? throw new InvalidOperationException("Massar report font is missing: " + file);
+            FontManager.RegisterFont(stream);
+        }
         return true;
     });
 
@@ -38,66 +47,117 @@ public static class TeacherDetailedReportPdf
         }).GeneratePdf();
     }
 
-    private static void Configure(PageDescriptor page, TeacherDetailedReport report)
+    private static readonly CultureInfo Arabic = CultureInfo.GetCultureInfo("ar-EG");
+    private static string PeriodLabel(TeacherReportPeriod period) =>
+        $"من {(period.From.HasValue ? period.From.Value.ToString("d MMMM yyyy", Arabic) : "البداية")} لحد {period.To.ToString("d MMMM yyyy", Arabic)}";
+    private static string CutoffLabel(TeacherReportPeriod period) => period.To.ToString("d MMMM", Arabic);
+
+    private static void Configure(PageDescriptor page, TeacherDetailedReport report, bool appendix = false)
     {
-        page.Margin(34);
+        page.MarginTop(appendix ? 34 : 39.7f);
+        page.MarginHorizontal(appendix ? 34 : 39.7f);
+        page.MarginBottom(16.5f);
         page.ContentFromRightToLeft();
-        page.DefaultTextStyle(x => x.FontFamily("Massar Report").FontSize(10).FontColor(Navy));
-        page.Footer().BorderTop(.5f).BorderColor(Line).PaddingTop(5).Row(row =>
+        page.DefaultTextStyle(x => x.FontFamily("Tahoma").FontSize(9).LineHeight(1.7f).FontColor("#20354a"));
+        page.Footer().BorderTop(.5f).BorderColor(Line).PaddingTop(3.75f).Row(row =>
         {
-            row.RelativeItem().Text(PeriodLabel(report.Period)).FontSize(8);
-            row.ConstantItem(80).ContentFromLeftToRight().Text(text =>
+            row.ConstantItem(35).ContentFromLeftToRight().Text(text =>
             {
-                text.DefaultTextStyle(x => x.FontSize(8)); text.CurrentPageNumber(); text.Span(" / "); text.TotalPages();
+                text.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(7).FontColor("#5b7085"));
+                text.CurrentPageNumber(); text.Span(" / "); text.TotalPages();
             });
-            row.ConstantItem(90).ContentFromLeftToRight().Text("Massar Academy").FontSize(8);
+            row.RelativeItem().AlignCenter().Text($"{report.TeacherName} · التقفيل حتى {report.Period.To.ToString("d MMMM yyyy", Arabic)}").FontSize(6.75f);
+            row.ConstantItem(90).ContentFromLeftToRight().Text("Massar Academy").FontFamily("Arial").FontSize(6.75f);
         });
     }
 
-    private static void Brand(IContainer container, TeacherDetailedReport report, string title)
+    private static void Brand(IContainer container, TeacherDetailedReport report, string title, string part, bool appendix = false)
     {
-        container.BorderBottom(2).BorderColor(Teal).PaddingBottom(10).Row(row =>
+        container.BorderBottom(appendix ? 1.5f : 2.25f).BorderColor(Teal).PaddingBottom(appendix ? 3.75f : 8.25f).Row(row =>
         {
             row.RelativeItem().Column(column =>
             {
-                column.Item().Text("منصة مسار").FontColor(Teal).FontSize(10);
-                column.Item().Text(title).Bold().FontSize(21);
-                column.Item().PaddingTop(5).Text($"حساب {report.TeacherName} · {PeriodLabel(report.Period)}").FontSize(10);
+                column.Item().PaddingBottom(3.75f).Text("منصة مسار").FontColor(Teal).FontSize(9).LineHeight(1.2f);
+                column.Item().Text(title).Bold().FontColor(Navy).FontSize(appendix ? 15 : 19.5f).LineHeight(1.5f);
+                column.Item().PaddingTop(4.5f).Text($"حساب {report.TeacherName} {PeriodLabel(report.Period)}").FontColor("#5b7085").FontSize(9).LineHeight(1.2f);
+                column.Item().PaddingTop(4.5f).Text(part).FontColor("#5b7085").FontSize(9).LineHeight(1.2f);
             });
-            row.ConstantItem(82).Height(66).Svg(Logo.Value);
+            row.ConstantItem(appendix ? 57 : 81).Height(appendix ? 43.5f : 61.5f).Svg(Logo.Value);
         });
     }
 
-    private static string PeriodLabel(TeacherReportPeriod period) =>
-        $"من {(period.From.HasValue ? period.From.Value.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("ar-EG")) : "البداية")} لحد {period.To.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("ar-EG"))}";
     private static string Money(decimal amount) => amount.ToString("N2", CultureInfo.InvariantCulture);
     private static string Date(DateTime at) => CairoTime.ToLocal(at).ToString("dd/MM/yyyy, HH:mm", CultureInfo.InvariantCulture);
+    private static string CourseLabel(string name) => name.Replace("باقه ال 3 شهور", "3 شهور").Replace("باقه الترم الاول", "الترم الأول").Replace(" ( ", " (").Replace(" )", ")");
     private static string Count(IEnumerable<Guid?> ids) => ids.Where(x => x.HasValue).Distinct().Count().ToString(CultureInfo.InvariantCulture);
 
     private static void Courses(IDocumentContainer document, TeacherDetailedReport report)
     {
         var courseIds = report.Purchases.Select(x => x.CourseId).Concat(report.Gifts.Select(x => x.CourseId))
-            .Concat(report.Cancellations.Select(x => x.CourseId)).Distinct().ToArray();
-        var chunks = courseIds.Length == 0 ? new[] { Array.Empty<Guid>() } : courseIds.Chunk(2);
-        foreach (var chunk in chunks)
+            .Concat(report.Cancellations.Select(x => x.CourseId)).Distinct()
+            .OrderBy(id => report.Purchases.FirstOrDefault(x => x.CourseId == id)?.Course
+                ?? report.Gifts.FirstOrDefault(x => x.CourseId == id)?.Course
+                ?? report.Cancellations.First(x => x.CourseId == id).Course, StringComparer.Ordinal).ToArray();
+        var chunks = courseIds.Length == 0 ? new[] { Array.Empty<Guid>() } : courseIds.Chunk(2).ToArray();
+        for (var index = 0; index < chunks.Length; index++)
+        {
+            var chunk = chunks[index]; var first = index == 0; var last = index == chunks.Length - 1;
             document.Page(page =>
             {
                 Configure(page, report); page.Size(PageSizes.A4);
-                page.Header().Element(x => Brand(x, report, "تفاصيل حساب المدرس"));
-                page.Content().PaddingTop(14).Column(column =>
+                page.Header().Element(x => Brand(x, report, first ? $"تفاصيل حساب {report.TeacherName}" : "باقي تفاصيل الكورسات", "تفاصيل الكورسات"));
+                page.Content().PaddingTop(12).PaddingBottom(30).Column(column =>
                 {
-                    column.Spacing(12);
-                    column.Item().Text("المدفوع بيتحسب حسب اتفاق المستر، والمجاني والهدايا من غير عمولة. كل الأرقام بالجنيه.").FontSize(10);
-                    if (report.Agreements.Count > 0)
-                        column.Item().Background(Pale).Padding(9).Column(terms =>
-                        {
-                            foreach (var agreement in report.Agreements) terms.Item().Text(agreement).FontSize(8);
-                        });
-                    foreach (var courseId in chunk) column.Item().PreventPageBreak().Element(x => Course(x, report, courseId));
+                    column.Item().PaddingBottom(11.25f).Text(first
+                        ? "الحساب بعد التصحيح. المدفوع بيتحسب حسب اتفاق المستر، والمجاني والهدايا من غير عمولة. كل الأرقام بالجنيه."
+                        : "نفس الاتفاق على كل الكورسات. عدد الشراء ممكن يزيد عن عدد الطلاب لأن الطالب ممكن يشتري أكتر من مرة.").FontSize(9).LineHeight(1.85f);
+                    if (first && report.Agreements.Count > 0) column.Item().PaddingBottom(12.75f).Element(x => Rules(x, report.Agreements));
+                    if (chunk.Length > 0)
+                        column.Item().PaddingBottom(4.5f).Text($"الكورسات {index * 2 + 1}" + (chunk.Length > 1 ? $" و{index * 2 + 2}" : "") + $" من {courseIds.Length}").Bold().FontColor(Teal).FontSize(8.25f);
+                    foreach (var id in chunk) column.Item().PaddingBottom(13.5f).PreventPageBreak().Element(x => Course(x, report, id));
                     if (chunk.Length == 0) column.Item().Text("مفيش مشتريات أو هدايا في الفترة دي.");
-                    column.Item().Text("عدد الطلاب بيحسب كل طالب مرة واحدة داخل الكورس، حتى لو اشترى أكتر من مرة. عدد الشراء ممكن يزيد عن عدد الطلاب.").FontSize(8);
+                    if (last && !first)
+                    {
+                        var paid = report.Purchases.Where(x => x.Counted && x.Paid > 0).ToArray();
+                        column.Item().Background("#fbf6e9").CornerRadius(3.75f).BorderRight(2.25f).BorderColor("#cb951e").Padding(9)
+                            .Text($"في الكورسات {Count(paid.Select(x => x.StudentId))} طالب مختلف دفعوا في {paid.Length} عملية شراء موجودة. إجمالي المدفوع {Money(paid.Sum(x => x.Paid))} جنيه. نصيب المستر {Money(paid.Sum(x => x.Teacher))} وعمولتنا {Money(paid.Sum(x => x.Platform))}.").FontSize(8.25f).LineHeight(1.85f);
+                    }
+                    column.Item().PaddingTop(7.5f).Text("عدد الطلاب في إجمالي الكورس بيحسب كل طالب مرة واحدة، حتى لو اشترى أكتر من نوع. المجاني والهدايا ظاهرين منفصلين.").FontColor("#5b7085").FontSize(7.5f).LineHeight(1.9f);
                 });
             });
+        }
+    }
+
+    private static void Rules(IContainer container, IReadOnlyList<string> agreements)
+    {
+        var rules = agreements.Select(text =>
+        {
+            var parts = text.Split(":", 2); var detail = parts.Length == 2 ? parts[1].Split(" · ")[0].Trim() : text;
+            var platform = detail.Contains(" لينا", StringComparison.Ordinal);
+            var value = platform ? detail.Split(" لينا")[0] : detail;
+            return (Scope: parts[0], Value: value, Platform: platform);
+        }).Distinct().ToList();
+        var term = rules.FindIndex(x => x.Scope == "الترم / الكورس");
+        var year = rules.FindIndex(x => x.Scope == "السنة / الباقة");
+        if (term >= 0 && year >= 0 && rules[term].Value == rules[year].Value && rules[term].Platform == rules[year].Platform)
+        {
+            rules[term] = ("الترم والسنة", rules[term].Value, rules[term].Platform); rules.RemoveAt(year);
+        }
+        rules = rules.OrderBy(x => x.Scope switch { "الحصة" => 0, "الشهر" => 1, "الترم والسنة" => 2, _ => 3 }).ToList();
+        container.Column(column =>
+        {
+            column.Spacing(6);
+            foreach (var chunk in rules.Chunk(3)) column.Item().Row(row =>
+            {
+                row.Spacing(6);
+                foreach (var rule in chunk)
+                    row.RelativeItem().Background("#f2f8f8").Border(.75f).BorderColor("#d9eeed").CornerRadius(4.5f).Padding(6.75f).Column(card =>
+                    {
+                        card.Item().AlignCenter().Text((rule.Platform ? "عمولتنا في " : "نصيب المستر في ") + rule.Scope).FontSize(8.25f).LineHeight(1.2f);
+                        card.Item().PaddingTop(3).AlignCenter().Text(rule.Value).Bold().FontColor(Teal).FontSize(12).LineHeight(1.2f);
+                    });
+            });
+        });
     }
 
     private static void Course(IContainer container, TeacherDetailedReport report, Guid courseId)
@@ -107,14 +167,14 @@ public static class TeacherDetailedReportPdf
         var cancellations = report.Cancellations.Where(x => x.CourseId == courseId).ToArray();
         var paid = purchases.Where(x => x.Counted && x.Paid > 0).ToArray();
         var name = purchases.FirstOrDefault()?.Course ?? gifts.FirstOrDefault()?.Course ?? cancellations.First().Course;
-        container.Border(1).BorderColor(Line).Column(column =>
+        container.Border(.75f).BorderColor(Line).CornerRadius(7.5f).Column(column =>
         {
             var people = Count(purchases.Where(x => x.Counted).Select(x => x.StudentId)
                 .Concat(gifts.Where(x => x.Status == "موجود").Select(x => (Guid?)x.StudentId)));
-            column.Item().Background(Pale).BorderRight(3).BorderColor(Teal).Padding(10).Row(row =>
+            column.Item().Background(Pale).CornerRadiusTopLeft(7.5f).CornerRadiusTopRight(7.5f).BorderRight(3).BorderColor(Teal).PaddingVertical(9).PaddingHorizontal(10.5f).Row(row =>
             {
-                row.RelativeItem().Text(name).Bold().FontSize(13);
-                row.ConstantItem(115).Text($"{people} طالب مختلف عنده").FontColor(Teal).FontSize(9);
+                row.RelativeItem().Text(name).Bold().FontColor(Navy).FontSize(11.25f).LineHeight(1.6f);
+                row.ConstantItem(105).AlignMiddle().AlignLeft().Text($"{people} طالب مختلف عنده").FontColor(Teal).FontSize(8.25f);
             });
             var kinds = new[] { "الحصة", "الشهر", "الترم / الكورس", "السنة / الباقة" }
                 .Concat(purchases.Select(x => x.Kind)).Distinct();
@@ -131,18 +191,18 @@ public static class TeacherDetailedReportPdf
             var ids = operations.Select(x => x.GrantId).OfType<Guid>().ToHashSet();
             var refunded = report.Refunds.Where(x => x.GrantId.HasValue && ids.Contains(x.GrantId.Value)
                 || operations.Any(p => p.OperationId == x.SourceId)).Sum(x => x.Amount);
-            column.Item().Padding(8).Row(row =>
+            column.Item().BorderTop(.75f).BorderColor(Line).PaddingVertical(8.25f).PaddingHorizontal(9).Row(row =>
             {
-                row.Spacing(6);
+                row.Spacing(4.5f);
                 foreach (var stat in new[] {
-                    (Value: Money(refunded), Label: "اترد للطلاب"),
+                    (Value: Money(refunded), Label: "اترد لرصيد الطلاب"),
                     (Value: cancellations.Length.ToString(), Label: "شراء اتلغى"),
                     (Value: gifts.Count(x => x.Status == "موجود").ToString(), Label: "اشتراكات هدية"),
                     (Value: purchases.Count(x => x.Counted && x.Paid == 0).ToString(), Label: "شراء مجاني موجود") })
-                    row.RelativeItem().Background(Pale).Padding(6).AlignCenter().Column(box =>
+                    row.RelativeItem().Background(Pale).CornerRadius(3.75f).PaddingVertical(6).PaddingHorizontal(3).AlignCenter().Column(box =>
                     {
-                        box.Item().AlignCenter().Text(stat.Value).Bold().FontSize(13);
-                        box.Item().AlignCenter().Text(stat.Label).FontSize(8);
+                        box.Item().AlignCenter().Text(stat.Value).FontFamily("Arial").Bold().FontColor(Navy).FontSize(6.75f).LineHeight(1.4f);
+                        box.Item().PaddingTop(3).AlignCenter().Text(stat.Label).FontSize(6.75f).LineHeight(1.4f);
                     });
             });
         });
@@ -151,58 +211,65 @@ public static class TeacherDetailedReportPdf
     private static void Summary(IDocumentContainer document, TeacherDetailedReport report) => document.Page(page =>
     {
         Configure(page, report); page.Size(PageSizes.A4);
-        page.Header().Element(x => Brand(x, report, "ملخص الحساب"));
-        page.Content().PaddingTop(16).Column(column =>
+        page.Header().Element(x => Brand(x, report, "ملخص الحساب", "الحساب تحت تفاصيل الكورسات"));
+        page.Content().PaddingTop(12).PaddingBottom(30).Column(column =>
         {
-            column.Spacing(14); var summary = report.Summary;
-            column.Item().Background(Navy).Padding(16).Row(hero =>
+            var summary = report.Summary; var end = CutoffLabel(report.Period);
+            column.Item().Background(Navy).CornerRadius(7.5f).PaddingVertical(12.75f).PaddingHorizontal(15).Row(hero =>
             {
-                hero.RelativeItem().AlignMiddle().Text(summary.Closing < 0 ? "عليه للمنصة لحد نهاية الفترة" : "له عندنا لحد نهاية الفترة").FontColor("#FFFFFF").FontSize(14);
+                hero.RelativeItem().AlignMiddle().Column(caption =>
+                {
+                    caption.Item().Text((summary.Closing < 0 ? "عليه للمنصة لحد " : "له عندنا لحد ") + end).FontColor("#FFFFFF").FontSize(11.25f).LineHeight(1.2f);
+                    caption.Item().PaddingTop(5.25f).Text("بعد استبعاد الإلغاء والمجاني، وحسب السداد المسجل.").FontColor("#d6e5ed").FontSize(8.25f);
+                });
                 hero.RelativeItem().ContentFromLeftToRight().Column(value =>
                 {
-                    value.Item().Text(Money(Math.Abs(summary.Closing))).Bold().FontColor(Gold).FontSize(30);
-                    value.Item().Text("جنيه").FontColor(Gold);
+                    value.Item().Text(Money(Math.Abs(summary.Closing))).FontFamily("Arial").Bold().FontColor(Gold).FontSize(24.75f).LineHeight(1.2f);
+                    value.Item().PaddingTop(3.75f).Text("جنيه").Bold().FontColor("#d6e5ed").FontSize(9).LineHeight(1.2f);
                 });
             });
-            column.Item().Text("الحسبة واحدة واحدة").FontColor(Teal).Bold().FontSize(14);
+            column.Item().PaddingTop(12.75f).PaddingBottom(6).Text("الحسبة واحدة واحدة").FontColor(Teal).Bold().FontSize(9.75f);
             var paid = report.Purchases.Where(x => x.Counted && x.Paid > 0).ToArray();
-            List<string[]> rows = [
-                ["رصيد قبل بداية الفترة", Money(summary.Opening)],
+            List<string[]> rows = [];
+            if (report.Period.From.HasValue) rows.Add(["رصيد قبل بداية الفترة", Money(summary.Opening)]);
+            rows.AddRange([
                 ["الطلاب دفعوا في الاشتراكات الموجودة", Money(paid.Sum(x => x.Paid))],
-                ["عمولتنا حسب الاتفاق في الفترة", Money(summary.Platform)],
-                ["نصيب المستر في الفترة بعد المرتجعات", Money(summary.Earned)],
+                ["عمولتنا حسب الاتفاق", Money(summary.Platform)],
+                [$"نصيب {report.TeacherName}", Money(summary.Earned)],
                 ["نصيبه اللي قبضه من أكواد مدفوعة", Money(summary.Retained)],
-                ["سداد مسجل له في الفترة", Money(summary.Paid)],
-                ["تسويات ومديونيات تخص الفترة", Money(summary.Adjustments)],
-                ["الصافي لحد نهاية الفترة", Money(summary.Closing)] ];
-            column.Item().Element(x => Table(x, new(["البيان", "جنيه"], [75,25], rows, LastRowIsTotal: true)));
-            column.Item().Text($"في الفترة {Count(paid.Select(x => x.StudentId))} طالب مختلف دفعوا في {paid.Length} عملية شراء موجودة.").FontSize(10);
-            if (summary.Earned != paid.Sum(x => x.Teacher))
-                column.Item().Text($"نصيب المستر يشمل كمان {Money(summary.Earned - paid.Sum(x => x.Teacher))} جنيه من باقي الحركات والمرتجعات المسجلة للفترة.").FontSize(9);
-            foreach (var note in report.Notes) column.Item().Background("#FBF6E9").Padding(10).Text(note).FontSize(9);
+                [$"سداد مسجل له حتى {end}", Money(summary.Paid)],
+                [summary.Adjustments <= 0 ? "مبالغ عليه تخص الفترة" : "تسويات تخص الفترة", Money(Math.Abs(summary.Adjustments))],
+                [summary.Closing < 0 ? $"الصافي اللي عليه للمنصة حتى {end}" : $"الصافي اللي له عندنا حتى {end}", Money(Math.Abs(summary.Closing))] ]);
+            column.Item().Element(x => Table(x, new([], [68,32], rows, LastRowIsTotal: true, Account: true)));
+            foreach (var note in report.Notes)
+                column.Item().PaddingTop(9.75f).Background("#fbf6e9").CornerRadius(3.75f).Padding(9).Text(note).FontSize(8.25f);
         });
     });
 
-    private sealed record ReportTable(string[] Headers, float[] Widths, IReadOnlyList<string[]> Rows, bool LastRowIsTotal = false);
+    private sealed record ReportTable(string[] Headers, float[] Widths, IReadOnlyList<string[]> Rows, bool LastRowIsTotal = false, bool Account = false, bool Appendix = false);
     private static void Table(IContainer container, ReportTable contents) => container.Table(table =>
     {
         table.ColumnsDefinition(columns => { foreach (var width in contents.Widths) columns.RelativeColumn(width); });
         table.Header(header =>
         {
-            foreach (var title in contents.Headers) header.Cell().Background(Navy).Padding(6).Text(title).FontColor("#FFFFFF").Bold().FontSize(8);
+            foreach (var title in contents.Headers) header.Cell().Background(Navy).PaddingVertical(contents.Appendix ? 3.75f : 6.75f).PaddingHorizontal(5.25f)
+                .AlignCenter().Text(title).FontColor("#FFFFFF").Bold().FontSize(contents.Appendix ? 8.25f : 7.5f).LineHeight(contents.Appendix ? 1.5f : 1.65f);
         });
         var index = 0;
         foreach (var cells in contents.Rows)
         {
-            var total = contents.LastRowIsTotal && index == contents.Rows.Count - 1;
+            var total = contents.LastRowIsTotal && index == contents.Rows.Count - 1 || contents.Account && cells[0].StartsWith("نصيب ", StringComparison.Ordinal);
             foreach (var cell in cells)
             {
-                IContainer entry = table.Cell().Background(total ? "#E5F3F1" : index % 2 == 0 ? "#FFFFFF" : Pale)
-                    .BorderBottom(.5f).BorderColor(Line).Padding(6);
-                if (decimal.TryParse(cell, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
-                    entry = entry.ContentFromLeftToRight().AlignCenter();
-                var text = entry.Text(cell).FontSize(8.5f);
-                if (total) text.Bold();
+                IContainer entry = table.Cell().Background(total ? "#E5F3F1" : index % 2 == 0 ? "#FFFFFF" : "#f5f8fa")
+                    .BorderBottom(.75f).BorderColor(Line).PaddingVertical(contents.Account ? 6 : contents.Appendix ? 3.75f : 7.35f).PaddingHorizontal(contents.Account ? 8.25f : 5.25f).AlignMiddle();
+                var numeric = decimal.TryParse(cell, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
+                var timestamp = DateTime.TryParseExact(cell, "dd/MM/yyyy, HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+                if (numeric || timestamp)
+                    entry = entry.ContentFromLeftToRight().DefaultTextStyle(x => x.FontFamily("Arial"));
+                if (!contents.Account && numeric) entry = entry.AlignCenter();
+                var text = entry.Text(cell).FontSize(contents.Account || contents.Appendix ? 8.25f : 7.5f).LineHeight(contents.Appendix ? 1.5f : 1.65f);
+                if (total || contents.Account && cell != cells[0]) text.Bold().FontColor(Navy);
             }
             index++;
         }
@@ -212,12 +279,12 @@ public static class TeacherDetailedReportPdf
     private static void Appendix(IDocumentContainer document, TeacherDetailedReport report, (string Title, string Note, ReportTable Contents) section) =>
         document.Page(page =>
         {
-            Configure(page, report); page.Size(PageSizes.A4.Landscape());
-            page.Header().Element(x => Brand(x, report, section.Title));
-            page.Content().PaddingTop(12).Column(column =>
+            Configure(page, report, appendix: true); page.Size(PageSizes.A4.Landscape());
+            page.Content().PaddingBottom(28).Column(column =>
             {
-                column.Spacing(10); column.Item().Text(section.Note).FontSize(9);
-                column.Item().Element(x => Table(x, section.Contents));
+                column.Item().PaddingBottom(6).Element(x => Brand(x, report, section.Title, "التفاصيل الكاملة", appendix: true));
+                column.Item().PaddingBottom(6).Text(section.Note).FontSize(7.5f);
+                column.Item().Element(x => Table(x, section.Contents with { Appendix = true }));
             });
         });
 
@@ -225,7 +292,7 @@ public static class TeacherDetailedReportPdf
     {
         Appendix(document, report, ("كل عمليات الشراء", $"{report.Purchases.Count} عملية في الفترة. المجاني والملغي والمرفوض ظاهرين منفصلين.", new(
             ["الطالب","الكورس","اشترى إيه؟","البند","وقت الشراء","الحالة","دفع كام؟","عمولتنا","للمستر","اترد للطالب"],
-            [17,12,8,18,11,9,7,6,6,6], report.Purchases.Select(x => new[] { x.Student, x.Course, x.Kind, x.Content,
+            [17,12,8,18,11,9,7,6,6,6], report.Purchases.Select(x => new[] { x.Student, CourseLabel(x.Course), x.Kind, x.Content,
                 Date(x.At), x.Status, Money(x.Paid), Money(x.Platform), Money(x.Teacher),
                 Money(report.Refunds.Where(r => r.SourceId == x.OperationId || r.GrantId.HasValue && r.GrantId == x.GrantId).Sum(r => r.Amount)) })
                 .Append(["إجمالي كل الشراء", "", "", "", "", "", Money(report.Purchases.Sum(x => x.Paid)),
@@ -247,7 +314,7 @@ public static class TeacherDetailedReportPdf
                 .ToArray(), LastRowIsTotal: true)));
         Appendix(document, report, ("اشتراكات الهدايا", "الهدايا مجانية وعمولتها صفر. نفس الطالب ممكن يظهر في الشراء وفي الهدية.", new(
             ["الطالب","الكورس","نوع الاشتراك","البند","وقت الهدية","الحالة"], [25,21,12,22,14,6],
-            report.Gifts.Select(x => new[] { x.Student, x.Course, x.Kind, x.Content, Date(x.At), x.Status }).ToArray())));
+            report.Gifts.Select(x => new[] { x.Student, CourseLabel(x.Course), x.Kind, x.Content, Date(x.At), x.Status }).ToArray())));
         if (report.Payments.Count > 0)
             Appendix(document, report, ("السداد المسجل للمستر", "صرف الأرباح المسجل في الفترة المختارة.", new(["المبلغ","وقت السداد","طريقة السداد","المرجع"], [20,25,25,30],
                 report.Payments.Select(x => new[] { Money(x.Amount), Date(x.At), x.Method, x.Reference ?? "مش مسجل" })
@@ -286,7 +353,7 @@ public static class TeacherDetailedReportPdf
 
     private static ReportTable CancellationTable(TeacherDetailedReport report)
     {
-        var rows = report.Cancellations.Select(x => new[] { x.Student, x.Course, x.Kind, x.Content, Date(x.CancelledAt!.Value), Money(x.Paid),
+        var rows = report.Cancellations.Select(x => new[] { x.Student, CourseLabel(x.Course), x.Kind, x.Content, Date(x.CancelledAt!.Value), Money(x.Paid),
             Money(report.Refunds.Where(r => r.SourceId == x.OperationId || r.GrantId.HasValue && r.GrantId == x.GrantId).Sum(r => r.Amount)), x.CancellationReason ?? "مش مسجل" }).ToList();
         rows.AddRange(report.Refunds.Where(r => !report.Cancellations.Any(x => r.SourceId == x.OperationId || r.GrantId.HasValue && r.GrantId == x.GrantId))
             .Select(r => new[] { r.Student, "استرداد منفصل", r.Method, r.Reason, Date(r.At), "-", Money(r.Amount), r.Reason }));
