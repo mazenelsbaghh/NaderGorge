@@ -15,7 +15,7 @@ namespace NaderGorge.Infrastructure.Services;
 /// Claims and sends frozen campaign recipients. A cluster lease must wrap each batch;
 /// atomic recipient claims remain the final duplicate-send fence.
 /// </summary>
-public sealed class WhatsAppCampaignDispatcher(
+public sealed partial class WhatsAppCampaignDispatcher(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
     ILogger<WhatsAppCampaignDispatcher> logger)
@@ -243,16 +243,17 @@ public sealed class WhatsAppCampaignDispatcher(
             throw;
         }
 
-        ApplyProviderOutcome(recipient, response);
         try
         {
-            await PersistRecipientAndProjectionAsync(db, campaigns, campaign, ct);
+            // Retry only local persistence. Repeating the provider call could deliver a duplicate.
+            await PersistProviderOutcomeAsync(recipientId, response, ct);
         }
         catch (Exception exception) when (response.Success && exception is not OperationCanceledException)
         {
             throw new ProviderAcceptedPersistenceException(exception);
         }
 
+        db.ClearTrackedChanges();
         if (response.Success && !string.IsNullOrWhiteSpace(response.MetaMessageId))
             await campaigns.ReconcilePendingReceiptAsync(response.MetaMessageId, ct);
     }

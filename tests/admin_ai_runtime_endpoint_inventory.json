@@ -5357,6 +5357,23 @@
     "permissions": []
   },
   {
+    "route": "api/admin/teacher-finance-center/settlements/{id:guid}/payment-preview",
+    "controller": "AdminTeacherFinanceCenter",
+    "action": "PreviewSettlementPayment",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/admin/teacher-finance-center/settlements/{id:guid}/review",
     "controller": "AdminTeacherFinanceCenter",
     "action": "ReviewSettlement",

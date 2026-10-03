@@ -6,6 +6,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_october_3_signed_resource_queries_are_omitted_but_upstream_failures_remain_observable() -> None:
+    nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
+    for name in ("massar_request_safe", "massar_failure", "massar_websocket_safe"):
+        fields = nginx.split("log_format " + name, 1)[1].split(";", 1)[0]
+        assert "$uri" in fields
+        assert "$request_uri" not in fields
+        assert "$request " not in fields
+        assert "$http_referer" not in fields
+        assert "$request_time" in fields
+    assert "access_log /var/log/nginx/access.log massar_request_safe;" in nginx
+    assert "access_log /dev/stdout massar_failure if=$massar_failed_request;" in nginx
+    assert "error_log /var/log/nginx/error.log crit;" in nginx
+    assert "upstream_status=$upstream_status" in nginx
+
+
+def test_october_3_ingress_logs_preserve_status_and_timings_without_query_tokens() -> None:
+    for filename in ("app.cfg", "postgres.cfg"):
+        config = (ROOT / "deploy/production/config/haproxy" / filename).read_text()
+        fields = config.split("log-format ", 1)[1].split("\n", 1)[0]
+        assert "%{+Q}HP" in fields
+        assert "%HQ" not in fields
+        assert "%HU" not in fields
+        assert "%r " not in fields
+        assert "%ST" in fields
+        assert "%Tc/%Tr/%Ta" in fields
+
+
 def test_websocket_logs_never_persist_signalr_query_tokens() -> None:
     nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
     websocket = nginx.split("server_name ws.massar-academy.net;", 1)[1].split("\n}", 1)[0]

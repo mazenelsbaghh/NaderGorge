@@ -30,6 +30,7 @@ export interface TeacherFinanceSummary {
   retained?: number;
   codeAmountDue?: number;
   codeAmountCollected?: number;
+  transferFees?: number;
   netBalance: number;
   debtReserved: number;
   unreservedDebt: number;
@@ -141,6 +142,7 @@ export interface TeacherStatement {
     studentCollections: number;
     openDebtAdjustments: number;
     platformEarned: number;
+    transferFees?: number;
   };
   activity: {
     purchasingStudents: number;
@@ -175,6 +177,21 @@ export interface SettlementPreview {
   grossDueAmount: number;
   debtDeductionAmount: number;
   netPayableAmount: number;
+}
+
+export interface TeacherTransferQuote {
+  teacherAmount: number;
+  platformShareBasis: number;
+  feeRate: number;
+  transferFee: number;
+  netTransferAmount: number;
+}
+
+export interface TeacherSettlementPaymentInput {
+  paymentMethod: string;
+  transferReference: string;
+  attachmentUrl?: string;
+  amount: number;
 }
 
 export interface TeacherSettlementLine {

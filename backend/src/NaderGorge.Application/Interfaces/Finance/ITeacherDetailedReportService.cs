@@ -16,7 +16,7 @@ public sealed record TeacherReportPayment(decimal Amount, DateTime At, string Me
 public sealed record TeacherReportMovement(DateTime At, string Description, decimal Teacher, decimal Platform,
     string Status, string Reference);
 public sealed record TeacherReportSummary(decimal Opening, decimal Earned, decimal Platform,
-    decimal Retained, decimal Paid, decimal Adjustments, decimal Closing);
+    decimal Retained, decimal Paid, decimal Adjustments, decimal Closing, decimal TransferFees = 0m);
 public sealed record TeacherDetailedReport(string TeacherName, TeacherReportPeriod Period,
     TeacherReportSummary Summary, IReadOnlyList<string> Agreements, IReadOnlyList<string> Notes,
     IReadOnlyList<TeacherReportPurchase> Purchases, IReadOnlyList<TeacherReportGift> Gifts,

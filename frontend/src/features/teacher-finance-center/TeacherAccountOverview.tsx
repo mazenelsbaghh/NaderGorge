@@ -22,6 +22,7 @@ export function TeacherAccountOverview({ account, showSources = false }: { accou
         <dt className="text-sm text-[var(--admin-muted)]">{label}</dt><dd className="mt-2 break-words text-xl font-bold tabular-nums">{teacherMoney(Number(amount))}</dd>
       </div>)}
     </dl>
+    {!!account.transferFees && <p className="rounded-xl bg-[var(--admin-card-soft)] p-3 text-sm">عمولة تحويل فودافون كاش المخصومة من مستحقاته: <strong>{teacherMoney(account.transferFees)}</strong>. محسوبة على نصيب المنصة، ومضافة لحسابنا.</p>}
     {(!!account.retained || !!account.codeAmountDue || !!account.codeAmountCollected) && <section className="rounded-xl border border-[var(--admin-border)] p-4 space-y-3" aria-label="حساب دفعات الأكواد">
       <h3 className="font-bold">الأكواد اللي استلمها المدرّس</h3>
       <dl className="grid gap-3 sm:grid-cols-3">{[

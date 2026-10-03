@@ -105,3 +105,19 @@ test('production Redis refuses direct localhost fallback', () => {
     assert.throws(() => redisConnectionOptions(), /Sentinel configuration/);
   });
 });
+
+test('2026-10-03 demoted Redis primary reconnects only for commands rejected before writing', () => {
+  withEnvironment({
+    NODE_ENV: 'production',
+    REDIS_SENTINELS: '127.0.0.1:26379',
+    REDIS_SENTINEL_MASTER: 'test-primary',
+    REDIS_PASSWORD: 'test-only-password',
+  }, () => {
+    const reconnect = redisConnectionOptions().reconnectOnError;
+    assert.equal(typeof reconnect, 'function');
+    if (typeof reconnect !== 'function') throw new Error('Missing failover recovery policy');
+    assert.equal(reconnect(new Error('READONLY You cannot write against a read only replica.')), 2);
+    assert.equal(reconnect(new Error('NOREPLICAS Not enough good replicas to write.')), false);
+    assert.equal(reconnect(new Error('connection lost after write')), false);
+  });
+});

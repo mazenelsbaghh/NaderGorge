@@ -35,6 +35,8 @@ export function redisConnectionOptions(overrides: RedisOptions = {}): RedisOptio
       maxRetriesPerRequest: null,
       connectTimeout: 10_000,
       sentinelRetryStrategy: attempt => Math.min(250 * 2 ** Math.min(attempt - 1, 5), 8_000),
+      // A demoted primary rejects the command before writing; Sentinel must resolve its successor.
+      reconnectOnError: error => error.message.startsWith('READONLY ') ? 2 : false,
       ...overrides,
     };
   }

@@ -61,8 +61,9 @@ public sealed class GetTeacherFinancialSummaryQuery(IAppDbContext db)
         var platformRefunds = -period.Where(x => x.Role == FinancialAccountRole.Refunds).Sum(x => x.Amount);
         var refunds = platformRefunds + teacherRefunds;
         var platformShare = period.Where(x => x.Role == FinancialAccountRole.PlatformRevenue).Sum(x => x.Amount) - platformRefunds;
+        var transferFees = period.Where(x => x.Role == FinancialAccountRole.PlatformRevenue && x.SourceType == "TeacherTransferFee").Sum(x => x.Amount);
         var outstanding = all.Where(x => x.Role == FinancialAccountRole.TeacherPayable).Sum(x => x.Amount);
-        return new(teacherId, name, teacherShare + platformShare + refunds, platformShare, teacherShare, refunds, paid, outstanding, adjustments);
+        return new(teacherId, name, teacherShare + platformShare + refunds - transferFees, platformShare, teacherShare, refunds, paid, outstanding, adjustments);
     }
 
     private static bool IsSale(string sourceType) => sourceType is "Purchase" or "DirectSale" or "CodeSale"

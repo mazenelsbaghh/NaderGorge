@@ -22,6 +22,15 @@ public sealed record TeacherSettlementPreview(string? Error, List<TeacherFinanci
 
 public sealed class TeacherSettlementAuthorityService(IAppDbContext db, IFinancialPostingService posting)
 {
+    public async Task<TeacherTransferQuote?> PaymentPreviewAsync(Guid id, string paymentMethod, CancellationToken ct)
+    {
+        var settlement = await db.TeacherSettlements.AsNoTracking().Include(x => x.Lines).ThenInclude(x => x.Allocation)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (settlement is null || settlement.Status != TeacherSettlementStatus.Approved) return null;
+        return TeacherTransferFee.Quote(paymentMethod, settlement.Lines.Where(x => x.Allocation is not null)
+            .Select(x => x.Allocation!).ToArray(), settlement.NetPayableAmount);
+    }
+
     public async Task<TeacherSettlementPreview> PreviewAsync(SettlementCreationInput input, CancellationToken ct)
     {
         var preview = await BuildPreviewAsync(input, ct);
@@ -76,7 +85,6 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db, IFinanci
         var settlement = await db.TeacherSettlements.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (settlement is null) return NotFound("التسوية غير موجودة");
         if (settlement.Status != TeacherSettlementStatus.Approved) return Conflict("يجب اعتماد التسوية قبل تسجيل الدفع");
-        if (input.Amount is not null && input.Amount != settlement.NetPayableAmount) return Invalid("يجب أن يطابق مبلغ الدفع صافي التسوية");
         var account = await db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == settlement.TeacherId, ct);
         if (account is null || account.ReservedBalance < settlement.GrossDueAmount || account.CurrentBalance < settlement.GrossDueAmount)
             return Conflict("رصيد التسوية المحجوز غير متاح");
@@ -87,6 +95,10 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db, IFinanci
         var allocations = await db.TeacherFinancialAllocations.Where(x => allocationIds.Contains(x.Id)).ToListAsync(ct);
         if (allocations.Count != allocationIds.Count || allocations.Any(x => x.PayoutStatus != TeacherFinancialPayoutStatus.Reserved || x.SettlementLineId == null))
             return Conflict("تغيرت حالة بنود التسوية؛ لا يمكن الدفع");
+        var quote = TeacherTransferFee.Quote(input.PaymentMethod, allocations, settlement.NetPayableAmount);
+        if (quote.NetTransferAmount < 0m) return Invalid("عمولة التحويل تتجاوز المبلغ المتاح؛ راجع بنود التسوية");
+        if ((input.Amount is null && quote.TransferFee > 0m) || (input.Amount is not null && input.Amount != quote.NetTransferAmount))
+            return Invalid($"مبلغ التحويل المطلوب بعد العمولة هو {quote.NetTransferAmount:N2} جنيه. أعد معاينة الدفع.");
         var adjustmentIds = settlement.Lines.Where(x => x.AdjustmentId.HasValue).Select(x => x.AdjustmentId!.Value).ToList();
         var adjustments = await db.TeacherPayoutAdjustments.Where(x => adjustmentIds.Contains(x.Id)).ToListAsync(ct);
         if (adjustments.Count != adjustmentIds.Count || adjustments.Any(x => x.Status != TeacherPayoutAdjustmentStatus.Open))
@@ -110,18 +122,30 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db, IFinanci
         }
         foreach (var allocation in allocations) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Paid;
         account.CurrentBalance -= settlement.GrossDueAmount; account.ReservedBalance -= settlement.GrossDueAmount; account.UpdatedAt = DateTime.UtcNow;
+        if (quote.TransferFee > 0m)
+        {
+            db.TeacherSettlementLines.Add(new TeacherSettlementLine { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id,
+                Amount = -quote.TransferFee, DescriptionSnapshot = $"{TeacherTransferFee.Description}: {quote.FeeRate}% من نصيب المنصة {quote.PlatformShareBasis:N2} جنيه" });
+            settlement.NetPayableAmount = quote.NetTransferAmount;
+        }
         settlement.Status = TeacherSettlementStatus.Paid; settlement.PaidByUserId = actorId; settlement.PaidAt = DateTime.UtcNow;
         db.TeacherSettlementPayments.Add(new TeacherSettlementPayment { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id,
             Amount = settlement.NetPayableAmount, PaymentMethod = input.PaymentMethod.Trim(), TransferReference = input.TransferReference.Trim(),
             AttachmentUrl = input.AttachmentUrl, PaidByUserId = actorId });
         var invoice = await db.FinancialInvoices.FirstOrDefaultAsync(x => x.TeacherSettlementId == settlement.Id, ct);
-        if (invoice is not null) { invoice.Status = FinancialInvoiceStatus.Paid; invoice.PaymentReference = input.TransferReference.Trim(); invoice.AttachmentUrl = input.AttachmentUrl; }
+        if (invoice is not null) { invoice.Status = FinancialInvoiceStatus.Paid; invoice.Amount = settlement.NetPayableAmount; invoice.PaymentReference = input.TransferReference.Trim(); invoice.AttachmentUrl = input.AttachmentUrl; }
         if (settlement.NetPayableAmount > 0m)
             await posting.PostAsync(new FinancialPostingRequest("TeacherSettlement", settlement.Id,
                 "TeacherSettlement", $"teacher-settlement:{settlement.Id:N}:paid", "صرف تسوية مدرس",
                 settlement.PaidAt.Value, actorId,
                 [new("2000", settlement.NetPayableAmount, 0m, TeacherId: settlement.TeacherId),
                  new("1000", 0m, settlement.NetPayableAmount, TeacherId: settlement.TeacherId)]), ct);
+        if (quote.TransferFee > 0m)
+            await posting.PostAsync(new FinancialPostingRequest("TeacherTransferFee", settlement.Id,
+                "TeacherTransferFee", $"teacher-settlement:{settlement.Id:N}:transfer-fee", TeacherTransferFee.Description,
+                settlement.PaidAt.Value, actorId,
+                [new("2000", quote.TransferFee, 0m, TeacherId: settlement.TeacherId),
+                 new("4000", 0m, quote.TransferFee, TeacherId: settlement.TeacherId, Memo: $"{quote.FeeRate}% من {quote.PlatformShareBasis:N2}")]), ct);
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return new(TeacherFinanceCommandStatus.Success);
     }

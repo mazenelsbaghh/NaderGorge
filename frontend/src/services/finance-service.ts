@@ -11,6 +11,7 @@ import type {
   TeacherStatement,
   TeacherCollections,
   TeacherSettlement,
+  TeacherTransferQuote,
 } from '@/features/teacher-finance-center/types';
 
 export interface ApiResponse<T = any> {
@@ -275,6 +276,12 @@ export const financeService = {
   getTeacherSettlement: async (settlementId: string): Promise<TeacherSettlement | null> => {
     const res = await apiClient.get<ApiResponse<TeacherSettlement>>(`/admin/teacher-finance-center/settlements/${settlementId}`);
     return res.data?.data ?? null;
+  },
+
+  previewTeacherSettlementPayment: async (settlementId: string, paymentMethod: string): Promise<TeacherTransferQuote> => {
+    const res = await apiClient.get<ApiResponse<TeacherTransferQuote>>(`/admin/teacher-finance-center/settlements/${settlementId}/payment-preview`, { params: { paymentMethod } });
+    if (!res.data?.success) throw new Error(res.data?.message || 'تعذر حساب مبلغ التحويل');
+    return res.data.data;
   },
 
   reviewTeacherSettlement: async (settlementId: string): Promise<ApiResponse<boolean>> => (await apiClient.post<ApiResponse<boolean>>(`/admin/teacher-finance-center/settlements/${settlementId}/review`)).data,

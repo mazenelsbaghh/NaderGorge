@@ -113,13 +113,17 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
                 settlement.Status.ToString()));
 
         var settlementPayments = await db.TeacherSettlementPayments.AsNoTracking()
-            .Include(x => x.TeacherSettlement)
+            .Include(x => x.TeacherSettlement).ThenInclude(x => x.Lines)
             .Where(x => x.TeacherSettlement.TeacherId == teacherId
                 && (!from.HasValue || x.PaidAt >= from.Value)
                 && (!to.HasValue || x.PaidAt <= to.Value)).ToListAsync(ct);
         foreach (var payment in settlementPayments)
             rows.Add(new(payment.Id, "SettlementPayment", payment.PaidAt, "صرف تسوية",
-                payment.PaymentMethod, payment.TeacherSettlement.Status.ToString(), payment.TransferReference,
+                string.Join(" · ", new[] { payment.PaymentMethod }.Concat(payment.TeacherSettlement.Lines
+                    .Where(x => x.AllocationId == null && x.AdjustmentId == null && x.Amount < 0m
+                        && x.DescriptionSnapshot.StartsWith(TeacherTransferFee.Description, StringComparison.Ordinal))
+                    .Select(x => $"{x.DescriptionSnapshot} · الخصم {Money(-x.Amount)}"))),
+                payment.TeacherSettlement.Status.ToString(), payment.TransferReference,
                 TeacherPaymentAmount: payment.TeacherSettlement.Status == TeacherSettlementStatus.Paid ? payment.Amount : null));
 
         var adjustments = await db.TeacherPayoutAdjustments.AsNoTracking()
@@ -204,6 +208,9 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
             var byDate = right.OccurredAt.CompareTo(left.OccurredAt);
             return byDate != 0 ? byDate : right.Id.CompareTo(left.Id);
         });
+        var transferFees = -settlementPayments.Where(x => x.TeacherSettlement.Status == TeacherSettlementStatus.Paid)
+            .SelectMany(x => x.TeacherSettlement.Lines).Where(x => x.AllocationId == null && x.AdjustmentId == null
+                && x.Amount < 0m && x.DescriptionSnapshot.StartsWith(TeacherTransferFee.Description, StringComparison.Ordinal)).Sum(x => x.Amount);
         var totals = new TeacherStatementTotals(
             rows.Where(x => x.Kind == "Earning" && x.Recognized).Sum(x => x.TeacherShareAmount ?? 0m),
             rows.Where(x => x.Kind == "Earning" && !x.Recognized && x.Status == "PendingReview").Sum(x => x.TeacherShareAmount ?? 0m),
@@ -213,7 +220,7 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
             rows.Sum(x => x.StudentCollectionAmount ?? 0m),
             -rows.Where(x => x.Kind == "Adjustment" && x.Status == "Open" && x.AdjustmentAmount < 0m)
                 .Sum(x => x.AdjustmentAmount ?? 0m),
-            rows.Where(x => x.Kind == "Earning" && x.Recognized).Sum(x => x.PlatformShareAmount ?? 0m));
+            rows.Where(x => x.Kind == "Earning" && x.Recognized).Sum(x => x.PlatformShareAmount ?? 0m) + transferFees, transferFees);
         var vodafoneCollections = collections.Where(x => IsVodafoneCash(x.MatchedSmsLog?.Sender)).ToArray();
         var activity = new TeacherStatementActivity(
             purchases.Where(x => x.StudentId.HasValue).Select(x => x.StudentId!.Value).Distinct().Count(),
@@ -309,6 +316,8 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
                 summary.Item().Text($"نصيب المدرس في الفترة بعد المرتجعات: {Money(statement.Totals.Earned)}").Bold();
                 summary.Item().Text($"نصيب المنصة في الفترة بعد المرتجعات: {Money(statement.Totals.PlatformEarned)}");
                 summary.Item().Text($"دفعت للمدرس في الفترة: {Money(statement.Totals.TeacherPayments)}");
+                if (statement.Totals.TransferFees > 0m)
+                    summary.Item().Text($"عمولة تحويل فودافون كاش المخصومة من مستحقاته: {Money(statement.Totals.TransferFees)}");
                 summary.Item().Text($"نصيبه المحتفظ به من الأكواد: {Money(statement.Totals.RetainedEarnings)}");
                 summary.Item().Text($"باقي له الآن ومتاح للصرف: {Money(statement.Account.NetPayable)}").Bold();
                 if (statement.Account.Reserved > 0m) summary.Item().Text($"محجوز لصرف لم يكتمل: {Money(statement.Account.Reserved)}");

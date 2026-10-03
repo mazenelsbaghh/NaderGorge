@@ -5,11 +5,11 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "2a923169b6fbe454d4ad3f9cd6cf11a0bd3b8d348737f99377a03b89b20037ca"
+      "digest": "efb3d43cd9de0f452b0e495d616745dca8d2914523ba593d02e24ff8a532f82e"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "58992cbe11b6b372d16a4122b61e9846a4f1704a3d55daa288ec252ee8a32485"
+      "digest": "3ee7c3f17118bb5092665716aa373547f08cf10f2ed9349f4cc1184b698d7a29"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -3843,7 +3843,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-bunny-cost-report:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:247",
+      "id": "be:get:api-admin-teacher-finance-center-bunny-cost-report:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:256",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/bunny/cost-report",
@@ -3866,7 +3866,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 247
+        "line": 256
       }
     },
     {
@@ -3894,6 +3894,33 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherCodeFinanceController.cs",
         "line": 43
+      }
+    },
+    {
+      "id": "be:get:api-admin-teacher-finance-center-settlements-id-payment-preview:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:223",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/teacher-finance-center/settlements/{id}/payment-preview",
+      "effect": "preview",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlementPayment",
+      "inputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsettlementpayment:input:v1",
+      "outputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsettlementpayment:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
+        "line": 223
       }
     },
     {
@@ -10707,7 +10734,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-bunny-usage-sync:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:259",
+      "id": "be:post:api-admin-teacher-finance-center-bunny-usage-sync:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:268",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/bunny/usage/sync",
@@ -10732,7 +10759,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 259
+        "line": 268
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -10797,7 +10824,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-invoices-id-attachments:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:240",
+      "id": "be:post:api-admin-teacher-finance-center-invoices-id-attachments:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:249",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/invoices/{id}/attachments",
@@ -10822,12 +10849,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 240
+        "line": 249
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-reversals:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:230",
+      "id": "be:post:api-admin-teacher-finance-center-reversals:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:239",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/reversals",
@@ -10852,7 +10879,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 230
+        "line": 239
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -10887,7 +10914,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-id-cancel:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:223",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-id-cancel:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:232",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/{id}/cancel",
@@ -10912,7 +10939,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 223
+        "line": 232
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -17349,7 +17376,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:338",
+      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:345",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/finance/payroll/{payrollId}/adjustments/{adjustmentId}",
@@ -17374,7 +17401,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 338
+        "line": 345
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -18513,7 +18540,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:386",
+      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:393",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/code-accounting",
@@ -18536,7 +18563,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 386
+        "line": 393
       }
     },
     {
@@ -18567,7 +18594,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:353",
+      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:360",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payouts",
@@ -18590,11 +18617,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 353
+        "line": 360
       }
     },
     {
-      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:308",
+      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:315",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payroll",
@@ -18617,11 +18644,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 308
+        "line": 315
       }
     },
     {
-      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:399",
+      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:406",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/teacher-events",
@@ -18644,7 +18671,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 399
+        "line": 406
       }
     },
     {
@@ -20619,7 +20646,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-code-groups-codegroupid-account:frontend-src-services-finance-service-ts:299",
+      "id": "fe:get:admin-teacher-finance-center-code-groups-codegroupid-account:frontend-src-services-finance-service-ts:306",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/account",
@@ -20642,11 +20669,38 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 299
+        "line": 306
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:276",
+      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid-payment-preview:frontend-src-services-finance-service-ts:282",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/teacher-finance-center/settlements/{settlementId}/payment-preview",
+      "effect": "preview",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlementPayment",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 282
+      }
+    },
+    {
+      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:277",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}",
@@ -20669,11 +20723,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 276
+        "line": 277
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:220",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:221",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -20696,11 +20750,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 220
+        "line": 221
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-collections:frontend-src-services-finance-service-ts:249",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-collections:frontend-src-services-finance-service-ts:250",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/collections",
@@ -20723,11 +20777,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 249
+        "line": 250
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:257",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:258",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/ledger",
@@ -20750,11 +20804,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 257
+        "line": 258
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-reports-detailed-pdf:frontend-src-services-finance-service-ts:195",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-reports-detailed-pdf:frontend-src-services-finance-service-ts:196",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/reports/detailed.pdf",
@@ -20777,11 +20831,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 195
+        "line": 196
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-settlements:frontend-src-services-finance-service-ts:361",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-settlements:frontend-src-services-finance-service-ts:368",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/settlements",
@@ -20804,11 +20858,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 361
+        "line": 368
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement-pdf:frontend-src-services-finance-service-ts:214",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement-pdf:frontend-src-services-finance-service-ts:215",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/statement/pdf",
@@ -20831,11 +20885,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 214
+        "line": 215
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement:frontend-src-services-finance-service-ts:204",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-statement:frontend-src-services-finance-service-ts:205",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/statement",
@@ -20858,11 +20912,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 204
+        "line": 205
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:242",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:243",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/summary",
@@ -20885,7 +20939,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 242
+        "line": 243
       }
     },
     {
@@ -24186,7 +24240,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:370",
+      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:377",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payouts/{payoutId}/resolve",
@@ -24211,12 +24265,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 370
+        "line": 377
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:316",
+      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:323",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/generate",
@@ -24241,12 +24295,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 316
+        "line": 323
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:327",
+      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:334",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/adjustments",
@@ -24271,12 +24325,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 327
+        "line": 334
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:345",
+      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:352",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/approve",
@@ -24301,12 +24355,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 345
+        "line": 352
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:413",
+      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:420",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/{allocationId}/review",
@@ -24331,12 +24385,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 413
+        "line": 420
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:425",
+      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:432",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/manual-compensation",
@@ -24361,7 +24415,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 425
+        "line": 432
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -26133,7 +26187,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:295",
+      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:302",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/confirm-delivery",
@@ -26158,12 +26212,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 295
+        "line": 302
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-payments:frontend-src-services-finance-service-ts:303",
+      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-payments:frontend-src-services-finance-service-ts:310",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/payments",
@@ -26188,12 +26242,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 303
+        "line": 310
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:286",
+      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:293",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/reversals",
@@ -26218,12 +26272,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 286
+        "line": 293
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:265",
+      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:266",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/preview",
@@ -26246,11 +26300,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 265
+        "line": 266
       }
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:281",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:288",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/approve",
@@ -26275,12 +26329,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 281
+        "line": 288
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:282",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:289",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/cancel",
@@ -26305,12 +26359,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 282
+        "line": 289
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:283",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:290",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/pay",
@@ -26335,12 +26389,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 283
+        "line": 290
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:280",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:287",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/review",
@@ -26365,12 +26419,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 280
+        "line": 287
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:271",
+      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:272",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements",
@@ -26395,12 +26449,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 271
+        "line": 272
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:228",
+      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:229",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -26425,7 +26479,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 228
+        "line": 229
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30498,7 +30552,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:235",
+      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:236",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/agreements/{agreementId}",
@@ -30523,12 +30577,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 235
+        "line": 236
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:291",
+      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:298",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/financial-terms",
@@ -30553,7 +30607,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 291
+        "line": 298
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -31145,12 +31199,12 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/context"
     },
     {
-      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:215",
+      "id": "fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:216",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement/pdf"
     },
     {
-      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:205",
+      "id": "fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:206",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/finance/statement"
     },
@@ -31295,5 +31349,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "48b333395b1a76fe40a846527a1dc9b583c0b31bdb0c664232f3b69461210b13"
+  "digest": "4b32d72af007fc0a9a63a79a4ef59c1751e1f0bdcc72f4cf7854a09aeef2597c"
 }

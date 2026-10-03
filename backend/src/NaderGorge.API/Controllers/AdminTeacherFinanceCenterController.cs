@@ -220,6 +220,15 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : FinanceError(response);
     }
 
+    [HttpGet("settlements/{id:guid}/payment-preview")]
+    public async Task<IActionResult> PreviewSettlementPayment(Guid id, [FromQuery] string paymentMethod, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(paymentMethod)) return BadRequest(new { success = false, message = "اختار طريقة التحويل" });
+        var quote = await _settlements.PaymentPreviewAsync(id, paymentMethod, ct);
+        return quote is null ? Conflict(new { success = false, message = "التسوية غير موجودة أو غير معتمدة للصرف" })
+            : Ok(new { success = true, data = quote });
+    }
+
     [HttpPost("settlements/{id:guid}/cancel")]
     public async Task<IActionResult> CancelSettlement(Guid id, CancellationToken ct)
     {

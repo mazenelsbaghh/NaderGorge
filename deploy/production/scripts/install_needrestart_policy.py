@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Install the reviewed Patroni needrestart exclusion without restarting services."""
+"""Install reviewed cluster service restart exclusions without restarting services."""
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import uuid
 from pathlib import Path
 
 from clusterctl import load_inventory, operator_transport, target
+from deploy_release import RolloutLock
 
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "deploy/production/config/needrestart/massar-patroni.conf"
 DESTINATION = "/etc/needrestart/conf.d/massar-patroni.conf"
 STAGING = "/tmp/massar-patroni-needrestart.conf"
-EXPECTED_SHA256 = "9c6f336e0fa40c9572b3c7a516a36d9b4c28a20e376b9475f2ffd90d61419590"
+EXPECTED_SHA256 = "bfa95fceacb7ea44c88b68b0ca46623fcbdc0970574d1f1d572e6e1d30e2537b"
+PREVIOUS_SHA256 = "9c6f336e0fa40c9572b3c7a516a36d9b4c28a20e376b9475f2ffd90d61419590"
 
 
 def main() -> None:
@@ -32,27 +35,37 @@ def main() -> None:
     nodes = tuple(inventory.nodes)
     if tuple(node.id for node in nodes) != ("node-1", "node-2", "node-3"):
         raise SystemExit("unexpected production node inventory")
-    for node in nodes:
-        remote = target(inventory, node)
-        inspection = transport.run(remote, ["bash", "-lc",
-            f"set -e; command -v needrestart >/dev/null; test -d /etc/needrestart/conf.d; "
-            f"if test -e {DESTINATION}; then sha256sum {DESTINATION}; else printf absent; fi"],
-            timeout_seconds=20)
-        existing = inspection.stdout.strip()
-        if existing != "absent" and not existing.startswith(sha + "  "):
-            raise SystemExit(f"{node.id}: existing policy differs; inspect before replacement")
-        print(json.dumps({"node": node.id, "destination": DESTINATION,
-                          "sha256": sha, "existing": "same" if existing != "absent" else "absent",
-                          "action": "preview" if args.dry_run else "install"}))
-        if args.dry_run or existing != "absent":
-            continue
-        transport.copy(remote, SOURCE, STAGING, timeout_seconds=30)
-        transport.run(remote, ["bash", "-lc",
-            f"set -euo pipefail; printf '%s  %s\\n' '{sha}' '{STAGING}' | sha256sum -c -; "
-            f"sudo -n /usr/bin/install -m 0644 -o root -g root {STAGING} {DESTINATION}; "
-            f"rm -f {STAGING}; printf '%s  %s\\n' '{sha}' '{DESTINATION}' | sha256sum -c -; "
-            f"test \"$(stat -c '%U:%G:%a' {DESTINATION})\" = root:root:644"],
-            timeout_seconds=30)
+    lock = RolloutLock(transport, target(inventory, nodes[0]), str(uuid.uuid4()))
+    if args.yes:
+        lock.acquire()
+    try:
+        for node in nodes:
+            remote = target(inventory, node)
+            inspection = transport.run(remote, ["bash", "-lc",
+                f"set -e; command -v needrestart >/dev/null; test -d /etc/needrestart/conf.d; "
+                f"if test -e {DESTINATION}; then sha256sum {DESTINATION}; else printf absent; fi"],
+                timeout_seconds=20)
+            existing = inspection.stdout.strip()
+            if existing != "absent" and not any(existing.startswith(digest + "  ") for digest in (sha, PREVIOUS_SHA256)):
+                raise SystemExit(f"{node.id}: existing policy differs; inspect before replacement")
+            print(json.dumps({"node": node.id, "destination": DESTINATION,
+                              "sha256": sha, "existing": "absent" if existing == "absent" else "same" if existing.startswith(sha + "  ") else "previous-reviewed",
+                              "action": "preview" if args.dry_run else "install"}))
+            if args.dry_run or existing.startswith(sha + "  "):
+                continue
+            transport.copy(remote, SOURCE, STAGING, timeout_seconds=30)
+            expected_existing = "! test -e " + DESTINATION if existing == "absent" else (
+                "test \"$(sha256sum " + DESTINATION + " | cut -d' ' -f1)\" = " + existing.split()[0])
+            transport.run(remote, ["bash", "-lc",
+                f"set -euo pipefail; {expected_existing}; printf '%s  %s\\n' '{sha}' '{STAGING}' | sha256sum -c -; "
+                f"sudo -n /usr/bin/install -m 0644 -o root -g root {STAGING} {DESTINATION}; "
+                f"rm -f {STAGING}; printf '%s  %s\\n' '{sha}' '{DESTINATION}' | sha256sum -c -; "
+                f"test \"$(stat -c '%U:%G:%a' {DESTINATION})\" = root:root:644"],
+                timeout_seconds=30)
+    finally:
+        if args.yes:
+            lock.release()
+
 
 
 if __name__ == "__main__":

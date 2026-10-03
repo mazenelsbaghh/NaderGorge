@@ -34,7 +34,16 @@ public sealed partial class WhatsAppCampaignService
         string? failureCode,
         CancellationToken ct)
     {
-        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var campaignId = await _db.WhatsAppCampaignRecipients.AsNoTracking()
+            .Where(item => item.MetaMessageId == metaMessageId)
+            .Select(item => (Guid?)item.CampaignId).SingleOrDefaultAsync(ct);
+        if (!campaignId.HasValue)
+        {
+            await transaction.RollbackAsync(ct);
+            return false;
+        }
+        await LockProjectionAsync(campaignId.Value, ct);
         var recipient = await _db.WhatsAppCampaignRecipients
             .SingleOrDefaultAsync(item => item.MetaMessageId == metaMessageId, ct);
         if (recipient is null)
@@ -80,7 +89,16 @@ public sealed partial class WhatsAppCampaignService
     private async Task<bool> ReconcilePendingReceiptOnceAsync(string metaMessageId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(metaMessageId)) return false;
-        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var campaignId = await _db.WhatsAppCampaignRecipients.AsNoTracking()
+            .Where(item => item.MetaMessageId == metaMessageId)
+            .Select(item => (Guid?)item.CampaignId).SingleOrDefaultAsync(ct);
+        if (!campaignId.HasValue)
+        {
+            await transaction.RollbackAsync(ct);
+            return false;
+        }
+        await LockProjectionAsync(campaignId.Value, ct);
         var pending = await _db.LiveSupportWhatsAppPendingReceipts
             .SingleOrDefaultAsync(item => item.MetaMessageId == metaMessageId, ct);
         if (pending is null)

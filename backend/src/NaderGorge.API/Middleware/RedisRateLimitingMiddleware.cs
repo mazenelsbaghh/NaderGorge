@@ -149,14 +149,15 @@ public class RedisRateLimitingMiddleware
             }
             catch (RedisServerException exception) when (attempt < 3 && IsReplicationUnavailable(exception))
             {
-                // NOREPLICAS rejects the write before INCR, so retrying cannot count it twice.
+                // Both failover errors reject the write before INCR; a retry cannot count it twice.
                 await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), ct);
             }
         }
     }
 
     private static bool IsReplicationUnavailable(RedisServerException exception) =>
-        exception.Message.Contains("NOREPLICAS Not enough good replicas to write", StringComparison.Ordinal);
+        exception.Message.StartsWith("NOREPLICAS ", StringComparison.Ordinal) ||
+        exception.Message.StartsWith("READONLY ", StringComparison.Ordinal);
 
     private static bool IsUnavailable(Exception exception) =>
         exception is RedisConnectionException or RedisTimeoutException ||

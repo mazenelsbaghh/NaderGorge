@@ -21,7 +21,8 @@ public sealed record TeacherFinanceAccountSnapshot(Guid TeacherId, string Teache
     decimal Available, decimal Reserved, decimal Paid, decimal Debt, decimal NetPayable,
     decimal NetBalance, decimal DebtReserved, decimal UnreservedDebt, decimal TodayEarnings,
     decimal CommissionRate, decimal SourceEarnings, decimal SourceDifference, decimal BalanceDifference,
-    IReadOnlyList<TeacherIncomeSource> Sources, decimal Retained = 0m, decimal CodeAmountDue = 0m, decimal CodeAmountCollected = 0m);
+    IReadOnlyList<TeacherIncomeSource> Sources, decimal Retained = 0m, decimal CodeAmountDue = 0m, decimal CodeAmountCollected = 0m,
+    decimal TransferFees = 0m);
 
 // Teacher-domain records own entitlement and withdrawal eligibility. The general ledger is their control projection.
 public sealed class TeacherFinanceAccountService(IAppDbContext db)
@@ -76,6 +77,9 @@ public sealed class TeacherFinanceAccountService(IAppDbContext db)
             .Select(x => new { TeacherId = x.CodeGroup.TeacherId!.Value, Due = x.PlatformAmountDue!.Value,
                 Collected = x.Payments.Sum(p => (decimal?)p.Amount) ?? 0m }).ToListAsync(ct);
         var (today, tomorrow) = CairoTime.GetCurrentDayRangeUtc();
+        var transferFees = await TeacherTransferFee.PaidLines(db).Where(x => ids.Contains(x.TeacherSettlement.TeacherId))
+            .GroupBy(x => x.TeacherSettlement.TeacherId).Select(g => new { Id = g.Key, Amount = -g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.Id, x => x.Amount, ct);
         var sources = await RecognizedAllocations(db).Where(x => ids.Contains(x.TeacherId))
             .GroupBy(x => new { x.TeacherId, x.TeacherFinancialEvent.SourceType })
             .Select(g => new {
@@ -98,9 +102,9 @@ public sealed class TeacherFinanceAccountService(IAppDbContext db)
             return new TeacherFinanceAccountSnapshot(teacher.Id, teacher.FullName, earned, balance.Balance,
                 balance.Reserved, paid, balance.Debt, balance.WithdrawalAvailable, balance.NetBalance,
                 balance.DebtReserved, balance.UnreservedDebt, income.Sum(x => x.Today), account?.CommissionRate ?? teacher.CommissionRate,
-                sourceEarnings, earned - sourceEarnings, balance.NetBalance - (earned - paid - retained),
+                sourceEarnings, earned - sourceEarnings, balance.NetBalance - (earned - paid - retained - transferFees.GetValueOrDefault(teacher.Id)),
                 income.Select(x => new TeacherIncomeSource(x.SourceType.ToString(), x.Count, x.Teacher, x.Platform)).ToArray(),
-                retained, codeAmounts.Sum(x => x.Due - x.Collected), codeAmounts.Sum(x => x.Collected));
+                retained, codeAmounts.Sum(x => x.Due - x.Collected), codeAmounts.Sum(x => x.Collected), transferFees.GetValueOrDefault(teacher.Id));
         }).ToArray();
         if (transaction is not null) await transaction.CommitAsync(ct);
         return snapshots;

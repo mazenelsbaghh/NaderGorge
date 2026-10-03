@@ -22,7 +22,7 @@ public sealed record TeacherStatementActivity(
 public sealed record TeacherStatementTotals(
     decimal Earned, decimal PendingEarnings, decimal TeacherPayments, decimal RetainedEarnings,
     decimal PlatformCodeDue, decimal PlatformCodePayments, decimal StudentCollections,
-    decimal OpenDebtAdjustments, decimal PlatformEarned = 0m);
+    decimal OpenDebtAdjustments, decimal PlatformEarned = 0m, decimal TransferFees = 0m);
 
 public sealed record TeacherStatementSale(int Students, int Operations, decimal UnitPrice,
     decimal Total, decimal TeacherShare, decimal PlatformShare, decimal? PlatformPercent);

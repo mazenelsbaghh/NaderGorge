@@ -142,7 +142,7 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
         return payouts.OrderBy(x => x.At).ToArray();
     }
 
-    private async Task<List<(DateTime At, decimal Amount, string Reason)>> ReadAdjustments(Guid teacherId,
+    private async Task<List<ReportAdjustment>> ReadAdjustments(Guid teacherId,
         List<TeacherFinancialAllocation> sources, DateTime end, CancellationToken ct)
     {
         var adjustments = await db.TeacherPayoutAdjustments.AsNoTracking().Include(x => x.RelatedFinancialEvent)
@@ -151,7 +151,7 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             && x.PayoutStatus == TeacherFinancialPayoutStatus.Debt && x.TeacherShareAmount < 0)
             .GroupBy(x => (x.TeacherFinancialEvent.StudentId, x.TeacherFinancialEvent.TargetType, x.TeacherFinancialEvent.TargetId))
             .ToDictionary(x => x.Key, x => x.Sum(a => -a.TeacherShareAmount));
-        var movements = new List<(DateTime, decimal, string)>();
+        var movements = new List<ReportAdjustment>();
         foreach (var adjustment in adjustments.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id))
         {
             var at = adjustment.RelatedPayoutId.HasValue ? adjustment.CreatedAt
@@ -163,13 +163,16 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             var key = (source?.StudentId, source?.TargetType ?? SalesTargetType.Platform, source?.TargetId ?? Guid.Empty);
             var duplicate = adjustment.RelatedPayoutId.HasValue ? Math.Min(-adjustment.Amount, debtReversals.GetValueOrDefault(key)) : 0m;
             if (duplicate > 0) debtReversals[key] -= duplicate;
-            movements.Add((at, adjustment.Amount + duplicate, adjustment.Reason));
+            movements.Add(new(at, adjustment.Amount + duplicate, adjustment.Reason));
         }
+        movements.AddRange(await TeacherTransferFee.PaidLines(db).Where(x => x.TeacherSettlement.TeacherId == teacherId
+            && x.TeacherSettlement.PaidAt < end).Select(x => new ReportAdjustment(
+                x.TeacherSettlement.PaidAt!.Value, x.Amount, x.DescriptionSnapshot, true)).ToListAsync(ct));
         return movements;
     }
 
     private static TeacherReportSummary Summarize(List<TeacherFinancialAllocation> sources,
-        TeacherReportPayment[] payments, List<(DateTime At, decimal Amount, string Reason)> adjustments, DateTime? start)
+        TeacherReportPayment[] payments, List<ReportAdjustment> adjustments, DateTime? start)
     {
         var recognized = sources.Where(x => TeacherFinanceAccountService.RecognizedStatuses.Contains(x.ReviewStatus)).ToArray();
         decimal BalanceBefore(DateTime? boundary) => boundary is null ? 0m :
@@ -180,12 +183,14 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
         var retained = period.Where(x => x.RetainedByTeacher).Sum(x => x.TeacherShareAmount);
         var paid = payments.Where(x => InPeriod(x.At, start)).Sum(x => x.Amount);
         var adjustmentTotal = adjustments.Where(x => InPeriod(x.At, start)).Sum(x => x.Amount);
-        return new(opening, earned, period.Sum(x => x.PlatformShareAmount), retained, paid, adjustmentTotal,
-            opening + earned - retained - paid + adjustmentTotal);
+        var fees = -adjustments.Where(x => InPeriod(x.At, start) && x.IsTransferFee)
+            .Sum(x => x.Amount);
+        return new(opening, earned, period.Sum(x => x.PlatformShareAmount) + fees, retained, paid, adjustmentTotal + fees,
+            opening + earned - retained - paid + adjustmentTotal, fees);
     }
 
     private static TeacherReportMovement[] BuildMovements(List<TeacherFinancialAllocation> sources,
-        List<(DateTime At, decimal Amount, string Reason)> adjustments, DateTime? start)
+        List<ReportAdjustment> adjustments, DateTime? start)
     {
         var movements = sources.Where(x => InPeriod(x.TeacherFinancialEvent.OccurredAt, start)
             && TeacherFinanceAccountService.RecognizedStatuses.Contains(x.ReviewStatus)
@@ -202,7 +207,9 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
                 x.RetainedByTeacher ? "قبضه المستر" : "داخل الحساب",
                 x.TeacherFinancialEvent.SourceId.ToString())).ToList();
         movements.AddRange(adjustments.Where(x => x.Amount != 0 && InPeriod(x.At, start))
-            .Select(x => new TeacherReportMovement(x.At, "تسوية / مديونية · " + x.Reason, x.Amount, 0, "داخل الحساب", "")));
+            .Select(x => new TeacherReportMovement(x.At, x.IsTransferFee
+                ? x.Reason : "تسوية / مديونية · " + x.Reason, x.Amount,
+                x.IsTransferFee ? -x.Amount : 0m, "داخل الحساب", "")));
         return movements.OrderBy(x => x.At).ToArray();
     }
 
@@ -246,4 +253,6 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
     };
 
     internal static bool InPeriod(DateTime at, DateTime? start) => !start.HasValue || at >= start.Value;
+    private sealed record ReportAdjustment(DateTime At, decimal Amount, string Reason, bool IsTransferFee = false);
+
 }

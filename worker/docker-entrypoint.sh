@@ -19,6 +19,7 @@ prepare_secret() {
 }
 
 prepare_secret FIREBASE_APPLICATION_CREDENTIALS
+prepare_secret APNS_PRIVATE_KEY_PATH
 
 prepare_shared_storage_group() {
   shared_gid="${MASSAR_SHARED_GID:-}"

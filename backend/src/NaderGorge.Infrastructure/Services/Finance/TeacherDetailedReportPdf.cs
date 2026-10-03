@@ -248,12 +248,14 @@ public static class TeacherDetailedReportPdf
             if (report.Period.From.HasValue) rows.Add(["رصيد قبل بداية الفترة", Money(summary.Opening)]);
             rows.AddRange([
                 ["الطلاب دفعوا في الاشتراكات الموجودة", Money(paid.Sum(x => x.Paid))],
-                ["عمولتنا حسب الاتفاق", Money(summary.Platform)],
+                ["عمولتنا حسب الاتفاق", Money(summary.Platform - summary.TransferFees)],
                 [$"نصيب {report.TeacherName}", Money(summary.Earned)],
                 ["نصيبه اللي قبضه من أكواد مدفوعة", Money(summary.Retained)],
                 [$"سداد مسجل له حتى {end}", Money(summary.Paid)],
                 [summary.Adjustments <= 0 ? "مبالغ عليه تخص الفترة" : "تسويات تخص الفترة", Money(Math.Abs(summary.Adjustments))],
                 [summary.Closing < 0 ? $"الصافي اللي عليه للمنصة حتى {end}" : $"الصافي اللي له عندنا حتى {end}", Money(Math.Abs(summary.Closing))] ]);
+            if (summary.TransferFees > 0m)
+                rows.Insert(rows.Count - 1, ["عمولة تحويل فودافون كاش — خصم من مستحقاته", Money(summary.TransferFees)]);
             column.Item().Element(x => Table(x, new([], [68,32], rows, LastRowIsTotal: true, Account: true)));
             foreach (var note in report.Notes)
                 column.Item().PaddingTop(9.75f).Background("#fbf6e9").CornerRadius(3.75f).Padding(9).Text(note).FontSize(8.25f);
