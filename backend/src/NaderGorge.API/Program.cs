@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.API.Configuration;
+using NaderGorge.API.CenterDesktop;
 using NaderGorge.API.Middleware;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
@@ -36,6 +37,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 SecurityConfigurationValidator.Validate(builder);
 builder.Services.AddPlatformFinanceConfiguration(builder.Configuration);
+
+builder.Services.AddCenterDesktopSupport(builder.Configuration);
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();

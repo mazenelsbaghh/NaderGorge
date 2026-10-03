@@ -21,6 +21,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  MonitorCog,
   MessageSquareText,
   Settings,
   MessageSquarePlus,
@@ -169,6 +170,7 @@ export type AdminShellRoute =
   | '/admin/live-support/ai'
   | '/admin/settings'
   | '/admin/system-logs'
+  | '/admin/center-desktop'
   | '/admin/auto-repair'
   | '/admin/popup';
 
@@ -595,6 +597,7 @@ const navItems: AdminNavItem[] = [
     permission: 'reports.manage',
   },
   { href: '/admin/auto-repair', label: 'الإصلاح التلقائي', icon: ScrollText, adminOnly: true },
+  { href: '/admin/center-desktop', label: 'برنامج السنتر', icon: MonitorCog, adminOnly: true },
   {
     href: '/admin/system-logs',
     label: 'سجل النظام',
@@ -727,7 +730,7 @@ const GROUP_CONFIG = [
     id: 'reports',
     label: 'التقارير والمتابعة',
     icon: BarChart3,
-    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs', '/admin/auto-repair'],
+    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs', '/admin/auto-repair', '/admin/center-desktop'],
   },
   {
     id: 'admin_tools',

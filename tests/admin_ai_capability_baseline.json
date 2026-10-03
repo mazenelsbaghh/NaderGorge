@@ -5,15 +5,15 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "efb3d43cd9de0f452b0e495d616745dca8d2914523ba593d02e24ff8a532f82e"
+      "digest": "79b152448625b8d3335d28ea83390d9cf16e435c7ba96e59155c69bff1ee4123"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "3ee7c3f17118bb5092665716aa373547f08cf10f2ed9349f4cc1184b698d7a29"
+      "digest": "557732aff00344f12acfa65e145ba60c59680ac99324bd3cb40b2106e8abafd3"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "5597bf94fc16b70947a44528b51315217dcfa65dfb82feb423969f8a16d93358"
+      "digest": "313eca822e98c3aa2af60765ea8ffc840ece5fc65dc51f40cb4028ca6f276812"
     }
   },
   "items": [
@@ -1140,6 +1140,142 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
         "line": 1369
+      }
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-releases:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:27",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/releases",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Releases",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-releases:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-releases:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 27
+      }
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-status:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:16",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/status",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Status",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-status:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-status:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 16
+      }
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-uploads-id-diagnostics:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:23",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/uploads/{id}/diagnostics",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Diagnostics",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-diagnostics:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-diagnostics:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 23
+      }
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-uploads-id-download:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:30",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/uploads/{id}/download",
+      "effect": "export",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Download",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-download:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-download:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 30
+      },
+      "blocker": "Human Admin-only export of a full private desktop snapshot; raw student records and credential hashes are excluded from AI reads. No executable AI adapter is authorized."
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-uploads:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:19",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/uploads",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Uploads",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-uploads:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-uploads:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 19
       }
     },
     {
@@ -18189,6 +18325,142 @@
       }
     },
     {
+      "id": "fe:get:admin-center-desktop-releases:frontend-src-services-center-desktop-service-ts:41",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/releases",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Releases",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 41
+      }
+    },
+    {
+      "id": "fe:get:admin-center-desktop-status:frontend-src-services-center-desktop-service-ts:30",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/status",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Status",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 30
+      }
+    },
+    {
+      "id": "fe:get:admin-center-desktop-uploads-encodeuricomponentid-diagnostics:frontend-src-services-center-desktop-service-ts:38",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/uploads/{encodeURIComponentid}/diagnostics",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Diagnostics",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 38
+      }
+    },
+    {
+      "id": "fe:get:admin-center-desktop-uploads-encodeuricomponentid-download:frontend-src-services-center-desktop-service-ts:44",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/uploads/{encodeURIComponentid}/download",
+      "effect": "export",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Download",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 44
+      },
+      "blocker": "Human Admin-only export of a full private desktop snapshot; raw student records and credential hashes are excluded from AI reads. No executable AI adapter is authorized."
+    },
+    {
+      "id": "fe:get:admin-center-desktop-uploads:frontend-src-services-center-desktop-service-ts:33",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/uploads",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Uploads",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 33
+      }
+    },
+    {
       "id": "fe:get:admin-codes-academic-subject-eligibilities:frontend-src-services-code-service-ts:69",
       "kind": "frontend-call",
       "method": "GET",
@@ -31349,5 +31621,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "4b32d72af007fc0a9a63a79a4ef59c1751e1f0bdcc72f4cf7854a09aeef2597c"
+  "digest": "fda190c0d53e4301cdd909ed8ee046aae4fd9479025110cb87fa7d1b4d5f1a99"
 }

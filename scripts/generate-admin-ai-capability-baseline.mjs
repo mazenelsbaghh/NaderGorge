@@ -19,6 +19,11 @@ const reviewedSharedAdminCommands = new Map([
   ['POST:/v1/assistant/tasks/my/{}/comments', 'command:AddTaskCommentCommand'],
   ['POST:/v1/assistant/tasks/my/{}/status', 'command:UpdateTaskStatusCommand'],
 ]);
+// Full desktop backups can contain student records and password hashes. Keep
+// the human Admin export inventoried without granting an AI raw-read adapter.
+const reviewedSensitiveExports = new Set([
+  'GET:/admin/center-desktop/uploads/{}/download',
+]);
 // These POST handlers only read persisted state or calculate a response. Review
 // each handler and its callees before adding another route to this list.
 const reviewedReadOnlyPostRoutes = new Map([
@@ -71,6 +76,12 @@ function domainFor(value) {
 
 function semantics(method, descriptor, route) {
   const operation = `${descriptor} ${route}`;
+  if (reviewedSensitiveExports.has(routeKey(method, route))) {
+    return {
+      effect: 'export', risk: 'none', confirmation: 'none', status: 'blocked',
+      blocker: 'Human Admin-only export of a full private desktop snapshot; raw student records and credential hashes are excluded from AI reads. No executable AI adapter is authorized.',
+    };
+  }
   const external = externalTerms.test(operation);
   const reviewedReadEffect = reviewedReadOnlyPostRoutes.get(routeKey(method, route));
   const mutation = method !== 'GET' && !reviewedReadEffect;

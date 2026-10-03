@@ -688,6 +688,91 @@
     ]
   },
   {
+    "route": "api/admin/center-desktop/releases",
+    "controller": "AdminCenterDesktop",
+    "action": "Releases",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/center-desktop/status",
+    "controller": "AdminCenterDesktop",
+    "action": "Status",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/center-desktop/uploads",
+    "controller": "AdminCenterDesktop",
+    "action": "Uploads",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/center-desktop/uploads/{id}/diagnostics",
+    "controller": "AdminCenterDesktop",
+    "action": "Diagnostics",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/center-desktop/uploads/{id}/download",
+    "controller": "AdminCenterDesktop",
+    "action": "Download",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/Admin/chapters/{chapterId:guid}/regenerate-mindmap",
     "controller": "Admin",
     "action": "RegenerateChapterMindmap",

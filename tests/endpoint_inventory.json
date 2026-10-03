@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 836,
-  "frontendCallCount": 717,
+  "endpointCount": 841,
+  "frontendCallCount": 722,
   "missingFrontendRouteCount": 0,
-  "digest": "ca3b8505e58f492923a2feabfc18c6aefa140cb01bca42825a41a625d3065d1e",
+  "digest": "1df52c562af3f628f4b97e006595f6497b7552fa3ac7dd043056cbe1d8c0f915",
   "endpoints": [
     {
       "controller": "AdminAIAgentController",
@@ -358,6 +358,66 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAutoRepairController.cs",
         "line": 44
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Releases",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/releases",
+      "routeTemplate": "/api/admin/center-desktop/releases",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 27
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Status",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/status",
+      "routeTemplate": "/api/admin/center-desktop/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 16
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Uploads",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads",
+      "routeTemplate": "/api/admin/center-desktop/uploads",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 19
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Diagnostics",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/diagnostics",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/diagnostics",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 23
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Download",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/download",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/download",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 30
       }
     },
     {
@@ -14126,6 +14186,78 @@
       "source": {
         "file": "frontend/src/services/balance-service.ts",
         "line": 87
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/center-desktop/status",
+      "routeTemplate": "/api/admin/center-desktop/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/status`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 30
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads",
+      "routeTemplate": "/api/admin/center-desktop/uploads",
+      "origin": "backend-api",
+      "queryParameters": [
+        "limit"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/uploads`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 33
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/diagnostics",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/diagnostics",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/uploads/${encodeURIComponent(id)}/diagnostics`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 38
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/center-desktop/releases",
+      "routeTemplate": "/api/admin/center-desktop/releases",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/releases`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 41
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/download",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/download",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/uploads/${encodeURIComponent(id)}/download`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 44
       }
     },
     {

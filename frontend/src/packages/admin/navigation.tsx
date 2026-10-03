@@ -25,6 +25,7 @@ import {
   Settings,
   MessageSquarePlus,
   ScrollText,
+  MonitorCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -66,6 +67,7 @@ export const adminMenuItems = [
   { label: 'مركز التقارير', href: '/admin/reports', icon: <BarChart3 className="h-4 w-4" />, permission: 'reports.manage' },
   { label: 'الإصلاح التلقائي', href: '/admin/auto-repair', icon: <ScrollText className="h-4 w-4" />, adminOnly: true },
   { label: 'سجل النظام', href: '/admin/system-logs', icon: <ScrollText className="h-4 w-4" />, adminOnly: true },
+  { label: 'برنامج السنتر', href: '/admin/center-desktop', icon: <MonitorCog className="h-4 w-4" />, adminOnly: true },
   { label: 'الإعدادات', href: '/admin/settings', icon: <Settings className="h-4 w-4" />, permission: 'settings.manage' },
   { label: 'Popup المنصة', href: '/admin/popup', icon: <MessageSquarePlus className="h-4 w-4" />, permission: 'settings.manage' },
 ];
@@ -98,6 +100,7 @@ export const adminAllNavigationRoutePermissions = [
 ];
 
 export const adminRootLinks: AdminRootLink[] = [
+  { href: '/admin/center-desktop', title: 'برنامج السنتر', body: 'النسخ المرفوعة من السنتر، سجل المشاكل وإصدارات البرنامج.', icon: MonitorCog, adminOnly: true },
   { href: '/admin/emthntak', title: 'امتحاناتك', body: 'إدارة التطبيق: المدرسون والكتب والامتحانات والاشتراكات.', icon: BookOpen },
   { href: '/admin/platform-profits', title: 'ملخص الحسابات', body: 'المنصّة كسبت كام، وكل مدرس باقي له كام.', icon: Coins, adminOnly: true },
   { href: '/admin/learning-center', title: 'التقييم والمتابعة', body: 'خريطة فهم المنهج ومتابعة الطلاب وبنك الأسئلة المنظم.', icon: BarChart3, adminOnly: true },
