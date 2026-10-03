@@ -29,7 +29,7 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
                 context.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite" ? IsolationLevel.Serializable : IsolationLevel.RepeatableRead, ct) : null;
         var name = await db.TeacherProfiles.AsNoTracking().Where(x => x.Id == teacherId).Select(x => x.User.FullName).SingleOrDefaultAsync(ct);
         if (name is null) return null;
-        var sources = await db.TeacherFinancialAllocations.AsNoTracking().Include(x => x.TeacherFinancialEvent)
+        var sources = await db.TeacherFinancialAllocations.AsNoTracking().Include(x => x.TeacherFinancialEvent).Include(x => x.Payout)
             .Where(x => x.TeacherId == teacherId && x.TeacherFinancialEvent.OccurredAt < end).ToListAsync(ct);
         var content = await new TeacherReportContentReader(db).ReadAsync(teacherId, ct);
         var grants = await ReadGrants(content, end, ct);
@@ -39,6 +39,7 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
         var payments = await ReadPayments(teacherId, end, ct);
         var adjustments = await ReadAdjustments(teacherId, sources, end, ct);
         var summary = Summarize(sources, payments, adjustments, start);
+        var transfer = await TransferPreview(sources, summary.Closing, end, ct);
         var recharges = await ReadRecharges(teacherId, start, end, ct);
         var funding = await new TeacherReportFundingReader(db).ReadAsync(teacherId, end, ct);
         var notes = new List<string>();
@@ -57,7 +58,26 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             purchases, BuildGifts(grants, content, start, end), recharges, funding,
             allRefunds.Where(x => InPeriod(x.At, start)).ToArray(), payments.Where(x => InPeriod(x.At, start)).ToArray(),
             allPurchases.Where(x => x.CancelledAt.HasValue && x.CancelledAt < end && InPeriod(x.CancelledAt.Value, start)).ToArray(),
-            BuildMovements(sources, adjustments, start)) { CurrentAgreements = agreements.Current };
+            BuildMovements(sources, adjustments, start)) { CurrentAgreements = agreements.Current, VodafoneCashTransfer = transfer };
+    }
+
+    private async Task<TeacherTransferQuote> TransferPreview(List<TeacherFinancialAllocation> sources,
+        decimal closing, DateTime end, CancellationToken ct)
+    {
+        if (closing <= 0m) return TeacherTransferFee.Quote("VodafoneCash", [], closing);
+        var ids = sources.Select(x => x.Id).ToArray();
+        var settled = await db.TeacherSettlementLines.AsNoTracking().Where(x => x.AllocationId.HasValue
+            && ids.Contains(x.AllocationId.Value) && x.TeacherSettlement.Status == TeacherSettlementStatus.Paid
+            && x.TeacherSettlement.PaidAt < end).Select(x => x.AllocationId!.Value).ToListAsync(ct);
+        var settledIds = settled.ToHashSet();
+        var available = sources.Where(x => !x.RetainedByTeacher && !settledIds.Contains(x.Id)
+            && x.ReviewStatus is TeacherFinancialReviewStatus.AutoApproved or TeacherFinancialReviewStatus.Approved
+            && x.TeacherShareAmount > x.ReversedAmount
+            && !(x.Payout?.Status == PayoutStatus.Paid && x.Payout.PaidAt < end)).ToArray();
+        // Historical payouts are excluded at the report cutoff; unknown adjustment income has no invented commission basis.
+        var attributable = Math.Min(closing, available.Sum(x => x.TeacherShareAmount - x.ReversedAmount));
+        var quote = TeacherTransferFee.Quote("VodafoneCash", available, attributable);
+        return quote with { TeacherAmount = closing, NetTransferAmount = closing - quote.TransferFee };
     }
 
     private async Task<List<StudentAccessGrant>> ReadGrants(

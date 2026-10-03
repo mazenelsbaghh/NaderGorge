@@ -1,3 +1,5 @@
+using NaderGorge.Application.Services;
+
 namespace NaderGorge.Application.Interfaces.Finance;
 
 public sealed record TeacherReportPeriod(DateOnly? From, DateOnly To);
@@ -25,6 +27,7 @@ public sealed record TeacherDetailedReport(string TeacherName, TeacherReportPeri
     IReadOnlyList<TeacherReportPurchase> Cancellations, IReadOnlyList<TeacherReportMovement> Movements)
 {
     public IReadOnlyList<string> CurrentAgreements { get; init; } = [];
+    public TeacherTransferQuote? VodafoneCashTransfer { get; init; }
 }
 
 public interface ITeacherDetailedReportService

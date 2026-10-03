@@ -229,16 +229,18 @@ public static class TeacherDetailedReportPdf
         page.Content().PaddingTop(12).PaddingBottom(30).Column(column =>
         {
             var summary = report.Summary; var end = CutoffLabel(report.Period);
+            var transferFee = report.VodafoneCashTransfer?.TransferFee ?? 0m;
+            var closing = summary.Closing - transferFee;
             column.Item().Background(Navy).CornerRadius(7.5f).PaddingVertical(12.75f).PaddingHorizontal(15).Row(hero =>
             {
                 hero.RelativeItem().AlignMiddle().Column(caption =>
                 {
-                    caption.Item().Text((summary.Closing < 0 ? "عليه للمنصة لحد " : "له عندنا لحد ") + end).FontColor("#FFFFFF").FontSize(11.25f).LineHeight(1.2f);
-                    caption.Item().PaddingTop(5.25f).Text("بعد استبعاد الإلغاء والمجاني، وحسب السداد المسجل.").FontColor("#d6e5ed").FontSize(8.25f);
+                    caption.Item().Text(closing < 0 ? "عليه للمنصة لحد " + end : "الصافي اللي يتحوّل للمستر").FontColor("#FFFFFF").FontSize(11.25f).LineHeight(1.2f);
+                    caption.Item().PaddingTop(5.25f).Text(transferFee > 0m ? "بعد خصم عمولة فودافون كاش." : "بعد استبعاد الإلغاء والمجاني، وحسب السداد المسجل.").FontColor("#d6e5ed").FontSize(8.25f);
                 });
                 hero.RelativeItem().ContentFromLeftToRight().Column(value =>
                 {
-                    value.Item().Text(Money(Math.Abs(summary.Closing))).FontFamily("Arial").Bold().FontColor(Gold).FontSize(24.75f).LineHeight(1.2f);
+                    value.Item().Text(Money(Math.Abs(closing))).FontFamily("Arial").Bold().FontColor(Gold).FontSize(24.75f).LineHeight(1.2f);
                     value.Item().PaddingTop(3.75f).Text("جنيه").Bold().FontColor("#d6e5ed").FontSize(9).LineHeight(1.2f);
                 });
             });
@@ -253,10 +255,14 @@ public static class TeacherDetailedReportPdf
                 ["نصيبه اللي قبضه من أكواد مدفوعة", Money(summary.Retained)],
                 [$"سداد مسجل له حتى {end}", Money(summary.Paid)],
                 [summary.Adjustments <= 0 ? "مبالغ عليه تخص الفترة" : "تسويات تخص الفترة", Money(Math.Abs(summary.Adjustments))],
-                [summary.Closing < 0 ? $"الصافي اللي عليه للمنصة حتى {end}" : $"الصافي اللي له عندنا حتى {end}", Money(Math.Abs(summary.Closing))] ]);
+                ["عمولة تحويل فودافون كاش - 1.5% من عمولتنا", Money(transferFee)],
+                [closing < 0 ? $"الصافي اللي عليه للمنصة حتى {end}" : "الصافي بعد خصم العمولة", Money(Math.Abs(closing))] ]);
             if (summary.TransferFees > 0m)
-                rows.Insert(rows.Count - 1, ["عمولة تحويل فودافون كاش — خصم من مستحقاته", Money(summary.TransferFees)]);
+                rows.Insert(rows.Count - 2, ["عمولة تحويل مسجّلة خلال الفترة", Money(summary.TransferFees)]);
             column.Item().Element(x => Table(x, new([], [68,32], rows, LastRowIsTotal: true, Account: true)));
+            if (transferFee > 0m)
+                column.Item().PaddingTop(9.75f).Background("#fbf6e9").CornerRadius(3.75f).Padding(9).Text(
+                    $"عمولة التحويل = {Money(report.VodafoneCashTransfer!.PlatformShareBasis)} × 1.5% = {Money(transferFee)} جنيه. بتتخصم من حق المستر وتتضاف لحساب مسار عند تسجيل الدفع. تنزيل الكشف مش تسجيل دفع أو خصم جديد.").FontSize(8.25f);
             foreach (var note in report.Notes)
                 column.Item().PaddingTop(9.75f).Background("#fbf6e9").CornerRadius(3.75f).Padding(9).Text(note).FontSize(8.25f);
         });

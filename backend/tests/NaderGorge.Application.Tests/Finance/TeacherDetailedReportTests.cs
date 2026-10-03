@@ -228,6 +228,90 @@ public sealed class TeacherDetailedReportTests : IAsyncLifetime
         await File.WriteAllBytesAsync(Path.Combine(Path.GetTempPath(), "massar-teacher-report-active-agreements.pdf"), TeacherDetailedReportPdf.Generate(report));
     }
 
+    [Theory]
+    [InlineData(80, 20, 0, 0.30, 79.70)]
+    [InlineData(80, 20, 10, 0.26, 69.74)]
+    [InlineData(80, 0, 0, 0, 80)]
+    [InlineData(80, 20, 83, 0, -3)]
+    public async Task Report_transfer_fee_uses_remaining_entitlement_and_debt_without_recording_a_payment(
+        decimal earned, decimal platform, decimal debt, decimal fee, decimal net)
+    {
+        Purchase(At(4), earned + platform, earned, platform);
+        if (debt > 0)
+            db.Add(new TeacherPayoutAdjustment { Teacher = teacher, Amount = -debt,
+                Status = TeacherPayoutAdjustmentStatus.Open, CreatedAt = At(5) });
+        await db.SaveChangesAsync();
+
+        var report = (await new TeacherDetailedReportService(db).ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+
+        Assert.Equal(earned - debt, report.Summary.Closing);
+        Assert.Equal(fee, report.VodafoneCashTransfer!.TransferFee);
+        Assert.Equal(net, report.VodafoneCashTransfer.NetTransferAmount);
+        Assert.Empty(await db.TeacherSettlementPayments.ToListAsync());
+        Assert.Empty(await db.TeacherPayouts.ToListAsync());
+        Assert.Equal(9999, await db.TeacherAccounts.Select(x => x.CurrentBalance).SingleAsync());
+        Assert.False(db.ChangeTracker.HasChanges());
+        if (fee == 0.30m)
+            await File.WriteAllBytesAsync(Path.Combine(Path.GetTempPath(), "massar-teacher-report-integrated-fee.pdf"),
+                TeacherDetailedReportPdf.Generate(report));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Settled_income_is_excluded_from_new_transfer_basis_but_remains_in_historical_report(bool modernSettlement)
+    {
+        var sale = Purchase(At(4), 100, 80, 20);
+        if (modernSettlement)
+        {
+            var settlement = new TeacherSettlement { Teacher = teacher, PeriodFrom = At(4), PeriodTo = At(5),
+                Status = TeacherSettlementStatus.Paid, PaidAt = At(5), GrossDueAmount = 80, NetPayableAmount = 80,
+                CreatedByUserId = teacher.UserId };
+            settlement.Lines.Add(new() { Allocation = sale.Allocations.Single(), Amount = 80 });
+            settlement.Payments.Add(new() { Amount = 80, PaymentMethod = "bank", PaidAt = At(5), PaidByUserId = teacher.UserId });
+            db.Add(settlement);
+        }
+        else
+        {
+            var payout = new TeacherPayout { Teacher = teacher, Amount = 80, Status = PayoutStatus.Paid, PaidAt = At(5) };
+            sale.Allocations.Single().Payout = payout;
+            db.Add(payout);
+        }
+        sale.Allocations.Single().PayoutStatus = TeacherFinancialPayoutStatus.Paid;
+        Purchase(At(6), 120, 80, 40);
+        await db.SaveChangesAsync();
+
+        var service = new TeacherDetailedReportService(db);
+        var historical = (await service.ReadAsync(teacher.Id, new(null, new(2026, 9, 4)), default))!;
+        var current = (await service.ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+
+        Assert.Equal(0.30m, historical.VodafoneCashTransfer!.TransferFee);
+        Assert.Equal(80, current.Summary.Closing);
+        Assert.Equal(40, current.VodafoneCashTransfer!.PlatformShareBasis);
+        Assert.Equal(0.60m, current.VodafoneCashTransfer.TransferFee);
+        Assert.Equal(79.40m, current.VodafoneCashTransfer.NetTransferAmount);
+        Assert.False(db.ChangeTracker.HasChanges());
+    }
+
+    [Fact]
+    public async Task Reversed_purchase_does_not_inflate_commission_basis_of_remaining_income()
+    {
+        var cancelled = Purchase(At(4), 1000, 750, 250);
+        cancelled.Allocations.Single().ReviewStatus = TeacherFinancialReviewStatus.Reversed;
+        db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = -750, PlatformShareAmount = -250,
+            ReviewStatus = TeacherFinancialReviewStatus.Reversed, TeacherFinancialEvent = new() {
+                SourceType = TeacherFinancialSourceType.Refund, OccurredAt = At(5), IdempotencyKey = Guid.NewGuid().ToString() } });
+        Purchase(At(6), 100, 80, 20);
+        await db.SaveChangesAsync();
+
+        var report = (await new TeacherDetailedReportService(db).ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+
+        Assert.Equal(80, report.Summary.Closing);
+        Assert.Equal(20, report.VodafoneCashTransfer!.PlatformShareBasis);
+        Assert.Equal(0.30m, report.VodafoneCashTransfer.TransferFee);
+        Assert.Equal(79.70m, report.VodafoneCashTransfer.NetTransferAmount);
+    }
+
     private TeacherFinancialEvent Purchase(DateTime at, decimal paid, decimal teacherShare, decimal fee)
     {
         var target = purchaseCount++ == 0 ? lesson : new Lesson { Title = "حصة أخرى", ContentSectionId = lesson.ContentSectionId };
