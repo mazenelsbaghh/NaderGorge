@@ -38,7 +38,8 @@ public record LessonDetailDto(
     bool IsVideoOnlyAccess = false,
     DateOnly? HomeworkComingSoonOn = null,
     bool IsCompleted = false,
-    StudentMimGameDto? MimGame = null
+    StudentMimGameDto? MimGame = null,
+    bool IsPackageActive = true
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -282,7 +283,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 null,
                 lesson.ContentSection?.TermId,
                 lesson.ContentSectionId,
-                accessibleVideoIds.Count > 0
+                accessibleVideoIds.Count > 0,
+                IsPackageActive: lesson.ContentSection!.Term!.Package.IsActive
             );
             var partialCompleted = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
                 new(_db, request.UserId, new[] { lesson.Id }), partialVideoDtos.Where(v => v.HasAccess).Select(v => v.Id).ToArray(), ct);
@@ -754,7 +756,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             false,
             hw is null ? lesson.HomeworkComingSoonOn : null,
             false,
-            mimGame
+            mimGame,
+            lesson.ContentSection!.Term!.Package.IsActive
         );
         var completed = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
             new(_db, request.UserId, new[] { lesson.Id }), videoDtos.Where(v => v.HasAccess).Select(v => v.Id).ToArray(), ct);

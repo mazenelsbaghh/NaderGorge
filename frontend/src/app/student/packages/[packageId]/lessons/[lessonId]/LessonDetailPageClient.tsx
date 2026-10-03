@@ -110,7 +110,9 @@ export default function LessonDetailPageClient() {
           </div>
 
           <div className="rounded-2xl bg-[var(--admin-card-soft)] p-6 max-w-sm mx-auto border border-[var(--admin-border)]">
-            {lesson.price != null && lesson.price > 0 ? (
+            {lesson.isPackageActive === false ? (
+              <p role="status" className="text-sm font-bold text-[var(--admin-muted)]">غير متاحة للشراء حالياً.</p>
+            ) : lesson.price != null && lesson.price > 0 ? (
               <>
                 <span className="text-xs font-bold text-[var(--admin-muted)] block mb-1">سعر الحصة منفردة</span>
                 <span className="text-3xl font-black text-[var(--admin-primary)]">{lesson.price} ج.م</span>

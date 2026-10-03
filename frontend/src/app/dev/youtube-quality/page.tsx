@@ -3,5 +3,5 @@ import QualityPreview from './QualityPreview';
 
 export default function YouTubeQualityPreviewPage() {
   if (process.env.NODE_ENV !== 'development') notFound();
-  return <QualityPreview />;
+  return <QualityPreview lessonTitle={process.env.MASSAR_LOCAL_YOUTUBE_PREVIEW_TITLE} />;
 }

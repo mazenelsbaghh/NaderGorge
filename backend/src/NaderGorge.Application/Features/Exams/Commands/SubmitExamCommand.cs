@@ -544,13 +544,8 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 continue;
             }
 
-            var isTeacherGraded = essay.Status == EssaySubmissionStatus.TeacherGraded;
-            snapshots[examQuestionId] = new QuestionReviewSnapshot(
-                essay.AnswerText,
-                !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
-                isTeacherGraded,
-                isTeacherGraded ? essay.TeacherFinalScore ?? 0 : 0,
-                essay.AudioUrl);
+            var examQuestion = exam.ExamQuestions.First(eq => eq.Id == examQuestionId);
+            snapshots[examQuestionId] = ExamResultBuilder.BuildEssayReviewSnapshot(essay, examQuestion.Points);
         }
 
         return snapshots;

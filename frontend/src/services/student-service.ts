@@ -209,6 +209,7 @@ export interface PublicTeacherDto {
 }
 
 export interface PublicTeacherContentDto {
+  isActive?: boolean;
   id: string;
   name?: string;
   title?: string;
@@ -224,6 +225,7 @@ export interface PublicTeacherDetailDto extends PublicTeacherDto {
 }
 
 export interface PublicPackageDetailDto {
+  isActive?: boolean;
   id: string;
   name: string;
   description: string;

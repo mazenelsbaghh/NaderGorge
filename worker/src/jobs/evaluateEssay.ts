@@ -15,7 +15,8 @@ export interface EvaluateEssayJobData {
   questionText?: string;
   answerText: string;
   expectedAnswer?: string;
-  evaluation?: { isCorrect: boolean; feedback: string };
+  // Existing queue checkpoints may predate partial-credit grading.
+  evaluation?: { score?: number; isCorrect: boolean; feedback: string };
 }
 
 export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
@@ -32,13 +33,12 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     // A callback retry must not pay for (or wait for) the same AI evaluation again.
     const parsed = job.data.evaluation ?? (answerText.trim()
       ? await evaluateEssayWithAI(answerText, expectedAnswer, questionText)
-      : { isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' });
+      : { score: 0, isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' });
     if (!job.data.evaluation) await job.updateData({ ...job.data, evaluation: parsed });
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
     await throwIfCancellationRequested(job);
 
-    // Map true/false to 1/0 for the webhook score
-    const safeScore = parsed.isCorrect ? 1 : 0;
+    const safeScore = parsed.score ?? (parsed.isCorrect ? 1 : 0);
     
     // Webhook callback to C# API
     await job.updateProgress({ percentage: 80, stage: 'بنبعت النتيجة...' });

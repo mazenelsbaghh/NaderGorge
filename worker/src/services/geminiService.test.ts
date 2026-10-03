@@ -242,30 +242,58 @@ test('essay request uses the configured text model with the exact grading inputs
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
-    return { text: '{"isCorrect":true,"feedback":"برافو عليك"}' };
+    return { text: '{"score":1,"feedback":"برافو عليك"}' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
-  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { isCorrect: true, feedback: 'برافو عليك' });
+  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { score: 1, isCorrect: true, feedback: 'برافو عليك' });
   assert.equal(sent.model, 'text-model');
   assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
-  assert.deepEqual(sent.config.responseSchema.required, ['isCorrect', 'feedback']);
+  assert.deepEqual(sent.config.responseSchema.required, ['score', 'feedback']);
 });
 
 test('missing teacher key uses conservative question-only grading', async () => {
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
-    return { text: '{"isCorrect":false,"feedback":"الإجابة محتاجة توضيح أكتر."}' };
+    return { text: '{"score":0,"feedback":"الإجابة محتاجة توضيح أكتر."}' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
   assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال'),
-    { isCorrect: false, feedback: 'الإجابة محتاجة توضيح أكتر.' });
+    { score: 0, isCorrect: false, feedback: 'الإجابة محتاجة توضيح أكتر.' });
   assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: '', studentAnswer: 'إجابة الطالب' });
 });
 
 test('missing question text cannot be graded', async () => {
   setAIServiceRuntimeFactoryForTests(() => { throw new Error('Provider must not be used'); });
   await assert.rejects(evaluateEssayWithAI('إجابة', 'نموذج', ' '), /requires the question text/);
+});
+
+test('2026-10-03 essay grading preserves partial credit and its deduction reason', async () => {
+  const feedback = 'وضحت مصالح ثلاثة أطراف صح؛ ناقص مصلحة الموردين، وهي السداد في الموعد.';
+  setAIServiceRuntimeFactoryForTests(() => runtime({ models: {
+    generateContent: async () => ({ text: JSON.stringify({ score: 0.75, feedback }) }),
+  } }));
+
+  const grade = await evaluateEssayWithAI('مصالح ثلاثة أطراف', 'مصالح أربعة أطراف', 'وضح مصلحة كل طرف');
+
+  assert.deepEqual(grade, { score: 0.75, isCorrect: false, feedback });
+});
+
+test('malformed AI grades are rejected instead of awarding unsupported marks', async context => {
+  for (const response of [
+    { score: -0.1, feedback: 'reason' }, { score: 1.1, feedback: 'reason' },
+    { score: '0.75', feedback: 'reason' }, { score: null, feedback: 'reason' },
+    { score: 0.333, feedback: 'unsupported precision' },
+    { score: 0.75, feedback: ' ' }, { score: 0.75, feedback: 'x'.repeat(4001) },
+    { isCorrect: true, feedback: 'missing numeric grade' },
+  ]) {
+    await context.test(JSON.stringify(response).slice(0, 80), async () => {
+      setAIServiceRuntimeFactoryForTests(() => runtime({ models: {
+        generateContent: async () => ({ text: JSON.stringify(response) }),
+      } }));
+      await assert.rejects(evaluateEssayWithAI('answer', 'reference', 'question'), /invalid result/);
+    });
+  }
 });
 
 test('live support returns a valid Developer API decision', async () => {

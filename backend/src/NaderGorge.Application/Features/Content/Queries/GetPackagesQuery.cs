@@ -35,7 +35,9 @@ public record PackageDto(
     ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
     DateTime? ArchivedAt = null,
     AiOutputLanguage AiOutputLanguage = AiOutputLanguage.Auto,
-    bool AllowFullPackagePurchase = true
+    bool AllowFullPackagePurchase = true,
+    bool IsActive = true,
+    bool ShowWhenUnavailable = false
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -96,8 +98,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
         }
         else
         {
-            // Students only see active packages
-            query = query.Where(p => p.IsActive && p.Teacher.IsContentVisibleToStudents);
+            query = query.Where(p => (p.IsActive || p.ShowWhenUnavailable) && p.Teacher.IsContentVisibleToStudents);
         }
 
         var packages = await query
@@ -297,7 +298,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.ArchiveMode,
                 pk.ArchivedAt,
                 pk.AiOutputLanguage,
-                pk.AllowFullPackagePurchase
+                pk.AllowFullPackagePurchase,
+                pk.IsActive,
+                pk.ShowWhenUnavailable
             ));
         }
 

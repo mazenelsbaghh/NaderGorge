@@ -439,6 +439,10 @@ export default function PackageProfilePageClient() {
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                 <CheckCircle2 className="inline h-4 w-4 mr-1" /> تم تفعيل {contentRootLabel} في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
               </div>
+            ) : pkg?.isActive === false ? (
+              <div role="status" className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 text-sm font-bold leading-7 text-[var(--admin-muted)]">
+                غير متاحة للشراء حالياً. لو أنت مشترك فيها، تقدر تدخل المحتوى المتاح في حسابك.
+              </div>
             ) : fullPackagePurchaseDisabled ? (
               <div
                 role="status"

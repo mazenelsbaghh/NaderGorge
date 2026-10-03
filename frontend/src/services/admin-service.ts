@@ -1051,6 +1051,7 @@ export interface AdminPackageListItemDto {
 }
 
 export interface AdminPackageDetailDto {
+  showWhenUnavailable?: boolean;
   id: string;
   name: string;
   description: string;
@@ -1086,6 +1087,7 @@ export interface CreatePackagePayload {
 }
 
 export interface UpdatePackagePayload {
+  showWhenUnavailable?: boolean;
   name: string;
   description: string;
   price: number;

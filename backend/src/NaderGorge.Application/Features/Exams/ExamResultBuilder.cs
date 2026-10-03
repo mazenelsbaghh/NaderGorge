@@ -15,7 +15,9 @@ public record ExamQuestionReviewDto(
     string? AudioUrl,
     string? ImageUrl,
     string? WrittenCorrection,
-    string? StudentAudioUrl = null
+    string? StudentAudioUrl = null,
+    string? GradingFeedback = null,
+    decimal? MaximumPoints = null
 );
 
 public record QuestionReviewSnapshot(
@@ -23,7 +25,8 @@ public record QuestionReviewSnapshot(
     bool IsAnswered,
     bool IsCorrect,
     decimal PointsAwarded,
-    string? StudentAudioUrl = null
+    string? StudentAudioUrl = null,
+    string? GradingFeedback = null
 );
 
 internal static class ExamResultBuilder
@@ -78,7 +81,9 @@ internal static class ExamResultBuilder
                     resultIsCompleted
                         ? eq.Question.WrittenCorrection
                         : null,
-                    snapshot?.StudentAudioUrl
+                    snapshot?.StudentAudioUrl,
+                    resultIsCompleted ? snapshot?.GradingFeedback : null,
+                    eq.Points
                 );
             })
             .ToList();
@@ -135,7 +140,8 @@ internal static class ExamResultBuilder
             !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
             isGraded && awardedPoints > 0m && awardedPoints >= maximumPoints,
             awardedPoints,
-            essay.AudioUrl);
+            essay.AudioUrl,
+            isGraded ? essay.TeacherFeedback : null);
     }
 
     public static string? GetCorrectReviewText(QuestionBankItem question)

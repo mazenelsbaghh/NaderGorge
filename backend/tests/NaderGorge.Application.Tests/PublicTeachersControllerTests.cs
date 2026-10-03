@@ -79,6 +79,45 @@ public sealed class PublicTeachersControllerTests
         Assert.Equal("Out Of Scope Teacher", GetPropertyValue<string>(data, "fullName"));
     }
 
+    [Theory]
+    [InlineData(false, ContentArchiveMode.None, false, true)]
+    [InlineData(true, ContentArchiveMode.None, true, true)]
+    [InlineData(true, ContentArchiveMode.HiddenFromEveryone, false, true)]
+    [InlineData(true, ContentArchiveMode.ActiveSubscribersOnly, false, true)]
+    [InlineData(true, ContentArchiveMode.None, false, false)]
+    public async Task Detail_UnavailablePackageVisibilityHonorsOptInAndArchive(
+        bool showWhenUnavailable, ContentArchiveMode archiveMode, bool expectedVisible, bool teacherContentVisible)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var subject = await SeedSubjectAsync(db, "Unavailable package subject");
+        var teacher = await SeedTeacherAsync(db, "Unavailable package teacher", subject);
+        teacher.IsContentVisibleToStudents = teacherContentVisible;
+        var package = new Package
+        {
+            Name = "Center package", Description = "Existing subscribers only",
+            Teacher = teacher, Subject = subject, Price = 200m, IsActive = false,
+            ShowWhenUnavailable = showWhenUnavailable, ArchiveMode = archiveMode
+        };
+        db.Packages.Add(package);
+        await db.SaveChangesAsync();
+
+        var response = Assert.IsType<OkObjectResult>(await CreateController(db, Guid.NewGuid())
+            .Detail(teacher.Id.ToString(), CancellationToken.None));
+        var teacherDetail = GetPropertyValue<object>(response.Value!, "data");
+        var packages = ((IEnumerable)GetPropertyValue<object>(teacherDetail, "packages")).Cast<object>().ToList();
+
+        if (expectedVisible)
+        {
+            var visible = Assert.Single(packages);
+            Assert.Equal(package.Id, GetPropertyValue<Guid>(visible, "Id"));
+            Assert.False(GetPropertyValue<bool>(visible, "IsActive"));
+        }
+        else
+        {
+            Assert.Empty(packages);
+        }
+    }
+
     private static PublicTeachersController CreateController(DbContext db, Guid userId)
     {
         var controller = new PublicTeachersController(

@@ -28,7 +28,8 @@ public record PackageDetailDto(
     ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
     DateTime? ArchivedAt = null,
     AiOutputLanguage AiOutputLanguage = AiOutputLanguage.Auto,
-    bool AllowFullPackagePurchase = true);
+    bool AllowFullPackagePurchase = true,
+    bool ShowWhenUnavailable = false);
 public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
 public record PackageDirectSectionDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
 public record PackageDirectLessonDto(Guid Id, string Title, string Summary, int Order, decimal Price, bool HasAccess = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
@@ -142,7 +143,8 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             package.ArchiveMode,
             package.ArchivedAt,
             package.AiOutputLanguage,
-            package.AllowFullPackagePurchase);
+            package.AllowFullPackagePurchase,
+            package.ShowWhenUnavailable);
 
         return ApiResponse<PackageDetailDto>.Ok(packageDto);
     }

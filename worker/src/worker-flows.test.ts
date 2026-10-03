@@ -94,7 +94,7 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
             content: {
               parts: [
                 {
-                  text: JSON.stringify({ isCorrect: true, feedback: 'إجابة رائعة يا بطل!' })
+                  text: JSON.stringify({ score: 1, feedback: 'إجابة رائعة يا بطل!' })
                 }
               ]
             }
@@ -163,7 +163,7 @@ test('processEvaluateEssayJob throws error to trigger queue retry if callback fa
             content: {
               parts: [
                 {
-                  text: JSON.stringify({ isCorrect: false, feedback: 'محاولة جيدة ولكن غير صحيحة.' })
+                  text: JSON.stringify({ score: 0, feedback: 'محاولة جيدة ولكن غير صحيحة.' })
                 }
               ]
             }

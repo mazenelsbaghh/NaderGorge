@@ -382,6 +382,8 @@ export default function TermDetailPageClient() {
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                 <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'هذه الباقة مفعّلة في حسابك بالفعل.' : 'هذا الترم مفعّل في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
+            ) : pkg?.isActive === false ? (
+              <p role="status" className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-sm font-bold text-[var(--admin-muted)]">غير متاحة للشراء حالياً.</p>
             ) : (
               <div className="flex flex-col gap-3">
                 <button

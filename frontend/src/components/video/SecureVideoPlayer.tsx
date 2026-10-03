@@ -1,6 +1,6 @@
 'use client';
 
-import { youtubeQualityPreviewGeometry, YOUTUBE_QUALITY_GEAR_CLIP } from '@/lib/youtube-quality-preview';
+import { youtubeQualityFullscreenGeometry, youtubeQualityPreviewGeometry, YOUTUBE_QUALITY_GEAR_CLIP } from '@/lib/youtube-quality-preview';
 import { devConsole } from '@/utils/dev-console';
 import { formatPlayerTime } from '@/lib/player-time';
 import { isVideoLearningComplete } from '@/lib/student-learning-progress';
@@ -169,6 +169,17 @@ function createVideoEmbedIframe(sessionId: string): HTMLIFrameElement {
   return iframe;
 }
 
+function applyYouTubeQualityFrameGeometry(
+  iframe: HTMLIFrameElement,
+  geometry: ReturnType<typeof youtubeQualityPreviewGeometry> & { offsetLeft?: number; offsetTop?: number },
+) {
+  Object.assign(iframe.style, {
+    left: `${geometry.offsetLeft ?? 0}px`, top: `${geometry.offsetTop ?? 0}px`,
+    width: `${geometry.canvasWidth}px`, height: `${geometry.canvasHeight}px`,
+    transform: `scale(${geometry.scale})`, transformOrigin: '0 0',
+  });
+}
+
 const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, SecureVideoPlayerProps>(({ 
   lessonVideoId, 
   localYouTubeQualityPreview = false,
@@ -275,6 +286,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const serverCanResolveDurationRef = useRef(false);
   
   const [showControls, setShowControls] = useState(true);
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
+  const [rotateLandscapeFallback, setRotateLandscapeFallback] = useState(false);
+  const fullscreenActive = isPseudoFullscreen || isNativeFullscreen;
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shadowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -292,6 +307,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [shadowCoverage, setShadowCoverage] = useState({ top: 40, bottom: 38 });
   const [shadowSolid, setShadowSolid] = useState({ top: 10, bottom: 12 });
   const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive', 'vcdn']);
+  const qualityShadowsVisible = showPlayerShadows && enabledShadowProviders.includes('youtube');
+  const cleanFullscreen = fullscreenActive && !showControls && !nativeQualityMenuOpen && !qualityShadowsVisible;
   const loadingSessionRef = useRef(false);
   const securitySuspendedRef = useRef(false);
   const domShieldsCleanupRef = useRef<(() => void) | null>(null);
@@ -322,9 +339,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const fullscreenRootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isLocalPreview) return;
+    if (isLocalPreview && !isLocalQualityPreview) return;
     let active = true;
-    apiClient.get('/public/settings').then(({ data }) => {
+    const appearanceRequest = isLocalQualityPreview
+      ? fetch('/api/dev/youtube-quality?settings=1').then(async (response) => {
+          if (!response.ok) throw new Error('Local player appearance settings are unavailable.');
+          return { data: await response.json() };
+        })
+      : apiClient.get('/public/settings');
+    appearanceRequest.then(({ data }) => {
       if (!active) return;
       const top = Number(data?.playerShadowTopOpacity ?? data?.PlayerShadowTopOpacity ?? 0.70);
       const bottom = Number(data?.playerShadowBottomOpacity ?? data?.PlayerShadowBottomOpacity ?? 0.98);
@@ -347,7 +370,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       bunnyShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.bunnyPlayerShadowHideDelaySeconds ?? data?.BunnyPlayerShadowHideDelaySeconds ?? 5))) * 1000;
     }).catch((error) => devConsole.error('Failed to load player appearance settings:', error));
     return () => { active = false; };
-  }, [isLocalPreview]);
+  }, [isLocalPreview, isLocalQualityPreview]);
 
   const showPersistentPlayerShadows = useCallback(() => {
     if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
@@ -521,13 +544,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const fitQualityPreview = useCallback((iframe: HTMLIFrameElement, surface: HTMLElement) => {
     if (surface.clientWidth === 0 || surface.clientHeight === 0) return;
-    const geometry = youtubeQualityPreviewGeometry(surface.clientWidth, surface.clientHeight);
-    Object.assign(iframe.style, {
-      width: `${geometry.canvasWidth}px`, height: `${geometry.canvasHeight}px`,
-      transform: `scale(${geometry.scale})`, transformOrigin: '0 0',
-    });
+    const geometry = cleanFullscreen
+      ? youtubeQualityFullscreenGeometry(surface.clientWidth, surface.clientHeight)
+      : { ...youtubeQualityPreviewGeometry(surface.clientWidth, surface.clientHeight), offsetLeft: 0, offsetTop: 0 };
+    applyYouTubeQualityFrameGeometry(iframe, geometry);
+    iframe.contentWindow?.postMessage({ type: 'fullscreenPresentation', clean: cleanFullscreen }, window.location.origin);
     setQualityGear({ left: geometry.left, top: geometry.top, size: geometry.size });
-  }, []);
+  }, [cleanFullscreen]);
 
   const mountVideoEmbed = useCallback((sessionId: string) => {
     const playerContainer = containerRef.current;
@@ -547,7 +570,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (isLocalQualityPreview) iframe.src = '/api/dev/youtube-quality';
       // Native links must not open tabs or navigate the containing page.
       iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
-      fitQualityPreview(iframe, playerContainer);
+      if (playerContainer.clientWidth > 0 && playerContainer.clientHeight > 0) {
+        applyYouTubeQualityFrameGeometry(iframe,
+          youtubeQualityPreviewGeometry(playerContainer.clientWidth, playerContainer.clientHeight));
+      }
     }
     iframeRef.current = iframe;
     playerContainer.appendChild(iframe);
@@ -555,7 +581,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setStatus('error');
       setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
     });
-  }, [fitQualityPreview, isLocalHlsPreview, isLocalQualityPreview, localHlsPreviewEndpoint, youtubeQualityEnabled]);
+  }, [isLocalHlsPreview, isLocalQualityPreview, localHlsPreviewEndpoint, youtubeQualityEnabled]);
 
   const scheduleBunnyPlaybackRecovery = useCallback(() => {
     if (bunnyRecoveryTimerRef.current) return true;
@@ -697,12 +723,20 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   useEffect(() => {
     const surface = containerRef.current;
     if (!youtubeQualityEnabled || status !== 'ready' || !surface) return;
+    if (iframeRef.current) fitQualityPreview(iframeRef.current, surface);
     const observer = new ResizeObserver(() => {
       if (iframeRef.current) fitQualityPreview(iframeRef.current, surface);
     });
     observer.observe(surface);
     return () => observer.disconnect();
   }, [fitQualityPreview, youtubeQualityEnabled, status]);
+
+  useEffect(() => {
+    if (!youtubeQualityEnabled || status !== 'ready') return;
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'playerShadows', visible: qualityShadowsVisible }, window.location.origin,
+    );
+  }, [youtubeQualityEnabled, status, qualityShadowsVisible]);
 
   useEffect(() => {
     if (!isLocalPreview || status !== 'loading') return;
@@ -1931,10 +1965,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
   };
 
-  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
-  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
-  const [rotateLandscapeFallback, setRotateLandscapeFallback] = useState(false);
-
   useEffect(() => {
     if (!isPseudoFullscreen) return;
 
@@ -2046,9 +2076,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (exitedFullscreen) resetFullscreenState();
     }
   };
-
-  const fullscreenActive = isPseudoFullscreen || isNativeFullscreen;
-
   useEffect(() => {
     handlePlayerInteraction();
   }, [fullscreenActive, handlePlayerInteraction]);
@@ -2090,7 +2117,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [chapterKey, status, activeChapterDesktop?.mindmapImageUrl, enableChapterAids, isLocalHlsPreview]);
 
   const usesNativePlayerChrome = usesNativeProviderControls(provider);
-  const dockedPlayerControls = youtubeQualityEnabled || provider === 'youtube-hls';
+  const dockedPlayerControls = !fullscreenActive && (youtubeQualityEnabled || provider === 'youtube-hls');
+  const qualityControlsVisible = !fullscreenActive || showControls || nativeQualityMenuOpen;
 
   // ── Render States ──
   if (isExamLocked) {
@@ -2399,7 +2427,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       {/* Video Container */}
       <div 
         className={`secure-video-fullscreen-surface relative min-h-0 w-full shrink aspect-video cursor-pointer overflow-hidden rounded-xl bg-black ${rotateLandscapeFallback ? 'secure-video-force-landscape' : ''}`}
-        style={youtubeQualityEnabled && touchQualityControls ? { minHeight: 360 } : undefined}
+        style={youtubeQualityEnabled && touchQualityControls && !fullscreenActive && (qualityShadowsVisible || nativeQualityMenuOpen) ? { minHeight: 360 } : undefined}
         role="region"
         aria-label="مشغل الفيديو"
         tabIndex={0}
@@ -2433,13 +2461,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           togglePlay();
           handlePlayerInteraction();
         }}
-        onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
+        onMouseLeave={() => { if(isPlaying && !youtubeQualityEnabled) setShowControls(false) }}
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
         {status === 'ready' && !nativeQualityMenuOpen && (
           <div
-            style={youtubeQualityEnabled && qualityPreviewStarted ? { clipPath: YOUTUBE_QUALITY_GEAR_CLIP, '--quality-gear-left': `${qualityGear.left}px`, '--quality-gear-top': `${qualityGear.top}px`, '--quality-gear-size': `${qualityGear.size}px` } as React.CSSProperties : undefined}
+            style={youtubeQualityEnabled && qualityPreviewStarted && qualityControlsVisible ? { clipPath: YOUTUBE_QUALITY_GEAR_CLIP, '--quality-gear-left': `${qualityGear.left}px`, '--quality-gear-top': `${qualityGear.top}px`, '--quality-gear-size': `${qualityGear.size}px` } as React.CSSProperties : undefined}
             className="pointer-events-none absolute inset-x-0 bottom-[22%] top-0 z-[var(--z-overlay-content)] flex touch-manipulation"
             aria-hidden="true"
             dir="ltr"
@@ -2559,7 +2587,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         {status === 'ready' && !dockedPlayerControls && !usesNativePlayerChrome && !isChapterInfoOpen && !isMindmapOpen && (
           playerControls
         )}
-      {youtubeQualityEnabled && status === 'ready' && (
+      {youtubeQualityEnabled && status === 'ready' && qualityControlsVisible && (
         <>
           {qualityPreviewStarted ? (
             <div aria-hidden="true" style={{ left: qualityGear.left + qualityGear.size / 2 - 22, top: qualityGear.top + qualityGear.size / 2 - 22 }} className="pointer-events-none absolute z-[var(--z-modal)] flex h-[44px] w-[44px] items-center justify-center rounded-full bg-black/65 text-white"><Settings className="size-5" /></div>

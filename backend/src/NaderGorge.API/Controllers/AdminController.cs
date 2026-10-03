@@ -413,7 +413,8 @@ public class AdminController : ControllerBase
             GetUserId(),
             dto.AiOutputLanguage)
         {
-            AllowFullPackagePurchase = dto.AllowFullPackagePurchase
+            AllowFullPackagePurchase = dto.AllowFullPackagePurchase,
+            ShowWhenUnavailable = dto.ShowWhenUnavailable
         });
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -1645,7 +1646,8 @@ public record UpdatePackageDto(
     bool IsActive,
     IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
     AiOutputLanguage? AiOutputLanguage = null,
-    bool? AllowFullPackagePurchase = null);
+    bool? AllowFullPackagePurchase = null,
+    bool? ShowWhenUnavailable = null);
 public record SetContentArchiveStateRequest(ContentArchiveMode ArchiveMode);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,

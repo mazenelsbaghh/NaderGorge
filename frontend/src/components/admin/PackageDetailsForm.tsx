@@ -33,6 +33,7 @@ interface PackageDetailsFormProps {
     description: string;
     price: number;
     isActive: boolean;
+    showWhenUnavailable?: boolean;
     programId?: string;
     targetGrade?: string;
     subjectId?: string;
@@ -85,6 +86,7 @@ export function PackageDetailsForm({ pkg, onSuccess }: PackageDetailsFormProps) 
   const [description, setDescription] = useState(pkg.description || '');
   const [price, setPrice] = useState(pkg.price || 0);
   const [isActive, setIsActive] = useState(pkg.isActive !== false);
+  const [showWhenUnavailable, setShowWhenUnavailable] = useState(pkg.showWhenUnavailable === true);
   const [allowFullPackagePurchase, setAllowFullPackagePurchase] = useState(
     pkg.allowFullPackagePurchase !== false,
   );
@@ -120,6 +122,7 @@ export function PackageDetailsForm({ pkg, onSuccess }: PackageDetailsFormProps) 
         description,
         price,
         isActive,
+        showWhenUnavailable,
         academicScopes,
         aiOutputLanguage,
         ...(pkg.contentMode === 'TermWithSections'
@@ -189,10 +192,18 @@ export function PackageDetailsForm({ pkg, onSuccess }: PackageDetailsFormProps) 
             <Checkbox.Indicator />
           </Checkbox.Control>
           <Checkbox.Content>
-            <CheckboxLabel className="cursor-pointer">تفعيل الباقة (تظهر للطلاب للتسجيل)</CheckboxLabel>
+            <CheckboxLabel className="cursor-pointer">السماح بشراء الباقة ومحتواها</CheckboxLabel>
           </Checkbox.Content>
         </Checkbox>
       </div>
+
+      <Checkbox id="showWhenUnavailable" isSelected={showWhenUnavailable} onChange={setShowWhenUnavailable} isDisabled={saving}>
+        <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+        <Checkbox.Content>
+          <CheckboxLabel className="cursor-pointer">إظهار الباقة حتى لو الشراء متوقف</CheckboxLabel>
+          <CheckboxDescription>تظهر للطلاب باسمها وتفاصيلها، والمشتركين فيها يفضلوا يدخلوا محتواها. إعدادات الأرشفة تظل لها الأولوية.</CheckboxDescription>
+        </Checkbox.Content>
+      </Checkbox>
 
       {pkg.contentMode === 'TermWithSections' ? (
         <div

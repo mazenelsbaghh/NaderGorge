@@ -12,7 +12,7 @@ test('homework grades survive callback outages and resume without another provid
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
   setAIServiceRuntimeFactoryForTests(() => ({
     config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: '{"isCorrect":true,"feedback":"Correct reasoning"}' }) } } as never,
+    developer: { models: { generateContent: async () => ({ text: '{"score":1,"feedback":"Correct reasoning"}' }) } } as never,
   }));
   const job = {
     id: 'homework-evaluation', data: { SubmissionId: 'submission', Fingerprint: 'A'.repeat(64), Questions: [

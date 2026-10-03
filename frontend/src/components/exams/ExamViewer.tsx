@@ -39,6 +39,16 @@ import { QuestionImage } from '@/components/assessment/QuestionImage';
 import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
+function AnswerGradingFeedback({ feedback }: { feedback?: string }) {
+  if (!feedback) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-border/40 bg-background/60 p-4">
+      <p className="text-xs font-black text-muted-foreground">تعليل التصحيح</p>
+      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-7 text-foreground" dir="auto">{feedback}</p>
+    </div>
+  );
+}
+
 // ─── Result Panel ───────────────────────────────────────────────────────────────
 
 export function ExamResultPanel({
@@ -361,7 +371,7 @@ export function ExamResultPanel({
           className="rounded-3xl border border-border bg-card p-6 sm:p-8"
         >
           <h3 className="text-xl font-black text-foreground">نقاط الضعف في هذه المحاولة</h3>
-          <p className="mt-1 text-sm text-muted-foreground">هذه الأسئلة كانت مواضع الخطأ — ركز عليها في المذاكرة.</p>
+          <p className="mt-1 text-sm text-muted-foreground">راجع الأجزاء الناقصة وسبب خصم الدرجة في هذه الأسئلة.</p>
 
           <div className="mt-5 space-y-3">
             {wrongQuestions.map((q) => (
@@ -373,7 +383,7 @@ export function ExamResultPanel({
                   <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-black text-destructive">
                     سؤال {q.order}
                   </span>
-                  <span className="text-xs font-black text-muted-foreground">{q.pointsAwarded} نقطة</span>
+                  <span className="text-xs font-black text-muted-foreground">{q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة</span>
                 </div>
                 <div
                   className="text-base font-bold leading-8 text-foreground"
@@ -400,6 +410,7 @@ export function ExamResultPanel({
                   </p>
                 )}
                 <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
+                <AnswerGradingFeedback feedback={q.gradingFeedback} />
               </article>
             ))}
           </div>
@@ -419,88 +430,100 @@ export function ExamResultPanel({
 
           {hasReviewData ? (
             <div className="mt-5 space-y-3">
-              {reviewedQuestions.map((q) => (
-              <article
-                key={q.examQuestionId}
-                className={`rounded-2xl border p-5 transition-colors ${
-                  q.isAnswered
-                    ? q.isCorrect
-                      ? 'border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
-                      : 'border-destructive/20 bg-destructive/5'
-                    : 'border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20'
-                }`}
-              >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-black text-muted-foreground border border-border/50">
-                    سؤال {q.order}
-                  </span>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${
-                      !q.isAnswered
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
-                        : q.isCorrect
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
-                          : 'bg-destructive/10 text-destructive'
+              {reviewedQuestions.map((q) => {
+                const hasPartialCredit = q.isAnswered && !q.isCorrect && q.pointsAwarded > 0;
+                return (
+                  <article
+                    key={q.examQuestionId}
+                    className={`rounded-2xl border p-5 transition-colors ${
+                      q.isAnswered
+                        ? q.isCorrect
+                          ? 'border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
+                          : hasPartialCredit
+                            ? 'border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20'
+                            : 'border-destructive/20 bg-destructive/5'
+                        : 'border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20'
                     }`}
                   >
-                    {!q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : 'خاطئة ✗'}
-                  </span>
-                </div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-black text-muted-foreground border border-border/50">
+                        سؤال {q.order}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black ${
+                          !q.isAnswered
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                            : q.isCorrect
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
+                              : hasPartialCredit
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                                : 'bg-destructive/10 text-destructive'
+                        }`}
+                      >
+                        {!q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : hasPartialCredit ? 'صحيحة جزئيًا' : 'خاطئة ✗'}
+                      </span>
+                    </div>
 
-                <div
-                  className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.questionText) }}
-                />
-                <div className="mt-3">
-                  <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الامتحان ${q.order}`} />
-                </div>
+                    <p className="mb-3 text-xs font-black text-muted-foreground">
+                      {q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة
+                    </p>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-background/60 border border-border/40 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{q.isAnswered ? 'إجابتك' : 'حالة السؤال'}</p>
-                    {q.isAnswered ? (
-                      q.studentAudioUrl ? (
-                        <div className="mt-2">
-                          <audio controls className="h-9 w-full" preload="none">
-                            <source src={resolveMediaUrl(q.studentAudioUrl)} />
-                          </audio>
-                          {q.selectedOptionText && (
-                            <p className="mt-2 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText) }} />
-                          )}
+                    <div
+                      className="text-base font-bold leading-8 text-foreground"
+                      dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.questionText) }}
+                    />
+                    <div className="mt-3">
+                      <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الامتحان ${q.order}`} />
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-background/60 border border-border/40 p-4">
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{q.isAnswered ? 'إجابتك' : 'حالة السؤال'}</p>
+                        {q.isAnswered ? (
+                          q.studentAudioUrl ? (
+                            <div className="mt-2">
+                              <audio controls className="h-9 w-full" preload="none">
+                                <source src={resolveMediaUrl(q.studentAudioUrl)} />
+                              </audio>
+                              {q.selectedOptionText && (
+                                <p className="mt-2 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText) }} />
+                              )}
+                            </div>
+                          ) : (
+                            <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText || 'لم تختر إجابة.') }} />
+                          )
+                        ) : (
+                          <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">عديت السؤال ده</p>
+                        )}
+                      </div>
+
+                      {q.correctOptionText ? (
+                        <div className="rounded-xl bg-background/60 border border-border/40 p-4">
+                          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                            الإجابة الصحيحة
+                          </p>
+                          <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
+                          <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
                         </div>
                       ) : (
-                        <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText || 'لم تختر إجابة.') }} />
-                      )
-                    ) : (
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">عديت السؤال ده</p>
-                    )}
-                  </div>
-
-                  {q.correctOptionText ? (
-                    <div className="rounded-xl bg-background/60 border border-border/40 p-4">
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                        الإجابة الصحيحة
-                      </p>
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
-                      <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
-                    </div>
-                  ) : (
-                    <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                        ملاحظات
-                      </p>
-                      {q.writtenCorrection || q.audioUrl ? (
-                        <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
-                      ) : (
-                        <p className="mt-1.5 text-sm font-bold leading-6 text-muted-foreground">
-                          لا توجد ملاحظات.
-                        </p>
+                        <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
+                          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                            ملاحظات
+                          </p>
+                          {q.writtenCorrection || q.audioUrl ? (
+                            <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
+                          ) : (
+                            <p className="mt-1.5 text-sm font-bold leading-6 text-muted-foreground">
+                              لا توجد ملاحظات.
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </article>
-              ))}
+                    <AnswerGradingFeedback feedback={q.gradingFeedback} />
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-10 text-center">

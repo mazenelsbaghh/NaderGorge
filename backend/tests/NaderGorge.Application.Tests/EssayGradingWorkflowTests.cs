@@ -61,6 +61,7 @@ public class EssayGradingWorkflowTests
         var pendingEssayReview = result.Data.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
         Assert.Null(pendingEssayReview.CorrectOptionText);
         Assert.Null(pendingEssayReview.WrittenCorrection);
+        Assert.Null(pendingEssayReview.GradingFeedback);
         var savedEssay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
         Assert.Equal(hasRecording ? EssaySubmissionStatus.WaitTeacher : EssaySubmissionStatus.WaitAI, savedEssay.Status);
         var queuedEvaluations = db.OutboxEvents.Where(e => e.Type == "EssayEvaluationQueued").ToList();
@@ -153,10 +154,16 @@ public class EssayGradingWorkflowTests
         var completedEssayReview = completedResult.Data!.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
         Assert.Equal("A force attracting masses.", completedEssayReview.CorrectOptionText);
         Assert.Equal("A force attracting masses.", completedEssayReview.WrittenCorrection);
+        Assert.Equal(manualGrading ? "Teacher says correct" : "AI says correct", completedEssayReview.GradingFeedback);
     }
 
-    [Fact]
-    public async Task EssayCallback_WhenAiReturnsFalse_AwardsZeroAndFinalizesAttempt()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(0.5)]
+    [InlineData(0.33)]
+    [InlineData(0.75)]
+    [InlineData(1)]
+    public async Task EssayCallback_PreservesEarnedCreditAndExplainsDeductions(double scoreRatio)
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "503");
@@ -175,25 +182,64 @@ public class EssayGradingWorkflowTests
         var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
 
         var aiHandler = new WebhookEssayGradedCommandHandler(db);
-        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 0m, "AI says incorrect"), CancellationToken.None);
+        const string feedback = "شرحت الجزء الأول صح؛ ناقص شرح الجزء الثاني وفق الإجابة النموذجية.";
+        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, (decimal)scoreRatio, feedback), CancellationToken.None);
         Assert.True(aiResult.Success);
+        var expectedPoints = 8m * (decimal)scoreRatio;
+
+        var duplicate = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 0m, "Duplicate delivery"), CancellationToken.None);
+        Assert.True(duplicate.Success);
 
         db.ChangeTracker.Clear();
         var persistedEssay = db.EssaySubmissions.AsNoTracking().Single(e => e.Id == essay.Id);
         Assert.Equal(EssaySubmissionStatus.TeacherGraded, persistedEssay.Status);
-        Assert.Equal(0m, persistedEssay.TeacherFinalScore);
+        Assert.Equal(expectedPoints, persistedEssay.TeacherFinalScore);
+        Assert.Equal(feedback, persistedEssay.TeacherFeedback);
 
         var persistedAttempt = db.StudentExamAttempts.AsNoTracking().Single(a => a.Id == attempt.Id);
-        Assert.Equal(2m, persistedAttempt.ScoreAchieved);
-        Assert.False(persistedAttempt.IsPassed);
+        Assert.Equal(2m + expectedPoints, persistedAttempt.ScoreAchieved);
+        Assert.Equal(persistedAttempt.ScoreAchieved >= exam.PassingScore, persistedAttempt.IsPassed);
 
         var persistedAnswer = db.StudentAnswers.AsNoTracking().Single(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == essayExamQuestion.Id);
-        Assert.False(persistedAnswer.IsCorrect);
-        Assert.Equal(0m, persistedAnswer.PointsAwarded);
+        Assert.Equal(scoreRatio == 1, persistedAnswer.IsCorrect);
+        Assert.Equal(expectedPoints, persistedAnswer.PointsAwarded);
 
         var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
         var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);
         Assert.Equal("Completed", status.Data!.ResultState);
+
+        var result = await new GetExamAttemptResultQueryHandler(db)
+            .Handle(new GetExamAttemptResultQuery(attempt.Id, student.Id), CancellationToken.None);
+        var review = result.Data!.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
+        Assert.Equal(expectedPoints, review.PointsAwarded);
+        Assert.Equal(8m, review.MaximumPoints);
+        Assert.Equal(feedback, review.GradingFeedback);
+        Assert.Equal(scoreRatio == 1, review.IsCorrect);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    [InlineData(0.333)]
+    public async Task EssayCallback_RejectsUnsupportedGradesWithoutFinalizing(double scoreRatio)
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "504");
+        var (exam, mcq, essayQuestion, _, _, correct, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        await new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer()).Handle(
+            new(exam.Id, attempt.Id, student.Id, [new(mcq.Id, correct.Id, null), new(essayQuestion.Id, null, "Answer")]), default);
+        var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id);
+
+        var response = await new WebhookEssayGradedCommandHandler(db)
+            .Handle(new(essay.Id, (decimal)scoreRatio, "Reason"), default);
+
+        Assert.False(response.Success);
+        db.ChangeTracker.Clear();
+        var saved = await db.EssaySubmissions.SingleAsync(e => e.Id == essay.Id);
+        Assert.Equal(EssaySubmissionStatus.WaitAI, saved.Status);
+        Assert.Null(saved.TeacherFinalScore);
+        Assert.Null(saved.AiInitialScore);
     }
 }
 

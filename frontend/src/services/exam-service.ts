@@ -70,6 +70,8 @@ export interface ExamQuestionReviewDto {
   isAnswered: boolean;
   isCorrect: boolean;
   pointsAwarded: number;
+  maximumPoints?: number;
+  gradingFeedback?: string;
   correctOptionText?: string;
   audioUrl?: string;
   imageUrl?: string;

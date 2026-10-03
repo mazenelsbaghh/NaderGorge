@@ -119,10 +119,11 @@ export default function PublicPackagePageClient({
                 </p>
                 <button
                   type="button"
+                  disabled={packageDetail.isActive === false}
                   onClick={() => setIsPurchaseDialogOpen(true)}
                   className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--public-accent)] px-5 text-sm font-black text-white transition hover:bg-[var(--public-accent-hover)]"
                 >
-                  <LockKeyhole className="h-4 w-4" /> اشترك في الباقة
+                  <LockKeyhole className="h-4 w-4" /> {packageDetail.isActive === false ? 'غير متاحة للشراء' : 'اشترك في الباقة'}
                 </button>
               </div>
             </div>
@@ -169,6 +170,7 @@ export default function PublicPackagePageClient({
                               <button
                                 key={lesson.id}
                                 type="button"
+                                disabled={packageDetail.isActive === false}
                                 onClick={() => setIsPurchaseDialogOpen(true)}
                                 className="flex min-h-11 items-center gap-2 rounded-lg bg-[var(--public-surface)] px-3 text-right text-sm font-bold text-[var(--public-text-muted)] transition hover:text-[var(--public-accent)]"
                               >

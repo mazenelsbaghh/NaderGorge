@@ -29,7 +29,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
                ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]' 
                : 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)] border border-[var(--admin-danger-20)]'
            }`}>
-             {pkg.isEnrolled ? 'مفعلة' : 'تحتاج كود'}
+             {pkg.isActive === false ? 'غير متاحة للشراء' : pkg.isEnrolled ? 'مفعلة' : 'تحتاج كود'}
            </span>
         </div>
       </div>
@@ -56,7 +56,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
               ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-[var(--admin-primary-contrast)]'
               : 'bg-[var(--admin-card-strong)] text-[var(--admin-text)] group-hover:bg-[var(--admin-card-strong)]'
           }`}>
-            {pkg.isEnrolled ? 'دخول الباقة' : 'تفعيل بالكود'}
+            {pkg.isEnrolled ? 'دخول الباقة' : pkg.isActive === false ? 'عرض التفاصيل' : 'تفعيل بالكود'}
           </span>
         </div>
       </div>

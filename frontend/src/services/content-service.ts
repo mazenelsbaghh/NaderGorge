@@ -52,6 +52,8 @@ export interface PackageDto {
   price: number;
   programId: string;
   isEnrolled: boolean;
+  isActive?: boolean;
+  showWhenUnavailable?: boolean;
   hasDirectPackageAccess?: boolean;
   hasRootContentAccess?: boolean;
   imageUrl?: string;
@@ -80,7 +82,7 @@ export type ContentRootPurchaseReference = {
 };
 
 export function getContentRootPurchaseReference(pkg: PackageDto): ContentRootPurchaseReference | null {
-  if (isFullPackagePurchaseDisabled(pkg)) {
+  if (pkg.isActive === false || isFullPackagePurchaseDisabled(pkg)) {
     return null;
   }
 
@@ -241,6 +243,7 @@ export interface HomeworkDto {
 }
 
 export interface LessonDetailDto {
+  isPackageActive?: boolean;
   isCompleted?: boolean;
   id: string;
   title: string;

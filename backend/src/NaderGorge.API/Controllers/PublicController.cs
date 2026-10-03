@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Features.Public.Queries;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
@@ -138,7 +139,8 @@ public class PublicController : ControllerBase
         var package = await _db.Packages
             .AsNoTracking()
             .Where(item => item.Id == packageId
-                && item.IsActive
+                && (item.IsActive || item.ShowWhenUnavailable)
+                && item.ArchiveMode == ContentArchiveMode.None
                 && item.Teacher.IsVisibleToStudents
                 && item.Teacher.IsContentVisibleToStudents
                 && item.Teacher.User.IsActive
@@ -149,6 +151,7 @@ public class PublicController : ControllerBase
                 item.Name,
                 item.Description,
                 item.Price,
+                item.IsActive,
                 item.ImageUrl,
                 SubjectName = item.Subject.Name,
                 TeacherName = item.Teacher.User.FullName,

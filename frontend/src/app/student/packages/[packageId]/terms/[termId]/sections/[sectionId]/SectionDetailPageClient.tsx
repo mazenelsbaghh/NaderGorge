@@ -257,7 +257,7 @@ export default function SectionDetailPageClient() {
                   const unlockedVideos = lesson.videos?.filter((video) => video.hasAccess) ?? [];
                   const hasVideoOnlyAccess = unlockedVideos.length > 0 && !lesson.hasAccess;
                   const hasContentAccess = hasSectionAccess || lesson.hasAccess || hasVideoOnlyAccess;
-                  const canBuyLesson = !hasSectionAccess && !lesson.hasAccess;
+                  const canBuyLesson = pkg?.isActive !== false && !hasSectionAccess && !lesson.hasAccess;
                   const canAccess = hasContentAccess && (!lesson.isLocked || hasVideoOnlyAccess);
                   const sortedVideos = [...(lesson.videos ?? [])].sort((a, b) => a.order - b.order);
                   const openVideoCount = sortedVideos.filter((video) => hasSectionAccess || lesson.hasAccess || video.hasAccess).length;
@@ -470,6 +470,8 @@ export default function SectionDetailPageClient() {
                 <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                   <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'الباقة مفعّلة' : hasTermAccess ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
                 </div>
+              ) : pkg?.isActive === false ? (
+                <p role="status" className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-sm font-bold text-[var(--admin-muted)]">غير متاحة للشراء حالياً.</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   <button

@@ -14,6 +14,7 @@ public class Package : BaseEntity, IArchivableContent
     public string? ImageUrl { get; set; }
     public decimal Price { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool ShowWhenUnavailable { get; set; }
     public ContentArchiveMode ArchiveMode { get; set; }
     public DateTime? ArchivedAt { get; set; }
     public Guid? ArchivedByUserId { get; set; }

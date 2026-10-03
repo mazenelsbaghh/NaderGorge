@@ -210,7 +210,11 @@ public class PublicTeachersController : ControllerBase
                 teacher.RatingCount,
                 subjectNames = teacher.TeacherSubjects.Select(ts => ts.Subject.Name),
                 subjects = teacher.TeacherSubjects.Select(ts => new { id = ts.SubjectId, ts.Subject.Name }),
-                packages = teacher.Packages.Where(p => p.IsActive).Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl }),
+                packages = teacher.Packages
+                    .Where(p => teacher.IsContentVisibleToStudents
+                        && (p.IsActive || p.ShowWhenUnavailable)
+                        && p.ArchiveMode == ContentArchiveMode.None)
+                    .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.IsActive }),
                 sharedPackages,
                 lessons
             }

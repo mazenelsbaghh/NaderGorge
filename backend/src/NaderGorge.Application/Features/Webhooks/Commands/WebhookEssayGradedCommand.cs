@@ -46,7 +46,8 @@ public class WebhookEssayGradedCommandHandler
                 "Essay submission has already processed or left WaitAI state.");
         }
 
-        if (request.AiScore is not (0m or 1m) || string.IsNullOrWhiteSpace(request.AiFeedback)
+        if (request.AiScore is < 0m or > 1m || request.AiScore != Math.Round(request.AiScore, 2)
+            || string.IsNullOrWhiteSpace(request.AiFeedback)
             || request.AiFeedback.Length > 4000)
             return ApiResponse<WebhookEssayGradedResultDto>.Fail("Invalid essay evaluation result.");
 
@@ -86,7 +87,7 @@ public class WebhookEssayGradedCommandHandler
         }
 
         var isCorrect = request.AiScore >= 1m;
-        var awardedScore = isCorrect ? examQuestion.Points : 0m;
+        var awardedScore = Math.Round(examQuestion.Points * request.AiScore, 2, MidpointRounding.AwayFromZero);
         if (attempt.DefinitionSnapshotJson is not null)
             attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
                 .WithGrades(new Dictionary<Guid, (decimal, bool)> { [examQuestion.Id] = (awardedScore, false) }).ToJson();

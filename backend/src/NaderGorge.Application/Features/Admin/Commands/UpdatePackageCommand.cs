@@ -19,6 +19,7 @@ public record UpdatePackageCommand(
     AiOutputLanguage? AiOutputLanguage = null) : IRequest<ApiResponse>
 {
     public bool? AllowFullPackagePurchase { get; init; }
+    public bool? ShowWhenUnavailable { get; init; }
 }
 
 public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand, ApiResponse>
@@ -45,6 +46,8 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         package.Description = request.Description;
         package.Price = request.Price;
         package.IsActive = request.IsActive;
+        if (request.ShowWhenUnavailable.HasValue)
+            package.ShowWhenUnavailable = request.ShowWhenUnavailable.Value;
         if (request.AllowFullPackagePurchase.HasValue
             && package.ContentMode == PackageContentMode.TermWithSections)
         {
@@ -70,6 +73,7 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
                 name = package.Name,
                 price = package.Price,
                 isActive = package.IsActive,
+                showWhenUnavailable = package.ShowWhenUnavailable,
                 allowFullPackagePurchase = package.AllowFullPackagePurchase
             })
         };
