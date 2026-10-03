@@ -71,12 +71,15 @@ public sealed class TeacherDetailedReportService(IAppDbContext db) : ITeacherDet
             && x.TeacherSettlement.PaidAt < end).Select(x => x.AllocationId!.Value).ToListAsync(ct);
         var settledIds = settled.ToHashSet();
         var available = sources.Where(x => !x.RetainedByTeacher && !settledIds.Contains(x.Id)
-            && x.ReviewStatus is TeacherFinancialReviewStatus.AutoApproved or TeacherFinancialReviewStatus.Approved
-            && x.TeacherShareAmount > x.ReversedAmount
+            && TeacherFinanceAccountService.RecognizedStatuses.Contains(x.ReviewStatus)
+            && !(x.TeacherShareAmount < 0m && x.PayoutStatus == TeacherFinancialPayoutStatus.Debt)
             && !(x.Payout?.Status == PayoutStatus.Paid && x.Payout.PaidAt < end)).ToArray();
-        // Historical payouts are excluded at the report cutoff; unknown adjustment income has no invented commission basis.
-        var attributable = Math.Min(closing, available.Sum(x => x.TeacherShareAmount - x.ReversedAmount));
-        var quote = TeacherTransferFee.Quote("VodafoneCash", available, attributable);
+        // Posted reversal entries reconstruct the cutoff. Current ReversedAmount may include later refunds.
+        var remaining = Math.Max(0m, available.Sum(x => x.TeacherShareAmount));
+        var platform = Math.Max(0m, available.Sum(x => x.PlatformShareAmount));
+        var attributable = Math.Min(closing, remaining);
+        var quote = TeacherTransferFee.Quote("VodafoneCash", [new TeacherFinancialAllocation
+            { TeacherShareAmount = remaining, PlatformShareAmount = platform }], attributable);
         return quote with { TeacherAmount = closing, NetTransferAmount = closing - quote.TransferFee };
     }
 

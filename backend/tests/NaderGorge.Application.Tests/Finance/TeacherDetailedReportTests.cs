@@ -312,6 +312,56 @@ public sealed class TeacherDetailedReportTests : IAsyncLifetime
         Assert.Equal(79.70m, report.VodafoneCashTransfer.NetTransferAmount);
     }
 
+    [Theory]
+    [InlineData(0, 40, 20, 0.30)]
+    [InlineData(2, 80, 20, 0.30)]
+    public async Task Transfer_quote_uses_posted_refunds_at_cutoff_instead_of_current_reversed_amount(
+        int refundDaysAfterCutoff, decimal expectedTeacher, decimal expectedPlatform, decimal expectedFee)
+    {
+        var sale = Purchase(At(4), 100, 80, 20);
+        var original = sale.Allocations.Single();
+        original.ReversedAmount = 40;
+        var at = refundDaysAfterCutoff == 0 ? At(20) : At(30).AddDays(refundDaysAfterCutoff);
+        db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = -40, PlatformShareAmount = 0,
+            ReviewStatus = TeacherFinancialReviewStatus.Reversed, TeacherFinancialEvent = new() {
+                SourceType = TeacherFinancialSourceType.Refund, OccurredAt = at, IdempotencyKey = Guid.NewGuid().ToString() } });
+        await db.SaveChangesAsync();
+
+        var report = (await new TeacherDetailedReportService(db).ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+
+        Assert.Equal(expectedTeacher, report.Summary.Closing);
+        Assert.Equal(expectedPlatform, report.VodafoneCashTransfer!.PlatformShareBasis);
+        Assert.Equal(expectedFee, report.VodafoneCashTransfer.TransferFee);
+        Assert.False(db.ChangeTracker.HasChanges());
+    }
+
+    [Fact]
+    public async Task Fully_reversed_purchase_after_cutoff_remains_in_historical_quote_only()
+    {
+        var sale = Purchase(At(4), 100, 80, 20);
+        var original = sale.Allocations.Single();
+        original.ReversedAmount = 80;
+        original.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
+        original.PayoutStatus = TeacherFinancialPayoutStatus.Reversed;
+        db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = -80, PlatformShareAmount = -20,
+            ReviewStatus = TeacherFinancialReviewStatus.Reversed, PayoutStatus = TeacherFinancialPayoutStatus.Reversed,
+            TeacherFinancialEvent = new() { SourceType = TeacherFinancialSourceType.Cancellation,
+                OccurredAt = At(30).AddDays(2), IdempotencyKey = Guid.NewGuid().ToString() } });
+        Purchase(At(6), 120, 80, 40);
+        await db.SaveChangesAsync();
+        var service = new TeacherDetailedReportService(db);
+        var historical = (await service.ReadAsync(teacher.Id, new(null, Cutoff), default))!;
+        var later = (await service.ReadAsync(teacher.Id, new(null, new(2026, 10, 3)), default))!;
+
+        Assert.Equal(160, historical.Summary.Closing);
+        Assert.Equal(60, historical.VodafoneCashTransfer!.PlatformShareBasis);
+        Assert.Equal(0.90m, historical.VodafoneCashTransfer.TransferFee);
+        Assert.Equal(80, later.Summary.Closing);
+        Assert.Equal(40, later.VodafoneCashTransfer!.PlatformShareBasis);
+        Assert.Equal(0.60m, later.VodafoneCashTransfer.TransferFee);
+        Assert.False(db.ChangeTracker.HasChanges());
+    }
+
     private TeacherFinancialEvent Purchase(DateTime at, decimal paid, decimal teacherShare, decimal fee)
     {
         var target = purchaseCount++ == 0 ? lesson : new Lesson { Title = "حصة أخرى", ContentSectionId = lesson.ContentSectionId };
