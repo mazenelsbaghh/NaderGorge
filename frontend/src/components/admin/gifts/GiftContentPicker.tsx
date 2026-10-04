@@ -34,7 +34,7 @@ function ContentSelect({ label, value, options, loading, error, onChange }: {
   return <label className="block text-sm font-bold text-[var(--admin-text)]">
     {label}
     <select className="admin-input mt-2" value={value} onChange={(event) => onChange(event.target.value)} disabled={loading || error} required>
-      <option value="">{loading ? 'جاري التحميل...' : error ? 'تعذر تحميل القائمة' : options.length ? `اختر ${label}` : 'لا توجد عناصر'}</option>
+      <option value="">{loading ? 'جاري التحميل...' : error ? 'تعذر تحميل القائمة' : options.length ? `اختر ${label}` : `لا توجد خيارات متاحة لـ${label}`}</option>
       {options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
     </select>
   </label>;
@@ -53,10 +53,9 @@ export function GiftContentPicker({ targetType, teachers, teacherSearch, onTeach
   const [sectionId, setSectionId] = useState('');
   const [lessonId, setLessonId] = useState('');
   const [videoId, setVideoId] = useState('');
-  const [packageSearch, setPackageSearch] = useState('');
   const [lessonSearch, setLessonSearch] = useState('');
 
-  const packages = useContentOptions('Package', teacherId, '', !!teacherId, packageSearch);
+  const packages = useContentOptions('Package', teacherId, '', !!teacherId);
   const terms = useContentOptions('Term', teacherId, packageId, !!packageId);
   const sections = useContentOptions('ContentSection', teacherId, termId, !!termId);
   const lessons = useContentOptions('Lesson', teacherId, sectionId, !!sectionId, lessonSearch);
@@ -80,29 +79,24 @@ export function GiftContentPicker({ targetType, teachers, teacherSearch, onTeach
     <p className="text-sm text-[var(--admin-muted)]">اختر المدرس ثم الباقة، وبعدها سيظهر محتوى كل اختيار بالترتيب.</p>
     <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن المدرس
       <input className="admin-input mt-2" value={teacherSearch} onChange={(event) => {
-        onTeacherSearchChange(event.target.value); setTeacherId(''); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
+        onTeacherSearchChange(event.target.value); setTeacherId(''); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); setLessonSearch(''); clearTarget();
       }} placeholder="اسم المدرس" />
     </label>
     <ContentSelect label="المدرس" value={teacherId} options={teachers} loading={false} error={false} onChange={(id) => {
-      setTeacherId(id); setPackageSearch(''); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
+      setTeacherId(id); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); setLessonSearch(''); clearTarget();
     }} />
     {teacherId && <>
-      <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن الباقة
-        <input className="admin-input mt-2" value={packageSearch} onChange={(event) => {
-          setPackageSearch(event.target.value); setPackageId(''); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
-        }} placeholder="اسم الباقة" />
-      </label>
       <ContentSelect label="الباقة" value={packageId} options={packages.rows} loading={packages.loading} error={packages.error} onChange={(id) => {
-        setPackageId(id); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
+        setPackageId(id); setTermId(''); setSectionId(''); setLessonId(''); setVideoId(''); setLessonSearch(''); clearTarget();
       }} />
     </>}
     {packageId && !terms.rows.some((row) => row.id === termId && row.isSystemContainer) &&
       <ContentSelect label="الترم" value={termId} options={terms.rows} loading={terms.loading} error={terms.error} onChange={(id) => {
-        setTermId(id); setSectionId(''); setLessonId(''); setVideoId(''); clearTarget();
+        setTermId(id); setSectionId(''); setLessonId(''); setVideoId(''); setLessonSearch(''); clearTarget();
       }} />}
     {termId && !sections.rows.some((row) => row.id === sectionId && row.isSystemContainer) &&
       <ContentSelect label="القسم" value={sectionId} options={sections.rows} loading={sections.loading} error={sections.error} onChange={(id) => {
-        setSectionId(id); setLessonId(''); setVideoId(''); clearTarget();
+        setSectionId(id); setLessonId(''); setVideoId(''); setLessonSearch(''); clearTarget();
       }} />}
     {sectionId && <>
       <label className="block text-sm font-bold text-[var(--admin-text)]">ابحث عن الحصة
