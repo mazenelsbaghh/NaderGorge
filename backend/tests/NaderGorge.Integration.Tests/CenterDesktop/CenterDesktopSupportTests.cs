@@ -35,12 +35,29 @@ public sealed class CenterDesktopSupportTests
     {
         using var fixture = new Fixture((_, _) => throw new Xunit.Sdk.XunitException("Unauthorized request reached support."));
         using var client = fixture.Client(role);
-        foreach (var route in Routes)
+        foreach (var route in Routes.Append($"uploads/{UploadId}/students?q=test"))
         {
             using var response = await client.GetAsync($"/api/admin/center-desktop/{route}");
             Assert.Equal(status, (int)response.StatusCode);
         }
         Assert.Equal(0, fixture.Handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(true, 200)]
+    [InlineData(false, 400)]
+    public async Task StudentSearchReadsOnlyDatabaseBundles(bool database, int expected)
+    {
+        using var fixture = new Fixture((_, _) => Task.FromResult(Json(new {
+            kind = database ? "database" : "diagnostics",
+            data = new { data = new { students = new[] { new { id = "s1", name = "طالب", code = "00123", secret = PrivateValue } }, credentials = PrivateValue } }
+        })));
+        using var client = fixture.Client("Admin");
+        using var response = await client.GetAsync($"/api/admin/center-desktop/uploads/{UploadId}/students?q=00123");
+        Assert.Equal(expected, (int)response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(PrivateValue, body);
+        if (database) Assert.Contains("00123", body);
     }
 
     [Fact]

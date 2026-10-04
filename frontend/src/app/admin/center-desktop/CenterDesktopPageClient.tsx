@@ -6,6 +6,7 @@ import { AdminPage } from '@/components/admin';
 import type { DesktopReceipt } from '@/services/center-desktop-service';
 import DesktopDiagnosticsPanel from './DesktopDiagnosticsPanel';
 import DesktopReleaseList from './DesktopReleaseList';
+import DesktopStudentsPanel from './DesktopStudentsPanel';
 import { useDesktopOverview } from './useDesktopOverview';
 import { osLabel, roleLabel, sizeLabel, timestamp } from './display';
 
@@ -16,6 +17,7 @@ export default function CenterDesktopPageClient() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
   const [os, setOs] = useState('');
+  const [studentSnapshot, setStudentSnapshot] = useState<DesktopReceipt | null>(null);
   const [selected, setSelected] = useState<DesktopReceipt | null>(null);
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -67,7 +69,7 @@ export default function CenterDesktopPageClient() {
                     <td className="px-4 py-4"><bdi>{row.app.version}</bdi></td>
                     <td className="px-4 py-4 whitespace-nowrap"><time dateTime={row.receivedAt}>{timestamp(row.receivedAt)}</time></td>
                     <td className="px-4 py-4 whitespace-nowrap"><bdi>{sizeLabel(row.size)}</bdi></td>
-                    <td className="px-4 py-4"><button className="admin-btn-ghost inline-flex items-center gap-1 whitespace-nowrap" aria-label={`عرض مشاكل ${row.centerId} ${row.uploadId}`} aria-expanded={selected?.uploadId === row.uploadId} onClick={() => setSelected(row)}>تفاصيل المشاكل<ChevronLeft className="h-4 w-4" /></button></td>
+                    <td className="px-4 py-4"><div className="flex flex-wrap gap-2">{row.app.role === 'host' && <button className="admin-btn-ghost" onClick={() => setStudentSnapshot(row)}>بحث الطلاب</button>}<button className="admin-btn-ghost inline-flex items-center gap-1 whitespace-nowrap" aria-label={`عرض مشاكل ${row.centerId} ${row.uploadId}`} aria-expanded={selected?.uploadId === row.uploadId} onClick={() => setSelected(row)}>تفاصيل المشاكل<ChevronLeft className="h-4 w-4" /></button></div></td>
                   </tr>)}
                 </tbody>
               </table>
@@ -75,6 +77,7 @@ export default function CenterDesktopPageClient() {
             {!rows.length && <div className="p-8 text-center text-sm" role="status">{state.loading ? 'جاري تحميل النسخ…' : state.uploadError ? 'لم نتمكن من عرض النسخ. جرّب التحديث.' : query || role || os ? 'لا توجد نتائج مطابقة في النسخ المحمّلة. غيّر البحث أو حمّل المزيد.' : 'لم تُرفع أي نسخة بعد. استخدم زر المزامنة من برنامج السنتر لعرضها هنا.'}</div>}
           </section>
           {state.cursor && <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--admin-muted)]">فيه نسخ إضافية. البحث والترتيب حسب الوقت بيشملوا النسخ المحمّلة فقط.</p><button className="admin-btn-ghost" disabled={state.loading || state.loadingMore} onClick={() => void state.loadMore()}>{state.loadingMore ? 'جاري التحميل…' : 'تحميل المزيد'}</button></div>}
+          {studentSnapshot && <DesktopStudentsPanel key={studentSnapshot.uploadId} receipt={studentSnapshot} />}
           {selected && <DesktopDiagnosticsPanel key={selected.uploadId} receipt={selected} onClose={() => setSelected(null)} />}
         </>}
       </>}

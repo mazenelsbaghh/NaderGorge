@@ -45,3 +45,23 @@ export async function downloadDesktopUpload(id: string, signal: AbortSignal) {
     ...options(signal), responseType: 'blob', timeout: 180_000,
   })).data;
 }
+
+export interface DesktopStudent {
+  id: string; name: string; code: string; barcode: string; phone: string;
+  guardianPhone: string; notes: string; discountPercent: number | null;
+  suspended: boolean; groups: string[];
+}
+interface DesktopLesson { group: string; number: number | null; month: number | null; date: string }
+export interface DesktopStudentSearch {
+  students: DesktopStudent[]; total: number;
+  profile: null | {
+    present: number; absent: number; attendanceTotal: number; examTotal: number;
+    attendances: { id: string; status: string; lesson: DesktopLesson }[];
+    exams: { id: string; score: number | null; maxScore: number | null; absent: boolean; homework: string; lesson: DesktopLesson }[];
+  };
+}
+export async function searchDesktopStudents(id: string, q: string, studentId: string | null, signal: AbortSignal) {
+  return (await apiClient.get<{ data: DesktopStudentSearch }>(`/admin/center-desktop/uploads/${encodeURIComponent(id)}/students`, {
+    ...options(signal), params: { q, ...(studentId ? { studentId } : {}) }, timeout: 180_000,
+  })).data.data;
+}

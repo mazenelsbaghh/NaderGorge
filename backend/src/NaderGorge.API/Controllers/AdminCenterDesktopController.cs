@@ -24,6 +24,11 @@ public sealed class AdminCenterDesktopController(CenterDesktopSupportClient supp
     public Task<IActionResult> Diagnostics(string id, [FromQuery] int limit = 200,
         CancellationToken cancellationToken = default) => Json(() => support.DiagnosticsAsync(id, limit, cancellationToken));
 
+    [HttpGet("uploads/{id}/students")]
+    public Task<IActionResult> Students(string id, [FromQuery] string? q = null,
+        [FromQuery] string? studentId = null, CancellationToken cancellationToken = default) =>
+        Json(() => support.StudentsAsync(id, q, studentId, cancellationToken));
+
     [HttpGet("releases")]
     public Task<IActionResult> Releases(CancellationToken cancellationToken) => Json(() => support.ReleasesAsync(cancellationToken));
 

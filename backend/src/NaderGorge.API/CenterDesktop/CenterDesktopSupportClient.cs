@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace NaderGorge.API.CenterDesktop;
 
-public sealed class CenterDesktopSupportClient(HttpClient http, IOptions<CenterDesktopSupportOptions> options)
+public sealed partial class CenterDesktopSupportClient(HttpClient http, IOptions<CenterDesktopSupportOptions> options)
 {
     private const long MaximumBundleBytes = 128L * 1024 * 1024;
     private const int MaximumMetadataBytes = 8 * 1024 * 1024;

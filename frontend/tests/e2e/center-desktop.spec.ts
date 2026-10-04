@@ -278,3 +278,25 @@ test('switching the selected upload discards a delayed diagnostic response from 
     releaseOld();
   }
 });
+
+
+test('admin searches snapshot students and opens attendance profile without leaving support', async ({ page, baseURL }) => {
+  await installApi(page, async (route, url) => {
+    if (!url.pathname.endsWith('/students')) return availableApi(route, url);
+    const student = { id: 'student-one', name: 'أحمد اختبار', code: '00123', barcode: '100123', phone: '01000000123', guardianPhone: '', notes: 'ملاحظة اختبار', discountPercent: 25, suspended: false, groups: ['الجمعة'] };
+    await reply(route, { students: [student], total: 1, profile: url.searchParams.has('studentId') ? {
+      present: 1, absent: 1, attendanceTotal: 2, examTotal: 1,
+      attendances: [{ id: 'a1', status: 'present', lesson: { group: 'الجمعة', number: 1, month: 2, date: '' } }, { id: 'a2', status: 'absent', lesson: { group: 'الجمعة', number: 2, month: 2, date: '' } }],
+      exams: [{ id: 'e1', score: 0, maxScore: 10, absent: false, homework: 'complete', lesson: { group: 'الجمعة', number: 1, month: 2, date: '' } }],
+    } : null });
+  });
+  await openPage(page, baseURL!);
+  await page.getByRole('button', { name: 'بحث الطلاب', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'الاسم أو الكود أو الباركود أو رقم الهاتف' }).fill('00123');
+  await page.getByRole('button', { name: 'عرض البروفايل' }).click();
+  await expect(page.getByRole('heading', { name: /أحمد اختبار/ })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'غائب', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '0 / 10', exact: true })).toBeVisible();
+  await expect(page.getByText('ملاحظة اختبار', { exact: true })).toBeVisible();
+  await page.screenshot({ path: '../artifacts/private/windows-release-1.2.0/student-support-preview.png', fullPage: true });
+});
