@@ -23,12 +23,19 @@ public static class HomeworkReadiness
         CancellationToken cancellationToken)
     {
         var readyHomeworks = await source.ReadyForStudents().ToListAsync(cancellationToken);
+        var accessByLesson = new Dictionary<Guid, bool>();
         foreach (var homework in readyHomeworks)
         {
-            if (!await access.HasAccessToLessonAsync(
+            if (!accessByLesson.TryGetValue(homework.LessonId, out var hasLessonAccess))
+            {
+                hasLessonAccess = await access.HasAccessToLessonAsync(
                     studentId,
                     homework.LessonId,
-                    cancellationToken))
+                    cancellationToken);
+                accessByLesson.Add(homework.LessonId, hasLessonAccess);
+            }
+
+            if (!hasLessonAccess)
             {
                 continue;
             }

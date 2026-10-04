@@ -7,7 +7,7 @@ import argparse
 import json
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -43,10 +43,13 @@ class ReleasePlan:
     database_changed: bool
     migration_added: bool
     migration_required: bool
+    candidate_commit: str | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
             "base": self.base,
+            "candidateCommit": self.candidate_commit,
+            "comparisonMode": "committed-candidate" if self.candidate_commit else "working-tree",
             "changedPaths": list(self.paths),
             "components": list(self.components),
             "localDockerImages": list(self.local_images),
@@ -99,6 +102,22 @@ def changed_paths(base: str) -> tuple[str, ...]:
             if line.strip()
         )
     return tuple(sorted(values))
+
+
+def committed_changed_paths(base: str, candidate: str) -> tuple[str, ...]:
+    """Scope the EF guard to the exact source-only publication candidate.
+
+    The normal working-tree guard remains conservative. This mode accepts only
+    full commit identities and one forward commit on the reviewed shared parent;
+    source publication separately enforces its source/secret inclusion policy.
+    """
+    if not all(re.fullmatch(r"[0-9a-f]{40}", value) for value in (base, candidate)):
+        raise PlanError("Committed candidate and base require full Git commit SHAs")
+    for value in (base, candidate):
+        git("rev-parse", "--verify", f"{value}^{{commit}}")
+    if git("rev-list", "--parents", "-n", "1", candidate).split() != [candidate, base]:
+        raise PlanError("Committed candidate must be one forward commit on the reviewed base")
+    return tuple(sorted(filter(None, git("diff", "--no-renames", "--name-only", f"{base}..{candidate}").splitlines())))
 
 
 def resolve_base(value: str) -> str:
@@ -203,6 +222,8 @@ def classify(
 def render_human(plan: ReleasePlan) -> None:
     print("Massar change plan")
     print(f"  Base:              {plan.base}")
+    if plan.candidate_commit:
+        print(f"  Source candidate:  {plan.candidate_commit}")
     print(f"  Changed paths:     {len(plan.paths)}")
     print(
         "  Components:        "
@@ -268,6 +289,10 @@ def parser() -> argparse.ArgumentParser:
     )
     value.add_argument("--json", action="store_true")
     value.add_argument(
+        "--candidate",
+        help="Verify one source-only commit on an explicit full --base SHA, preserving the working tree",
+    )
+    value.add_argument(
         "--scope",
         choices=("frontend", "backend", "worker", "all"),
     )
@@ -279,9 +304,11 @@ def main() -> int:
     base = resolve_base(args.base)
     plan = classify(
         base,
-        changed_paths(base),
+        committed_changed_paths(base, args.candidate) if args.candidate else changed_paths(base),
         lambda path: git_succeeds("cat-file", "-e", f"{base}:{path}"),
     )
+    if args.candidate:
+        plan = replace(plan, candidate_commit=args.candidate)
     if args.command == "validate-scope":
         if args.scope is None:
             raise PlanError("validate-scope requires --scope")

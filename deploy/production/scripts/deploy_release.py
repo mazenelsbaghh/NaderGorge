@@ -978,6 +978,10 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
     parser.add_argument("--force-reconfigure", action="store_true")
+    parser.add_argument(
+        "--keep-release-artifacts", action="store_true",
+        help="Retain release directories, images and build caches after rollout",
+    )
     args = parser.parse_args()
     if not RELEASE.fullmatch(args.release):
         raise DeployError("invalid immutable release ID")
@@ -1032,7 +1036,8 @@ def main() -> int:
     )
     images = manifest.images
     if args.dry_run:
-        print(json.dumps({"release": args.release, "order": ROLLING_ORDER, "status": "dry-run"}))
+        print(json.dumps({"release": args.release, "order": ROLLING_ORDER, "status": "dry-run",
+                          "keepReleaseArtifacts": args.keep_release_artifacts}))
         return 0
     if not args.yes:
         raise DeployError("deployment requires --yes or --dry-run")
@@ -1048,7 +1053,7 @@ def main() -> int:
             gate=rollback_gate,
         )
     by_id = {node.id: node for node in inventory.nodes}
-    for node in inventory.nodes:
+    for node in (() if args.keep_release_artifacts else inventory.nodes):
         target = SshTarget(
             node.id,
             node.public_address,
@@ -1242,7 +1247,7 @@ def main() -> int:
                 ),
                 args.release,
             )
-        for node_id in ROLLING_ORDER:
+        for node_id in (() if args.keep_release_artifacts else ROLLING_ORDER):
             node = by_id[node_id]
             cleanup_evidence[node_id] = prune_release_artifacts(
                 transport,
@@ -1331,6 +1336,7 @@ def main() -> int:
                 "release": args.release,
                 "order": ROLLING_ORDER,
                 "cleanup": cleanup_evidence,
+                "keepReleaseArtifacts": args.keep_release_artifacts,
                 "status": "success",
             }
         )

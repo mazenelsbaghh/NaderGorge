@@ -230,6 +230,21 @@ def rollout_state(
     }
 
 
+def test_retaining_artifacts_preserves_rollout_gates_and_marker_cleanup(monkeypatch):
+    state = rollout_state()
+    configure_main_boundaries(monkeypatch, state)
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--keep-release-artifacts"])
+
+    assert deploy.main() == 0
+    assert state["deploy_calls"] == ["node-3", "node-2", "node-1"]
+    assert state["quorum_calls"] >= 6
+    assert state["clear_calls"] == ["node-3", "node-2", "node-1"]
+    assert state["markers"] == set()
+    assert set(state["traffic_states"].values()) == {"UP"}
+    assert state["preview_calls"] == []
+    assert state["prune_calls"] == []
+
+
 @pytest.mark.parametrize(
     ("failed_node", "rollback_order"),
     [
