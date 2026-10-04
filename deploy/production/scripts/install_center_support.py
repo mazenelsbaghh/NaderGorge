@@ -34,7 +34,7 @@ RequiresMountsFor=/srv/massar-shared
 
 [Service]
 User=massar-ops
-Group=massar-ops
+Group=massar
 ExecStart=/opt/massar-support/massar-support
 EnvironmentFile=/etc/massar/center-support.env
 Restart=on-failure
@@ -56,6 +56,7 @@ PREPARE = r'''
 import hashlib,json,os,re,subprocess
 from pathlib import Path
 assert subprocess.check_output(['id','-u','massar-ops'],text=True).strip()=='1000'
+assert subprocess.check_output(['id','-g','massar-ops'],text=True).strip()=='986'
 assert subprocess.check_output(['findmnt','-n','-o','FSTYPE','/srv/massar-shared'],text=True).strip()=='fuse.glusterfs'
 p=Path('/etc/haproxy/haproxy.cfg'); old=p.read_text()
 if 'backend massar_desktop_support' in old:
@@ -111,7 +112,7 @@ def main():
                 command=f'''set -euo pipefail
 test "$(sha256sum {stage}/binary | cut -d' ' -f1)" = {binary_hash}
 test "$(sha256sum /etc/haproxy/haproxy.cfg | cut -d' ' -f1)" = {prepared['old']}
-sudo -n /usr/bin/install -d -m 0700 -o massar-ops -g massar-ops {BASE} {BASE}/uploads {BASE}/releases
+sudo -n /usr/bin/install -d -m 0700 -o massar-ops -g massar {BASE} {BASE}/uploads {BASE}/releases
 sudo -n /usr/bin/install -d -m 0755 /opt/massar-support
 sudo -n /usr/bin/install -m 0755 {stage}/binary /opt/massar-support/massar-support.next
 sudo -n /usr/bin/mv /opt/massar-support/massar-support.next /opt/massar-support/massar-support
