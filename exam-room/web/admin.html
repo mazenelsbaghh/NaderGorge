@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مسار · قاعة السنتر</title><link rel="icon" href="/assets/logo-mark.svg">
+<link rel="stylesheet" href="/assets/style.css"><link rel="stylesheet" href="/assets/admin-ui.css"><script type="module" src="/assets/admin-react.js"></script></head>
+<body class="admin-body">
+<a href="#main" class="skip-link">انتقل للمحتوى</a>
+<aside class="sidebar">
+  <a class="brand brand-light" href="/"><img src="/assets/logo-mark-light.svg" alt=""><span>امتحانات السنتر<small>مساحة إدارة الامتحانات</small></span></a>
+  <div class="sidebar-label">مساحة المدرس</div>
+  <nav aria-label="القائمة الرئيسية">
+    <button class="nav-item active" data-view="room"><span aria-hidden="true">▣</span>قاعة السنتر</button>
+    <button class="nav-item" data-view="catalog"><span aria-hidden="true">▦</span>تنظيم السنتر</button>
+    <button class="nav-item" data-view="exams"><span aria-hidden="true">▤</span>مكتبة الامتحانات</button>
+    <button class="nav-item" data-view="sheets"><span aria-hidden="true">▦</span>شيتات</button>
+    <button class="nav-item" data-view="whatsapp"><span aria-hidden="true">◉</span>واتساب السنتر</button>
+    <button class="nav-item" data-view="storage"><span aria-hidden="true">▤</span>الإعدادات والبيانات</button>
+    <button class="nav-item" data-view="guide"><span aria-hidden="true">ⓘ</span>دليل التجربة</button>
+  </nav>
+  <div class="sidebar-bottom"><span class="status-dot"></span> يعمل على جهازك<p>الحفظ محلي · لا يحتاج إنترنت</p><button class="sidebar-backup" id="backup">تنزيل نسخة احتياطية ↓</button></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span class="breadcrumb">مسار <span class="crumb">/</span> <b id="page-location">قاعة السنتر</b></span><div class="connection" id="admin-connection"><span class="status-dot"></span> متصل بجهاز الإدارة</div></header>
+  <main id="main" tabindex="-1"><div class="loading">جارٍ فتح قاعة السنتر…</div></main>
+</div>
+<div id="toast" role="status" class="toast" hidden></div>
+<dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title"></h2><p id="confirm-copy"></p><div class="actions"><button class="button danger" value="yes">تأكيد</button><button class="button secondary" value="cancel">رجوع</button></div></form></dialog>
+</body></html>

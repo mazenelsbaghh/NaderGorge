@@ -1,0 +1,5 @@
+package main
+
+func demoExam() M {
+	return M{"title": "تجربة مسار · معلومات عامة", "instructions": "امتحان تجريبي للتأكد من الدخول وحفظ الإجابات. اختر إجابة واحدة لكل سؤال، واكتب إجابتك في السؤال المقالي.", "minutes": float64(15), "timerMode": "shared", "allowLate": true, "shuffle": false, "questionCount": float64(4), "questions": []any{M{"kind": "mcq", "text": "ما عاصمة جمهورية مصر العربية؟", "points": float64(2), "options": []any{"الإسكندرية", "القاهرة", "الأقصر", "أسوان"}, "correct": float64(1)}, M{"kind": "mcq", "text": "إذا كان ثمن الكتاب ٨٠ جنيهًا، وخصمه ٢٥٪، فما سعره بعد الخصم؟", "points": float64(2), "options": []any{"٥٥ جنيهًا", "٦٠ جنيهًا", "٦٥ جنيهًا", "٧٠ جنيهًا"}, "correct": float64(1)}, M{"kind": "mcq", "text": "أي كوكب يُعرف بالكوكب الأحمر؟", "points": float64(2), "options": []any{"الأرض", "زحل", "المريخ", "عطارد"}, "correct": float64(2)}, M{"kind": "essay", "text": "اذكر فائدتين لتنظيم وقت المذاكرة.", "points": float64(4), "modelAnswer": "يساعد على إنجاز المهام في مواعيدها، وتقليل التوتر، وتوزيع المجهود، وتوفير وقت للمراجعة. تُقبل أي فائدتين صحيحتين."}}}
+}
