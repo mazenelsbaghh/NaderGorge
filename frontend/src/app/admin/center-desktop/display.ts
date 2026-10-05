@@ -19,6 +19,8 @@ export function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 export function operationLabel(operation: string) {
+  if (operation === 'ui.warning') return 'تنبيه أثناء العمل';
+  if (operation.includes('reports')) return 'التقارير';
   if (operation.startsWith('cloud.')) return 'المزامنة والتحديث';
   if (operation.startsWith('database.') || operation.startsWith('store_')) return 'حفظ البيانات';
   if (operation.startsWith('startup')) return 'فتح البرنامج';

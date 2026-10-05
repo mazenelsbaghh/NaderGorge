@@ -11,7 +11,7 @@ export interface DesktopUploads { uploads: DesktopReceipt[]; nextCursor: string 
 export interface DesktopEvent {
   id: string; session: string; kind: 'session' | 'error'; time: string;
   version: string; build?: string; role?: string; platform: string; operation: string;
-  errors?: { type: string; code?: number }[];
+  errors?: { type: string; code?: number | null }[];
   frames?: { file: string; frame: number; line: number; column: number }[];
 }
 export interface DesktopDiagnostics {

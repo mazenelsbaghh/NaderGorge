@@ -51,7 +51,11 @@ export default function DesktopDiagnosticsPanel({ receipt, onClose }: { receipt:
       if (!request.signal.aborted) setDownloading(false);
     }
   };
-  const visible = (detail?.events ?? []).filter(event => !errorsOnly || event.kind === 'error');
+  const events = detail?.events ?? [];
+  const isWarning = (event: DesktopDiagnostics['events'][number]) => event.kind === 'error' && event.operation === 'ui.warning';
+  const warningCount = events.filter(isWarning).length;
+  const errorCount = events.filter(event => event.kind === 'error' && !isWarning(event)).length;
+  const visible = events.filter(event => !errorsOnly || (event.kind === 'error' && !isWarning(event)));
   return (
     <section className="admin-panel space-y-5 p-4 md:p-6" aria-labelledby="desktop-detail-title" aria-busy={loading}>
       <div className="flex items-start justify-between gap-4">
@@ -71,19 +75,20 @@ export default function DesktopDiagnosticsPanel({ receipt, onClose }: { receipt:
       {error && <div role="alert" className="flex flex-wrap items-center gap-3 text-[var(--admin-danger)]"><AlertTriangle className="h-5 w-5" /><p>{error}</p><button className="admin-btn-ghost" onClick={() => { setError(''); setLoading(true); setRetry(value => value + 1); }}><RefreshCw className="me-2 inline h-4 w-4" />إعادة المحاولة</button></div>}
       {detail && !loading && !error && <>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-bold">سجل المشاكل <span className="font-normal text-[var(--admin-muted)]">· {visible.length} حدث ظاهر</span></h3>
+          <h3 className="font-bold">سجل المشاكل <span className="font-normal text-[var(--admin-muted)]">· {errorCount} خطأ مسجل · {warningCount} تنبيه · {visible.length} حدث ظاهر</span></h3>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={errorsOnly} onChange={event => setErrorsOnly(event.target.checked)} />الأخطاء فقط</label>
         </div>
-        <p className="text-sm text-[var(--admin-muted)]">دي الأحداث الموجودة وقت رفع النسخة. عدم وجود أخطاء هنا لا يثبت خلو الجهاز من مشاكل لم تُرفع بعد.</p>
+        <p className="text-sm text-[var(--admin-muted)]">دي أحداث تاريخية وقت رفع النسخة، وليست عدد المشاكل المفتوحة الآن. تنبيهات الواجهة منفصلة ويمكن عرضها بإلغاء «الأخطاء فقط». السجل القديم لا يتغير بعد تحديث البرنامج.</p>
         {detail.truncated && <p role="status" className="text-sm text-[var(--admin-warning)]">معروض آخر {detail.events.length} حدث من {detail.total}. النسخة الكاملة تحتوي على باقي السجل المحفوظ.</p>}
         {visible.length === 0 ? <p className="rounded-xl bg-[var(--admin-card-soft)] p-5">{errorsOnly ? 'لا توجد أخطاء مسجلة في الأحداث المعروضة لهذه النسخة.' : 'لا توجد أحداث تشخيصية محفوظة في هذه النسخة.'}</p> : <div className="max-h-[36rem] divide-y divide-[var(--admin-border)] overflow-y-auto rounded-xl border border-[var(--admin-border)]">
           {visible.map((event, index) => <article key={`${event.id}-${index}`} className="space-y-2 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <strong className={event.kind === 'error' ? 'text-[var(--admin-danger)]' : 'text-[var(--admin-primary)]'}>{event.kind === 'error' ? 'خطأ' : 'بدء تشغيل'} · {operationLabel(event.operation)}</strong>
+              <strong className={isWarning(event) ? 'text-[var(--admin-warning)]' : event.kind === 'error' ? 'text-[var(--admin-danger)]' : 'text-[var(--admin-primary)]'}>{isWarning(event) ? 'تنبيه' : event.kind === 'error' ? 'خطأ' : 'بدء تشغيل'} · {operationLabel(event.operation)}</strong>
               <time className="text-xs text-[var(--admin-muted)]" dateTime={event.time}>{timestamp(event.time)}</time>
             </div>
             <div className="flex flex-wrap gap-3 text-sm"><span>الإصدار: <bdi>{event.version}</bdi></span><span>{osLabel(event.platform)}{event.role ? ` · ${roleLabel(event.role)}` : ''}</span></div>
-            {event.errors?.map((problem, item) => <p key={item} className="break-words text-sm"><bdi>{problem.type}</bdi>{problem.code !== undefined ? ` · كود الخطأ: ${problem.code}` : ''}</p>)}
+            {event.errors?.map((problem, item) => <p key={item} className="break-words text-sm"><bdi>{problem.type}</bdi>{problem.code != null ? ` · كود الخطأ: ${problem.code}` : ''}</p>)}
+            {event.kind === 'error' && !isWarning(event) && !event.frames?.length && !event.errors?.some(problem => problem.code != null) && <p className="text-sm text-[var(--admin-muted)]">هذا السجل القديم لا يحتوي على سبب أو موضع الخطأ؛ لا يمكن تأكيد إصلاحه من هذا التسجيل وحده. راجع رفعة أحدث بعد تكرار المشكلة.</p>}
             <details className="text-sm"><summary className="cursor-pointer py-1 text-[var(--admin-primary)]">تفاصيل فنية للدعم</summary><div className="mt-2 space-y-1 break-all text-[var(--admin-muted)]"><p>العملية: <bdi>{event.operation}</bdi></p><p>معرّف الحدث: <bdi>{event.id}</bdi></p>{event.frames?.map((frame, item) => <p key={item} dir="ltr" className="text-start">{frame.file}:{frame.line}:{frame.column}</p>)}</div></details>
           </article>)}
         </div>}

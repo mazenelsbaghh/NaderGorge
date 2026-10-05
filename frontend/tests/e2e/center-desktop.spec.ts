@@ -300,3 +300,27 @@ test('admin searches snapshot students and opens attendance profile without leav
   await expect(page.getByText('ملاحظة اختبار', { exact: true })).toBeVisible();
   await page.screenshot({ path: '../artifacts/private/windows-release-1.2.0/student-support-preview.png', fullPage: true });
 });
+
+
+test('legacy warnings remain available without inflating errors or showing null codes', async ({ page, baseURL }) => {
+  await installApi(page, async (route, url) => {
+    if (url.pathname.endsWith('/diagnostics')) {
+      const detail = diagnostics();
+      const event = { ...detail.events[0], frames: [], errors: [{ type: 'CenterException', code: null }] };
+      await reply(route, { ...detail, total: 75, events: [
+        ...Array.from({ length: 59 }, (_, i) => ({ ...event, id: `warning-${i}`, operation: 'ui.warning' })),
+        ...Array.from({ length: 16 }, (_, i) => ({ ...event, id: `failure-${i}`, operation: 'lan.command' })),
+      ] });
+    } else await availableApi(route, url);
+  });
+  await openPage(page, baseURL!);
+  await page.getByRole('button', { name: `عرض مشاكل synthetic-center-alpha ${uploadA}` }).click();
+  const detail = page.getByRole('region', { name: 'synthetic-center-alpha · الرئيسي' });
+  await expect(detail.getByText('16 خطأ مسجل · 59 تنبيه · 16 حدث ظاهر', { exact: false })).toBeVisible();
+  await expect(detail.locator('article')).toHaveCount(16);
+  await expect(detail.getByText('كود الخطأ: null', { exact: false })).toHaveCount(0);
+  await expect(detail.getByText('هذا السجل القديم لا يحتوي', { exact: false })).toHaveCount(16);
+  await detail.getByLabel('الأخطاء فقط').uncheck();
+  await expect(detail.locator('article')).toHaveCount(75);
+  await expect(detail.getByText('تنبيه · تنبيه أثناء العمل', { exact: true })).toHaveCount(59);
+});
