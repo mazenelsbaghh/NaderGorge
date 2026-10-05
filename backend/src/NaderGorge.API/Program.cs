@@ -287,6 +287,7 @@ builder.Services.AddHttpClient<NaderGorge.Application.Features.VideoLearning.IVi
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
+builder.Services.AddScoped<ExamWhatsAppWebhookService>();
 builder.Services.AddHttpClient<BaileysWhatsAppClient>(client => client.Timeout = TimeSpan.FromMinutes(3));
 builder.Services.AddScoped<WhatsAppMessageMutationService>();
 builder.Services.AddScoped<BaileysAccountService>();

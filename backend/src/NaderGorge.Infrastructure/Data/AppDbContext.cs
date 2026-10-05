@@ -31,6 +31,7 @@ public class AppDbContext : DbContext, IAppDbContext
     }
 
     public DbSet<AutoRepairIncident> AutoRepairIncidents => Set<AutoRepairIncident>();
+    public DbSet<ExamWhatsAppDeliveryEvent> ExamWhatsAppDeliveryEvents => Set<ExamWhatsAppDeliveryEvent>();
     public DbSet<AutoRepairControl> AutoRepairControls => Set<AutoRepairControl>();
     public DbSet<AutoRepairLogReceipt> AutoRepairLogReceipts => Set<AutoRepairLogReceipt>();
     public DbSet<AutoRepairEvent> AutoRepairEvents => Set<AutoRepairEvent>();
@@ -357,6 +358,16 @@ public class AppDbContext : DbContext, IAppDbContext
         if (Database.IsNpgsql())
             modelBuilder.HasSequence<long>("live_support_event_sequence");
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ExamWhatsAppDeliveryEvent>(b =>
+        {
+            b.HasKey(x => x.Fingerprint);
+            b.Property(x => x.Fingerprint).HasMaxLength(64);
+            b.Property(x => x.BusinessAccountId).HasMaxLength(30);
+            b.Property(x => x.PhoneNumberId).HasMaxLength(30);
+            b.Property(x => x.MessageId).HasMaxLength(512);
+            b.Property(x => x.Status).HasMaxLength(20);
+            b.HasIndex(x => new { x.BusinessAccountId, x.MessageId, x.EventUnixTime });
+        });
         modelBuilder.Entity<AutoRepairIncident>(b =>
         {
             b.HasIndex(x => x.Fingerprint).IsUnique();
