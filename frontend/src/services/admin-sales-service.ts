@@ -1,5 +1,6 @@
 import apiClient from './api-client';
 import type { AcademicScopePayload, AcademicScopeSummary } from '@/lib/academic-labels';
+import { prepareSalesCouponPayload } from '@/lib/sales-coupon-payload';
 
 export type SalesTargetType = 'Package' | 'Term' | 'ContentSection' | 'Lesson' | 'SpecificVideo' | 'VideoType' | 'PublicExam' | 'Teacher' | 'Platform';
 export type DiscountType = 'Percentage' | 'FixedAmount';
@@ -167,10 +168,10 @@ export const adminSalesService = {
     return unwrap<SalesCouponDto>(await apiClient.get(`/admin/sales/coupons/${id}`));
   },
   async createCoupon(payload: Record<string, unknown>) {
-    return unwrap<SalesCouponDto>(await apiClient.post('/admin/sales/coupons', payload));
+    return unwrap<SalesCouponDto>(await apiClient.post('/admin/sales/coupons', prepareSalesCouponPayload(payload)));
   },
   async updateCoupon(id: string, payload: Record<string, unknown>) {
-    return unwrap<SalesCouponDto>(await apiClient.put(`/admin/sales/coupons/${id}`, payload));
+    return unwrap<SalesCouponDto>(await apiClient.put(`/admin/sales/coupons/${id}`, prepareSalesCouponPayload(payload)));
   },
   async stackingPolicies() {
     return unwrap<StackingPolicyDto[]>(await apiClient.get('/admin/sales/stacking-policies'));
