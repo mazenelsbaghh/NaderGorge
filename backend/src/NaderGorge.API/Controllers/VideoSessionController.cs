@@ -65,7 +65,14 @@ public partial class VideoSessionController : ControllerBase
                 ? VideoSessionMode.AdminPreview : VideoSessionMode.Standard
         );
 
+        var creationStartedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         var result = await _mediator.Send(command, ct);
+        if (!result.Success)
+        {
+            NaderGorge.API.Observability.VideoSessionRejectionDiagnostics.Shared.Log(
+                _logger, result.Errors?.FirstOrDefault(),
+                System.Diagnostics.Stopwatch.GetElapsedTime(creationStartedAt).TotalMilliseconds);
+        }
 
         if (result.Success)
             return Ok(result);
