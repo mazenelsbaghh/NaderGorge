@@ -5,14 +5,14 @@ export interface MimScene {
   title: string; educationalPoint: string; sourceChapterIds: string[]; shots: MimShot[]; prompt: string;
 }
 export interface MimDocument {
-  schemaVersion: number; title: string; premise: string; style: string; continuity: string; scenes: MimScene[];
+  schemaVersion: number; title: string; premise: string; style: string; continuity: string; scenes: MimScene[]; sourceText?: string | null;
 }
 export interface MimSource {
   id: string; title: string; sourceRevision: number;
   chapters: { id: string; title: string; summary: string; startTime: number; endTime: number }[];
 }
 export interface MimSnapshot {
-  version: string; sourceVideoId: string; sourceRevision: number; stale: boolean; document: MimDocument; updatedAt: string | null;
+  version: string; sourceVideoId: string | null; sourceRevision: number; stale: boolean; document: MimDocument; updatedAt: string | null; generating?: boolean;
 }
 export interface McpConnection { connected: boolean; configured: boolean; endpoint: string }
 export interface McpTool { name: string; description: string; inputSchema: Record<string, unknown> }
@@ -62,7 +62,7 @@ export function mcpBrief(document: MimDocument): string {
     'ارفع الصورتين الفعليتين من الحزمة وأرفقهما بكل طلب توليد، بما فيه اللقطات المقسمة؛ ذكر أسماء الملفات في النص وحده لا يكفي. ثبّت الشكل والملابس والصوت عبر كل اللقطات.',
     'الشيتان مرجع للشخصيات فقط؛ لا تعرض لوحة الزوايا والتعبيرات نفسها داخل الفيديو. إذا تعذر إرفاق المرجعين، وضّح العائق قبل التوليد.',
     'اكتشف أدوات التوليد والموديلات المتاحة ودعم أكثر من مرجع قبل اختيار الموديل.',
-    'مدة الحلقة ١٢٠ ثانية: أربعة مشاهد، كل مشهد ٣٠ ثانية. إذا لم يدعم الموديل ٣٠ ثانية، اقسم المشهد عند حدود الكادرات إلى لقطات مدعومة بدون قطع الحوار.',
+    `المتاح حاليًا ${document.scenes.length} من ٤ مشاهد. نفّذ المشهد المحدد فقط بعد مراجعته. كل مشهد ٣٠ ثانية؛ إذا لم يدعم الموديل المدة، اقسمه عند حدود الكادرات بدون قطع الحوار.`,
     'اعرض خطة اللقطات والتكلفة قبل بدء التوليد. لا تكرر طلب توليد حالته غير مؤكدة.',
     episodeScript(document),
     ...document.scenes.map((_, index) => `GENERATION PROMPT ${index + 1}\n${generationPrompt(document, index)}`),
@@ -73,3 +73,5 @@ export function preparedSourceMatches(document: MimDocument, source: MimSource):
   const chapters = new Set(source.chapters.map(chapter => chapter.id));
   return document.scenes.every(scene => scene.sourceChapterIds.every(id => chapters.has(id)));
 }
+
+export interface MimVideo { version: string; state: string; quote: string; expiresAt: string; jobId: string | null; urls: string[] }

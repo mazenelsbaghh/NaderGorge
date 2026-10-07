@@ -1,3 +1,5 @@
+import { parseWritingContext } from './services/mimSceneWriter.js';
+import { generateMimStudioScene } from './services/geminiService.js';
 import { installAIProviderMonitor } from './services/aiProviderMonitor.js';
 import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
@@ -414,8 +416,17 @@ async function startWorker() {
   if (process.env.NODE_ENV !== 'production') {
     app.use(cors({ origin: process.env.WORKER_ALLOWED_ORIGIN || 'http://localhost:8738' }));
   }
+  app.use('/internal/mim-studio/scene', express.json({ limit: '250kb' }));
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  app.post('/internal/mim-studio/scene', workerAdminGuard, async (req, res) => {
+    let context;
+    try { context = parseWritingContext(req.body); }
+    catch { return res.status(400).json({ error: 'INVALID_MIM_WRITING_SOURCE' }); }
+    try { return res.json(await generateMimStudioScene(context)); }
+    catch { return res.status(503).json({ error: 'MIM_SCENE_UNAVAILABLE' }); }
+  });
 
   app.post('/internal/video-learning', workerAdminGuard, async (req, res) => {
     const { mode, question, context } = req.body ?? {};

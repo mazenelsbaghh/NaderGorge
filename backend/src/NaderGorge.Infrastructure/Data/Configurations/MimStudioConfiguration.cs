@@ -18,6 +18,18 @@ public static class MimStudioConfiguration
             e.HasOne<LessonVideo>().WithMany().HasForeignKey(x => x.SourceVideoId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UpdatedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
+        model.Entity<MimSceneVideo>(e =>
+        {
+            e.ToTable("mim_scene_videos");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.LessonId, x.SceneIndex }).IsUnique();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.Property(x => x.State).HasMaxLength(32);
+            e.Property(x => x.ParametersJson).HasColumnType("jsonb");
+            e.Property(x => x.ResultJson).HasColumnType("jsonb");
+            e.HasOne<Lesson>().WithMany().HasForeignKey(x => x.LessonId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.AdminUserId).OnDelete(DeleteBehavior.Restrict);
+        });
         model.Entity<HiggsfieldMcpConnection>(e =>
         {
             e.ToTable("higgsfield_mcp_connections");

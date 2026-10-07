@@ -18,6 +18,7 @@ async function openStudio(page, matches = true) {
   }, user);
   const saves = [];
   let snapshot = null;
+  let video = null;
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
     let response = [];
@@ -25,7 +26,22 @@ async function openStudio(page, matches = true) {
     if (path.includes('/cockpit')) response = { lessonId, title: 'المحاضرة السادسة: التحولات الكبرى في مصر خلال العصر الوسيط', summary: '', internalCode: 'L-6',
       order: 1, price: 0, archiveMode: 'None', videos: [], resources: [], homework: [], commentsSummary: { pending: 0, total: 0 } };
     if (path === `/admin/mim-studio/lessons/${lessonId}/sources`) response = [{ ...source, chapters: matches ? source.chapters : [] }];
-    if (path === '/admin/mim-studio/connection') response = { connected: false, configured: true, endpoint: 'https://mcp.higgsfield.ai/mcp' };
+    if (path.endsWith('/scenes/next')) {
+      const request = route.request().postDataJSON();
+      const scenes = [...(snapshot?.document.scenes ?? []), { ...structuredClone(episode.scenes[request.expectedSceneCount]), sourceChapterIds: [] }];
+      snapshot = { version: `version-${scenes.length}`, sourceVideoId: null, sourceRevision: 0, stale: false, generating: false,
+        document: { ...episode, scenes, sourceText: request.sourceText } };
+      response = snapshot;
+    }
+    if (path.endsWith('/video/quote')) {
+      video = { version: 'quote-1', state: 'quoted', quote: '١٠ كريديت', expiresAt: new Date(Date.now()+300000).toISOString(), urls: [], jobId: null };
+      response = video;
+    }
+    if (path.endsWith('/video')) {
+      if (route.request().method() === 'POST') { saves.push({ videoSubmission: true }); video = { ...video, state: 'running', jobId: '00000000-0000-4000-8000-000000000008' }; }
+      response = video;
+    }
+    if (path === '/admin/mim-studio/connection') response = { connected: !matches, configured: true, endpoint: 'https://mcp.higgsfield.ai/mcp' };
     if (path === `/admin/mim-studio/lessons/${lessonId}`) {
       if (route.request().method() === 'PUT') {
         const saved = route.request().postDataJSON(); saves.push(saved);
@@ -79,7 +95,36 @@ test('unrelated lessons do not display the prepared history episode (synthetic A
   const browser = await chromium.launch({ channel: 'chrome' });
   try {
     const page = await browser.newPage(); await openStudio(page, false);
-    await expect(page.getByRole('heading', { name: 'الحصة دي لسه مالهاش اسكربت محفوظ' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'المشهد الأول هيظهر هنا' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'حفظ الاسكربت', exact: true })).toHaveCount(0);
+  } finally { await browser.close(); }
+});
+
+
+test('empty lesson writes one scene per click and video waits for explicit cost approval (synthetic API)', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ channel: 'chrome' });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const submissions = await openStudio(page, false);
+    const first = page.getByRole('button', { name: 'كتابة المشهد الأول', exact: true });
+    await expect(first).toBeDisabled();
+    await page.getByLabel('نص شرح الحصة', { exact: true }).fill('شرح تفصيلي للحصة ومفاهيمها وأمثلتها، يستند إليه الكاتب في إعداد المشاهد دون اختلاق معلومات جديدة. '.repeat(4));
+    await first.click();
+    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (2 من ٤)', exact: true })).toBeVisible();
+    await expect(page.getByText('1 من ٤ مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.', { exact:true })).toBeVisible();
+    assert.equal(submissions.length, 0);
+    await page.getByRole('button', { name: 'عرض تكلفة هذا المشهد', exact:true }).click();
+    const approve = page.getByRole('button', { name: 'توليد هذا المشهد وخصم التكلفة المعروضة', exact:true });
+    await expect(approve).toBeEnabled();
+    assert.equal(submissions.length, 0);
+    await approve.click();
+    await expect(page.getByText('المشهد قيد التوليد على Higgsfield.', { exact:false })).toBeVisible();
+    assert.equal(submissions.length, 1);
+    await page.getByRole('button', { name: 'كتابة المشهد التالي (2 من ٤)', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (3 من ٤)', exact: true })).toBeVisible();
+    assert.equal(submissions.length, 1);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.getByRole('heading', { name: 'استوديو ميم', exact:true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '../artifacts/mim-studio/scene-generation/mobile.png', fullPage:true });
   } finally { await browser.close(); }
 });

@@ -32,6 +32,15 @@ public sealed class MimStudioContractTests
         Assert.Throws<ArgumentException>(() => MimStudioContract.Validate(document, new HashSet<Guid> { Chapter }));
     }
 
+    [Fact]
+    public void SavesOneSceneFromPastedLessonTextWithoutInventedChapterIds()
+    {
+        var episode = Episode();
+        var doc = episode with { Scenes = [episode.Scenes[0] with { SourceChapterIds = [] }], SourceText = "شرح الحصة" };
+        MimStudioContract.Validate(doc, new HashSet<Guid>());
+        Assert.Throws<ArgumentException>(() => MimStudioContract.Validate(doc with { Scenes = [] }, new HashSet<Guid>()));
+    }
+
     private static MimStudioDocument Episode() => new(1, "مغامرة ميم", "إنقاذ ميم من المصباح", "كرتون سينمائي", "ثبات الشخصيات",
         Enumerable.Range(0, 4).Select(index => new MimScene($"مشهد {index}", "فكرة من الحصة", [Chapter],
             Enumerable.Range(0, 6).Select(shot => new MimShot(shot * 5, (shot + 1) * 5, "كادر", "حركة", "كاميرا", "", "")).ToArray(),

@@ -284,6 +284,8 @@ builder.Services.AddSingleton<IWhatsAppOutboundMediaNormalizer, WhatsAppOutbound
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddScoped<NaderGorge.Application.Features.VideoLearning.VideoLearningService>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.MimStudio.LessonMimStudioService>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.MimStudio.MimSceneVideoService>();
+builder.Services.AddHttpClient<NaderGorge.Infrastructure.Services.MimStudio.MimSceneWriter>(client => { client.Timeout = TimeSpan.FromSeconds(70); client.MaxResponseContentBufferSize = 250_000; });
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.MimStudio.HiggsfieldMcpConnectionService>();
 builder.Services.AddHttpClient("HiggsfieldMcp", client =>
 {

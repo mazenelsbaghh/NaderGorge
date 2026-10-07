@@ -10,7 +10,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController, Authorize(Roles = "Admin"), HasPermission("content.manage")]
 [Route("api/admin/mim-studio"), RequestSizeLimit(250_000)]
-public sealed class AdminMimStudioController(LessonMimStudioService studio, HiggsfieldMcpConnectionService connection) : ControllerBase
+public sealed class AdminMimStudioController(LessonMimStudioService studio, HiggsfieldMcpConnectionService connection, MimSceneVideoService videos) : ControllerBase
 {
     [HttpGet("lessons/{lessonId:guid}")]
     public Task<IActionResult> Read(Guid lessonId, CancellationToken ct) => Run(() => studio.ReadAsync(lessonId, ct));
@@ -21,6 +21,20 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
     [HttpPut("lessons/{lessonId:guid}")]
     public Task<IActionResult> Save(Guid lessonId, SaveMimStudio request, CancellationToken ct) =>
         Run(() => studio.SaveAsync(User.RequireUserId(), lessonId, request, ct));
+
+    [HttpPost("lessons/{lessonId:guid}/scenes/next")]
+    public Task<IActionResult> Generate(Guid lessonId, GenerateMimScene request, CancellationToken ct) =>
+        Run(() => studio.GenerateAsync(User.RequireUserId(), lessonId, request, ct));
+
+    [HttpGet("lessons/{lessonId:guid}/scenes/{scene:int}/video")]
+    public Task<IActionResult> Video(Guid lessonId, int scene, CancellationToken ct) => Run(() => videos.ReadAsync(User.RequireUserId(), lessonId, scene, ct));
+
+    [HttpPost("lessons/{lessonId:guid}/scenes/{scene:int}/video/quote")]
+    public Task<IActionResult> Quote(Guid lessonId, int scene, CancellationToken ct) => Run(() => videos.QuoteAsync(User.RequireUserId(), lessonId, scene, ct));
+
+    [HttpPost("lessons/{lessonId:guid}/scenes/{scene:int}/video")]
+    public Task<IActionResult> Submit(Guid lessonId, int scene, MimVideoApproval request, CancellationToken ct) =>
+        Run(() => videos.SubmitAsync(User.RequireUserId(), lessonId, scene, request, ct));
 
     [HttpGet("connection")]
     public Task<IActionResult> Connection(CancellationToken ct) => Run(() => connection.StatusAsync(User.RequireUserId(), ct));
@@ -46,6 +60,7 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
         catch (DbUpdateConcurrencyException) { return Conflict(ApiResponse.Fail("البيانات اتغيّرت أثناء الطلب. حدّث الصفحة.")); }
         catch (DbUpdateException) { return Conflict(ApiResponse.Fail("تعذر الحفظ بسبب تعديل متزامن أو بيانات مرتبطة.")); }
         catch (ArgumentException ex) { return BadRequest(ApiResponse.Fail(ex.Message)); }
+        catch (MimStudioGenerationException ex) { return StatusCode(503, ApiResponse.Fail(ex.Message)); }
         catch (HiggsfieldMcpException ex) { return StatusCode(502, ApiResponse.Fail(ex.Message)); }
     }
 }

@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { Clapperboard, Copy, Download, Save } from 'lucide-react';
+import { Clapperboard, Copy, Download, Save, Sparkles, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import preparedEpisode from './prepared-episode.json';
 import { characterReferences, lessonOpeningDirection, mcpBrief, preparedSourceMatches, type McpConnection, type MimDocument, type MimSnapshot, type MimSource } from './contract';
 import { createEpisodeArchive } from './archive';
 import { mimStudioService, studioError } from './service';
 import { copyStudioText, MimScriptView } from './MimScriptView';
+import { MimSceneVideoPanel } from './MimSceneVideoPanel';
 import { HiggsfieldConnection } from './HiggsfieldConnection';
 
 const prepared = preparedEpisode as MimDocument;
@@ -18,6 +19,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   const [document, setDocument] = useState<MimDocument | null>(null);
   const [sources, setSources] = useState<MimSource[]>([]);
   const [sourceId, setSourceId] = useState('');
+  const [sourceText, setSourceText] = useState('');
+  const [generating, setGenerating] = useState(false);
   const [connection, setConnection] = useState<McpConnection | null>(null);
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -36,7 +39,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
         if (controller.signal.aborted) return;
         setSnapshot(saved); setSources(options); setConnection(linked);
         const matching = options.find(item => preparedSourceMatches(prepared, item));
-        setSourceId(saved?.sourceVideoId ?? matching?.id ?? '');
+        setSourceId(saved ? saved.sourceVideoId ?? '' : matching?.id ?? '');
+        setSourceText(saved?.document.sourceText ?? '');
         setDocument(saved?.document ?? (matching ? structuredClone(prepared) : null));
         setDirty(!saved && Boolean(matching)); setSelected(0);
       }).catch(cause => { if (!controller.signal.aborted) setError(studioError(cause, 'تعذر تحميل استوديو الحصة.')); })
@@ -52,13 +56,31 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   }, [dirty]);
 
   const save = async () => {
-    if (!document || !source) return;
+    if (!document || !document.scenes.length) return;
     setSaving(true); setError('');
     try {
       const saved = await mimStudioService.save(lessonId, snapshot?.version ?? null, source, document);
       setSnapshot(saved); setDocument(saved.document); setDirty(false); toast.success('اتحفظ الاسكربت في الحصة');
     } catch (cause) { setError(studioError(cause)); }
     finally { setSaving(false); }
+  };
+
+  const refresh = async () => {
+    try {
+      const saved = await mimStudioService.read(lessonId);
+      if (saved) { setSnapshot(saved); setDocument(saved.document); setDirty(false); setSelected(Math.max(0, saved.document.scenes.length - 1)); }
+    } catch (cause) { setError(studioError(cause)); }
+  };
+  const generateNext = async () => {
+    if (generating || dirty) return;
+    setGenerating(true); setError('');
+    try {
+      const saved = await mimStudioService.generateNext(lessonId, snapshot?.version ?? null, source,
+        source ? null : sourceText, document?.scenes.length ?? 0);
+      setSnapshot(saved); setDocument(saved.document); setDirty(false); setSelected(saved.document.scenes.length - 1);
+      toast.success('المشهد جاهز ومحفوظ. راجعه قبل كتابة اللي بعده.');
+    } catch (cause) { await refresh(); setError(studioError(cause, 'تعذر كتابة المشهد. حدّث الحالة قبل إعادة المحاولة.')); }
+    finally { setGenerating(false); }
   };
 
   const downloadPackage = async () => {
@@ -86,14 +108,40 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
       </div>
       {document && <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-[var(--admin-muted)]" role="status">{dirty ? 'تعديلات لم تُحفظ' : 'محفوظ في الحصة'}</span>
-        <button type="button" className="admin-btn-primary min-h-11 disabled:opacity-50" disabled={saving || !dirty || !source} onClick={() => void save()}><Save className="h-4 w-4" />{saving ? 'جاري الحفظ…' : 'حفظ الاسكربت'}</button>
+        <button type="button" className="admin-btn-primary min-h-11 disabled:opacity-50" disabled={saving || generating || snapshot?.generating || !dirty || !document.scenes.length} onClick={() => void save()}><Save className="h-4 w-4" />{saving ? 'جاري الحفظ…' : 'حفظ الاسكربت'}</button>
       </div>}
     </header>
     {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-sm leading-7 text-red-800">{error}</p>}
     {snapshot?.stale && <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-4 text-sm leading-7 text-amber-900">شرح الفيديو اتغيّر بعد حفظ الاسكربت. راجع الفصول والحوار قبل إعادة الحفظ أو استخدامه للتوليد.</p>}
+    <section aria-label="كتابة المشاهد" className="space-y-4 border-b border-[var(--admin-border)] py-6">
+      {!document?.scenes.length && <>
+        <h3 className="text-lg font-black text-[var(--admin-text)]">ابدأ بمصدر شرح الحصة</h3>
+        <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">اختار فيديو له فصول محللة، أو أدخل نص الشرح. هنكتب مشهد واحد مدته ٣٠ ثانية، وبعد مراجعته تقدر تبدأ التالي.</p>
+        <label htmlFor="mim-source" className="block text-sm font-bold text-[var(--admin-text)]">مصدر الشرح</label>
+        <select id="mim-source" disabled={generating || snapshot?.generating} value={sourceId} onChange={event => setSourceId(event.target.value)} className="admin-input min-h-11 w-full max-w-xl">
+          <option value="">إدخال نص الشرح</option>
+          {sources.map(item => <option key={item.id} value={item.id} disabled={!item.chapters.length}>{item.title}{!item.chapters.length ? ' (يحتاج تحليل AI أولاً)' : ''}</option>)}
+        </select>
+        {!sourceId && <div className="max-w-3xl space-y-2">
+          <label htmlFor="mim-source-text" className="block text-sm font-bold text-[var(--admin-text)]">نص شرح الحصة</label>
+          <textarea id="mim-source-text" value={sourceText} disabled={generating || snapshot?.generating} onChange={event => setSourceText(event.target.value)} rows={7} maxLength={24000}
+            className="admin-input w-full leading-8" placeholder="الصق شرح الحصة أو ملخصها التفصيلي هنا…" />
+          <p className="text-sm text-[var(--admin-muted)]">من ١٠٠ إلى ٢٤ ألف حرف. بنستخدم النص في كتابة المشاهد، عنوان الحصة وحده مش كفاية.</p>
+        </div>}
+      </>}
+      <div className="flex flex-wrap items-center gap-3">
+        {(document?.scenes.length ?? 0) < 4 && <button type="button" onClick={() => void generateNext()}
+          disabled={generating || saving || dirty || snapshot?.generating || snapshot?.stale || (!source && sourceText.trim().length < 100)}
+          className="admin-btn-primary min-h-11 disabled:opacity-50"><Sparkles className="h-4 w-4" />
+          {generating || snapshot?.generating ? 'جاري كتابة المشهد…' : document?.scenes.length ? `كتابة المشهد التالي (${document.scenes.length + 1} من ٤)` : 'كتابة المشهد الأول'}
+        </button>}
+        {snapshot && !dirty && <button type="button" onClick={() => void refresh()} disabled={generating} className="admin-btn-ghost min-h-11"><RefreshCw className="h-4 w-4" />تحديث الحالة</button>}
+        <p role="status" className="text-sm leading-7 text-[var(--admin-muted)]">{dirty ? 'احفظ تعديلاتك قبل كتابة المشهد التالي.' : document?.scenes.length ? `${document.scenes.length} من ٤ مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.` : 'كل ضغطة تكتب مشهد واحد فقط.'}</p>
+      </div>
+    </section>
     <div className="grid gap-7 pt-6 xl:grid-cols-[16rem_minmax(0,1fr)]">
       <aside className="order-2 min-w-0 space-y-6 xl:order-1">
-        {document && <nav aria-label="مشاهد الحلقة" className="hidden flex-col gap-2 xl:flex">
+        {document && document.scenes.length > 0 && <nav aria-label="مشاهد الحلقة" className="hidden flex-col gap-2 xl:flex">
           {document.scenes.map((scene, index) => <button key={index} type="button" aria-current={selected === index ? 'step' : undefined}
             className={`min-h-14 rounded-lg px-3 py-3 text-start text-sm font-bold leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)] ${selected === index ? 'bg-[var(--admin-primary)] text-white' : 'bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'}`}
             onClick={() => setSelected(index)}>{index + 1}. {scene.title}</button>)}
@@ -111,7 +159,7 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
         <HiggsfieldConnection connection={connection} onChanged={setConnection} unsaved={dirty} />
       </aside>
       <div className="order-1 min-w-0 xl:order-2">
-        {document ? <>
+        {document && document.scenes.length > 0 ? <>
           <nav aria-label="اختيار مشهد الحلقة" className="mb-5 grid grid-cols-2 gap-2 xl:hidden">
             {document.scenes.map((scene, index) => <button type="button" key={index} aria-current={selected === index ? 'step' : undefined}
               className={`min-h-12 rounded-lg px-3 py-2 text-start text-sm font-bold leading-6 ${selected === index ? 'bg-[var(--admin-primary)] text-white' : 'bg-[var(--admin-card-soft)] text-[var(--admin-text)]'}`}
@@ -121,19 +169,21 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
             <summary className="min-h-11 cursor-pointer font-bold text-[var(--admin-text)]">القصة وثبات الشخصيات ومراجع الشرح</summary>
             <div className="max-w-prose space-y-3 text-sm leading-8 text-[var(--admin-muted)]"><p>{document.premise}</p><p>{document.style}</p><p>{document.continuity}</p>
               <p><strong className="text-[var(--admin-text)]">افتتاحية كل حصة: </strong>{lessonOpeningDirection}</p>
-              <p>المصدر: ملخصات فصول الفيديو المحفوظة في الحصة، وليست مراجعة حرفية للتفريغ.</p>
+              <p>{document.sourceText ? 'المصدر: نص الشرح اللي أضفته للحصة.' : 'المصدر: ملخصات فصول الفيديو المحفوظة في الحصة، وليست مراجعة حرفية للتفريغ.'}</p>
               <ul className="list-inside list-disc">{source?.chapters.filter(chapter => document.scenes[selected].sourceChapterIds.includes(chapter.id)).map(chapter => <li key={chapter.id}>{chapter.title}</li>)}</ul>
             </div>
           </details>
-          <MimScriptView key={selected} document={document} selected={selected} disabled={saving} onChange={next => { setDocument(next); setDirty(true); }} />
+          <MimScriptView key={selected} document={document} selected={selected} disabled={saving || generating || snapshot?.generating} onChange={next => { setDocument(next); setDirty(true); }} />
+          <MimSceneVideoPanel key={`video-${selected}`} lessonId={lessonId} scene={selected} scriptVersion={snapshot?.version ?? null}
+            connected={connection.connected} disabled={dirty || saving || generating || !!snapshot?.generating || !!snapshot?.stale} />
           <footer className="mt-7 flex flex-wrap gap-3 border-t border-[var(--admin-border)] pt-5">
             <button type="button" className="admin-btn-ghost min-h-11 disabled:opacity-50" disabled={exporting} onClick={() => void downloadPackage()}><Download className="h-4 w-4" />{exporting ? 'جاري تجهيز الشيتين والاسكربت…' : 'تنزيل الاسكربت والشيتين'}</button>
             <button type="button" className="admin-btn-ghost min-h-11" onClick={() => void copyStudioText(mcpBrief(document))}><Copy className="h-4 w-4" />نسخ طلب Higgsfield MCP</button>
             <p className="w-full text-sm leading-7 text-[var(--admin-muted)]">الحزمة فيها صور الشخصيتين الأصلية والاسكربت وبرومبت كل مشهد. نسخ الطلب ينسخ النص فقط؛ أرفق معه الشيتين بعد فك الحزمة.</p>
           </footer>
         </> : <div className="max-w-xl py-8">
-          <h3 className="text-xl font-black text-[var(--admin-text)]">الحصة دي لسه مالهاش اسكربت محفوظ</h3>
-          <p className="mt-3 text-base leading-8 text-[var(--admin-muted)]">المشاهد الأربعة اللي جهّزناها تخص «التحولات الكبرى في مصر خلال العصر الوسيط». هتظهر تلقائيًا في الحصة اللي فيها نفس فصول الشرح.</p>
+          <h3 className="text-xl font-black text-[var(--admin-text)]">المشهد الأول هيظهر هنا</h3>
+          <p className="mt-3 text-base leading-8 text-[var(--admin-muted)]">بعد إضافة مصدر الشرح فوق، اضغط «كتابة المشهد الأول». هتلاقي كل كادر بتوقيته وحركته وحواره وزاوية الكاميرا.</p>
           <p className="mt-3 text-sm leading-7 text-[var(--admin-muted)]">مراجع ميم وبابا نادر متاحة هنا، وربط Higgsfield خاص بحساب الإدارة.</p>
         </div>}
       </div>

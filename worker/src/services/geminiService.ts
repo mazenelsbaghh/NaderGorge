@@ -1,3 +1,4 @@
+import { mimSceneInstructions, mimSceneSchema, parseWrittenScene, type WritingContext } from './mimSceneWriter.js';
 import { FileState, GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { Agent, setGlobalDispatcher } from 'undici';
 import fs from 'fs';
@@ -956,4 +957,15 @@ Never claim a teacher approved your answer. No external tools, actions, URLs or 
       result.text.length > 6000 || !('activities' in result) || !Array.isArray(result.activities) || result.activities.length > 30)
     throw new Error('AI_INVALID_RESPONSE');
   return result;
+}
+
+export async function generateMimStudioScene(context: WritingContext) {
+  const runtime = createRuntime();
+  const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
+    model: runtime.config.textModel, contents: JSON.stringify(context),
+    config: { systemInstruction: mimSceneInstructions, responseMimeType: 'application/json', responseSchema: mimSceneSchema,
+      maxOutputTokens: 10000, abortSignal: AbortSignal.any([abortSignal, AbortSignal.timeout(60000)]) },
+  }));
+  if (!response.text || response.text.length > 100000) throw new Error('INVALID_MIM_SCENE');
+  return parseWrittenScene(JSON.parse(response.text), context);
 }

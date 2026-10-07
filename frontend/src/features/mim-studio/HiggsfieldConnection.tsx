@@ -39,6 +39,6 @@ export function HiggsfieldConnection({ connection, onChanged, unsaved = false }:
     {unsaved && !connection.connected && <p className="text-sm text-[var(--admin-muted)]">احفظ الاسكربت قبل الانتقال لربط حسابك.</p>}
     {toolCount !== null && <p role="status" className="text-sm font-bold text-emerald-800">الاتصال يعمل؛ تم اكتشاف {toolCount} أداة بدون إرسال طلب توليد.</p>}
     {error && <p role="alert" className="text-sm leading-7 text-red-800">{error}</p>}
-    <p className="text-xs leading-6 text-[var(--admin-muted)]">التوليد المباشر من الحصة يحتاج التحقق من أدوات حسابك أولاً. ربط الحساب وفحصه لا يولّدان فيديوهات.</p>
+    <p className="text-xs leading-6 text-[var(--admin-muted)]">بعد حفظ المشهد، اعرض تكلفته من أسفل الاسكربت ثم ابدأ توليده. ربط الحساب وفحصه لا يولّدان فيديوهات.</p>
   </section>;
 }

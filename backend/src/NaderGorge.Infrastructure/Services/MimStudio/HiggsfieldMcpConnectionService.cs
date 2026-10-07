@@ -124,6 +124,19 @@ public sealed class HiggsfieldMcpConnectionService(
         throw new HiggsfieldMcpException("قائمة أدوات Higgsfield أكبر من الحد المسموح. حاول لاحقًا.");
     }
 
+    internal async Task<JsonElement> CallStudioToolAsync(Guid actor, string name, object arguments, CancellationToken ct)
+    {
+        if (name is not ("models_explore" or "media_import_url" or "generate_video" or "job_status"))
+            throw new ArgumentException("أداة غير مسموحة لاستوديو ميم.");
+        using var client = clients.CreateClient("HiggsfieldMcp");
+        var transport = new HiggsfieldMcpTransport(client, await AccessTokenAsync(actor, ct));
+        await transport.InitializeAsync(ct);
+        var reply = await transport.RequestAsync("tools/call", new { name, arguments }, ct);
+        if (reply.TryGetProperty("isError", out var error) && error.ValueKind == JsonValueKind.True)
+            throw new HiggsfieldMcpException("Higgsfield رفض الطلب. راجع اتصال الحساب أو الرصيد وإعدادات التوليد.");
+        return reply;
+    }
+
     private async Task<string> AccessTokenAsync(Guid actor, CancellationToken ct)
     {
         var row = await FindAsync(actor, ct) ?? throw new HiggsfieldMcpException("اربط حساب Higgsfield أولاً.");
