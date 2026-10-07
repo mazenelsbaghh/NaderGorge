@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "title": "ميم وبابا نادر: مغامرة التحوّلات الكبرى",
+  "premise": "ميم غرقان في دوّامة تاريخ خرجت من مصباح سحري، وبابا نادر بينقذه. الشرح بيطلع وسط مغامرة في صفحات مصر خلال العصر الوسيط.",
+  "style": "كرتون 3D سينمائي بكوميديا حركة بروح توم وجيري: استعداد قبل الحركة، اندفاع وتوقّف مفاجئ، ردود فعل واضحة، كادرات متنوعة وحوار مصري.",
+  "continuity": "شيت ميم مرجع ١ وشيت بابا نادر مرجع ٢. نفس الملابس والأحجام والأصوات عبر المشاهد. بابا نادر هو والد ميم الخيالي؛ لحظة النسيان قصيرة وميم يسانده. الكوميديا من حركة الأدوات. المصباح والصفحات إطار خيالي، والتاريخ يظهر على مراحل متتابعة. لا كتابة أو ترجمة على الشاشة، والشيتات لا تظهر داخل الفيلم.",
+  "scenes": [
+    {
+      "title": "الحقني يا بابا… التاريخ بيبلعني!",
+      "educationalPoint": "التحولات في مصر خلال العصر الوسيط حصلت تدريجيًا وشملت مجالات متعددة.",
+      "sourceChapterIds": [
+        "4f2771eb-8c78-4f45-880b-dbdf6a4873a6"
+      ],
+      "shots": [
+        {
+          "start": 0,
+          "end": 3,
+          "title": "افتتاح من قلب الخطر",
+          "action": "ميم بيحاول يعوم وسط دوّامة صفحات وخرائط ومجسّمات تاريخية؛ ودانه بتظهر وتختفي وسط الورق.",
+          "camera": "لقطة علوية واسعة، ثم غوص وتتبع ناحية ميم.",
+          "dialogue": "ميم: «بابا نادر! التاريخ بيبلعني!»",
+          "sound": "تصاعد موسيقي مع حفيف الورق."
+        },
+        {
+          "start": 3,
+          "end": 5,
+          "title": "المصباح مصدر الدوّامة",
+          "action": "نكشف المصباح الذهبي على أرض المكتبة؛ دخان فوهته عامل الدوّامة وبيسحب ميم ناحيته.",
+          "camera": "قرب شديد على فوهة المصباح، مع حركة الورق في اتجاهها.",
+          "dialogue": "",
+          "sound": "صوت شفط بيزيد تدريجيًا."
+        },
+        {
+          "start": 5,
+          "end": 8,
+          "title": "دخول بابا نادر",
+          "action": "بابا نادر يدخل بسرعة، يتزحلق على خريطة، يستعيد توازنه ويمد إيده لميم.",
+          "camera": "تتبع منخفض من عند الأرض مع دخوله.",
+          "dialogue": "بابا نادر: «امسك إيدي يا ميم!»",
+          "sound": "ضربة موسيقية عند الزحلقة."
+        },
+        {
+          "start": 8,
+          "end": 11,
+          "title": "شد وجذب",
+          "action": "إيد ميم تتمد؛ بابا نادر يمسكها؛ الدوّامة تشد من الناحية التانية. جسم ميم يتمطّط لحظة وودانه ترفرف.",
+          "camera": "ثلاث قطوع: إيد ميم، قبضة بابا، ثم لقطة واسعة توضح اتجاه الشد.",
+          "dialogue": "",
+          "sound": "ضربات موسيقية متزامنة مع كل شدّة."
+        },
+        {
+          "start": 11,
+          "end": 14,
+          "title": "الحل البصري",
+          "action": "بابا نادر يلمح غطا المصباح، يرفعه بطرف الحذاء ويلقفه بإيده الحرة وهو ماسك ميم.",
+          "camera": "قرب على الغطا، ثم متابعة حركته لإيد بابا نادر.",
+          "dialogue": "ميم: «اقفل المصباح يا بابا!»",
+          "sound": "صوت قفزة خفيفة للغطا."
+        },
+        {
+          "start": 14,
+          "end": 17,
+          "title": "الإنقاذ",
+          "action": "الغطا يقفل؛ الشفط يقف؛ ميم يطير في حضن بابا نادر. الورق ينزل عليهم، وصفحة أخيرة تغطي وش بابا؛ ميم يشيلها.",
+          "camera": "لقطة واسعة للإنقاذ ثم رد فعل قريب للشخصيتين.",
+          "dialogue": "",
+          "sound": "«طَق!» ثم هدوء وحفيف الورق."
+        },
+        {
+          "start": 17,
+          "end": 20,
+          "title": "لحظة دفء",
+          "action": "بابا نادر يبص للصفحة ويبحث لحظة عن مكانهم في الحكاية؛ ميم يفكره بهدوء وابتسامة.",
+          "camera": "لقطة ثنائية قريبة، من غير مبالغة في رد الفعل.",
+          "dialogue": "بابا نادر: «إحنا كنا عند إيه؟»\nميم: «تحوّلات مصر يا بابا.»",
+          "sound": "الموسيقى تهدأ تحت الحوار."
+        },
+        {
+          "start": 20,
+          "end": 24,
+          "title": "التاريخ يبقى حكاية",
+          "action": "بابا نادر يفرد الصفحة؛ مصر تظهر كعالم مصغّر، وعناصرها تتكوّن واحدة بعد التانية.",
+          "camera": "الكاميرا تنساب فوق الصفحة وتدخل العالم المصغّر.",
+          "dialogue": "بابا نادر: «التحوّل مش فجأة يا ميم… بيحصل على مراحل.»",
+          "sound": "نغمة دافئة مع ظهور كل عنصر."
+        },
+        {
+          "start": 24,
+          "end": 28,
+          "title": "مجالات التحوّل",
+          "action": "نمر على مقر حكم، وسوق، وحلقة تعليم، ومبانٍ بتتوسع، وقناة ري ومركب تجارة؛ كل جزء يظهر بعد اللي قبله.",
+          "camera": "حركة سفر متصلة وسط المجسّمات.",
+          "dialogue": "بابا نادر: «الحكم، والمجتمع، والثقافة… والعمران والاقتصاد.»",
+          "sound": "أجواء خفيفة لكل مكان، مع وضوح الكلام."
+        },
+        {
+          "start": 28,
+          "end": 30,
+          "title": "بوابة المشهد التاني",
+          "action": "المصباح يهتز خلفهم؛ بابا نادر يثبت الغطا بكتاب تقيل، ويفتح لميم صفحة مقر الحكم.",
+          "camera": "قرب على رد فعل ميم، ثم دخول بالكاميرا داخل الصفحة.",
+          "dialogue": "بابا نادر: «نبدأ بالحكم!»",
+          "sound": "رجرجة المصباح، ثم انتقال موسيقي."
+        }
+      ],
+      "prompt": "Create ONE continuous 30-second cinematic 3D cartoon sequence, 16:9, with ten motivated edited shots, NOT a single static talking shot.\nREFERENCE IMAGE 1: Meem's character sheet, identity only. He is the small cream-furred mascot with long teal-tipped ears, large navy eyes, navy adventure suit with teal trim, boots and teal backpack. He is never a monkey or a human.\nREFERENCE IMAGE 2: Papa Nader's approved cartoon character sheet, identity only. Preserve his caricature face, broad high forehead, receding short dark hair, brown eyes, sparse moustache and chin/jaw beard, stout adult build, open white short-sleeve overshirt, white T-shirt, black trousers and black sneakers.\nPapa Nader is Meem's loving fictional father; the fictional character has Alzheimer's, unrelated to any claim about the real teacher. Keep his dignity, agency and teaching knowledge; memory hesitation is brief and Meem responds warmly. Physical comedy comes from magical objects.\nBoth characters remain exactly consistent in model, relative scale, clothing and voice. Use original non-celebrity Egyptian Arabic voices: youthful bright male Meem and warm mature male Papa Nader. Spoken names below indicate the speaker and MUST NOT be read aloud. Preserve exact Arabic dialogue, synchronized lip movement and clear turn taking; no overlapping speech or added narrator.\nUse classic Tom and Jerry-inspired visual slapstick timing, anticipation, elastic motion, fast reactions and musical punctuation, rendered as polished cinematic 3D matching the supplied sheets. No Tom or Jerry characters. Combine wide geography, close reactions, inserts, tracking shots, whip pans, soft bounced lighting, depth and smooth cinematic motion. Keep spatial continuity and readable action.\nThe golden lamp and living history pages are fictional storytelling devices. Different historical stages must read as successive passages of time, not simultaneous events. No subtitles, captions, text, labels, watermark, split screen or visible character sheets. Reference sheets do not prescribe the first frame. End at exactly 30 seconds.\n\nSCENE 1: THE HISTORY VORTEX.\nTeach only the opening concept: Egypt's medieval transformation was gradual and affected politics, society, culture, urban development and economy.\n00-03: Open in immediate danger: overhead spiral of book pages, maps and miniature historical buildings. Meem swims helplessly through flying paper, teal ear tips bobbing. Tracking dive toward him. Meem shouts: \"بابا نادر! التاريخ بيبلعني!\"\n03-05: Extreme close-up reveals a golden magical lamp on the library floor. Its spout creates the paper vortex and pulls Meem toward it. Escalating suction sound.\n05-08: Low tracking shot: Papa Nader bursts through the library doorway, skids on a map, regains balance and reaches toward Meem. Papa Nader: \"امسك إيدي يا ميم!\"\n08-11: Three brisk action inserts inside this beat: Meem's reaching hand, Papa's secure grip, wide tug of war against the vortex. Brief elastic stretch of Meem's body; ears flutter. Nobody is injured. Music accents each pull.\n11-14: Papa spots the lamp lid, flicks it upward with his shoe and catches it with his free hand while still holding Meem. Meem: \"اقفل المصباح يا بابا!\"\n14-17: Papa snaps the lid shut. Suction stops, Meem lands safely in Papa's arms. Pages rain down. One late page covers Papa's face; Meem gently removes it.\n17-20: Warm close two-shot. Papa briefly searches for their place in the story, not played for ridicule. Papa: \"إحنا كنا عند إيه؟\" Meem kindly prompts: \"تحوّلات مصر يا بابا.\"\n20-24: Papa unfolds a page; camera glides into its miniature Egypt. Elements assemble one after another. Papa: \"التحوّل مش فجأة يا ميم… بيحصل على مراحل.\"\n24-28: Continuous traveling view across a government building, an everyday market, a teaching circle, growing buildings, irrigation and a trading boat. Papa: \"الحكم، والمجتمع، والثقافة… والعمران والاقتصاد.\"\n28-30: The sealed lamp rattles behind them. Papa calmly pins its lid with a heavy book, then opens a page showing a seat of government. Papa: \"نبدأ بالحكم!\" Camera enters the page to bridge into scene 2.\nKeep total spoken dialogue within the timings; lower the score under voices."
+    },
+    {
+      "title": "مين بيحكم مصر؟",
+      "educationalPoint": "تتابع التحولات السياسية، والفرق بين التبعية والاستقلال بالحكم والخلافة المستقلة.",
+      "sourceChapterIds": [
+        "451defec-4026-461e-ab40-78e9d3f540c9",
+        "988fa0e6-573d-45ba-ab1a-295402c1858c"
+      ],
+      "shots": [
+        {
+          "start": 0,
+          "end": 3,
+          "title": "الدخول في صفحات مصر",
+          "action": "ميم وبابا نادر يدخلوا العالم التاريخي؛ ميم يقع على مخطوط بيتدحرج، وبابا يمسك حزام شنطته ويسنده.",
+          "camera": "لقطة تأسيسية واسعة تتحرك مع مسار الصفحات.",
+          "dialogue": "",
+          "sound": "دحرجة ورق وضربة كوميدية قصيرة."
+        },
+        {
+          "start": 3,
+          "end": 5,
+          "title": "سؤال ميم",
+          "action": "ميم يبص ناحية مبنى الحكم ويسأل بابا نادر.",
+          "camera": "قرب على ميم، ثم من فوق كتفه ناحية المبنى.",
+          "dialogue": "ميم: «ومصر كان بيحكمها مين؟»",
+          "sound": "الموسيقى تهدأ للسؤال."
+        },
+        {
+          "start": 5,
+          "end": 8,
+          "title": "من صفحة لصفحة",
+          "action": "صفحة رمزية للعصر الروماني تتقلب لصفحة مصر بعد الفتح الإسلامي؛ من غير معارك أو أعلام حديثة.",
+          "camera": "انتقال بصري مع تقليب الصفحة.",
+          "dialogue": "بابا نادر: «كانت تابعة للروم… وبعد الفتح»",
+          "sound": "حفيف صفحة كبيرة."
+        },
+        {
+          "start": 8,
+          "end": 11,
+          "title": "ولاية في دولة الخلافة",
+          "action": "الشخصيتان يمشوا على المسار الجديد، وبابا نادر يكمل الشرح.",
+          "camera": "لقطة ثنائية متتبعة في نفس اتجاه السير.",
+          "dialogue": "بابا نادر: «بقت ولاية في دولة الخلافة.»",
+          "sound": "صوت خطوات خفيفة."
+        },
+        {
+          "start": 11,
+          "end": 14,
+          "title": "استقلال الحكم المحلي",
+          "action": "صفحتان متعاقبتان تكشفان مقرّين للحكم في مرحلتي الطولونيين والإخشيديين؛ كل مرحلة منفصلة.",
+          "camera": "حركة عبر الصفحتين بالتتابع.",
+          "dialogue": "بابا نادر: «الطولونيين والإخشيديين استقلّوا بالحكم،»",
+          "sound": "إشارة موسيقية عند كل انتقال."
+        },
+        {
+          "start": 14,
+          "end": 17,
+          "title": "مع الاعتراف بالخليفة",
+          "action": "بابا نادر يوضح الفرق، والمسار يفضل متصلًا رمزيًا بسلطة الخليفة.",
+          "camera": "قرب على بابا نادر، ثم إظهار الصلة في الخلفية.",
+          "dialogue": "بابا نادر: «بس فضلوا يعترفوا بالخليفة.»",
+          "sound": "موسيقى هادئة تحت التوضيح."
+        },
+        {
+          "start": 17,
+          "end": 20,
+          "title": "خلافة مستقلة",
+          "action": "انتقال واضح لصفحة القاهرة الفاطمية كمقر خلافة منفصلة.",
+          "camera": "لقطة واسعة تكشف عالم الصفحة الجديدة.",
+          "dialogue": "بابا نادر: «والفاطميين عملوا خلافة مستقلة.»",
+          "sound": "نقلة موسيقية قصيرة."
+        },
+        {
+          "start": 20,
+          "end": 24,
+          "title": "مواجهة الأخطار",
+          "action": "صفحة للأيوبيين في مواجهة الصليبيين، ثم صفحة للمماليك في مواجهة الصليبيين والمغول. درع صغير يتدحرج ناحية ميم، وبابا يوقفه برجله.",
+          "camera": "لقطات رمزية متتابعة، ثم قرب على الدرع ورد فعل ميم.",
+          "dialogue": "بابا نادر: «والأيوبيين والمماليك واجهوا أخطار كبيرة.»",
+          "sound": "دحرجة الدرع، من غير أصوات عنف مبالغ فيها."
+        },
+        {
+          "start": 24,
+          "end": 27,
+          "title": "مرحلة عثمانية لاحقة",
+          "action": "صفحة جديدة تكشف النيل وطرق المواصلات؛ نوضح انتقال الزمن بعيدًا عن الصفحات السابقة.",
+          "camera": "كشف واسع للنيل والمسارات.",
+          "dialogue": "بابا نادر: «وبعدين العثمانيين عرفوا قيمة مصر وموقعها.»",
+          "sound": "أجواء نهر هادئة."
+        },
+        {
+          "start": 27,
+          "end": 30,
+          "title": "من الحكم لحياة الناس",
+          "action": "ميم يلتفت من مباني الحكم لأسر ماشية في الشارع؛ بابا يفتح صفحة الحياة اليومية ويدخلوا مع بعض.",
+          "camera": "تتبع للنظرة ثم عبور إلى الصفحة التالية.",
+          "dialogue": "ميم: «والناس حياتهم اتغيّرت إزاي؟»",
+          "sound": "أصوات سوق تبدأ تدريجيًا."
+        }
+      ],
+      "prompt": "Create ONE continuous 30-second cinematic 3D cartoon sequence, 16:9, with ten motivated edited shots, NOT a single static talking shot.\nREFERENCE IMAGE 1: Meem's character sheet, identity only. He is the small cream-furred mascot with long teal-tipped ears, large navy eyes, navy adventure suit with teal trim, boots and teal backpack. He is never a monkey or a human.\nREFERENCE IMAGE 2: Papa Nader's approved cartoon character sheet, identity only. Preserve his caricature face, broad high forehead, receding short dark hair, brown eyes, sparse moustache and chin/jaw beard, stout adult build, open white short-sleeve overshirt, white T-shirt, black trousers and black sneakers.\nPapa Nader is Meem's loving fictional father; the fictional character has Alzheimer's, unrelated to any claim about the real teacher. Keep his dignity, agency and teaching knowledge; memory hesitation is brief and Meem responds warmly. Physical comedy comes from magical objects.\nBoth characters remain exactly consistent in model, relative scale, clothing and voice. Use original non-celebrity Egyptian Arabic voices: youthful bright male Meem and warm mature male Papa Nader. Spoken names below indicate the speaker and MUST NOT be read aloud. Preserve exact Arabic dialogue, synchronized lip movement and clear turn taking; no overlapping speech or added narrator.\nUse classic Tom and Jerry-inspired visual slapstick timing, anticipation, elastic motion, fast reactions and musical punctuation, rendered as polished cinematic 3D matching the supplied sheets. No Tom or Jerry characters. Combine wide geography, close reactions, inserts, tracking shots, whip pans, soft bounced lighting, depth and smooth cinematic motion. Keep spatial continuity and readable action.\nThe golden lamp and living history pages are fictional storytelling devices. Different historical stages must read as successive passages of time, not simultaneous events. No subtitles, captions, text, labels, watermark, split screen or visible character sheets. Reference sheets do not prescribe the first frame. End at exactly 30 seconds.\n\nSCENE 2: WHO GOVERNS EGYPT?\nBegin precisely where scene 1 ended: the camera crosses the book page, with Meem and Papa entering a stylized miniature historical world. Political stages are chronological, separated by page-turn transitions. Do not invent dates or depict all rulers together.\n00-03: Wide establishing move: successive pages form a path across Egypt. Meem lands on a rolling scroll; Papa catches his backpack strap and steadies him.\n03-05: Close Meem reaction, then over his shoulder toward a government building. Meem: \"ومصر كان بيحكمها مين؟\"\n05-08: A symbolic Roman-era page turns into a page representing Egypt after the Islamic conquest. No literal modern flags, no battle or religious leader impersonation. Papa begins: \"كانت تابعة للروم… وبعد الفتح\"\n08-11: Tracking two-shot as Papa and Meem follow the new page path. Papa completes: \"بقت ولاية في دولة الخلافة.\"\n11-14: Page flip reveals two successive miniature administrative seats for the Tulunid and Ikhshidid stages, clearly separate. Papa begins: \"الطولونيين والإخشيديين استقلّوا بالحكم،\"\n14-17: Close Papa explaining; the path still connects symbolically toward the caliph's authority. Papa completes: \"بس فضلوا يعترفوا بالخليفة.\"\n17-20: Distinct transition into Fatimid Cairo as a seat of a separate caliphate. Papa: \"والفاطميين عملوا خلافة مستقلة.\"\n20-24: Sequential dramatic silhouettes on TWO separate pages: Ayyubid defensive forces facing Crusaders; then Mamluk defensive forces facing Crusaders and Mongols. No gore. Meem's ears recoil from a tiny rolling shield, Papa stops it with his foot. Papa: \"والأيوبيين والمماليك واجهوا أخطار كبيرة.\"\n24-27: A later Ottoman-era page unfolds over a broad Nile and route view. Papa: \"وبعدين العثمانيين عرفوا قيمة مصر وموقعها.\"\n27-30: Meem looks from the changing government buildings to families walking through an everyday street. Meem: \"والناس حياتهم اتغيّرت إزاي؟\" Papa opens a street-life page. Follow them through for scene 3.\nKeep the political distinctions accurate: early caliphate dependency, later local independence while recognizing the caliph, then a separate Fatimid caliphate. The montage is an educational abbreviation, never an assertion that centuries passed in one literal day."
+    },
+    {
+      "title": "الناس واللغة والعلم",
+      "educationalPoint": "تعريب الدواوين والاندماج الاجتماعي والمؤسسات العلمية وحركة الترجمة والتأليف.",
+      "sourceChapterIds": [
+        "9252e96e-0422-4a5a-8f11-6e0e1dc8e755",
+        "3b52e7a1-d179-42b4-97cc-7087bb353262",
+        "b8fd0caa-a9c6-4ec3-81b4-0fa8f08f9017"
+      ],
+      "shots": [
+        {
+          "start": 0,
+          "end": 3,
+          "title": "مخطوط بيتزحلق",
+          "action": "ميم وبابا يدخلوا سوق؛ مخطوط إداري فاضي يتدحرج تحت ميم ويحمله بالعرض زي لوح تزلّج.",
+          "camera": "تتبع واسع من مستوى الشارع.",
+          "dialogue": "",
+          "sound": "أصوات سوق ودحرجة الورق."
+        },
+        {
+          "start": 3,
+          "end": 5,
+          "title": "بابا يوقف المخطوط",
+          "action": "بابا نادر يوقف المخطوط برجله برفق؛ ميم يستعيد توازنه ويسأل.",
+          "camera": "قرب على القدم ثم رد فعل ميم.",
+          "dialogue": "ميم: «والناس حياتهم اتغيّرت إزاي؟»",
+          "sound": "وقفة موسيقية قصيرة."
+        },
+        {
+          "start": 5,
+          "end": 8,
+          "title": "تعريب الدواوين",
+          "action": "نشوف مكتب إدارة فيه أوراق وأقلام، من غير كتابة مقروءة؛ بابا نادر يبدأ الشرح.",
+          "camera": "من فوق كتف بابا ناحية المكتب.",
+          "dialogue": "بابا نادر: «الدواوين اتعرّبت… والعربي انتشر»",
+          "sound": "صوت قلم وورق خفيف."
+        },
+        {
+          "start": 8,
+          "end": 11,
+          "title": "انتشار تدريجي",
+          "action": "المشهد ينتقل من الإدارة لحلقة تعليم، مع فرق واضح بين المراحل.",
+          "camera": "حركة سفر تربط الأماكن بالتتابع.",
+          "dialogue": "بابا نادر: «بالتدريج في الإدارة والعلم والثقافة.»",
+          "sound": "موسيقى انتقال هادئة."
+        },
+        {
+          "start": 11,
+          "end": 14,
+          "title": "الناس بتعيش مع بعض",
+          "action": "جيران بيتبادلوا التحية وأسر بتشارك في شغل يومي، من غير قوالب شكلية نمطية.",
+          "camera": "لقطة شارع دافئة بعمق واضح.",
+          "dialogue": "بابا نادر: «والعرب والمصريين عاشوا مع بعض،»",
+          "sound": "أصوات حياة يومية منخفضة."
+        },
+        {
+          "start": 14,
+          "end": 17,
+          "title": "روابط وعائلات",
+          "action": "ميم يساعد بابا نادر في حمل سلة صغيرة وسط الناس.",
+          "camera": "لقطة ثنائية قريبة أثناء الحركة.",
+          "dialogue": "بابا نادر: «واتكوّنت بينهم عائلات.»",
+          "sound": "خطوات وحركة السلة."
+        },
+        {
+          "start": 17,
+          "end": 20,
+          "title": "سؤال عن العلم",
+          "action": "صفحة تكشف حلقة تعليم بمسجد عمرو بن العاص؛ صفحة لاحقة تبدأ تتفتح نحو الأزهر.",
+          "camera": "تقليب صفحة ثم نظرة ميم ناحية حلقة التعليم.",
+          "dialogue": "ميم: «والعلم كان فين؟»",
+          "sound": "الموسيقى تهدأ للسؤال."
+        },
+        {
+          "start": 20,
+          "end": 23,
+          "title": "من جامع عمرو للأزهر",
+          "action": "نكشف المؤسستين في مشهدين تاريخيين منفصلين، من غير خلط تاريخ الإنشاء بالعمارة الحديثة.",
+          "camera": "لقطتان واسعتان يفصل بينهما انتقال زمني.",
+          "dialogue": "بابا نادر: «من جامع عمرو بن العاص… للأزهر.»",
+          "sound": "أجواء تعليم هادئة."
+        },
+        {
+          "start": 23,
+          "end": 27,
+          "title": "الترجمة والتأليف",
+          "action": "أشعة رمزية تنقل أفكارًا بين الكتب، وبعدها تظهر كتب مؤلَّفة، من غير كتابة على الشاشة.",
+          "camera": "تتبع قريب فوق الكتب.",
+          "dialogue": "بابا نادر: «وازدهرت الترجمة والتأليف… زي كتب المقريزي وابن إياس.»",
+          "sound": "حفيف صفحات مع نغمة صاعدة."
+        },
+        {
+          "start": 27,
+          "end": 30,
+          "title": "الكتب ترفع ميم",
+          "action": "كومة كتب سحرية ترتفع بميم؛ بابا ينزله بأمان، وميم يشاور على صفحة مدن بتتفتح تحتهم.",
+          "camera": "ميل بالكاميرا لأسفل، ثم غوص داخل صفحة المدن.",
+          "dialogue": "ميم: «والمدن اتبنت إزاي؟»",
+          "sound": "ضربات كوميدية لحركة الكتب."
+        }
+      ],
+      "prompt": "Create ONE continuous 30-second cinematic 3D cartoon sequence, 16:9, with ten motivated edited shots, NOT a single static talking shot.\nREFERENCE IMAGE 1: Meem's character sheet, identity only. He is the small cream-furred mascot with long teal-tipped ears, large navy eyes, navy adventure suit with teal trim, boots and teal backpack. He is never a monkey or a human.\nREFERENCE IMAGE 2: Papa Nader's approved cartoon character sheet, identity only. Preserve his caricature face, broad high forehead, receding short dark hair, brown eyes, sparse moustache and chin/jaw beard, stout adult build, open white short-sleeve overshirt, white T-shirt, black trousers and black sneakers.\nPapa Nader is Meem's loving fictional father; the fictional character has Alzheimer's, unrelated to any claim about the real teacher. Keep his dignity, agency and teaching knowledge; memory hesitation is brief and Meem responds warmly. Physical comedy comes from magical objects.\nBoth characters remain exactly consistent in model, relative scale, clothing and voice. Use original non-celebrity Egyptian Arabic voices: youthful bright male Meem and warm mature male Papa Nader. Spoken names below indicate the speaker and MUST NOT be read aloud. Preserve exact Arabic dialogue, synchronized lip movement and clear turn taking; no overlapping speech or added narrator.\nUse classic Tom and Jerry-inspired visual slapstick timing, anticipation, elastic motion, fast reactions and musical punctuation, rendered as polished cinematic 3D matching the supplied sheets. No Tom or Jerry characters. Combine wide geography, close reactions, inserts, tracking shots, whip pans, soft bounced lighting, depth and smooth cinematic motion. Keep spatial continuity and readable action.\nThe golden lamp and living history pages are fictional storytelling devices. Different historical stages must read as successive passages of time, not simultaneous events. No subtitles, captions, text, labels, watermark, split screen or visible character sheets. Reference sheets do not prescribe the first frame. End at exactly 30 seconds.\n\nSCENE 3: PEOPLE, LANGUAGE AND LEARNING.\nBegin on the everyday-life page from scene 2. Teach gradual Arabization of administration, social interaction and intermarriage, teaching institutions and scholarly authorship. Magical setting allows traveling through distinct periods; keep time passage visible.\n00-03: Wide street-level tracking: Meem and Papa step into a market. A loose blank administrative scroll rolls beneath Meem, carrying him sideways like a skateboard.\n03-05: Papa gently stops the scroll with a foot. Meem asks: \"والناس حياتهم اتغيّرت إزاي؟\"\n05-08: Over-shoulder view of an administrative office with paper and pens, no legible writing. Papa begins: \"الدواوين اتعرّبت… والعربي انتشر\"\n08-11: Traveling transition through separate representations of administration and a learning circle. Papa completes: \"بالتدريج في الإدارة والعلم والثقافة.\"\n11-14: Warm street scene of neighbors greeting and families sharing daily work; no homogeneous ethnic caricatures. Papa begins: \"والعرب والمصريين عاشوا مع بعض،\"\n14-17: Close two-shot as Meem helps carry a small basket with Papa. Papa completes: \"واتكوّنت بينهم عائلات.\"\n17-20: A page turns to a historical teaching circle representing the Mosque of Amr ibn al-As. Another page begins opening toward a LATER Al-Azhar stage. Meem: \"والعلم كان فين؟\"\n20-23: Wide reveal of two clearly separated historical institutional scenes, no modern-era skyline passed off as the foundation period. Papa: \"من جامع عمرو بن العاص… للأزهر.\"\n23-27: Close-up travelling over scholarly books; abstract rays suggest ideas transferred between books, followed by authored volumes. No visible writing. Papa: \"وازدهرت الترجمة والتأليف… زي كتب المقريزي وابن إياس.\"\n27-30: A magically rising stack of books lifts Meem too high. Papa lifts him safely down; Meem points to a new city-building page opening below. Meem: \"والمدن اتبنت إزاي؟\" Tilt down and dive into the city page for scene 4.\nThe gag is the book stack's movement, not memory loss or education. Frame Meem's curiosity and Papa's competence warmly. The stated social and intellectual changes are gradual; do not imply one decree instantly changed every person's language or identity."
+    },
+    {
+      "title": "المدن والاقتصاد والعودة من المغامرة",
+      "educationalPoint": "بناء المدن وتنظيم الري وارتباط الصناعة بالزراعة وازدهار التجارة.",
+      "sourceChapterIds": [
+        "c5e157fe-6a93-41cf-8058-614a4d756fde",
+        "a1fc3388-318f-44fd-b6ce-a649fa0bed73"
+      ],
+      "shots": [
+        {
+          "start": 0,
+          "end": 3,
+          "title": "مدن عبر الزمن",
+          "action": "صفحات متعاقبة للفسطاط والقطائع ثم القاهرة؛ الشخصيتان راكبين حافة الصفحة المفتوحة.",
+          "camera": "حركة علوية واسعة عبر الصفحات.",
+          "dialogue": "",
+          "sound": "حفيف الصفحات وموسيقى انتقال."
+        },
+        {
+          "start": 3,
+          "end": 6,
+          "title": "شوارع وأسواق",
+          "action": "نعدي بين شوارع مصغّرة وسوق ومكان تعليم داخل عالم المدن.",
+          "camera": "تتبع منخفض بين المباني.",
+          "dialogue": "بابا نادر: «مدن جديدة ظهرت… زي الفسطاط والقطائع والقاهرة.»",
+          "sound": "أجواء شارع منخفضة."
+        },
+        {
+          "start": 6,
+          "end": 9,
+          "title": "النيل والري",
+          "action": "منحنى شارع يتحول لمنحنى النيل وقناة ري؛ نشوف قياس المياه وتنظيم الري من غير اختراع تاريخ أو اسم باني.",
+          "camera": "قطع متطابق بين منحنى الشارع والنهر.",
+          "dialogue": "بابا نادر: «والري ومقياس النيل ساعدوا الزراعة.»",
+          "sound": "مياه بتتحرك بهدوء."
+        },
+        {
+          "start": 9,
+          "end": 12,
+          "title": "نقطة على مناخير ميم",
+          "action": "عجلة ري صغيرة ترش نقطة على مناخير ميم؛ يهز ودانه، وبابا يديله فوطة.",
+          "camera": "قرب على النقطة ورد الفعل، ثم إيد بابا.",
+          "dialogue": "",
+          "sound": "ضربة موسيقية قصيرة، من غير حوار."
+        },
+        {
+          "start": 12,
+          "end": 15,
+          "title": "من الزراعة للصناعة",
+          "action": "نربط نبات الكتان بالنول، ثم القصب بورشة صناعة سكر مبسّطة.",
+          "camera": "تتبع قريب يصل بين المادة الخام والصناعة.",
+          "dialogue": "بابا نادر: «ومن الكتان نسيج… ومن القصب سكر.»",
+          "sound": "صوت نول خفيف."
+        },
+        {
+          "start": 15,
+          "end": 18,
+          "title": "الموقع والتجارة",
+          "action": "الكاميرا تبعد لتكشف ميناء نشيط، وسوق في صفحة متصلة به.",
+          "camera": "انسحاب واسع من الورشة للميناء.",
+          "dialogue": "بابا نادر: «والتجارة ازدهرت بالموقع،»",
+          "sound": "أجواء ميناء وحركة بضائع."
+        },
+        {
+          "start": 18,
+          "end": 21,
+          "title": "مواني وأسواق",
+          "action": "مركب صغيرة توصل البضائع، ثم ننتقل لتبادلها في السوق.",
+          "camera": "تتبع للمركب ثم قطع للسوق.",
+          "dialogue": "بابا نادر: «والمواني والأسواق.»",
+          "sound": "مياه وأصوات سوق تحت الكلام."
+        },
+        {
+          "start": 21,
+          "end": 24,
+          "title": "الرجوع للمكتبة",
+          "action": "الصفحات تستقر في كتاب مرتب، وميم وبابا نادر ينزلوا بأمان على أرض المكتبة.",
+          "camera": "لقطة واسعة توضّح العودة للمكان الأول.",
+          "dialogue": "ميم: «كده التاريخ بقى حكاية مفهومة!»",
+          "sound": "الموسيقى تستقر في لحن دافئ."
+        },
+        {
+          "start": 24,
+          "end": 27,
+          "title": "نفهم واحدة واحدة",
+          "action": "ميم ماسك إيد بابا نادر؛ الكتاب والصفحات مرتبون جنبهم.",
+          "camera": "لقطة ثنائية قريبة ودافئة.",
+          "dialogue": "بابا نادر: «واحدة واحدة… نفهم التغيير.»",
+          "sound": "هدوء تحت آخر جملة."
+        },
+        {
+          "start": 27,
+          "end": 30,
+          "title": "قفلة المصباح",
+          "action": "المصباح المغلق يترجرج؛ ميم يحطه في صندوق ويقعد على الغطا بفخر. بابا يبتسم، وصفحة متأخرة تقع على راس ميم؛ يضحكوا مع بعض.",
+          "camera": "نهاية واسعة للمكتبة بعد رد الفعل القريب.",
+          "dialogue": "",
+          "sound": "رجرجة، وقعة ورقة، وضحكة دافئة؛ من غير حوار جديد."
+        }
+      ],
+      "prompt": "Create ONE continuous 30-second cinematic 3D cartoon sequence, 16:9, with ten motivated edited shots, NOT a single static talking shot.\nREFERENCE IMAGE 1: Meem's character sheet, identity only. He is the small cream-furred mascot with long teal-tipped ears, large navy eyes, navy adventure suit with teal trim, boots and teal backpack. He is never a monkey or a human.\nREFERENCE IMAGE 2: Papa Nader's approved cartoon character sheet, identity only. Preserve his caricature face, broad high forehead, receding short dark hair, brown eyes, sparse moustache and chin/jaw beard, stout adult build, open white short-sleeve overshirt, white T-shirt, black trousers and black sneakers.\nPapa Nader is Meem's loving fictional father; the fictional character has Alzheimer's, unrelated to any claim about the real teacher. Keep his dignity, agency and teaching knowledge; memory hesitation is brief and Meem responds warmly. Physical comedy comes from magical objects.\nBoth characters remain exactly consistent in model, relative scale, clothing and voice. Use original non-celebrity Egyptian Arabic voices: youthful bright male Meem and warm mature male Papa Nader. Spoken names below indicate the speaker and MUST NOT be read aloud. Preserve exact Arabic dialogue, synchronized lip movement and clear turn taking; no overlapping speech or added narrator.\nUse classic Tom and Jerry-inspired visual slapstick timing, anticipation, elastic motion, fast reactions and musical punctuation, rendered as polished cinematic 3D matching the supplied sheets. No Tom or Jerry characters. Combine wide geography, close reactions, inserts, tracking shots, whip pans, soft bounced lighting, depth and smooth cinematic motion. Keep spatial continuity and readable action.\nThe golden lamp and living history pages are fictional storytelling devices. Different historical stages must read as successive passages of time, not simultaneous events. No subtitles, captions, text, labels, watermark, split screen or visible character sheets. Reference sheets do not prescribe the first frame. End at exactly 30 seconds.\n\nSCENE 4: CITIES, ECONOMY AND THE RETURN HOME.\nBegin entering the city-building page from scene 3. Show an ordered magical historical miniature, then finish the lamp story safely back in the library.\n00-03: High sweeping move over successive city pages: Fustat, al-Qata'i and later Cairo, DISTINCT successive stages, not one contemporaneous map. Meem and Papa ride the opening page edge.\n03-06: Low tracking shot through miniature streets, market and a teaching space. Papa: \"مدن جديدة ظهرت… زي الفسطاط والقطائع والقاهرة.\"\n06-09: Match cut from a street curve to a river bend and irrigation channel. Show Nile measurement and flowing irrigation water without inventing a specific structure's date or builder. Papa: \"والري ومقياس النيل ساعدوا الزراعة.\"\n09-12: A tiny irrigation wheel flicks a harmless water droplet onto Meem's nose. Close reaction, ear shake, then Papa hands him a cloth. Short musical accent; no dialogue.\n12-15: Traveling close-up connects a flax plant to a loom, then cane to a stylized sugar-making workshop. Papa: \"ومن الكتان نسيج… ومن القصب سكر.\"\n15-18: Pull out to a bustling port, then a market on a separate connected page. Papa begins: \"والتجارة ازدهرت بالموقع،\"\n18-21: Camera tracks a small boat delivering goods, cutting to market exchange. Papa completes: \"والمواني والأسواق.\"\n21-24: The pages settle into one neat ordered history book. Papa and Meem safely step onto the library floor again. Meem: \"كده التاريخ بقى حكاية مفهومة!\"\n24-27: Warm close two-shot, Meem's hand in Papa's. Papa: \"واحدة واحدة… نفهم التغيير.\" The previously chaotic pages now rest in order.\n27-30: The sealed golden lamp gives a tiny mischievous rattle. Meem puts it inside a plain closed box and sits on the lid, folding his arms triumphantly. Papa smiles, then one late loose page lands on Meem's head. Both share a warm laugh. Final wide library frame.\nNo dialogue added after the last line. Finish with physical comedy, warmth and a complete rescue payoff. The magical book teaches history; it does not cure Papa's fictional Alzheimer's. Maintain the clothes and character scale exactly through every historical page and the return."
+    }
+  ]
+}

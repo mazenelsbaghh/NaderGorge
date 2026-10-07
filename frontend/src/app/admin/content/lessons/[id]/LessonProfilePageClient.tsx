@@ -9,8 +9,10 @@ import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
 import { LessonInteractionsEditor } from '@/components/video-learning/LessonInteractionsEditor';
+import { LessonMimStudioTab } from '@/features/mim-studio/LessonMimStudioTab';
+import { useAuthStore } from '@/stores/auth-store';
 
-type ActiveTab = 'interactions' | 'overview' | 'videos' | 'ai-analysis' | 'mim-game' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
+type ActiveTab = 'interactions' | 'overview' | 'videos' | 'ai-analysis' | 'mim-game' | 'mim-studio' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: 'interactions', label: 'التفاعل والمراجعة', icon: MessageSquareText },
@@ -18,6 +20,7 @@ const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
   { key: 'ai-analysis', label: 'تحليل AI', icon: Sparkles },
   { key: 'mim-game', label: 'لعبة ميم', icon: Gamepad2 },
+  { key: 'mim-studio', label: 'استوديو ميم', icon: Video },
   { key: 'comments', label: 'التعليقات', icon: MessageSquareText },
   { key: 'subscribers', label: 'الطلاب المشتركون', icon: Users },
   { key: 'resources', label: 'المذكرات والملفات', icon: FileText },
@@ -28,7 +31,9 @@ const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
 export default function LessonProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
+  const isAdmin = useAuthStore((state) => state.user?.roles?.includes('Admin') ?? false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+  const [studioVisited, setStudioVisited] = useState(false);
   const [lesson, setLesson] = useState<LessonCockpitDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [videoView, setVideoView] = useState<'current' | 'archived'>('current');
@@ -48,6 +53,13 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (isAdmin && new URLSearchParams(window.location.search).get('tab') === 'mim-studio') {
+      setActiveTab('mim-studio');
+      setStudioVisited(true);
+    }
+  }, [isAdmin]);
 
   if (loading) {
     return (
@@ -131,7 +143,10 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       </section>
 
       <div className="mb-8">
-        <AdminTabBar tabs={TAB_OPTIONS} activeTab={activeTab} onSelect={setActiveTab} />
+        <AdminTabBar tabs={TAB_OPTIONS.filter(tab => tab.key !== 'mim-studio' || isAdmin)} activeTab={activeTab} onSelect={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'mim-studio') setStudioVisited(true);
+        }} />
       </div>
 
       {activeTab === 'interactions' && <LessonInteractionsEditor lessonId={lesson.lessonId} videos={lesson.videos || []} />}
@@ -231,6 +246,10 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       {activeTab === 'mim-game' && (
         <LessonMimGameTab lessonId={lesson.lessonId} videos={lesson.videos || []} />
       )}
+
+      {isAdmin && studioVisited && <div hidden={activeTab !== 'mim-studio'}>
+        <LessonMimStudioTab key={lesson.lessonId} lessonId={lesson.lessonId} />
+      </div>}
 
       {activeTab === 'comments' && (
         <LessonCommentsModerationTab

@@ -22,6 +22,39 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 public sealed class AssessmentReviewPostgresTests
 {
     [Fact]
+    public async Task TeacherOptOutLeavesHomeworkUngradedAndSkipsAutomaticRecoveryAndLateAiResults()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var other = await Seed(fixture.Db);
+        seed.Submission.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(seed.Homework).ToJson();
+        other.Submission.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(other.Homework).ToJson();
+        var fingerprint = HomeworkEvaluationQueue.Fingerprint(seed.Submission);
+        fixture.Db.PlatformSettings.Add(new PlatformSetting
+        {
+            Key = TeacherEssayGradingPolicy.SettingPrefix + seed.Teacher.Id,
+            Value = "true"
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        Assert.True(await TeacherEssayGradingPolicy.IsManualHomeworkAsync(fixture.Db, seed.Submission.Id, default));
+        Assert.False(await TeacherEssayGradingPolicy.IsManualHomeworkAsync(fixture.Db, other.Submission.Id, default));
+        var recovery = new HomeworkGradingRecoveryService(fixture.Db);
+        Assert.DoesNotContain(seed.Submission.Id, await recovery.FindBatchAsync(Guid.Empty, default));
+        Assert.False(await recovery.RecoverAsync(seed.Submission.Id, default));
+        var result = await new WebhookHomeworkGradedCommandHandler(fixture.Db).Handle(
+            new(seed.Submission.Id, fingerprint, [new(seed.Submission.Answers.Single().Id, 1m, "Late AI result")]), default);
+        Assert.True(result.Success, result.Message);
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync(s => s.Id == seed.Submission.Id);
+        Assert.Equal(SubmissionStatus.PendingReview, saved.Status);
+        Assert.Null(saved.GradedAt);
+        Assert.Null(Assert.Single(saved.Answers).ScoreReceived);
+        Assert.Empty(await fixture.Db.OutboxEvents.Where(e => e.Type == "HomeworkGraded").ToListAsync());
+    }
+
+    [Fact]
     public async Task EditorLoadReadsOnlyDefinitionAndAttemptCountThenPreviewIssuesSaveToken()
     {
         await using var fixture = new PostgresLiveSupportFixture();

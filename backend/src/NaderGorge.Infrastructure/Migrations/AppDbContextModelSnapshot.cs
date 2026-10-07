@@ -5662,6 +5662,42 @@ namespace NaderGorge.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HiggsfieldMcpConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ProtectedSession")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminUserId")
+                        .IsUnique();
+
+                    b.ToTable("higgsfield_mcp_connections", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.Homework", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7217,6 +7253,50 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("lesson_mim_games", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonMimStudio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DocumentJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SourceRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SourceVideoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId")
+                        .IsUnique();
+
+                    b.HasIndex("SourceVideoId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("lesson_mim_studios", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>
@@ -16738,6 +16818,15 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HiggsfieldMcpConnection", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AdminUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.HomeworkAnswer", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Homework.HomeworkSubmission", "Submission")
@@ -17048,6 +17137,27 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonMimStudio", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LessonVideo", null)
+                        .WithMany()
+                        .HasForeignKey("SourceVideoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>

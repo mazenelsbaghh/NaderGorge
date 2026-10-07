@@ -10,12 +10,14 @@ public sealed class HomeworkGradingRecoveryService(IAppDbContext db)
 {
     public Task<List<Guid>> FindBatchAsync(Guid afterId, CancellationToken ct) => db.HomeworkSubmissions.AsNoTracking()
         .Where(s => s.Status == SubmissionStatus.PendingReview && s.DefinitionSnapshotJson != null && s.Id.CompareTo(afterId) > 0)
+        .Where(s => !TeacherEssayGradingPolicy.ManualHomeworkIds(db).Contains(s.HomeworkId))
         .OrderBy(s => s.Id).Select(s => s.Id).Take(25).ToListAsync(ct);
 
     public Task<bool> RecoverAsync(Guid submissionId, CancellationToken ct) => SerializationRetryHelper.ExecuteAsync(async retryCt =>
     {
         db.ClearTrackedChanges();
         await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, retryCt);
+        if (await TeacherEssayGradingPolicy.IsManualHomeworkAsync(db, submissionId, retryCt)) return false;
         var cutoff = DateTime.UtcNow.AddMinutes(-10);
         var group = submissionId.ToString();
         if (await db.OutboxEvents.AnyAsync(e => e.Type == HomeworkEvaluationQueue.EventType && e.TargetGroup == group

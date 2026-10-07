@@ -86,3 +86,33 @@ artifacts/teacher-defaults/production-teachers.txt
 
 # Synthetic PostgreSQL fixture for the staged finance migration regression.
 !deploy/production/tests/fixtures/finance-activation.sql
+
+# Private owner-reviewed attendance and grade import.
+desktop/center-flutter/assets/academic_import_20261004.json
+
+# Private Cairo code changes; never publish student identities.
+desktop/center-flutter/assets/cairo_codes_20261004.json
+
+# Private GEC student code correction asset.
+desktop/center-flutter/assets/gec_codes_20261004.json
+
+# Private Cairo exam records.
+desktop/center-flutter/assets/cairo_academic_import_20261004.json
+
+# Private student code review workbook.
+outputs/cairo-code-review-20261004/
+
+# Local generated previews and exports never belong to published source.
+/output/
+/outputs/
+/.tmp-tools/
+/scratch/
+/previews/
+
+# Private desktop installation data and generated UI captures.
+/desktop/center-flutter/assets/admin_account.json
+/desktop/center-flutter/assets/installation_seed.json
+/desktop/center-flutter/assets/data_repair_*.json
+/desktop/center-flutter/docs/screenshots/
+
+desktop/center-flutter/assets/gec_duplicate_codes_20261004.json

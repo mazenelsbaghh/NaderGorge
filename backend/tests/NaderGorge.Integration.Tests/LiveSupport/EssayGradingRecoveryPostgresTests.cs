@@ -19,6 +19,62 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class EssayGradingRecoveryPostgresTests
 {
+    [Theory]
+    [InlineData("dispatch")]
+    [InlineData("callback")]
+    [InlineData("recovery")]
+    public async Task TeacherOptOutKeepsPendingEssaysForManualReviewEvenWhenAiWorkAlreadyExists(string stage)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var essay = await Seed(fixture.Db);
+        var other = await Seed(fixture.Db);
+        essay.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        essay.Question.WrittenCorrection = null;
+        essay.Attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(essay.Attempt.Exam).ToJson();
+        EssayEvaluationQueue.Enqueue(fixture.Db, essay, essay.Question.Text, null);
+        fixture.Db.PlatformSettings.Add(new PlatformSetting
+        {
+            Key = TeacherEssayGradingPolicy.SettingPrefix + essay.Attempt.Exam.CreatedByTeacherId,
+            Value = "true"
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        if (stage == "dispatch")
+        {
+            var queue = new EssayQueueProbe();
+            await EssayEvaluationOutboxQueueDispatcher.DispatchAsync(
+                await fixture.Db.OutboxEvents.SingleAsync(e => e.Type == "EssayEvaluationQueued"), queue, fixture.Db, default);
+            Assert.Equal(0, queue.DeliveredCount);
+        }
+        else if (stage == "callback")
+        {
+            var response = await new WebhookEssayGradedCommandHandler(fixture.Db)
+                .Handle(new(essay.Id, 1m, "AI result arriving after opt-out"), default);
+            Assert.True(response.Success, response.Message);
+        }
+        else
+            Assert.True(await new EssayGradingRecoveryService(fixture.Db).RecoverAsync(essay.Id, default));
+
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.EssaySubmissions.SingleAsync(e => e.Id == essay.Id);
+        Assert.Equal(EssaySubmissionStatus.WaitTeacher, saved.Status);
+        Assert.Null(saved.AiInitialScore);
+        Assert.Null(saved.TeacherFinalScore);
+        Assert.Null(saved.AiNextRetryAt);
+        var recovery = new EssayGradingRecoveryService(fixture.Db);
+        Assert.DoesNotContain(essay.Id, await recovery.FindDueAsync(default));
+        Assert.False(await recovery.RecoverAsync(essay.Id, default));
+        Assert.False(await TeacherEssayGradingPolicy.IsManualEssayAsync(fixture.Db, other.Id, default));
+        Assert.Equal(EssaySubmissionStatus.WaitAI, (await fixture.Db.EssaySubmissions.FindAsync(other.Id))!.Status);
+
+        var graded = await new GradeEssayCommandHandler(fixture.Db, new TeacherAuthorizationService(fixture.Db))
+            .Handle(new GradeEssayCommand(essay.Id, 2m, "Teacher review"), default);
+        Assert.True(graded.Success, graded.Message);
+        fixture.Db.ChangeTracker.Clear();
+        Assert.Equal(2m, (await fixture.Db.EssaySubmissions.FindAsync(essay.Id))!.TeacherFinalScore);
+    }
+
     [Fact]
     public async Task SubmittedEssayBurstReachesWorkerWithoutTwoSecondDelayBetweenEveryQuestion()
     {

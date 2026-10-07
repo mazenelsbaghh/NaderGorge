@@ -46,6 +46,14 @@ public class WebhookEssayGradedCommandHandler
                 "Essay submission has already processed or left WaitAI state.");
         }
 
+        if (await TeacherEssayGradingPolicy.IsManualEssayAsync(_db, submission.Id, ct))
+        {
+            submission.Status = EssaySubmissionStatus.WaitTeacher;
+            submission.AiNextRetryAt = null;
+            await _db.SaveChangesAsync(ct);
+            return ApiResponse<WebhookEssayGradedResultDto>.Ok(new(submission.Id, submission.Status.ToString()));
+        }
+
         if (request.AiScore is < 0m or > 1m || request.AiScore != Math.Round(request.AiScore, 2)
             || string.IsNullOrWhiteSpace(request.AiFeedback)
             || request.AiFeedback.Length > 4000)

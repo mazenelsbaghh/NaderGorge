@@ -1,0 +1,24 @@
+[Unit]
+Description=Massar private support uploads
+After=network.target
+
+[Service]
+Type=simple
+User=massar-support
+Group=massar-support
+ExecStart=/opt/massar-support/massar-support
+EnvironmentFile=/etc/massar-support/service.env
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/massar-support/uploads
+ReadOnlyPaths=/var/lib/massar-support/releases
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitNOFILE=1024
+
+[Install]
+WantedBy=multi-user.target

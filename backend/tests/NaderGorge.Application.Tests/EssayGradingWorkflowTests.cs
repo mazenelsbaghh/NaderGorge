@@ -69,7 +69,7 @@ public class EssayGradingWorkflowTests
         else
         {
             var bridge = new FakeJobEnqueuer();
-            await NaderGorge.API.BackgroundServices.EssayEvaluationOutboxQueueDispatcher.DispatchAsync(Assert.Single(queuedEvaluations), bridge);
+            await NaderGorge.API.BackgroundServices.EssayEvaluationOutboxQueueDispatcher.DispatchAsync(Assert.Single(queuedEvaluations), bridge, db, default);
             using var payload = System.Text.Json.JsonDocument.Parse(Assert.Single(bridge.Payloads));
             Assert.Equal(savedEssay.Id, payload.RootElement.GetProperty("essaySubmissionId").GetGuid());
             Assert.Equal("Explain gravity", payload.RootElement.GetProperty("questionText").GetString());

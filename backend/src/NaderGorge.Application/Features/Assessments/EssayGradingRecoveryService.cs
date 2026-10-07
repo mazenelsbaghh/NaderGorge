@@ -38,6 +38,15 @@ public sealed class EssayGradingRecoveryService(IAppDbContext db)
                 .SingleOrDefaultAsync(e => e.Id == essayId, retryCt);
             if (essay is null)
                 return false;
+            if (await TeacherEssayGradingPolicy.IsManualEssayAsync(db, essay.Id, retryCt))
+            {
+                if (essay.Status != EssaySubmissionStatus.WaitAI) return false;
+                essay.Status = EssaySubmissionStatus.WaitTeacher;
+                essay.AiNextRetryAt = null;
+                await db.SaveChangesAsync(retryCt);
+                await transaction.CommitAsync(retryCt);
+                return true;
+            }
             var now = DateTime.UtcNow;
             var waitAiDue = essay.Status == EssaySubmissionStatus.WaitAI
                 && (essay.AiNextRetryAt ?? essay.CreatedAt.Add(EssayEvaluationQueue.RecoveryDelay)) <= now;
@@ -99,6 +108,7 @@ public sealed class EssayGradingRecoveryService(IAppDbContext db)
     private Task<List<LegacyCandidate>> LoadLegacyCandidatesAsync(DateTime cutoff, int offset, CancellationToken ct) =>
         db.EssaySubmissions.AsNoTracking()
             .Where(e => e.Status == EssaySubmissionStatus.WaitTeacher
+                && !TeacherEssayGradingPolicy.ManualTeacherIds(db).Contains(e.Attempt.Exam.CreatedByTeacherId)
                 && (e.AudioUrl == null || e.AudioUrl.Trim() == string.Empty)
                 && e.AiInitialScore == null
                 && e.TeacherFinalScore == null

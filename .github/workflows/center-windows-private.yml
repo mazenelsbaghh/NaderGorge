@@ -1,0 +1,56 @@
+name: Massar Windows private build
+
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/center-flutter/**', 'desktop/center-lan/**', '.github/workflows/center-windows-private.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    if: github.event.repository.private == true
+    runs-on: windows-2022
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        role: [host, client]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Install official Flutter 3.41.0
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Base = 'https://storage.googleapis.com/flutter_infra_release/releases'
+          $Index = Invoke-RestMethod 'https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json'
+          $Release = @($Index.releases | Where-Object { $_.channel -eq 'stable' -and $_.version -eq '3.41.0' -and $_.dart_sdk_arch -eq 'x64' })
+          if ($Release.Count -ne 1) { throw 'Expected one pinned Flutter release.' }
+          $Zip = Join-Path $env:RUNNER_TEMP 'flutter-sdk.zip'
+          Invoke-WebRequest "$Base/$($Release[0].archive)" -OutFile $Zip
+          if ((Get-FileHash $Zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $Release[0].sha256) { throw 'Flutter archive digest mismatch.' }
+          $Sdk = Join-Path $env:RUNNER_TEMP 'massar-sdk'
+          Expand-Archive -LiteralPath $Zip -DestinationPath $Sdk
+          Join-Path $Sdk 'flutter/bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Compile and package without tests
+        shell: pwsh
+        env:
+          PACKAGE_ROLE: ${{ matrix.role }}
+        run: |
+          $Parameters = @{ SkipTests = $true; OutputTag = "run-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" }
+          if ($env:PACKAGE_ROLE -eq 'client') { $Parameters.ClientOnly = $true }
+          & ./desktop/center-flutter/scripts/build-windows.ps1 @Parameters
+      - uses: actions/upload-artifact@v7
+        with:
+          name: massar-windows-${{ matrix.role }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            desktop/center-flutter/dist/*.zip
+            desktop/center-flutter/dist/*.sha256
+          if-no-files-found: error
+          retention-days: 7

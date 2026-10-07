@@ -408,6 +408,7 @@ public class AppDbContext : DbContext, IAppDbContext
             [typeof(string)])!);
         modelBuilder.HasAnnotation("Massar:AdminAIEntitySearchContract", "1.0.0");
         AdminAIEntityConfigurations.Configure(modelBuilder);
+        Configurations.MimStudioConfiguration.Configure(modelBuilder);
         ConfigurePlatformFinance(modelBuilder);
 
         // User

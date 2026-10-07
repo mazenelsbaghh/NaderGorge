@@ -213,13 +213,15 @@ public class OutboxProcessorBackgroundService : BackgroundService
         {
             var payload = JsonSerializer.Deserialize<NaderGorge.Application.Features.Assessments.HomeworkEvaluationPayload>(@event.PayloadJson)
                 ?? throw new InvalidOperationException("Homework evaluation payload is empty.");
+            if (await NaderGorge.Application.Features.Assessments.TeacherEssayGradingPolicy.IsManualHomeworkAsync(
+                services.GetRequiredService<IAppDbContext>(), payload.SubmissionId, ct)) return;
             await services.GetRequiredService<IJobEnqueuer>().EnqueueJobAsync("ai-homework-queue", "evaluate-homework", payload);
         }
         else if (EssayEvaluationOutboxQueueDispatcher.IsEssayEvaluationEvent(@event))
         {
             var jobEnqueuer = services.GetService<IJobEnqueuer>()
                 ?? throw new InvalidOperationException("Essay evaluation queue dispatcher is unavailable.");
-            await EssayEvaluationOutboxQueueDispatcher.DispatchAsync(@event, jobEnqueuer);
+            await EssayEvaluationOutboxQueueDispatcher.DispatchAsync(@event, jobEnqueuer, services.GetRequiredService<IAppDbContext>(), ct);
         }
         else if (ParentPurchaseOutboxDispatcher.IsPurchaseEvent(@event))
         {
@@ -473,13 +475,16 @@ public static class EssayEvaluationOutboxQueueDispatcher
     public static bool IsEssayEvaluationEvent(OutboxEvent value) =>
         string.Equals(value.Type, EventType, StringComparison.Ordinal);
 
-    public static async Task DispatchAsync(OutboxEvent value, IJobEnqueuer jobEnqueuer)
+    public static async Task DispatchAsync(OutboxEvent value, IJobEnqueuer jobEnqueuer, IAppDbContext db, CancellationToken ct)
     {
         var payload = JsonSerializer.Deserialize<EssayEvaluationQueuePayload>(value.PayloadJson, PayloadJsonOptions)
             ?? throw new InvalidOperationException("Essay evaluation outbox payload is empty.");
 
         if (payload.EssaySubmissionId == Guid.Empty || payload.QuestionId == Guid.Empty || payload.StudentId == Guid.Empty)
             throw new InvalidOperationException("Essay evaluation outbox payload is invalid.");
+
+        if (await NaderGorge.Application.Features.Assessments.TeacherEssayGradingPolicy.HoldEssayForTeacherAsync(
+            db, payload.EssaySubmissionId, ct)) return;
 
         await jobEnqueuer.EnqueueJobAsync("bullmq-bridge-ingest", "evaluateEssay", new
         {

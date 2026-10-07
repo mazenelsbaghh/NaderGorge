@@ -33,6 +33,8 @@ public sealed class WebhookHomeworkGradedCommandHandler(IAppDbContext db)
     {
         var submission = await db.HomeworkSubmissions.Include(s => s.Answers).SingleOrDefaultAsync(s => s.Id == request.SubmissionId, ct);
         if (submission is null) return Receipt(request.SubmissionId, "Deleted");
+        if (await TeacherEssayGradingPolicy.IsManualHomeworkAsync(db, submission.Id, ct))
+            return Receipt(request.SubmissionId, "ManualReview");
         if (submission.Status != SubmissionStatus.PendingReview || HomeworkEvaluationQueue.Fingerprint(submission) != request.Fingerprint)
             return Receipt(request.SubmissionId, "Superseded");
         var eligible = HomeworkEvaluationQueue.Questions(submission).Select(q => q.AnswerId).ToHashSet();

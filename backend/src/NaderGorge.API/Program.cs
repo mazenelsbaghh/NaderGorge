@@ -283,6 +283,13 @@ builder.Services.AddSingleton<IWhatsAppAudioProcess>(
 builder.Services.AddSingleton<IWhatsAppOutboundMediaNormalizer, WhatsAppOutboundMediaNormalizer>();
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddScoped<NaderGorge.Application.Features.VideoLearning.VideoLearningService>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.MimStudio.LessonMimStudioService>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.MimStudio.HiggsfieldMcpConnectionService>();
+builder.Services.AddHttpClient("HiggsfieldMcp", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+    client.MaxResponseContentBufferSize = 1_000_000;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<NaderGorge.Application.Features.VideoLearning.IVideoLearningAi, NaderGorge.Infrastructure.Services.VideoLearningAiClient>(client => client.Timeout = TimeSpan.FromSeconds(65));
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
