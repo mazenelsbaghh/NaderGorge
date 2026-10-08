@@ -104,8 +104,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
             var parameters = JsonSerializer.Deserialize<JsonElement>(row.ParametersJson);
             var submitted = await connection.CallStudioToolAsync(actor, "generate_video", new { @params = parameters }, ct);
             var payload = HiggsfieldStudioReply.Payload(submitted);
-            if (payload.TryGetProperty("generation", out var generation)) payload = generation;
-            row.JobId = HiggsfieldStudioReply.RequiredId(payload, "job_id", "jobId", "id");
+            row.JobId = HiggsfieldStudioReply.SubmissionId(payload);
             row.State = "running";
             row.Version = Guid.NewGuid();
             await db.SaveChangesAsync(CancellationToken.None);

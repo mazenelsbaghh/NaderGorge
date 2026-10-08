@@ -4,6 +4,20 @@ namespace NaderGorge.Infrastructure.Services.MimStudio;
 
 public static class HiggsfieldStudioReply
 {
+    public static Guid SubmissionId(JsonElement payload)
+    {
+        if (payload.TryGetProperty("results", out var results))
+        {
+            // The official direct-generation tool returns one result for count=1.
+            // Never choose an arbitrary result when the provider returns a different count.
+            if (results.ValueKind != JsonValueKind.Array || results.GetArrayLength() != 1 || results[0].ValueKind != JsonValueKind.Object)
+                throw new HiggsfieldMcpException("Higgsfield لم يرجع طلب فيديو واحدًا واضحًا. راجع سجل الحساب قبل إعادة الإرسال.");
+            return RequiredId(results[0], "id", "job_id");
+        }
+        if (payload.TryGetProperty("generation", out var generation)) payload = generation;
+        return RequiredId(payload, "job_id", "jobId", "id");
+    }
+
     public static JsonElement Payload(JsonElement reply)
     {
         if (reply.TryGetProperty("structuredContent", out var structured) && structured.ValueKind == JsonValueKind.Object) return structured.Clone();

@@ -5,6 +5,15 @@ namespace NaderGorge.Application.Tests.MimGames;
 
 public sealed class HiggsfieldStudioReplyTests
 {
+    [Theory]
+    [InlineData("{\"results\":[]}")]
+    [InlineData("{\"results\":[{\"id\":\"60cf35c4-4b63-41d1-8c24-40d3962553f5\"},{\"id\":\"c871e19d-72eb-460d-b744-11b965509d1e\"}]}")]
+    public void AmbiguousSubmissionNeverPicksAnArbitraryJob(string json)
+    {
+        using var reply = JsonDocument.Parse(json);
+        Assert.Throws<HiggsfieldMcpException>(() => HiggsfieldStudioReply.SubmissionId(reply.RootElement));
+    }
+
     [Fact]
     public void ProviderRejectionKeepsTheReasonButRemovesCredentialsAndRequestPayload()
     {

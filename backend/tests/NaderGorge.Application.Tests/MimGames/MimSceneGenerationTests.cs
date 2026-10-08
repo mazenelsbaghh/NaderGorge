@@ -183,7 +183,7 @@ public sealed class MimSceneGenerationTests
                         PaidRequests.Add(parameters.Clone());
                         if (Reject) return new(HttpStatusCode.OK) { Content=JsonContent.Create(new { jsonrpc="2.0", id=root.GetProperty("id").GetString(), result=new { isError=true, structuredContent=new { error=new { code="INVALID_MEDIA", message="Reference image unavailable" } } } }) };
                         if (loseReply) throw new HttpRequestException("lost synthetic response");
-                        payload=new { job_id=Guid.NewGuid() };
+                        payload = new { results = new[] { new { id=Guid.NewGuid(), type="video", status="pending", model=parameters.GetProperty("model").GetString() } } };
                     }
                 }
                 result=new { structuredContent=payload };
