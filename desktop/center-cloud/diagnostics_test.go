@@ -75,7 +75,7 @@ func TestUploadSanitizesUntrustedDiagnosticsAndRetainsCompleteLogicalBackup(t *t
 func TestPerformanceDiagnosticsRetainTimingsThroughUploadAndAdminRead(t *testing.T) {
 	f := newFixture(t)
 	secret := "PRIVATE_STUDENT_PHONE_PATH"
-	event := map[string]any{"schema": 1, "kind": "performance", "id": testUploadID, "session": "22222222-2222-4222-8222-222222222222", "time": "2026-10-03T12:00:00Z", "version": "1.2.8+11", "platform": "windows", "operation": "lan.refresh", "durationUs": int64(18000000000), "budgetMs": 15000, "outcome": "completed", "phasesUs": map[string]any{"receive": 17000000000, secret: 123, "decode": -1}, "counts": map[string]any{"bytes": 15194328, "repeats": 4, secret: 567}, "message": secret}
+	event := map[string]any{"schema": 1, "kind": "performance", "id": testUploadID, "session": "22222222-2222-4222-8222-222222222222", "time": "2026-10-03T12:00:00Z", "version": "1.2.8+11", "platform": "windows", "operation": "cloud.transfer", "durationUs": int64(18000000000), "budgetMs": 15000, "outcome": "completed", "phasesUs": map[string]any{"receive": 17000000000, secret: 123, "decode": -1}, "counts": map[string]any{"bytes": 15194328, "rawBytes": 16000000, "wireBytes": 1000000, "repeats": 4, secret: 567}, "message": secret}
 	encode := func() string {
 		encoded, err := json.Marshal(event)
 		if err != nil {
@@ -97,6 +97,10 @@ func TestPerformanceDiagnosticsRetainTimingsThroughUploadAndAdminRead(t *testing
 	}
 	if len(projection.Events) != 1 || projection.Events[0]["kind"] != "performance" || projection.Events[0]["durationUs"] != float64(18000000000) {
 		t.Fatalf("timings dropped: %s", response)
+	}
+	counts := projection.Events[0]["counts"].(map[string]any)
+	if counts["rawBytes"] != float64(16000000) || counts["wireBytes"] != float64(1000000) {
+		t.Fatal("transfer size metrics dropped")
 	}
 	if strings.Contains(string(response), secret) || strings.Contains(string(response), "\"decode\"") {
 		t.Fatal("untrusted metrics survived")

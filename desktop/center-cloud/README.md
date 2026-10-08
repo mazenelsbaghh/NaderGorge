@@ -1,6 +1,6 @@
 # Massar private support service
 
-This source-only Go 1.22 service accepts voluntary support uploads and serves pre-authored desktop updates. It does not synchronize operational data, run migrations, execute commands, or replace the offline database. The source has passed `go test -race ./...` and `go vet ./...` locally using synthetic fixtures, temporary private directories, and loopback TLS only. It has not been deployed or exercised with actual center data.
+This Go 1.22 service accepts voluntary support uploads and serves pre-authored desktop updates. It does not synchronize operational data, run migrations, execute commands, or replace the offline database. Its tests use synthetic fixtures, temporary private directories, and loopback TLS; deployment evidence is recorded separately.
 
 ## Configuration and isolation
 
@@ -24,6 +24,8 @@ A local reverse proxy must terminate TLS, overwrite `X-Forwarded-Proto` with `ht
 ## Upload contract
 
 Device Bearer token: `POST /v1/uploads`, `Content-Type: application/json`.
+
+The body may use `Content-Encoding: gzip`; omitted or `identity` encoding accepts legacy plain JSON. Other encodings return `415`. The configured upload limit applies independently to transferred and expanded bytes. Malformed/truncated gzip or an invalid checksum returns `400`; exceeding either bound returns `413`. Logical request hashes and durable retry receipts are identical across plain and compressed transfers.
 
 ```json
 {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
@@ -189,12 +190,17 @@ func (s *supportService) upload(w http.ResponseWriter, r *http.Request, center s
 		fail(w, http.StatusRequestEntityTooLarge, "upload_too_large")
 		return
 	}
+	encoding := strings.ToLower(strings.TrimSpace(strings.Join(r.Header.Values("Content-Encoding"), ",")))
+	if encoding != "" && encoding != "identity" && encoding != "gzip" {
+		fail(w, http.StatusUnsupportedMediaType, "unsupported_content_encoding")
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.config.maxUploadBytes)
 	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+	body, err := readSupportBody(r.Body, encoding, s.config.maxUploadBytes)
 	if err != nil {
 		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
+		if errors.As(err, &tooLarge) || errors.Is(err, errTooLarge) {
 			fail(w, http.StatusRequestEntityTooLarge, "upload_too_large")
 		} else {
 			fail(w, http.StatusBadRequest, "invalid_upload")
@@ -264,6 +270,24 @@ func (s *supportService) upload(w http.ResponseWriter, r *http.Request, center s
 		status = http.StatusCreated
 	}
 	writeJSON(w, status, receipt)
+}
+
+// Bound both transfer and expanded JSON; compression never changes the logical
+// request hash, receipt identity, or private snapshot stored on disk.
+func readSupportBody(body io.Reader, encoding string, limit int64) ([]byte, error) {
+	if encoding == "gzip" {
+		reader, err := gzip.NewReader(body)
+		if err != nil {
+			return nil, err
+		}
+		defer reader.Close()
+		body = reader
+	}
+	data, err := io.ReadAll(io.LimitReader(body, limit+1))
+	if int64(len(data)) > limit {
+		return nil, errTooLarge
+	}
+	return data, err
 }
 
 func isObject(data json.RawMessage) bool {
