@@ -90,6 +90,8 @@ public sealed class MimSceneGenerationTests
         Assert.Equal(loseReply ? "unknown" : "running", repeated.State);
         var paid = Assert.Single(provider.PaidRequests);
         Assert.Equal(2, paid.GetProperty("medias").GetArrayLength());
+        Assert.All(paid.GetProperty("medias").EnumerateArray(), media => Assert.Equal("image_references", media.GetProperty("role").GetString()));
+        Assert.Equal("omni_reference", paid.GetProperty("mode").GetString());
         Assert.Equal(30, paid.GetProperty("duration").GetInt32());
         Assert.Equal(1, paid.GetProperty("count").GetInt32());
         Assert.DoesNotContain("OLD_STORYBOARD", paid.GetProperty("prompt").GetString());
@@ -118,7 +120,7 @@ public sealed class MimSceneGenerationTests
                 if (name == "generate_video")
                 {
                     var parameters=args.GetProperty("arguments").GetProperty("params");
-                    if (parameters.TryGetProperty("get_cost",out var cost) && cost.GetBoolean()) payload=new { credits=10 };
+                    if (parameters.TryGetProperty("get_cost",out var cost) && cost.GetBoolean()) payload=new { cost = new { credits=210, credits_exact=210 }, adjustments = new { } };
                     else
                     {
                         PaidRequests.Add(parameters.Clone());

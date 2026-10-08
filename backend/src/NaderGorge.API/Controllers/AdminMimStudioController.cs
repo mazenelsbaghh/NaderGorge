@@ -61,6 +61,7 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
         catch (DbUpdateException) { return Conflict(ApiResponse.Fail("تعذر الحفظ بسبب تعديل متزامن أو بيانات مرتبطة.")); }
         catch (ArgumentException ex) { return BadRequest(ApiResponse.Fail(ex.Message)); }
         catch (MimStudioGenerationException ex) { return StatusCode(503, ApiResponse.Fail(ex.Message)); }
-        catch (HiggsfieldMcpException ex) { return StatusCode(502, ApiResponse.Fail(ex.Message)); }
+        // This is an actionable provider rejection, not a gateway failure. Preserve its message through the edge.
+        catch (HiggsfieldMcpException ex) { return UnprocessableEntity(ApiResponse.Fail(ex.Message)); }
     }
 }

@@ -48,10 +48,11 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         {
             var imported = await connection.CallStudioToolAsync(actor, "media_import_url", new { url, type = "image" }, ct);
             var mediaId = HiggsfieldStudioReply.RequiredId(HiggsfieldStudioReply.Payload(imported), "media_id", "id");
-            media.Add(new { value = mediaId.ToString(), role = "image" });
+            media.Add(new { value = mediaId.ToString(), role = "image_references" });
         }
         var parameters = new { model = "seedance_2_5", prompt = Prompt(script.Document, scene), count = 1,
-            duration = 30, aspect_ratio = "16:9", resolution = "720p", generate_audio = true, use_unlim = false, medias = media };
+            duration = 30, aspect_ratio = "16:9", resolution = "720p", mode = "omni_reference",
+            bitrate_mode = "standard", draft = false, generate_audio = true, use_unlim = false, medias = media };
         var serialized = JsonSerializer.Serialize(parameters, JsonOptions);
         var costParams = JsonNode.Parse(serialized)!.AsObject();
         costParams["get_cost"] = true;

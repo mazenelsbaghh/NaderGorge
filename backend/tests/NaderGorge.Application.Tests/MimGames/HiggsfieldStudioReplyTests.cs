@@ -5,6 +5,13 @@ namespace NaderGorge.Application.Tests.MimGames;
 
 public sealed class HiggsfieldStudioReplyTests
 {
+    [Fact]
+    public void ReadsObservedHiggsfieldNestedCostWithoutAdjustments()
+    {
+        using var reply = JsonDocument.Parse("{\"cost\":{\"credits\":210,\"credits_exact\":210},\"adjustments\":{}}");
+        Assert.Equal("210 كريديت من رصيد Higgsfield", HiggsfieldStudioReply.Quote(reply.RootElement));
+    }
+
     [Theory]
     [InlineData("{\"error\":\"insufficient credits\"}")]
     [InlineData("{\"credits\":-1}")]
