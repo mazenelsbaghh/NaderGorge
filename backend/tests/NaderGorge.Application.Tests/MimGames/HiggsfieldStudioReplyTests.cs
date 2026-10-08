@@ -5,6 +5,27 @@ namespace NaderGorge.Application.Tests.MimGames;
 
 public sealed class HiggsfieldStudioReplyTests
 {
+    [Fact]
+    public void ProviderRejectionKeepsTheReasonButRemovesCredentialsAndRequestPayload()
+    {
+        using var reply = JsonDocument.Parse("""
+            {"isError":true,"structuredContent":{"error":{"code":"INVALID_MEDIA","message":"Reference image unavailable; access_token=secret-value; Bearer private-token; https://example.test/signed?secret=foo; person@example.test"},"prompt":"PRIVATE_STORY","headers":{"cookie":"private-cookie"}}}
+            """);
+        var message = HiggsfieldMcpErrors.Rejection(reply.RootElement).Message;
+        Assert.Contains("INVALID_MEDIA", message);
+        Assert.Contains("Reference image unavailable", message);
+        foreach (var secret in new[] { "secret-value", "private-token", "secret=foo", "person@example.test", "PRIVATE_STORY", "private-cookie" }) Assert.DoesNotContain(secret, message);
+    }
+
+    [Theory]
+    [InlineData("{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Prompt exceeds the model limit\"}]}", "Prompt exceeds")]
+    [InlineData("{\"error\":{\"code\":-32602,\"message\":\"Invalid parameters\"}}", "Invalid parameters")]
+    public void TextAndRpcErrorsRetainActionableDetails(string json, string reason)
+    {
+        using var reply = JsonDocument.Parse(json);
+        Assert.Contains(reason, HiggsfieldMcpErrors.Rejection(reply.RootElement).Message);
+    }
+
     [Theory]
     [InlineData("{\"notice\":{\"type\":\"execute_tool\",\"data\":{\"retry_literal_with\":{\"declined_preset_id\":\"24bae836-2c4a-48e0-89b6-49fcc0b21612\"}}}}")]
     [InlineData("{\"notice\":{\"type\":123}}")]

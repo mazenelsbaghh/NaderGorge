@@ -133,7 +133,7 @@ public sealed class HiggsfieldMcpConnectionService(
         await transport.InitializeAsync(ct);
         var reply = await transport.RequestAsync("tools/call", new { name, arguments }, ct);
         if (reply.TryGetProperty("isError", out var error) && error.ValueKind == JsonValueKind.True)
-            throw new HiggsfieldMcpException("Higgsfield رفض الطلب. راجع اتصال الحساب أو الرصيد وإعدادات التوليد.");
+            throw HiggsfieldMcpErrors.Rejection(reply);
         return reply;
     }
 

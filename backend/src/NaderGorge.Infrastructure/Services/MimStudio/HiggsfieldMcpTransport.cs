@@ -34,7 +34,7 @@ public sealed class HiggsfieldMcpTransport(HttpClient client, string accessToken
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 throw new HiggsfieldMcpException("Higgsfield طلب تسجيل الدخول من جديد.");
-            if (!response.IsSuccessStatusCode) throw new HiggsfieldMcpException("تعذر قراءة أدوات Higgsfield.");
+            if (!response.IsSuccessStatusCode) throw new HiggsfieldMcpException($"تعذر تنفيذ طلب Higgsfield (HTTP {(int)response.StatusCode}). راجع حالة الاتصال والحساب.");
             if (response.Headers.TryGetValues("Mcp-Session-Id", out var sessions)) sessionId = sessions.Single();
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
             deadline.CancelAfter(TimeSpan.FromSeconds(40));
@@ -83,5 +83,5 @@ public sealed class HiggsfieldMcpTransport(HttpClient client, string accessToken
     }
     private static bool Matches(JsonElement json, string id) => json.TryGetProperty("id", out var found) && found.ValueKind == JsonValueKind.String && found.GetString() == id;
     private static JsonElement Result(JsonElement json) => json.TryGetProperty("result", out var result) ? result.Clone() :
-        throw new HiggsfieldMcpException("Higgsfield لم يتمكن من تنفيذ طلب الاتصال.");
+        throw HiggsfieldMcpErrors.Rejection(json);
 }

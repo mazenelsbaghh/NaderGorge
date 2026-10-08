@@ -88,6 +88,7 @@ public sealed class MimSceneGenerationTests
     [InlineData(false, "seedance_2_5")]
     [InlineData(true, "seedance_2_5")]
     [InlineData(false, "wan3_0_prime")]
+    [InlineData(true, "wan3_0_prime")]
     public async Task VideoRequiresCostApprovalAndNeverResubmitsAcceptedOrUncertainRequest(bool loseReply, string model)
     {
         await using var sqlite = new SqliteConnection("Data Source=:memory:");
@@ -102,7 +103,7 @@ public sealed class MimSceneGenerationTests
         var session = JsonSerializer.Serialize(new { accessToken="synthetic-token", expires=DateTimeOffset.UtcNow.AddHours(1) });
         db.Add(new HiggsfieldMcpConnection { AdminUserId=actor, ClientId="test", ProtectedSession=protection.CreateProtector("Massar.HiggsfieldMcp.v1", actor.ToString("N")).Protect(session) });
         await db.SaveChangesAsync(); db.ChangeTracker.Clear();
-        var provider = new VideoHandler(loseReply);
+        var provider = new VideoHandler(loseReply) { Reject = loseReply && model == "wan3_0_prime" };
         var mcp = new HiggsfieldMcpConnectionService(db,new ClientFactory(provider),protection,config);
         var videos = new MimSceneVideoService(db,script,mcp);
         var quote = await videos.QuoteAsync(actor,new(lesson,0,model),default);
@@ -113,6 +114,28 @@ public sealed class MimSceneGenerationTests
         db.ChangeTracker.Clear();
         var repeated = await videos.SubmitAsync(actor,lesson,0,new(quote.Version),default);
         Assert.Equal(loseReply ? "unknown" : "running", repeated.State);
+        if (loseReply)
+        {
+            var reloaded = await videos.ReadAsync(actor,lesson,0,default);
+            Assert.NotNull(reloaded!.Error);
+            if (provider.Reject) Assert.Contains("INVALID_MEDIA", reloaded.Error);
+            await Assert.ThrowsAsync<ArgumentException>(() => videos.ReviewAsync(actor,new(lesson,0,new(reloaded.Version,false)),default));
+            await Assert.ThrowsAsync<MimStudioConflictException>(() => videos.ReviewAsync(actor,new(lesson,0,new(reloaded.Version,true)),default));
+            var row = await db.Set<MimSceneVideo>().SingleAsync();
+            await db.Set<MimSceneVideo>().Where(x => x.Id == row.Id).ExecuteUpdateAsync(set => set.SetProperty(x => x.UpdatedAt, DateTime.UtcNow.AddMinutes(-6)));
+            db.ChangeTracker.Clear();
+            await Assert.ThrowsAsync<MimStudioConflictException>(() => videos.ReviewAsync(actor,new(lesson,0,new(Guid.NewGuid(),true)),default));
+            var reviewed = await videos.ReviewAsync(actor,new(lesson,0,new(reloaded.Version,true)),default);
+            Assert.Equal("retry_ready", reviewed.State);
+            Assert.Equal("retry_ready", (await videos.SubmitAsync(actor,lesson,0,new(quote.Version),default)).State);
+            Assert.Single(provider.PaidRequests);
+            db.ChangeTracker.Clear();
+            var newQuote = await videos.QuoteAsync(actor,new(lesson,0,model),default);
+            Assert.Null(newQuote.Error);
+            Assert.Contains("no_generation_and_no_charge", (await db.Set<MimSceneVideo>().SingleAsync()).ResultJson);
+            await Assert.ThrowsAsync<MimStudioConflictException>(() => videos.SubmitAsync(actor,lesson,0,new(quote.Version),default));
+            Assert.Single(provider.PaidRequests);
+        }
         var paid = Assert.Single(provider.PaidRequests);
         Assert.Equal(2, paid.GetProperty("medias").GetArrayLength());
         Assert.All(paid.GetProperty("medias").EnumerateArray(), media => Assert.Equal("image_references", media.GetProperty("role").GetString()));
@@ -133,6 +156,7 @@ public sealed class MimSceneGenerationTests
     private sealed class VideoHandler(bool loseReply) : HttpMessageHandler
     {
         public List<JsonElement> PaidRequests { get; } = [];
+        public bool Reject { get; init; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             using var doc = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
@@ -157,6 +181,7 @@ public sealed class MimSceneGenerationTests
                     else
                     {
                         PaidRequests.Add(parameters.Clone());
+                        if (Reject) return new(HttpStatusCode.OK) { Content=JsonContent.Create(new { jsonrpc="2.0", id=root.GetProperty("id").GetString(), result=new { isError=true, structuredContent=new { error=new { code="INVALID_MEDIA", message="Reference image unavailable" } } } }) };
                         if (loseReply) throw new HttpRequestException("lost synthetic response");
                         payload=new { job_id=Guid.NewGuid() };
                     }

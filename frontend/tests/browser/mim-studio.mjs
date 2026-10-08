@@ -10,15 +10,16 @@ const videoId = '00000000-0000-4000-8000-000000000002';
 const source = { id: videoId, title: 'شرح التحولات الكبرى', sourceRevision: 1,
   chapters: episode.scenes.flatMap(scene => scene.sourceChapterIds).map(id => ({ id, title: 'فصل من الشرح', summary: 'ملخص الفصل', startTime: 0, endTime: 300 })) };
 
-async function openStudio(page, matches = true, availableVideos = null) {
+async function openStudio(page, matches = true, availableVideos = null, savedVideo = null) {
   const user = { id: '00000000-0000-4000-8000-000000000003', fullName: 'أدمن الاختبار', roles: ['Admin'], permissions: ['content.manage'],
     allowedDomains: ['admin'], allowedNavbarItems: [], profileComplete: true, authorizationVersion: 1 };
   await page.addInitScript(user => {
     localStorage.setItem('accessToken', 'synthetic-test-token'); localStorage.setItem('user', JSON.stringify(user));
   }, user);
   const saves = [];
-  let snapshot = null;
-  let video = null;
+  let snapshot = savedVideo ? { version:'saved-script', sourceVideoId:null, sourceRevision:0, stale:false, generating:false,
+    document:{ ...episode, sourceText:'شرح محفوظ', scenes:[{ ...episode.scenes[0], sourceChapterIds:[] }] } } : null;
+  let video = savedVideo;
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
     let response = [];
@@ -32,6 +33,12 @@ async function openStudio(page, matches = true, availableVideos = null) {
       snapshot = { version: `version-${scenes.length}`, sourceVideoId: null, sourceRevision: 0, stale: false, generating: false,
         document: { ...episode, scenes, sourceText: request.sourceText } };
       response = snapshot;
+    }
+    if (path.endsWith('/video/review')) {
+      const review = route.request().postDataJSON();
+      assert.equal(review.version, video.version);
+      assert.equal(review.confirmedNoGenerationOrCharge, true);
+      saves.push({ review:true }); video = { ...video, state:'retry_ready', version:'reviewed' }; response = video;
     }
     if (path.endsWith('/video/quote')) {
       video = { model:route.request().postDataJSON().model, version: 'quote-1', state: 'quoted', quote: '١٠ كريديت', expiresAt: new Date(Date.now()+300000).toISOString(), urls: [], jobId: null };
@@ -154,5 +161,32 @@ test('admin selects a video and Gemini receives that video identity, not another
     assert.equal(request.sourceVideoId, videoId);
     assert.equal(request.sourceText, null);
     await expect(page.getByRole('button', { name:'كتابة المشهد التالي (2 من ٤)', exact:true })).toBeVisible();
+  } finally { await browser.close(); }
+});
+
+
+test('rejected scene survives reload and needs account review plus fresh cost approval before retry (synthetic API)', { timeout:90000 }, async () => {
+  const browser = await chromium.launch({ channel:'chrome' });
+  try {
+    const page = await browser.newPage({ viewport:{ width:390, height:844 } });
+    const actions = await openStudio(page,false,null,{ model:'wan3_0_prime', version:'rejected', state:'unknown', quote:'90 كريديت', expiresAt:new Date(0).toISOString(),
+      jobId:null, urls:[], error:'Higgsfield رفض الطلب. تفاصيل الرد: INVALID_MEDIA', reviewAvailableAt:new Date(0).toISOString() });
+    await expect(page.getByText('Higgsfield رفض الطلب. تفاصيل الرد: INVALID_MEDIA', { exact:true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Higgsfield رفض الطلب. تفاصيل الرد: INVALID_MEDIA', { exact:true })).toBeVisible();
+    await expect(page.getByRole('button', { name:'عرض تكلفة هذا المشهد', exact:true })).toHaveCount(0);
+    const review = page.getByRole('button', { name:'حفظ المراجعة وإتاحة تسعير جديد', exact:true });
+    await expect(review).toBeDisabled();
+    await page.getByRole('checkbox', { name:'راجعت سجل التوليد والرصيد: لم يبدأ الفيديو ولم تُخصم تكلفته.' }).check();
+    await review.click();
+    await expect(page.getByText('تم حفظ مراجعتك.', { exact:false })).toBeVisible();
+    assert.deepEqual(actions,[{ review:true }]);
+    const approve = page.getByRole('button', { name:'توليد هذا المشهد وخصم التكلفة المعروضة', exact:true });
+    await expect(approve).toHaveCount(0);
+    await page.getByRole('button', { name:'عرض تكلفة هذا المشهد', exact:true }).click();
+    await expect(approve).toBeEnabled();
+    assert.deepEqual(actions,[{ review:true }]);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({ path:'../artifacts/mim-studio/scene-generation/retry-mobile.png', fullPage:true });
   } finally { await browser.close(); }
 });

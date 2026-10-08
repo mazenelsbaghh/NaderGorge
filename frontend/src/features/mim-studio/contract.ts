@@ -75,4 +75,4 @@ export function preparedSourceMatches(document: MimDocument, source: MimSource):
 }
 
 export interface MimVideoModel { id: string; name: string }
-export interface MimVideo { model: string; version: string; state: string; quote: string; expiresAt: string; jobId: string | null; urls: string[] }
+export interface MimVideo { error?: string | null; reviewAvailableAt?: string | null; model: string; version: string; state: string; quote: string; expiresAt: string; jobId: string | null; urls: string[] }

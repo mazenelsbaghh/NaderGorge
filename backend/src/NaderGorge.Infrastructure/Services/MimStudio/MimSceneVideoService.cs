@@ -7,8 +7,10 @@ using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Infrastructure.Services.MimStudio;
 
-public sealed record MimVideoView(Guid Version, string State, string Quote, DateTime ExpiresAt, Guid? JobId, string[] Urls, string Model);
+public sealed record MimVideoView(Guid Version, string State, string Quote, DateTime ExpiresAt, Guid? JobId, string[] Urls, string Model, string? Error, DateTime? ReviewAvailableAt);
 public sealed record MimVideoApproval(Guid Version);
+public sealed record MimVideoReview(Guid Version, bool ConfirmedNoGenerationOrCharge);
+public sealed record MimVideoReviewTarget(Guid Lesson, int Scene, MimVideoReview Review);
 
 public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService studio, HiggsfieldMcpConnectionService connection)
 {
@@ -27,7 +29,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
             var payload = HiggsfieldStudioReply.Payload(reply);
             var result = HiggsfieldStudioReply.Job(payload);
             row.State = result.State;
-            row.ResultJson = JsonSerializer.Serialize(result.Urls);
+            row.ResultJson = MimVideoOutcome.WithUrls(MimVideoOutcome.WithError(row.ResultJson, null), result.Urls);
             row.Version = Guid.NewGuid();
             row.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
@@ -41,7 +43,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         MimVideoModels.Require(model);
         var script = await CurrentScriptAsync(lesson, scene, ct);
         var row = await FindAsync(actor, lesson, scene, ct);
-        if (row is not null && row.State is not ("quoted" or "failed")) return View(row);
+        if (row is not null && row.State is not ("quoted" or "failed" or "retry_ready")) return View(row);
         if (scene > 0 && !await db.Set<MimSceneVideo>().AnyAsync(x => x.LessonId == lesson && x.SceneIndex == scene - 1 && x.State == "completed", ct))
             throw new ArgumentException("ولّد فيديو المشهد السابق وراجعه أولاً، ثم ابدأ هذا المشهد.");
         var discovered = await connection.CallStudioToolAsync(actor, "models_explore", new { action = "get", model_id = model }, ct);
@@ -70,7 +72,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         if (row is null) { row = new MimSceneVideo { LessonId = lesson, SceneIndex = scene, AdminUserId = actor }; db.Add(row); }
         row.State = "quoted";
         row.JobId = null;
-        row.ResultJson = "[]";
+        row.ResultJson = MimVideoOutcome.WithUrls(MimVideoOutcome.WithError(row.ResultJson, null), []);
         row.ScriptVersion = script.Version;
         row.ParametersJson = costParams.ToJsonString(JsonOptions);
         row.QuoteText = quote;
@@ -95,6 +97,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
             throw new MimStudioConflictException("تكلفة Higgsfield اتغيّرت. اعرض التكلفة الجديدة قبل التوليد.");
         row.State = "submitting";
         row.Version = Guid.NewGuid();
+        row.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct); // Claim before any paid call, across all nodes and browser retries.
         try
         {
@@ -108,13 +111,33 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
             await db.SaveChangesAsync(CancellationToken.None);
             return View(row);
         }
-        catch
+        catch (Exception error)
         {
             // No automatic retry: a lost response may still have spent credits.
+            var message = error is HiggsfieldMcpException ? error.Message : "تعذر تأكيد نتيجة إرسال المشهد. راجع سجل التوليد والرصيد قبل أي محاولة جديدة.";
+            var outcome = MimVideoOutcome.WithError(row.ResultJson, message);
             await db.Set<MimSceneVideo>().Where(x => x.Id == row.Id && x.State == "submitting")
-                .ExecuteUpdateAsync(set => set.SetProperty(x => x.State, "unknown"), CancellationToken.None);
+                .ExecuteUpdateAsync(set => set.SetProperty(x => x.State, "unknown").SetProperty(x => x.ResultJson, outcome)
+                    .SetProperty(x => x.JobId, row.JobId)
+                    .SetProperty(x => x.UpdatedAt, DateTime.UtcNow), CancellationToken.None);
             throw;
         }
+    }
+
+    public async Task<MimVideoView> ReviewAsync(Guid actor, MimVideoReviewTarget target, CancellationToken ct)
+    {
+        var (lesson, scene, review) = target;
+        var row = await FindAsync(actor, lesson, scene, ct) ?? throw new ArgumentException("لا يوجد طلب لمراجعته.");
+        if (row.Version != review.Version || row.State != "unknown" || row.JobId is not null)
+            throw new MimStudioConflictException("حالة الطلب اتغيّرت. حدّث الصفحة قبل المراجعة.");
+        if (!review.ConfirmedNoGenerationOrCharge) throw new ArgumentException("راجع سجل التوليد والرصيد وأكد عدم بدء الفيديو أو خصم تكلفته أولاً.");
+        if (ReviewAvailableAt(row) > DateTime.UtcNow) throw new MimStudioConflictException("انتظر خمس دقائق من آخر إرسال ثم راجع سجل Higgsfield والرصيد.");
+        row.ResultJson = MimVideoOutcome.Reviewed(row);
+        row.State = "retry_ready";
+        row.QuoteExpiresAt = DateTime.UtcNow;
+        row.Version = Guid.NewGuid();
+        await db.SaveChangesAsync(ct);
+        return View(row); // Review never calls the provider or reuses spending approval.
     }
 
     private async Task<MimStudioSnapshot> CurrentScriptAsync(Guid lesson, int scene, CancellationToken ct)
@@ -131,8 +154,10 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         return row;
     }
     private static MimVideoView View(MimSceneVideo row) => new(row.Version, row.State, row.QuoteText, row.QuoteExpiresAt, row.JobId,
-        row.ResultJson.StartsWith('[') ? JsonSerializer.Deserialize<string[]>(row.ResultJson)! : [],
-        JsonNode.Parse(row.ParametersJson)?["model"]?.GetValue<string>() ?? "seedance_2_5");
+        MimVideoOutcome.Urls(row.ResultJson),
+        JsonNode.Parse(row.ParametersJson)?["model"]?.GetValue<string>() ?? "seedance_2_5", MimVideoOutcome.Error(row.ResultJson),
+        row.State == "unknown" && row.JobId is null ? ReviewAvailableAt(row) : null);
+    private static DateTime ReviewAvailableAt(MimSceneVideo row) => (row.UpdatedAt ?? row.CreatedAt).AddMinutes(5);
     private static string Prompt(MimStudioDocument doc, int index) => string.Join("\n\n", new[] {
         "Create one 30-second cinematic 3D animation with Egyptian Arabic speech. Use attached reference 1 for Meem and reference 2 for Papa Nader. Preserve their exact appearance and clothes. Sheets are identity references only; never show the sheets or their collages in the video. No titles or subtitles.",
         doc.Style, doc.Continuity, System.Text.RegularExpressions.Regex.Split(doc.Scenes[index].Prompt, @"\nSCENE \d+:")[0],

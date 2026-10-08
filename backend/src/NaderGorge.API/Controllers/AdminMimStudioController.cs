@@ -40,6 +40,10 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
     public Task<IActionResult> Submit(Guid lessonId, int scene, MimVideoApproval request, CancellationToken ct) =>
         Run(() => videos.SubmitAsync(User.RequireUserId(), lessonId, scene, request, ct));
 
+    [HttpPost("lessons/{lessonId:guid}/scenes/{scene:int}/video/review")]
+    public Task<IActionResult> Review(Guid lessonId, int scene, MimVideoReview request, CancellationToken ct) =>
+        Run(() => videos.ReviewAsync(User.RequireUserId(), new(lessonId, scene, request), ct));
+
     [HttpGet("connection")]
     public Task<IActionResult> Connection(CancellationToken ct) => Run(() => connection.StatusAsync(User.RequireUserId(), ct));
 
