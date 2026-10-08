@@ -94,8 +94,18 @@ void main() {
         ),
       );
       otherClass = store.sessions.last;
-      await store.checkPayment(studentId: student.id, sessionId: newClass.id);
-      await store.checkPayment(studentId: student.id, sessionId: otherClass.id);
+      await store.collectAndAttend(
+        EntryRequest(
+          studentId: student.id,
+          sessionId: newClass.id,
+          mode: EntryMode.single,
+        ),
+      );
+      await store.checkPayment(
+        studentId: student.id,
+        sessionId: newClass.id,
+        expectedAmount: 10000,
+      );
     }),
   );
   tearDown(
@@ -129,6 +139,11 @@ void main() {
   }
 
   Future<void> scan(WidgetTester tester) async {
+    await tester.enterText(
+      find.byKey(const Key('payment-review-custom-amount')),
+      '100',
+    );
+    await tester.pump();
     var changed = false;
     void listener() {
       changed = true;
@@ -151,7 +166,7 @@ void main() {
           isTrue,
           reason: 'The real SQLite review must persist before assertions.',
         );
-        await acknowledgeNotice(tester);
+        await Future<void>(() {});
       });
       await tester.pumpAndSettle();
     } finally {
@@ -214,14 +229,14 @@ void main() {
       expect(find.text('مقارنة مبلغ الورق'), findsNothing);
       expect(find.byKey(const Key('session-review-context')), findsOneWidget);
       expect(find.textContaining('حصة 5 ·'), findsOneWidget);
-      expect(find.text('تمت مراجعة 0 كود'), findsOneWidget);
+      expect(find.textContaining('تمت مراجعة 0 من 1 حاضر'), findsOneWidget);
       final payments = store.allPayments.length,
           attendance = store.allAttendances.length;
       await scan(tester);
       expect(find.byKey(const Key('payment-check-result')), findsOneWidget);
       expect(
         tester.widget<Text>(find.byKey(const Key('payment-check-result'))).data,
-        'دافع الحصة',
+        'دفع بالحصة — محصّل ١٠٠ ج',
       );
       expect(
         store.paymentChecks
@@ -235,16 +250,13 @@ void main() {
             .where((c) => c.sessionId == newClass.id)
             .single
             .status,
-        StudentPaymentStatus.notPaid,
+        StudentPaymentStatus.paidSingle,
       );
       expect(
-        store.paymentChecks
-            .where((c) => c.sessionId == otherClass.id)
-            .single
-            .status,
-        StudentPaymentStatus.free,
+        store.paymentChecks.where((c) => c.sessionId == otherClass.id),
+        isEmpty,
       );
-      expect(find.text('تمت مراجعة 1 كود'), findsOneWidget);
+      expect(find.textContaining('تمت مراجعة 1 من 1 حاضر'), findsOneWidget);
       expect(store.allPayments, hasLength(payments));
       expect(store.allAttendances, hasLength(attendance));
       expect(
@@ -254,7 +266,14 @@ void main() {
             .hasFocus,
         isTrue,
       );
-      await scan(tester);
+      await tester.enterText(
+        find.byKey(const Key('payment-check-code')),
+        student.code,
+      );
+      await tester.runAsync(() async {
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await acknowledgeNotice(tester);
+      });
       expect(
         store.paymentChecks.where((c) => c.sessionId == oldClass.id),
         hasLength(1),
@@ -373,7 +392,13 @@ void main() {
           );
           await tester.runAsync(() async {
             await tester.testTextInput.receiveAction(TextInputAction.search);
-            await acknowledgeNotice(tester);
+            await tester.pump(const Duration(milliseconds: 200));
+            expect(
+              find.byKey(const Key('student-lookup-choice')),
+              findsOneWidget,
+            );
+            await tester.tap(find.text('إلغاء'));
+            await tester.pumpAndSettle();
           });
           await tester.pumpAndSettle();
           expect(find.textContaining('الكود يطابق أكثر من طالب'), findsNothing);
@@ -393,7 +418,7 @@ void main() {
             tester
                 .widget<Text>(find.byKey(const Key('payment-check-result')))
                 .data,
-            'دافع الحصة',
+            'دفع بالحصة — محصّل ١٠٠ ج',
           );
         }
         expect(tester.takeException(), isNull);

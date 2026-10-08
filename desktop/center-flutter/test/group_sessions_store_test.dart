@@ -51,6 +51,23 @@ void main() {
     await store.signIn('manager', 'group-sessions-password');
   }
 
+  Map<String, dynamic> legacySessionFields(LessonSession session) =>
+      session.toJson()..remove('preparedLessonId');
+  void expectPreparedLinks() {
+    for (final session in store.sessions) {
+      expect(session.preparedLessonId, isNotNull);
+      final month = store.studyMonthForLesson(session.preparedLessonId!);
+      expect(month, isNotNull);
+      expect(month!.number, session.monthNumber);
+      expect(
+        month.lessons
+            .singleWhere((lesson) => lesson.id == session.preparedLessonId)
+            .number,
+        session.number,
+      );
+    }
+  }
+
   for (final kind in SessionKind.values) {
     test(
       '$kind batch uses per-group numbering and one durable timestamp without collecting money',
@@ -86,10 +103,11 @@ void main() {
         expect(store.audit.last.action, 'sessions_create');
         final saved = created.map((session) => session.toJson()).toList();
         await reopen();
+        expectPreparedLinks();
         expect(
           store.sessions
               .where((session) => !previousIds.contains(session.id))
-              .map((session) => session.toJson()),
+              .map(legacySessionFields),
           saved,
         );
       },
@@ -115,7 +133,8 @@ void main() {
       expect(store.sessions.map((session) => session.toJson()), before);
       expect(store.audit, hasLength(auditCount));
       await reopen();
-      expect(store.sessions.map((session) => session.toJson()), before);
+      expectPreparedLinks();
+      expect(store.sessions.map(legacySessionFields), before);
     });
   }
 
@@ -199,7 +218,7 @@ void main() {
       final auditCount = store.audit.length;
       try {
         await database.execute(
-          "CREATE TRIGGER reject_batch BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'test failure'); END",
+          "CREATE TRIGGER reject_batch BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'test failure'); END",
         );
         await expectLater(
           store.createGroupSessions(groupIds: ids, kind: SessionKind.counted),

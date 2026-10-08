@@ -24,11 +24,18 @@ public sealed partial class LessonMimStudioService(AppDbContext db, MimSceneWrit
     public async Task<MimStudioSnapshot> SaveAsync(Guid actor, Guid lessonId, SaveMimStudio request, CancellationToken ct)
     {
         if (!await db.Lessons.AnyAsync(x => x.Id == lessonId, ct)) throw new KeyNotFoundException();
-        var source = await WritingSourceAsync(lessonId, request.SourceVideoId, request.SourceRevision, request.Document?.SourceText, ct);
-        MimStudioContract.Validate(request.Document, source.Chapters.Select(x => x.Id).ToHashSet());
+        var document = request.Document ?? throw new ArgumentException("الاسكربت غير مكتمل.");
+        var source = await WritingSourceAsync(lessonId, request.SourceVideoId, request.SourceRevision, document.SourceText, ct);
+        MimStudioContract.Validate(document, source.Chapters.Select(x => x.Id).ToHashSet());
         var studio = await db.Set<LessonMimStudio>().SingleOrDefaultAsync(x => x.LessonId == lessonId, ct);
         CheckVersion(studio, request.Version);
         CheckIdle(studio);
+        if (studio is not null)
+        {
+            var previous = JsonSerializer.Deserialize<MimStudioDocument>(studio.DocumentJson, JsonOptions)!;
+            if (previous.Scenes.Length > 0 && (previous.TargetSceneCount != document.TargetSceneCount || previous.EpisodeContext != document.EpisodeContext))
+                throw new MimStudioConflictException("عدد المشاهد وسياق الحلقة ثابتان بعد بدء الكتابة، للحفاظ على القصة.");
+        }
         if (studio is null)
         {
             studio = new LessonMimStudio { LessonId = lessonId };
@@ -36,7 +43,7 @@ public sealed partial class LessonMimStudioService(AppDbContext db, MimSceneWrit
         }
         studio.SourceVideoId = request.SourceVideoId;
         studio.SourceRevision = request.SourceRevision;
-        studio.DocumentJson = JsonSerializer.Serialize(request.Document, JsonOptions);
+        studio.DocumentJson = JsonSerializer.Serialize(document, JsonOptions);
         studio.UpdatedByUserId = actor;
         studio.UpdatedAt = DateTime.UtcNow;
         studio.Version = Guid.NewGuid();

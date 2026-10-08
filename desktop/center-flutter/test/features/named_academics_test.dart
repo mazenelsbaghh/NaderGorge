@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../helpers/notice_helpers.dart';
+import '../helpers/academic_fixture.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
@@ -70,7 +70,11 @@ void main() {
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
     );
-    session = store.sessions.single;
+    session = await prepareAcademicFixture(
+      store,
+      store.sessions.single,
+      store.students,
+    );
     await store.saveAcademic(
       AcademicRecord(
         studentId: store.students.last.id,
@@ -137,25 +141,14 @@ void main() {
     await tester.pumpAndSettle();
     if (!direct) {
       await tester.ensureVisible(
-        find.widgetWithText(ListTile, 'الامتحانات والواجب'),
+        find.widgetWithText(ListTile, 'رصد الامتحانات والواجبات'),
       );
-      await tester.tap(find.widgetWithText(ListTile, 'الامتحانات والواجب'));
+      await tester.tap(
+        find.widgetWithText(ListTile, 'رصد الامتحانات والواجبات'),
+      );
       await tester.pumpAndSettle();
     }
-    final groupPicker = find.widgetWithText(
-      DropdownButtonFormField<String>,
-      'المجموعة',
-    );
-    await tester.tap(groupPicker);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(store.groupLabel(store.groups.first.id)).last);
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(DropdownButtonFormField<String>, 'اختر الحصة للرصد'),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('حصة 8 —').last);
-    await tester.pumpAndSettle();
+    await selectAcademicFixtureSession(tester, store, session);
   }
 
   Future<void> submit(
@@ -167,7 +160,27 @@ void main() {
       find.byKey(const Key('academic-code-search')),
       query,
     );
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    final selectedActivity = tester
+        .widget<DropdownButtonFormField<String>>(
+          find.widgetWithText(
+            DropdownButtonFormField<String>,
+            'اختر الامتحان أو الواجب',
+          ),
+        )
+        .initialValue;
+    final homework = store.academicActivities.any(
+      (activity) =>
+          activity.id == selectedActivity &&
+          activity.kind == AcademicActivityKind.homework,
+    );
+    if (detailed && homework) {
+      await tester.pumpAndSettle();
+      final row = find.widgetWithText(TextButton, 'رصد').first;
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+    } else {
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+    }
     await tester.pumpAndSettle();
     final details = find.byKey(const Key('academic-quick-details'));
     if (detailed && details.evaluate().isNotEmpty) {
@@ -189,8 +202,15 @@ void main() {
     image.dispose();
   }
 
-  Future<void> saveEditor(WidgetTester tester, {bool twice = false}) async {
-    final button = find.widgetWithText(FilledButton, 'حفظ');
+  Future<void> saveEditor(
+    WidgetTester tester, {
+    bool twice = false,
+    String label = 'حفظ الرصد',
+  }) async {
+    final button = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.widgetWithText(FilledButton, label),
+    );
     await tester.ensureVisible(button);
     final callback = tester.widget<FilledButton>(button).onPressed!;
     final persisted = Completer<void>();
@@ -204,7 +224,7 @@ void main() {
       if (twice) callback();
       await persisted.future.timeout(const Duration(seconds: 5));
       await Future<void>(() {});
-      await acknowledgeNotice(tester, message: 'حُفظت البيانات بنجاح.');
+      expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
       await tester.pumpAndSettle();
     } finally {
       store.removeListener(changed);
@@ -248,9 +268,13 @@ void main() {
     } else {
       expect(find.byKey(const Key('academic-activity-max')), findsNothing);
     }
-    await saveEditor(tester, twice: twice);
+    await saveEditor(
+      tester,
+      twice: twice,
+      label: kind == AcademicActivityKind.exam ? 'إضافة امتحان' : 'إضافة واجب',
+    );
     final activity = store.academicActivities.singleWhere(
-      (item) => item.name == name && item.sessionId == session.id,
+      (item) => item.name == name && item.appliesToSession(session),
     );
     expect(
       tester
@@ -263,6 +287,27 @@ void main() {
           .initialValue,
       activity.id,
     );
+    if (kind == AcademicActivityKind.homework) {
+      for (var attempt = 0; attempt < 100; attempt++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await tester.pump(const Duration(milliseconds: 20));
+        final code = tester.widget<TextField>(
+          find.byKey(const Key('academic-code-search')),
+        );
+        if (store.academics
+                    .where((record) => record.activityId == activity.id)
+                    .length ==
+                3 &&
+            code.enabled == true &&
+            code.focusNode!.hasFocus) {
+          break;
+        }
+      }
+      expect(
+        store.academics.where((record) => record.activityId == activity.id),
+        hasLength(3),
+      );
+    }
     expectCodeFocus(tester);
     return activity;
   }
@@ -400,7 +445,7 @@ void main() {
         expect(record(firstExam).homework, HomeworkStatus.notReviewed);
         expect(record(secondExam).score, isNull);
         expect(record(secondExam).examAbsent, isTrue);
-        expect(record(firstHomework).homework, HomeworkStatus.notReviewed);
+        expect(record(firstHomework).homework, HomeworkStatus.complete);
         expect(record(firstHomework).score, isNull);
         expect(record(secondHomework).homework, HomeworkStatus.incomplete);
         expect(
@@ -437,11 +482,11 @@ void main() {
         store = await CenterStore.open(directory: directory.path);
         await store.signIn('الرصد', 'test-password-2026');
         expect(store.academicActivities, hasLength(4));
-        expect(store.academics, hasLength(5));
+        expect(store.academics, hasLength(9));
         expect(record(firstExam).score, 0);
         expect(record(firstExam).notes, 'تمت مراجعة الصفر');
         expect(record(secondExam).examAbsent, isTrue);
-        expect(record(firstHomework).homework, HomeworkStatus.notReviewed);
+        expect(record(firstHomework).homework, HomeworkStatus.complete);
         expect(record(secondHomework).homework, HomeworkStatus.incomplete);
         expect(
           store.academics.singleWhere((row) => row.activityId == null).toJson(),
@@ -464,7 +509,13 @@ void main() {
             createdAt: DateTime.now().subtract(const Duration(days: 2)),
           ),
         );
-        final fresh = store.sessions.last;
+        final fresh = await prepareAcademicFixture(
+          store,
+          store.sessions.last,
+          store.students.where(
+            (student) => student.groupIds.contains(session.groupId),
+          ),
+        );
         await store.saveStaff(
           name: 'المساعد',
           password: 'assistant-academic-password',
@@ -475,11 +526,11 @@ void main() {
         await openPage(tester, dark: true, size: const Size(1280, 900));
         final sessionPicker = find.widgetWithText(
           DropdownButtonFormField<String>,
-          'اختر الحصة للرصد',
+          'الحصة المجهزة لكل المجموعات',
         );
         await tester.tap(sessionPicker);
         await tester.pumpAndSettle();
-        await tester.tap(find.textContaining('حصة 9 —').last);
+        await tester.tap(find.textContaining('9 ·').last);
         await tester.pumpAndSettle();
         session = fresh;
         expect(
@@ -499,7 +550,10 @@ void main() {
           find.byKey(const Key('academic-activity-name')),
           'مسودة ملغاة',
         );
-        await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+        await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
+        await tester.pumpAndSettle();
+        expect(find.text('الخروج بدون حفظ؟'), findsOneWidget);
+        await tester.tap(find.text('تجاهل التعديلات والخروج'));
         await tester.pumpAndSettle();
         expect(store.academicActivities, isEmpty);
         final exam = await create(
@@ -510,7 +564,7 @@ void main() {
           twice: true,
         );
         expect(store.academicActivities, hasLength(1));
-        expect(exam.sessionId, fresh.id);
+        expect(exam.preparedLessonId, fresh.preparedLessonId);
         expect(find.text('الرصد السابق للحصة'), findsNothing);
         expect(
           tester
@@ -524,13 +578,10 @@ void main() {
           store.academics.where((row) => row.activityId == exam.id),
           isEmpty,
         );
-        await acknowledgeNotice(
-          tester,
-          message: 'الاسم يطابق 2 طلبة. اختر الطالب من الجدول أو اكتب كوده.',
-        );
+        await cancelAcademicStudentChoice(tester);
         expect(find.byType(AlertDialog), findsNothing);
         await submit(tester, '102');
-        await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+        await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
         await tester.pumpAndSettle();
         expectCodeFocus(tester);
         expect(
@@ -550,7 +601,7 @@ void main() {
           tester
               .widget<DropdownButtonFormField<String>>(sessionPicker)
               .initialValue,
-          fresh.id,
+          fresh.preparedLessonId,
         );
         expect(tester.takeException(), isNull);
         await capture(tester, 'named-academics-exam-dark-1280');
@@ -559,12 +610,12 @@ void main() {
   );
 
   testWidgets(
-    'cashier can inspect a named result but cannot create or edit academic activities',
+    'cashier academic actions are available but logout disables creation and editing',
     (tester) async {
       await tester.runAsync(() async {
         final exam = await store.saveAcademicActivity(
           AcademicActivity(
-            sessionId: session.id,
+            preparedLessonId: session.preparedLessonId,
             kind: AcademicActivityKind.exam,
             name: 'نتيجة للعرض',
             maxScore: 12,
@@ -598,6 +649,15 @@ void main() {
           tester
               .widget<FilledButton>(find.byKey(const Key('add-academic-exam')))
               .onPressed,
+          isNotNull,
+        );
+        expect(store.canAssess, isTrue);
+        store.signOut();
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('add-academic-exam')))
+              .onPressed,
           isNull,
         );
         expect(
@@ -613,7 +673,7 @@ void main() {
         expect(find.text('8 / 12'), findsOneWidget);
         expect(
           tester
-              .widget<TextButton>(find.widgetWithText(TextButton, 'رصد'))
+              .widget<TextButton>(find.widgetWithText(TextButton, 'رصد').first)
               .onPressed,
           isNull,
         );
@@ -646,9 +706,13 @@ void main() {
         await saveEditor(tester);
         expect(
           store.academics
-              .singleWhere((row) => row.activityId == homework.id)
+              .singleWhere(
+                (row) =>
+                    row.activityId == homework.id &&
+                    row.studentId == store.students.first.id,
+              )
               .homework,
-          HomeworkStatus.notReviewed,
+          HomeworkStatus.complete,
         );
         await capture(tester, 'named-academics-homework-dark-1280');
         expect(tester.takeException(), isNull);
@@ -663,15 +727,23 @@ void main() {
             createdAt: DateTime.now().subtract(const Duration(days: 2)),
           ),
         );
+        await prepareAcademicFixture(store, store.sessions.last, const []);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.widgetWithText(
+            DropdownButtonFormField<String>,
+            'الحصة المجهزة لكل المجموعات',
+          ),
+        );
         await tester.pumpAndSettle();
         await tester.tap(
           find.widgetWithText(
             DropdownButtonFormField<String>,
-            'اختر الحصة للرصد',
+            'الحصة المجهزة لكل المجموعات',
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.textContaining('حصة 9 —').last);
+        await tester.tap(find.textContaining('9 ·').last);
         await tester.pumpAndSettle();
         expect(
           find.byKey(const Key('selected-academic-activity')),
@@ -684,14 +756,21 @@ void main() {
               .enabled,
           isFalse,
         );
-        await tester.tap(
+        await tester.ensureVisible(
           find.widgetWithText(
             DropdownButtonFormField<String>,
-            'اختر الحصة للرصد',
+            'الحصة المجهزة لكل المجموعات',
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.textContaining('حصة 8 —').last);
+        await tester.tap(
+          find.widgetWithText(
+            DropdownButtonFormField<String>,
+            'الحصة المجهزة لكل المجموعات',
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.textContaining('8 ·').last);
         await tester.pumpAndSettle();
         expect(
           tester

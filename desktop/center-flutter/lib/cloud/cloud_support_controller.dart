@@ -1,3 +1,4 @@
+import '../shared/performance_trace.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -12,6 +13,12 @@ import '../shared/app_build_metadata.dart';
 import '../shared/problem_log.dart';
 import 'cloud_support_settings.dart';
 
+typedef _SupportObservation = ({
+  CloudSupportConfiguration configuration,
+  String revision,
+  String diagnosticsAndApp,
+});
+
 /// A queued snapshot stays immutable until the server acknowledges its own ID.
 class CloudSupportController extends ChangeNotifier {
   CloudSupportController({
@@ -19,13 +26,18 @@ class CloudSupportController extends ChangeNotifier {
     required Future<String> Function() diagnostics,
     required Directory directory,
     required this.clientOnly,
+    Future<String> Function()? snapshotRevision,
     HttpClient Function()? httpClientFactory,
   }) : _snapshot = snapshot,
+       _snapshotRevision = snapshotRevision,
        _diagnostics = diagnostics,
        _httpClientFactory = httpClientFactory ?? HttpClient.new,
        _settings = CloudSupportSettings(directory, diagnosticsOnly: clientOnly);
 
   final Future<Map<String, dynamic>> Function() _snapshot;
+  // The source token must include every snapshot-affecting write, including
+  // durable command receipts. Without one, automatic checks capture fully.
+  final Future<String> Function()? _snapshotRevision;
   final Future<String> Function() _diagnostics;
   final CloudSupportSettings _settings;
   final HttpClient Function() _httpClientFactory;
@@ -36,8 +48,10 @@ class CloudSupportController extends ChangeNotifier {
   Future<void>? _initialization, _queueOperation, _operation;
   Timer? _retryTimer, _automaticTimer;
   String? _lastFingerprint, _pendingFingerprint;
+  _SupportObservation? _lastObservation, _pendingObservation;
   HttpClient? _httpClient;
   bool _busy = false, _closed = false, _storageBlocked = false;
+  bool _automaticQueue = false, _automaticOperation = false;
   int _attempts = 0;
   int? _lastHttpStatus;
   String? _lastError;
@@ -148,6 +162,7 @@ class CloudSupportController extends ChangeNotifier {
         _receipt = null;
       }
       _configuration = candidate;
+      _lastObservation = null;
       _lastError = null;
       _lastHttpStatus = null;
       _attempts = 0;
@@ -193,7 +208,13 @@ class CloudSupportController extends ChangeNotifier {
   }
 
   Future<void> _ensureQueued({bool automatic = false}) {
-    if (_queueOperation != null) return _queueOperation!;
+    if (_queueOperation != null) {
+      if (!automatic && _automaticQueue && _pending == null) {
+        return _queueOperation!.then((_) => _ensureQueued());
+      }
+      return _queueOperation!;
+    }
+    _automaticQueue = automatic;
     final queued = _prepareUpload(
       automatic: automatic,
     ).whenComplete(() => _queueOperation = null);
@@ -237,9 +258,17 @@ class CloudSupportController extends ChangeNotifier {
   }
 
   Future<void> syncNow({bool automatic = false}) {
-    if (_operation != null) return _operation!;
-    final sending = _sync(
-      automatic: automatic,
+    if (_operation != null) {
+      if (!automatic && _automaticOperation && _pending == null) {
+        return _operation!.then((_) => syncNow());
+      }
+      return _operation!;
+    }
+    _automaticOperation = automatic;
+    final sending = PerformanceTrace.measureAsync(
+      'cloud.upload',
+      () => _sync(automatic: automatic),
+      budgetMs: 1000,
     ).whenComplete(() => _operation = null);
     _operation = sending;
     return sending;
@@ -286,14 +315,38 @@ class CloudSupportController extends ChangeNotifier {
     // locally without recapturing or inventing a second upload.
     await _saveStatus();
     await _settings.removePending(receipt.uploadId);
+    // A retry acknowledges the original capture, never the current revision.
+    // Restored pending uploads have no runtime observation and recheck fully.
+    _lastObservation = _pendingObservation;
     _pending = null;
     _pendingFingerprint = null;
+    _pendingObservation = null;
   }
 
-  Future<PendingSupportUpload?> _capture({bool skipUnchanged = false}) async {
+  Future<PendingSupportUpload?> _capture({bool skipUnchanged = false}) =>
+      PerformanceTrace.measureAsync(
+        'cloud.snapshot',
+        () => _captureSnapshot(skipUnchanged: skipUnchanged),
+        budgetMs: 250,
+      );
+
+  Future<PendingSupportUpload?> _captureSnapshot({
+    bool skipUnchanged = false,
+  }) async {
     final configuration = _configuration!;
-    final snapshot = clientOnly ? null : await _snapshot();
     final diagnostics = await _diagnostics();
+    final observation = await _observeSupportSource(configuration, diagnostics);
+    _ensureOpen();
+    if (skipUnchanged &&
+        observation != null &&
+        observation == _lastObservation) {
+      return null;
+    }
+    final snapshot = clientOnly ? null : await _snapshot();
+    final capturedObservation =
+        observation != null && observation.revision == await _sourceRevision()
+        ? observation
+        : null;
     _ensureOpen();
     final createdAt = DateTime.now().toUtc();
     final uploadId = const Uuid().v4();
@@ -306,7 +359,10 @@ class CloudSupportController extends ChangeNotifier {
     ));
     _ensureOpen();
     final body = prepared.body;
-    if (body == null) return null;
+    if (body == null) {
+      _lastObservation = capturedObservation;
+      return null;
+    }
     final pending = PendingSupportUpload(
       uploadId: uploadId,
       origin: configuration.origin,
@@ -316,8 +372,35 @@ class CloudSupportController extends ChangeNotifier {
     );
     await _settings.savePending(pending);
     _pendingFingerprint = prepared.fingerprint;
+    _pendingObservation = capturedObservation;
     return pending;
   }
+
+  Future<_SupportObservation?> _observeSupportSource(
+    CloudSupportConfiguration configuration,
+    String diagnostics,
+  ) async {
+    if (!clientOnly && _snapshotRevision == null) return null;
+    final fingerprint = await compute(_fingerprintSupportEnvelope, {
+      'diagnostics': diagnostics,
+      'app': _applicationIdentity,
+    });
+    return (
+      configuration: configuration,
+      revision: (await _sourceRevision())!,
+      diagnosticsAndApp: fingerprint,
+    );
+  }
+
+  Future<String?> _sourceRevision() async =>
+      clientOnly ? 'diagnostics-only' : await _snapshotRevision?.call();
+
+  Map<String, String> get _applicationIdentity => {
+    'version': AppBuildMetadata.version,
+    'build': AppBuildMetadata.buildIdentifier,
+    'role': clientOnly ? 'client' : 'host',
+    'os': Platform.operatingSystem,
+  };
 
   Map<String, dynamic> _envelope(
     CloudSupportConfiguration configuration,
@@ -330,12 +413,7 @@ class CloudSupportController extends ChangeNotifier {
     'uploadId': identity.uploadId,
     'centerId': configuration.centerId,
     'createdAt': identity.createdAt.toIso8601String(),
-    'app': {
-      'version': AppBuildMetadata.version,
-      'build': AppBuildMetadata.buildIdentifier,
-      'role': clientOnly ? 'client' : 'host',
-      'os': Platform.operatingSystem,
-    },
+    'app': _applicationIdentity,
     'data': snapshot,
     'diagnostics': diagnostics,
   };
@@ -358,26 +436,49 @@ class CloudSupportController extends ChangeNotifier {
     PendingSupportUpload pending,
     String token,
   ) async {
-    final request = await client.postUrl(pending.origin.resolve('/v1/uploads'));
-    request.followRedirects = false;
-    request.headers.set(
-      HttpHeaders.userAgentHeader,
-      'Massar-Center/${AppBuildMetadata.version}',
-    );
-    request.maxRedirects = 0;
-    request.headers.contentType = ContentType.json;
-    request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-    final bytes = utf8.encode(pending.body);
-    request.contentLength = bytes.length;
-    request.add(bytes);
-    final response = await request.close();
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw _UploadFailure(
-        _httpError(response.statusCode),
-        response.statusCode,
+    final trace = PerformanceTrace('cloud.transfer', budgetMs: 1000);
+    var failed = true;
+    try {
+      final encoded = await compute(_encodeSupportTransfer, pending.body);
+      _ensureOpen();
+      trace.counts.addAll({
+        'rawBytes': encoded.rawBytes,
+        'wireBytes': encoded.bytes.length,
+      });
+      trace.stage('encode');
+      final request = await client.postUrl(
+        pending.origin.resolve('/v1/uploads'),
       );
+      trace.stage('connect');
+      request.followRedirects = false;
+      request.headers.set(
+        HttpHeaders.userAgentHeader,
+        'Massar-Center/${AppBuildMetadata.version}',
+      );
+      request.maxRedirects = 0;
+      request.headers.contentType = ContentType.json;
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      if (encoded.compressed) {
+        request.headers.set(HttpHeaders.contentEncodingHeader, 'gzip');
+      }
+      request.contentLength = encoded.bytes.length;
+      request.add(encoded.bytes);
+      final response = await request.close();
+      trace.stage('write');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw _UploadFailure(
+          _httpError(response.statusCode),
+          response.statusCode,
+        );
+      }
+      final receipt = await _readReceipt(response, pending.uploadId);
+      trace.stage('receive');
+      failed = false;
+      return receipt;
+    } finally {
+      trace.stage('work');
+      trace.finish(failed: failed);
     }
-    return _readReceipt(response, pending.uploadId);
   }
 
   Future<SupportUploadReceipt> _readReceipt(
@@ -482,7 +583,7 @@ class CloudSupportController extends ChangeNotifier {
       return;
     }
     unawaited(
-      syncNow().catchError((Object error, StackTrace stack) {
+      syncNow(automatic: true).catchError((Object error, StackTrace stack) {
         // The failed attempt is reported and retained by syncNow; timer errors
         // must not escape into Flutter's event loop.
         if (error is! CenterException) _log(error, stack, 'cloud.upload');
@@ -562,11 +663,6 @@ class CloudSupportController extends ChangeNotifier {
   ({Map<String, dynamic> envelope, String? previousFingerprint}) capture,
 ) {
   final envelope = capture.envelope;
-  if (utf8.encode(envelope['diagnostics'] as String).length > 6 * 1024 * 1024) {
-    throw const _UploadFailure(
-      'سجل المشاكل أكبر من الحد المسموح. لم تُحذف أو تُختصر سجلاتك تلقائيًا.',
-    );
-  }
   final fingerprint = _fingerprintSupportEnvelope(envelope);
   if (fingerprint == capture.previousFingerprint) {
     return (body: null, fingerprint: fingerprint);
@@ -583,24 +679,44 @@ class CloudSupportController extends ChangeNotifier {
 String _fingerprintSupportBody(String body) =>
     _fingerprintSupportEnvelope(jsonDecode(body) as Map<String, dynamic>);
 
-String _fingerprintSupportEnvelope(Map<String, dynamic> envelope) => sha256
-    .convert(
-      utf8.encode(
-        jsonEncode({
-          'data': (envelope['data'] as Map?)?['data'],
-          'commands': (envelope['data'] as Map?)?['lanCommandReceipts'],
-          'diagnostics': _diagnosticContent(envelope['diagnostics'] as String),
-          'app': envelope['app'],
-        }),
-      ),
-    )
-    .toString();
+String _fingerprintSupportEnvelope(Map<String, dynamic> envelope) {
+  if (utf8.encode(envelope['diagnostics'] as String).length > 6 * 1024 * 1024) {
+    throw const _UploadFailure(
+      'سجل المشاكل أكبر من الحد المسموح. لم تُحذف أو تُختصر سجلاتك تلقائيًا.',
+    );
+  }
+  return sha256
+      .convert(
+        utf8.encode(
+          jsonEncode({
+            'data': (envelope['data'] as Map?)?['data'],
+            'commands': (envelope['data'] as Map?)?['lanCommandReceipts'],
+            'diagnostics': _diagnosticContent(
+              envelope['diagnostics'] as String,
+            ),
+            'app': envelope['app'],
+          }),
+        ),
+      )
+      .toString();
+}
 
 List<String> _diagnosticContent(String text) =>
     const LineSplitter().convert(text).where((line) {
       try {
         final event = jsonDecode(line);
-        return event is! Map || event['kind'] != 'export';
+        if (event is! Map) return true;
+        if (event['kind'] == 'export') return false;
+        // Uploading must not produce a successful timing that triggers another
+        // full upload forever. These events still travel with the next real
+        // data/diagnostic change or a manual upload; failed timings remain new.
+        return !(event['kind'] == 'performance' &&
+            event['outcome'] == 'completed' &&
+            const {
+              'cloud.upload',
+              'cloud.transfer',
+              'cloud.snapshot',
+            }.contains(event['operation']));
       } on FormatException {
         return true;
       }
@@ -610,4 +726,19 @@ class _UploadFailure implements Exception {
   const _UploadFailure(this.message, [this.httpStatus]);
   final String message;
   final int? httpStatus;
+}
+
+// Run encoding outside the reception isolate; the persisted queue remains raw
+// JSON with its original ID, so retries and upgrades cannot recapture the data.
+({List<int> bytes, int rawBytes, bool compressed}) _encodeSupportTransfer(
+  String body,
+) {
+  final raw = utf8.encode(body);
+  final packed = gzip.encode(raw);
+  final compressed = packed.length < raw.length;
+  return (
+    bytes: compressed ? packed : raw,
+    rawBytes: raw.length,
+    compressed: compressed,
+  );
 }

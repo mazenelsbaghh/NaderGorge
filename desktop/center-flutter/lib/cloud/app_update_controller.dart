@@ -1,3 +1,4 @@
+import '../shared/performance_trace.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
@@ -134,11 +135,16 @@ class AppUpdateController extends ChangeNotifier {
   Future<void> checkNow() {
     if (_closed) return Future<void>.value();
     _timer?.cancel();
-    return _checkingFuture ??= _check().whenComplete(() {
-      _checkingFuture = null;
-      _schedule();
-      _notify();
-    });
+    return _checkingFuture ??=
+        PerformanceTrace.measureAsync(
+          'cloud.updates',
+          _check,
+          budgetMs: 1000,
+        ).whenComplete(() {
+          _checkingFuture = null;
+          _schedule();
+          _notify();
+        });
   }
 
   Future<void> _check() async {
@@ -345,6 +351,15 @@ class AppUpdateController extends ChangeNotifier {
   }
 
   Future<void> _download(
+    CloudSupportConfiguration configuration,
+    _UpdateManifest manifest,
+  ) => PerformanceTrace.measureAsync(
+    'cloud.updates',
+    () => _downloadArchive(configuration, manifest),
+    budgetMs: 1000,
+  );
+
+  Future<void> _downloadArchive(
     CloudSupportConfiguration configuration,
     _UpdateManifest manifest,
   ) async {

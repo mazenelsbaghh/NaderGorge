@@ -50,11 +50,12 @@ extension _BundledCenterDataRepair on CenterStore {
           );
         }
         validateState(candidate);
-        await _saveAutomaticBackup();
+        await _saveAutomaticBackup(_state.copyForBackup());
         await _database!.transaction((transaction) async {
-          final count = await transaction.update('state', {
-            'payload': jsonEncode(candidate.toJson()),
-          }, where: 'id = 1');
+          final count = await replaceRecordState(
+            transaction,
+            _stateEncoder.encodeStorageFields(candidate),
+          );
           if (count != 1) throw const FormatException('Historical import save');
         });
         _state = candidate;
@@ -200,11 +201,14 @@ extension _BundledCenterDataRepair on CenterStore {
         _verifyRepairFields(candidate.toJson(), patch);
         candidate.appliedDataRepairs.add(repairId!);
         validateState(candidate);
-        if (_state.staff.isNotEmpty) await _saveAutomaticBackup();
+        if (_state.staff.isNotEmpty) {
+          await _saveAutomaticBackup(_state.copyForBackup());
+        }
         await _database!.transaction((transaction) async {
-          final updated = await transaction.update('state', {
-            'payload': jsonEncode(candidate.toJson()),
-          }, where: 'id = 1');
+          final updated = await replaceRecordState(
+            transaction,
+            _stateEncoder.encodeStorageFields(candidate),
+          );
           if (updated != 1) {
             throw const CenterException(
               'لم يُحفظ الإصلاح؛ البيانات الأصلية محفوظة.',

@@ -92,8 +92,7 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         answer.SelectedOptionId = question.Type == (int)QuestionType.MCQ ? option?.Id : null;
         answer.SubmittedText = question.Type == (int)QuestionType.MCQ ? option?.Text
             : question.Type == (int)QuestionType.FindTheMistake ? provided?.SelectedText?.Trim() : provided?.AnswerText?.Trim();
-        var hasAnswer = !string.IsNullOrWhiteSpace(answer.SubmittedText)
-            || (question.Type == (int)QuestionType.Essay && !string.IsNullOrWhiteSpace(provided?.AudioUrl));
+        var hasAnswer = !string.IsNullOrWhiteSpace(answer.SubmittedText);
         var points = expired || !hasAnswer ? 0 : AssessmentAttemptRegrader.AutomaticGrade(question,
             new(question.Id, answer.SubmittedText, answer.SelectedOptionId, null, false), "exam");
         answer.PointsAwarded = points ?? 0;
@@ -107,7 +106,7 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         var essay = new EssaySubmission
         {
             StudentExamAttemptId = attempt.Id, StudentId = attempt.UserId, QuestionId = question.BankQuestionId,
-            AnswerText = provided?.AnswerText?.Trim() ?? string.Empty, AudioUrl = provided?.AudioUrl?.Trim(),
+            AnswerText = provided?.AnswerText?.Trim() ?? string.Empty,
             Status = points is null ? EssaySubmissionStatus.WaitAI : EssaySubmissionStatus.TeacherGraded,
             TeacherFinalScore = points
         };

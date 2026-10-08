@@ -53,6 +53,8 @@ void main() {
     await store.saveSession(
       LessonSession(
         groupId: store.groups.single.id,
+        monthNumber: store.studyMonths.first.number,
+        preparedLessonId: store.studyMonths.first.lessons.first.id,
         number: 1,
         startsAt: DateTime.now().add(const Duration(minutes: 1)),
         createdAt: DateTime.now(),
@@ -80,7 +82,7 @@ void main() {
     );
     try {
       await connection.execute(
-        "CREATE TRIGGER reject_problem_entry BEFORE UPDATE ON state "
+        "CREATE TRIGGER reject_problem_entry BEFORE INSERT ON state_records "
         "BEGIN SELECT RAISE(ABORT, '$privateError'); END",
       );
     } finally {
@@ -99,9 +101,7 @@ void main() {
 
   Future<String> exportedDiagnostics() async {
     // Export itself must await records queued by the unawaited reporting bridge.
-    final path = await log.exportTo(
-      '${directory.path}/diagnostics-export.txt',
-    );
+    final path = await log.exportTo('${directory.path}/diagnostics-export.txt');
     return File(path).readAsString();
   }
 
@@ -142,6 +142,13 @@ void main() {
       expect(exported, contains('"auth.sign_in"'));
       expect(exported, isNot(contains('PRIVATE-unknown-user-fixture')));
       expectPrivateDataAbsent(exported);
+      // Remove the injected disk-write fault before testing a healthy reopen.
+      final recovered = await databaseFactoryFfi.openDatabase(
+        store.databasePath,
+        options: OpenDatabaseOptions(singleInstance: false),
+      );
+      await recovered.execute('DROP TRIGGER reject_problem_entry');
+      await recovered.close();
       await store.close();
       store = await CenterStore.open(directory: '${directory.path}/center');
       await store.signIn('fixture-manager', privatePassword);

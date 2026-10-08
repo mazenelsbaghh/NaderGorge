@@ -1,4 +1,5 @@
 import { parseWritingContext } from './services/mimSceneWriter.js';
+import { installMimEpisodeRoutes } from './server/mimEpisodeRoutes.js';
 import { generateMimStudioScene } from './services/geminiService.js';
 import { installAIProviderMonitor } from './services/aiProviderMonitor.js';
 import { generateVideoLearning } from './services/geminiService.js';
@@ -416,9 +417,10 @@ async function startWorker() {
   if (process.env.NODE_ENV !== 'production') {
     app.use(cors({ origin: process.env.WORKER_ALLOWED_ORIGIN || 'http://localhost:8738' }));
   }
-  app.use('/internal/mim-studio/scene', express.json({ limit: '250kb' }));
+  app.use('/internal/mim-studio/scene', express.json({ limit: '2mb' }));
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
+  installMimEpisodeRoutes(app, workerAdminGuard);
 
   app.post('/internal/mim-studio/scene', workerAdminGuard, async (req, res) => {
     let context;

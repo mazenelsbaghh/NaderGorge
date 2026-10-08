@@ -99,53 +99,35 @@ class StudentHistoryPanel extends StatelessWidget {
     return '${_attendanceLabel(record)} · $account';
   }
 
-  String _makeupLabel(AttendanceRecord record) {
+  String _makeupLabel(AttendanceRecord record, _HistoryLinks links) {
     if (record.makeupSourceGroupId != null) {
       return 'من ${store.groupLabel(record.makeupSourceGroupId!)}';
     }
-    if (store.attendances.any(
-      (item) => item.originalAttendanceId == record.id,
-    )) {
+    if (links.madeUpAttendanceIds.contains(record.id)) {
       return 'تم التعويض';
     }
     if (record.originalAttendanceId != null) {
-      final originals = store.attendances.where(
-        (item) => item.id == record.originalAttendanceId,
-      );
-      return originals.isEmpty
+      final original = links.activeAttendanceById[record.originalAttendanceId];
+      return original == null
           ? 'تعويض'
-          : 'عن ${_sessionLabel(originals.first.sessionId)}';
+          : 'عن ${_sessionLabel(original.sessionId)}';
     }
     return record.status == AttendanceStatus.absent && record.packageId != null
         ? 'غياب محسوب من الشهر'
         : '—';
   }
 
-  PaymentRecord? _attendancePayment(AttendanceRecord record) {
-    var packageId = record.packageId;
-    if (packageId == null && record.originalAttendanceId != null) {
-      packageId = store.allAttendances
-          .where((original) => original.id == record.originalAttendanceId)
-          .firstOrNull
-          ?.packageId;
-    }
+  PaymentRecord? _attendancePayment(
+    AttendanceRecord record,
+    _HistoryLinks links,
+  ) {
+    final packageId =
+        record.packageId ??
+        links.allAttendanceById[record.originalAttendanceId]?.packageId;
     if (packageId != null) {
-      final paymentId = store.allPackages
-          .where((package) => package.id == packageId)
-          .firstOrNull
-          ?.paymentId;
-      return store.payments
-          .where((payment) => payment.id == paymentId)
-          .firstOrNull;
+      return links.activePaymentsById[links.packagePaymentIds[packageId]];
     }
-    return store.payments
-        .where(
-          (payment) =>
-              payment.studentId == record.studentId &&
-              payment.sessionId == record.sessionId &&
-              payment.packageId == null,
-        )
-        .firstOrNull;
+    return links.singlePaymentsBySession[record.sessionId];
   }
 
   String _collectionStatus(int due, int collected, int remaining) {
@@ -163,10 +145,10 @@ class StudentHistoryPanel extends StatelessWidget {
         )
       : 'ملغاة';
 
-  String _accountLabel(AttendanceRecord record) {
+  String _accountLabel(AttendanceRecord record, _HistoryLinks links) {
     if (record.packageMember) return 'باكدج — دون تحصيل';
     if (record.paymentPending) return 'حضور محفوظ — غير مدفوع';
-    final payment = _attendancePayment(record);
+    final payment = _attendancePayment(record, links);
     if (payment != null) {
       final status = _collectionStatus(
         payment.netAmount,
@@ -550,6 +532,7 @@ class StudentHistoryPanel extends StatelessWidget {
 
   Widget _buildHistory(BuildContext context) {
     final history = store.studentHistoryFor(student.id);
+    final links = _HistoryLinks(history, store);
     final attendance = history.attendances.toList()
       ..sort((a, b) {
         final first = _session(a.sessionId);
@@ -591,9 +574,7 @@ class StudentHistoryPanel extends StatelessWidget {
           ..sort(
             (first, second) => second.createdAt.compareTo(first.createdAt),
           );
-    final allAttendanceById = {
-      for (final record in history.allAttendances) record.id: record,
-    };
+    final allAttendanceById = links.allAttendanceById;
     final activitiesById = history.activitiesById;
     final examRecords = academics
         .where(
@@ -664,8 +645,8 @@ class StudentHistoryPanel extends StatelessWidget {
                       AttendanceStatus.makeup => 'معوّض',
                       AttendanceStatus.absent => 'غائب',
                     },
-              if (store.canCollect) _accountLabel(record),
-              if (expanded) _makeupLabel(record),
+              if (store.canCollect) _accountLabel(record, links),
+              if (expanded) _makeupLabel(record, links),
             ],
           )
           .toList(),
@@ -1031,9 +1012,7 @@ class StudentHistoryPanel extends StatelessWidget {
                   'الموظف',
                 ],
                 settlements.map((p) {
-                  final invoice = payments
-                      .where((payment) => payment.id == p.paymentId)
-                      .firstOrNull;
+                  final invoice = links.paymentsById[p.paymentId];
                   return [
                     _paymentTime(p.createdAt),
                     p.kind == DebtKind.card
@@ -1142,4 +1121,44 @@ class StudentHistoryPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+// Built from the current snapshot on every refresh; canceled history and active
+// coverage stay separate so a refund cannot become a valid attendance payment.
+class _HistoryLinks {
+  _HistoryLinks(StudentHistoryRecords history, this.store)
+    : activeAttendanceById = {
+        for (final record in history.attendances) record.id: record,
+      },
+      allAttendanceById = {
+        for (final record in history.allAttendances) record.id: record,
+      },
+      madeUpAttendanceIds = {
+        for (final record in history.attendances)
+          if (record.originalAttendanceId != null) record.originalAttendanceId!,
+      },
+      paymentsById = {
+        for (final payment in history.payments) payment.id: payment,
+      },
+      activePaymentsById = {
+        for (final payment in history.payments)
+          if (history.activePaymentIds.contains(payment.id))
+            payment.id: payment,
+      } {
+    // The original first matching payment wins when historical records overlap.
+    for (final payment in activePaymentsById.values) {
+      if (payment.packageId == null && payment.sessionId != null) {
+        singlePaymentsBySession.putIfAbsent(payment.sessionId!, () => payment);
+      }
+    }
+  }
+
+  final Map<String, AttendanceRecord> activeAttendanceById, allAttendanceById;
+  final Set<String> madeUpAttendanceIds;
+  final Map<String, PaymentRecord> paymentsById, activePaymentsById;
+  final CenterStore store;
+  late final packagePaymentIds = {
+    for (final package in store.allPackages) package.id: package.paymentId,
+  };
+  final singlePaymentsBySession = <String, PaymentRecord>{};
 }

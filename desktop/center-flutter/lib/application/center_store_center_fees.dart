@@ -170,7 +170,7 @@ extension CenterStoreCenterFees on CenterStore {
   });
 
   AttendanceRecord? _centerOnlyAttendance(String studentId, String sessionId) =>
-      _activeAttendances
+      _attendancesForStudent(studentId)
           .where(
             (entry) =>
                 entry.studentId == studentId &&
@@ -180,7 +180,7 @@ extension CenterStoreCenterFees on CenterStore {
           .firstOrNull;
 
   int _centerFeeTotalDue(String studentId, String sessionId) {
-    final invoices = _state.centerFees.where(
+    final invoices = centerFeesFor(studentId, sessionId).where(
       (fee) =>
           fee.studentId == studentId &&
           fee.sessionId == sessionId &&
@@ -197,10 +197,10 @@ extension CenterStoreCenterFees on CenterStore {
         : 0;
   }
 
-  int _centerFeeCollected(String studentId, String sessionId) => _state
-      .centerFees
-      .where((fee) => fee.studentId == studentId && fee.sessionId == sessionId)
-      .fold<int>(0, (sum, fee) => sum + fee.paidAmount);
+  int _centerFeeCollected(String studentId, String sessionId) => centerFeesFor(
+    studentId,
+    sessionId,
+  ).fold<int>(0, (sum, fee) => sum + fee.paidAmount);
 
   int _centerFeeDue(Student student, String sessionId) =>
       centerFeeRemainingFor(student.id, sessionId);

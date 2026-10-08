@@ -36,6 +36,15 @@ class ProblemLog {
     'printing',
     'ui_operation',
     'unknown_operation',
+    'ui.frame',
+    'ui.event_loop',
+    'reports.build',
+    'reports.search',
+    'academic.import.read',
+    'academic.import.match',
+    'academic.import.scope',
+    'database.migrate',
+    'lan.decode',
     'flutter.framework',
     'flutter.platform',
     'flutter.zone',
@@ -67,7 +76,9 @@ class ProblemLog {
     'ui.sessions_page',
     'ui.backup_page',
     'cloud.upload',
+    'cloud.transfer',
     'cloud.snapshot',
+    'cloud.revision',
     'cloud.settings',
     'cloud.initialize',
     'cloud.updates',
@@ -277,6 +288,50 @@ class ProblemLog {
   Future<void> _tail = Future<void>.value();
   final _failure = ValueNotifier<String?>(null);
   bool _sessionStarted = false;
+  int _revision = 0;
+  int get revision => _revision;
+  String? _savedSignature;
+  List<Map<String, Object?>>? _savedCache;
+  static const _performancePhases = {
+    'queue',
+    'copy',
+    'work',
+    'validate',
+    'encode',
+    'sqlite',
+    'notify',
+    'capture',
+    'write',
+    'prune',
+    'connect',
+    'response',
+    'receive',
+    'decode',
+    'apply',
+    'build',
+    'raster',
+    'match',
+    'scope',
+    'export',
+    'hash',
+  };
+  static const _performanceCounts = {
+    'students',
+    'attendances',
+    'payments',
+    'closings',
+    'rows',
+    'bytes',
+    'rawBytes',
+    'wireBytes',
+    'sections',
+    'records',
+    'full',
+    'delta',
+    'repeats',
+  };
+  final _performanceLastAt = <String, DateTime>{};
+  final _performanceRepeats = <String, int>{};
 
   String get directoryPath => _directory.path;
   String? get writeFailure => _failure.value;
@@ -320,6 +375,46 @@ class ProblemLog {
     });
   }
 
+  Future<void> recordPerformance({
+    required String operation,
+    required int durationUs,
+    required int budgetMs,
+    Map<String, int> phasesUs = const {},
+    Map<String, int> counts = const {},
+    bool failed = false,
+  }) {
+    if (!_operations.contains(operation) ||
+        durationUs < budgetMs * 1000 ||
+        budgetMs <= 0) {
+      return Future<void>.value();
+    }
+    final now = DateTime.now().toUtc();
+    final previous = _performanceLastAt[operation];
+    if (previous != null && now.difference(previous).inSeconds < 5) {
+      _performanceRepeats[operation] =
+          (_performanceRepeats[operation] ?? 0) + 1;
+      return Future<void>.value();
+    }
+    _performanceLastAt[operation] = now;
+    final repeats = _performanceRepeats.remove(operation) ?? 0;
+    final entry = _event('performance', operation)
+      ..['durationUs'] = durationUs.clamp(0, 86400000000)
+      ..['budgetMs'] = budgetMs.clamp(1, 86400000)
+      ..['outcome'] = failed ? 'failed' : 'completed'
+      ..['phasesUs'] = _safeMetrics(phasesUs, _performancePhases)
+      ..['counts'] = _safeMetrics({
+        ...counts,
+        'repeats': repeats,
+      }, _performanceCounts);
+    return _enqueue(() => _writeSafely(entry));
+  }
+
+  static Map<String, int> _safeMetrics(Map metrics, Set<String> allowed) => {
+    for (final name in allowed)
+      if (metrics[name] is int && (metrics[name] as int) >= 0)
+        name: (metrics[name] as int).clamp(0, 86400000000),
+  };
+
   Future<void> flush() => _tail;
 
   Future<String> exportTo(String destination) => _enqueue(() async {
@@ -354,7 +449,7 @@ class ProblemLog {
       'build': AppBuildMetadata.buildIdentifier,
       'role': AppBuildMetadata.role,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
-      'privacy': 'types_codes_app_frames_only',
+      'privacy': 'types_codes_app_frames_timings_counts_only',
       'eventCount': entries.length,
     };
     return '${[header, ...entries].map(jsonEncode).join('\n')}\n';
@@ -437,6 +532,7 @@ class ProblemLog {
       }
       await currentFile.writeAsString(line, mode: FileMode.append, flush: true);
       _failure.value = null;
+      _revision++;
     } catch (_) {
       _failure.value = 'تعذر كتابة سجل المشاكل المحلي.';
     }
@@ -468,6 +564,18 @@ class ProblemLog {
   }
 
   Future<List<Map<String, Object?>>> _savedEntries() async {
+    final stamps = <String>[];
+    for (var index = 0; index < _fileCount; index++) {
+      final file = await _managedFile(index);
+      final stat = await file.stat();
+      stamps.add(
+        '${stat.type}:${stat.size}:${stat.modified.microsecondsSinceEpoch}',
+      );
+    }
+    final signature = stamps.join('|');
+    if (_savedSignature == signature && _savedCache != null) {
+      return _savedCache!;
+    }
     final entries = <Map<String, Object?>>[];
     for (var index = _fileCount - 1; index >= 0; index--) {
       final file = await _managedFile(index);
@@ -487,7 +595,8 @@ class ProblemLog {
         }
       }
     }
-    return entries;
+    _savedSignature = signature;
+    return _savedCache = List.unmodifiable(entries);
   }
 
   static bool _supportsIdentity(Object error) =>
@@ -562,7 +671,7 @@ class ProblemLog {
   static Map<String, Object?>? _sanitizedSavedEntry(Object? decoded) {
     if (decoded is! Map ||
         decoded['schema'] != 1 ||
-        !['session', 'error'].contains(decoded['kind'])) {
+        !['session', 'error', 'performance'].contains(decoded['kind'])) {
       return null;
     }
     final id = decoded['id'],
@@ -608,6 +717,31 @@ class ProblemLog {
           ? operation
           : 'unknown_operation',
     };
+    if (decoded['kind'] == 'performance') {
+      final duration = decoded['durationUs'], budget = decoded['budgetMs'];
+      if (duration is! int ||
+          duration < 0 ||
+          duration > 86400000000 ||
+          budget is! int ||
+          budget <= 0 ||
+          budget > 86400000 ||
+          !['failed', 'completed'].contains(decoded['outcome'])) {
+        return null;
+      }
+      entry.addAll({
+        'durationUs': duration,
+        'budgetMs': budget,
+        'outcome': decoded['outcome'],
+        'phasesUs': _safeMetrics(
+          decoded['phasesUs'] is Map ? decoded['phasesUs'] as Map : {},
+          _performancePhases,
+        ),
+        'counts': _safeMetrics(
+          decoded['counts'] is Map ? decoded['counts'] as Map : {},
+          _performanceCounts,
+        ),
+      });
+    }
     if (decoded['kind'] == 'error') {
       final errors = decoded['errors'];
       if (errors is! List || errors.isEmpty) return null;

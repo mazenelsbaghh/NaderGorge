@@ -38,6 +38,54 @@ void main() {
   CenterState readFull(Map<String, dynamic> snapshot) =>
       CenterState.fromJson({...snapshot, 'credentials': <String, dynamic>{}});
 
+  test(
+    'deferred snapshots stay frozen after mutation and history eviction',
+    () {
+      final encoder = CenterStateEncoder();
+      final original = deltaFixture()
+        ..appliedDataRepairs = ['first-repair']
+        ..groups = [
+          StudyGroup(
+            id: 'group',
+            name: 'مجموعة',
+            subjectId: 'subject',
+            centerId: 'center',
+            gradeId: 'grade',
+            monthPlans: [],
+          ),
+        ];
+      final expected =
+          jsonDecode(jsonEncode(original.toJson())) as Map<String, dynamic>;
+      final storage = encoder.encodeStorageFields(original);
+      final public = encoder.encodePublicChanges(
+        original,
+        'original',
+      )['state']!;
+      original.students.clear();
+      original.appliedDataRepairs.add('later-repair');
+      original.credentials['staff']!['hash'] = 'later-private-marker';
+      original.groups.single.monthPlans.add(
+        const GroupMonthPlan(
+          id: 'month',
+          name: 'شهر',
+          sessions: 4,
+          price: 21000,
+        ),
+      );
+      for (var version = 0; version < 6; version++) {
+        encoder.encodePublicChanges(original, 'later-$version');
+      }
+      expect(
+        storage.map((key, json) => MapEntry(key, jsonDecode(json))),
+        expected,
+      );
+      expect(() => storage['students'] = '[]', throwsUnsupportedError);
+      expect(decodePublic(public), {...expected}..remove('credentials'));
+      expect(public.jsonLength, public.json.length);
+      expect(public.json, isNot(contains('private-marker')));
+    },
+  );
+
   for (final change in ['append', 'replace', 'remove', 'reorder', 'clear']) {
     test('versioned $change delta reconstructs the exact public snapshot', () {
       final encoder = CenterStateEncoder();
@@ -173,7 +221,7 @@ void main() {
     final original = deltaFixture();
     encoder.encodePublicChanges(original, 'old');
     var current = original;
-    for (var version = 1; version <= 4; version++) {
+    for (var version = 1; version <= 16; version++) {
       current = current.copyForMutation();
       current.students[0] = current.students[0].copyWith(
         notes: 'revision $version',
@@ -183,7 +231,7 @@ void main() {
     for (final base in ['old', 'unknown']) {
       final response = encoder.encodePublicChanges(
         current,
-        'v4',
+        'v16',
         baseVersion: base,
       );
       expect(response.keys, ['state']);
@@ -194,7 +242,9 @@ void main() {
     }
     encoder.clearPublicHistory();
     expect(
-      encoder.encodePublicChanges(original, 'restored', baseVersion: 'v4').keys,
+      encoder
+          .encodePublicChanges(original, 'restored', baseVersion: 'v16')
+          .keys,
       ['state'],
     );
     expect(encoder.encodePublicChanges(original, 'restored').keys, ['state']);

@@ -15,6 +15,56 @@ namespace NaderGorge.Application.Tests.MimGames;
 public sealed class MimSceneGenerationTests
 {
     [Fact]
+    public async Task ChosenEpisodeCountSurvivesReloadAndAssemblyRejectsChangedOrForeignClips()
+    {
+        await using var sqlite = new SqliteConnection("Data Source=:memory:");
+        await sqlite.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(sqlite).Options);
+        await db.Database.EnsureCreatedAsync();
+        var (lesson, actor) = await SeedAsync(db);
+        var handler = new WriterHandler();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["WORKER_URL"]="http://worker.test", ["WORKER_ADMIN_TOKEN"]="test-only" }).Build();
+        var studio = new LessonMimStudioService(db, new MimSceneWriter(new HttpClient(handler), config));
+        var text = new string('ش', 120);
+        var first = await studio.GenerateAsync(actor, lesson, new(null,null,0,text,0,2,"طبخة اتلخبطت"), default);
+        db.ChangeTracker.Clear();
+        Assert.Equal(2, (await studio.ReadAsync(lesson, default))!.Document.TargetSceneCount);
+        await Assert.ThrowsAsync<MimStudioConflictException>(() => studio.GenerateAsync(actor,lesson,new(first.Version,null,0,text,1,3,"طبخة اتلخبطت"),default));
+        var final = await studio.GenerateAsync(actor, lesson, new(first.Version,null,0,text,1,2,"طبخة اتلخبطت"), default);
+        Assert.Equal(2, final.Document.Scenes.Length);
+        Assert.Equal(2, handler.Contexts.Last().GetProperty("previousSceneEnding").GetArrayLength());
+        Assert.Equal(MimVideoPrompt.Build(final.Document, 1), final.Document.Scenes[1].Prompt);
+        await Assert.ThrowsAsync<MimStudioConflictException>(() => studio.GenerateAsync(actor,lesson,new(final.Version,null,0,text,2,2,"طبخة اتلخبطت"),default));
+        var editor = new EditorHandler();
+        var montage = new MimEpisodeVideoService(db, studio, new HttpClient(editor), config);
+        Assert.Equal("waiting", (await montage.ReadAsync(actor, lesson, default)).State);
+        await Assert.ThrowsAsync<ArgumentException>(() => montage.AssembleAsync(actor,lesson,new(final.Version),default));
+        for (var index = 0; index < 2; index++) db.Add(new MimSceneVideo { LessonId=lesson, AdminUserId=actor, SceneIndex=index,
+            ScriptVersion=final.Version, State="completed", ParametersJson=JsonSerializer.Serialize(new { prompt=MimVideoPrompt.Build(final.Document,index) }),
+            ResultJson=JsonSerializer.Serialize(new { urls=new[] { $"https://cdn.example/scene-{index}.mp4" } }) });
+        await db.SaveChangesAsync();
+        var assembly = await montage.AssembleAsync(actor, lesson, new(final.Version), default);
+        Assert.Equal("queued", assembly.State);
+        Assert.Equal(60, assembly.Duration);
+        Assert.Equal(new[] { "https://cdn.example/scene-0.mp4", "https://cdn.example/scene-1.mp4" }, editor.Input!.Value.GetProperty("urls").EnumerateArray().Select(x=>x.GetString()).ToArray());
+        await Assert.ThrowsAsync<ArgumentException>(() => montage.ReadAsync(Guid.NewGuid(),lesson,default));
+        var changed = final.Document with { Scenes=final.Document.Scenes.Select(scene => scene with { Shots=scene.Shots.ToArray() }).ToArray() };
+        changed.Scenes[0].Shots[0] = changed.Scenes[0].Shots[0] with { Dialogue="ميم: جملة اتغيّرت بعد التوليد" };
+        await studio.SaveAsync(actor, lesson, new(final.Version,null,0,changed),default);
+        await Assert.ThrowsAsync<MimStudioConflictException>(() => montage.ReadAsync(actor,lesson,default));
+    }
+
+    private sealed class EditorHandler : HttpMessageHandler
+    {
+        public JsonElement? Input { get; private set; }
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (request.Method == HttpMethod.Post) Input = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct)).RootElement.Clone();
+            return new(HttpStatusCode.OK) { Content=JsonContent.Create(new { state="queued", progress=0 }) };
+        }
+    }
+
+    [Fact]
     public async Task SequentialScenesSurviveReloadAndRejectStaleVersions()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -212,7 +262,7 @@ public sealed class MimSceneGenerationTests
             Contexts.Add(JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct)).RootElement.Clone());
             if (Fail) return new(HttpStatusCode.ServiceUnavailable);
             var chapters = Contexts.Last().GetProperty("source").GetProperty("chapters").EnumerateArray().Select(x => x.GetProperty("id").GetGuid()).ToArray();
-            var scene = new MimScene("رحلة الماء", "التبخر", chapters, Enumerable.Range(0,6).Select(i=>new MimShot(i*5,(i+1)*5,"القطرة","تتبخر القطرة","لقطة قريبة","","")).ToArray(), "Character references.\nSCENE 1:\nOLD_STORYBOARD");
+            var scene = new MimScene("رحلة الماء", "التبخر", chapters, Enumerable.Range(0,10).Select(i=>new MimShot(i*3,(i+1)*3,"القطرة","تتبخر القطرة","لقطة قريبة","","")).ToArray(), "Character references.\nSCENE 1:\nOLD_STORYBOARD");
             return new(HttpStatusCode.OK) { Content=JsonContent.Create(new MimStudioDocument(1,"دورة الماء","رحلة ميم","3D","نفس الشخصيات",[scene])) };
         }
     }

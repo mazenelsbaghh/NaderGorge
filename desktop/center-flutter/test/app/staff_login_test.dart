@@ -1,5 +1,5 @@
 import 'dart:async';
-import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -91,9 +91,13 @@ void main() {
         await tester.tap(find.byKey(const Key('auth-submit')));
         await tester.pump();
         expect(store.currentUser, isNull);
-        await acknowledgeNotice(
+        await waitForUiCondition(
           tester,
-          message: 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+          () => find
+              .text('اسم المستخدم أو كلمة المرور غير صحيحة.')
+              .evaluate()
+              .isNotEmpty,
+          reason: 'The rejected sign-in displays its inline error.',
         );
         expect(store.currentUser, isNull);
         await tester.enterText(
@@ -115,7 +119,7 @@ void main() {
         expect(store.currentUser?.name, 'الاستقبال');
         expect(store.canCollect, isTrue);
         expect(store.canManage, isFalse);
-        expect(store.canAssess, isFalse);
+        expect(store.canAssess, isTrue);
         await tester.binding.setSurfaceSize(const Size(800, 600));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

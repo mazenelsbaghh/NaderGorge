@@ -55,7 +55,7 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
             var mediaId = HiggsfieldStudioReply.RequiredId(HiggsfieldStudioReply.Payload(imported), "media_id", "id");
             media.Add(new JsonObject { ["value"] = mediaId.ToString(), ["role"] = "image_references" });
         }
-        var costParams = MimVideoModels.Parameters(model, Prompt(script.Document, scene), media);
+        var costParams = MimVideoModels.Parameters(model, MimVideoPrompt.Build(script.Document, scene), media);
         costParams["get_cost"] = true;
         var cost = await connection.CallStudioToolAsync(actor, "generate_video", new { @params = costParams }, ct);
         var payload = HiggsfieldStudioReply.Payload(cost);
@@ -157,10 +157,4 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         JsonNode.Parse(row.ParametersJson)?["model"]?.GetValue<string>() ?? "seedance_2_5", MimVideoOutcome.Error(row.ResultJson),
         row.State == "unknown" && row.JobId is null ? ReviewAvailableAt(row) : null);
     private static DateTime ReviewAvailableAt(MimSceneVideo row) => (row.UpdatedAt ?? row.CreatedAt).AddMinutes(5);
-    private static string Prompt(MimStudioDocument doc, int index) => string.Join("\n\n", new[] {
-        "Create one 30-second cinematic 3D animation with Egyptian Arabic speech. Use attached reference 1 for Meem and reference 2 for Papa Nader. Preserve their exact appearance and clothes. Sheets are identity references only; never show the sheets or their collages in the video. No titles or subtitles.",
-        doc.Style, doc.Continuity, System.Text.RegularExpressions.Regex.Split(doc.Scenes[index].Prompt, @"\nSCENE \d+:")[0],
-        index > 0 ? "Continue the previous scene's final situation: " + doc.Scenes[index - 1].Shots.Last().Action : "Opening scene for this lesson.",
-        string.Join("\n", doc.Scenes[index].Shots.Select(s => $"{s.Start}-{s.End}s: {s.Title}\nAction: {s.Action}\nCamera: {s.Camera}\nEXACT Egyptian dialogue (speaker labels are not spoken): {s.Dialogue}\nSound: {s.Sound}"))
-    });
 }

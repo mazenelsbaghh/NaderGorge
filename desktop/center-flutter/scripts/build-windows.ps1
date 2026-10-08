@@ -68,17 +68,39 @@ function Assert-NoRuntimeData([string]$Directory) {
     }
 }
 
+$BuildLock = $null
+$AssetStageOwned = $false
+$AssetOwner = [Guid]::NewGuid().ToString("N")
+$AssetTool = Join-Path $PSScriptRoot "windows_package_assets.py"
 Push-Location $AppRoot
 try {
     if (-not $IsWindows -and $env:OS -ne "Windows_NT") {
         throw "Build this package on Windows with Flutter 3.41.0 and Visual Studio C++ desktop tools."
     }
+    & python -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)"
+    if ($LASTEXITCODE -ne 0) { throw "Packaging requires Python 3.9 or newer." }
+    $BuildLock = [System.IO.File]::Open((Join-Path $AppRoot ".massar-windows-build.lock"), [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    & python $AssetTool assert-clean
+    if ($LASTEXITCODE -ne 0) { throw "Resolve the interrupted asset staging before building." }
     Assert-RunnerIdentity
     $PackageMode = if ($ClientOnly) { "client" } else { "host" }
     $ClientDefine = if ($ClientOnly) { "true" } else { "false" }
     $SeedSource = Join-Path $AppRoot "assets/installation_seed.json"
-    if (-not $ClientOnly -and -not (Test-Path -LiteralPath $SeedSource -PathType Leaf)) {
-        throw "The host package requires assets/installation_seed.json."
+    $Seed = $null
+    if (-not $ClientOnly) {
+        if (-not (Test-Path -LiteralPath $SeedSource -PathType Leaf)) {
+            throw "The host package requires assets/installation_seed.json."
+        }
+        $Seed = Get-Content -LiteralPath $SeedSource -Raw | ConvertFrom-Json
+        $HistoryKeys = @("sessions", "packages", "attendances", "payments", "academics", "academicActivities", "audit", "staff", "reviews", "closings", "paymentChecks", "corrections", "refunds", "cardPayments", "cardReceipts", "debtSettlements", "centerFees")
+        foreach ($Key in $HistoryKeys) {
+            if ($null -ne $Seed.state.$Key -and @($Seed.state.$Key).Count -ne 0) { throw "First-install seed contains operational history: $Key" }
+        }
+    }
+    else {
+        $AssetStageOwned = $true
+        & python $AssetTool begin --owner $AssetOwner
+        if ($LASTEXITCODE -ne 0) { throw "Could not prepare the public client asset manifest." }
     }
     & flutter pub get
     if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
@@ -101,7 +123,13 @@ try {
         Sort-Object FullName | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     $LanFingerprints = Get-ChildItem $LanRoot -Filter *.go -Recurse | Sort-Object FullName |
         ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash }
-    $AssetFingerprints = Get-ChildItem (Join-Path $AppRoot "assets") -File -Recurse |
+    $AssetInputs = if ($ClientOnly) {
+        $PublicAssets = & python $AssetTool client-inputs
+        if ($LASTEXITCODE -ne 0) { throw "Could not resolve public client assets." }
+        $PublicAssets | ForEach-Object { Get-Item -LiteralPath (Join-Path $AppRoot $_) }
+    }
+    else { Get-ChildItem (Join-Path $AppRoot "assets") -File -Recurse }
+    $AssetFingerprints = $AssetInputs |
         Sort-Object FullName | ForEach-Object {
             $_.FullName.Substring($AppRoot.Length) + (Get-FileHash $_.FullName -Algorithm SHA256).Hash
         }
@@ -122,9 +150,30 @@ try {
     if ($AppVersion -notmatch '^\d{1,6}\.\d{1,6}\.\d{1,6}(?:-[0-9A-Za-z][0-9A-Za-z.-]{0,31})?\+\d{1,10}$') {
         throw "Application version must include a bounded numeric build number."
     }
+    $ReleaseDirectory = Join-Path $AppRoot "build/windows/x64/runner/Release"
+    $CompiledAot = Join-Path $AppRoot "build/windows/app.so"
+    $PackagedAot = Join-Path $ReleaseDirectory "data/app.so"
+    # Require this Flutter build to produce both AOT outputs when switching roles.
+    foreach ($AotFile in @($CompiledAot, $PackagedAot)) {
+        if (Test-Path -LiteralPath $AotFile) { Remove-Item -LiteralPath $AotFile -Force }
+    }
     & flutter build windows --release "--dart-define=MASSAR_BUILD_ID=$BuildId" "--dart-define=MASSAR_CLIENT_ONLY=$ClientDefine" "--dart-define=MASSAR_APP_VERSION=$AppVersion"
     if ($LASTEXITCODE -ne 0) { throw "Windows compilation failed." }
-    $ReleaseDirectory = Join-Path $AppRoot "build/windows/x64/runner/Release"
+    $CmakeConfig = Get-Content -LiteralPath "windows/flutter/ephemeral/generated_config.cmake" -Raw
+    $DefinesMatch = [regex]::Matches($CmakeConfig, '(?m)^\s*"DART_DEFINES=([A-Za-z0-9+/=,]+)"\s*$')
+    if ($DefinesMatch.Count -ne 1) { throw "Could not verify the compiled Flutter defines." }
+    $CompiledDefines = $DefinesMatch[0].Groups[1].Value.Split(',') | ForEach-Object {
+        [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_))
+    }
+    foreach ($Expected in @("MASSAR_BUILD_ID=$BuildId", "MASSAR_CLIENT_ONLY=$ClientDefine", "MASSAR_APP_VERSION=$AppVersion")) {
+        $Key = $Expected.Split('=')[0] + '='
+        $Definitions = @($CompiledDefines | Where-Object { $_.StartsWith($Key, [StringComparison]::Ordinal) })
+        if ($Definitions.Count -ne 1 -or $Definitions[0] -cne $Expected) { throw "Compiled application role or build identity does not match the package." }
+    }
+    $AotSha256 = (Get-FileHash -LiteralPath $CompiledAot -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($AotSha256 -ne (Get-FileHash -LiteralPath $PackagedAot -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw "Packaged AOT differs from this build's compiled application."
+    }
     if (-not (Test-Path (Join-Path $ReleaseDirectory "massar_center.exe"))) {
         throw "Release executable was not found."
     }
@@ -134,12 +183,8 @@ try {
     }
     $PackagedAssets = Join-Path $ReleaseDirectory "data/flutter_assets/assets"
     if ($ClientOnly) {
-        foreach ($PrivateAsset in @("admin_account.json", "installation_seed.json", "data_repair_20261002.json", "data_repair_20261004.json", "academic_import_20261004.json", "cairo_academic_import_20261004.json", "cairo_codes_20261004.json", "gec_codes_20261004.json", "gec_duplicate_codes_20261004.json")) {
-            $PackagedFile = Join-Path $PackagedAssets $PrivateAsset
-            if (Test-Path -LiteralPath $PackagedFile) {
-                Remove-Item -LiteralPath $PackagedFile -Force
-            }
-        }
+        & python $AssetTool verify-client --bundle $ReleaseDirectory
+        if ($LASTEXITCODE -ne 0) { throw "Client asset privacy verification failed." }
     }
     elseif (-not (Test-Path -LiteralPath (Join-Path $PackagedAssets "installation_seed.json") -PathType Leaf)) {
         throw "The compiled host package is missing installation_seed.json."
@@ -151,15 +196,11 @@ try {
     }
     finally { Pop-Location }
     Copy-VisualCppRuntime $ReleaseDirectory
-    $Seed = Get-Content -LiteralPath $SeedSource -Raw | ConvertFrom-Json
-    $HistoryKeys = @("sessions", "packages", "attendances", "payments", "academics", "academicActivities", "audit", "staff", "reviews", "closings", "paymentChecks", "corrections", "refunds", "cardPayments", "cardReceipts", "debtSettlements", "centerFees")
-    foreach ($Key in $HistoryKeys) {
-        if ($null -ne $Seed.state.$Key -and @($Seed.state.$Key).Count -ne 0) { throw "First-install seed contains operational history: $Key" }
-    }
     $Manifest = [ordered]@{
         role = $PackageMode
         appVersion = $AppVersion
         buildId = $BuildId
+        aotSha256 = $AotSha256
         sourceCommit = $env:GITHUB_SHA
         builtAt = [DateTime]::UtcNow.ToString("o")
         testsSkipped = [bool]$SkipTests
@@ -183,5 +224,14 @@ try {
     Write-Output "Bundled students/groups seed only a genuinely new database. Updates never reseed existing data and do not require device pairing again."
 }
 finally {
-    Pop-Location
+    try {
+        if ($AssetStageOwned) {
+            & python $AssetTool restore --owner $AssetOwner
+            if ($LASTEXITCODE -ne 0) { throw "Client manifest restoration failed; run the recovery command after reviewing pubspec.yaml." }
+        }
+    }
+    finally {
+        if ($null -ne $BuildLock) { $BuildLock.Dispose() }
+        Pop-Location
+    }
 }

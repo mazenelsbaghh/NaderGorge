@@ -150,7 +150,7 @@ void main() {
         );
         await db.insert('import_write_count', {'count': 0});
         await db.execute(
-          'CREATE TRIGGER count_import_writes AFTER UPDATE ON state BEGIN UPDATE import_write_count SET count = count + 1; END',
+          r"CREATE TRIGGER count_import_writes AFTER INSERT ON state_records WHEN NEW.section='audit' AND json_extract(NEW.payload,'$.action')='academic_import' BEGIN UPDATE import_write_count SET count = count + 1; END",
         );
         final input = [
           row(

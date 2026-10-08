@@ -332,11 +332,12 @@ extension _StudyMonthsStore on CenterStore {
     final migrated = _state.copyForMutation();
     if (!_ensureStudyMonths(migrated)) return;
     validateState(migrated);
-    await _saveAutomaticBackup();
+    await _saveAutomaticBackup(_state.copyForBackup());
     await _database!.transaction((transaction) async {
-      final updated = await transaction.update('state', {
-        'payload': jsonEncode(migrated.toJson()),
-      }, where: 'id = 1');
+      final updated = await replaceRecordState(
+        transaction,
+        _stateEncoder.encodeStorageFields(migrated),
+      );
       if (updated != 1) {
         throw const CenterException(
           'تعذر حفظ تنظيم الشهور؛ البيانات السابقة محفوظة.',

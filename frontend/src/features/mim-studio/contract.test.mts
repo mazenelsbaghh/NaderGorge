@@ -24,6 +24,19 @@ test('the prepared episode only attaches when every referenced chapter belongs t
   assert.equal(preparedSourceMatches(episode, { ...source, chapters: [] }), false);
 });
 
+test('a later scene exports its current storyboard and the edited incoming ending', () => {
+  const updated = structuredClone(episode);
+  updated.targetSceneCount = 6;
+  updated.episodeContext = 'طبخة اتلخبطت';
+  updated.scenes[0].shots[9].action = 'ميم يمسك غطاء الحلة المتطاير';
+  const prompt = generationPrompt(updated, 1);
+  assert.ok(prompt.includes(updated.episodeContext));
+  assert.ok(prompt.includes(updated.scenes[0].shots[9].action));
+  assert.ok(prompt.includes(updated.scenes[0].shots[9].camera));
+  assert.ok(prompt.includes(updated.scenes[1].shots[0].action));
+  assert.ok(prompt.includes('Scene 2 of 6'));
+});
+
 test('the complete approved episode has four continuous thirty-second timelines', () => {
   assert.equal(episode.scenes.length, 4);
   for (const scene of episode.scenes) {

@@ -74,7 +74,11 @@ void main() {
       await enter(EntryMode.single);
       final original = store.attendances.single;
       final payment = store.payments.single;
-      await store.checkPayment(studentId: student.id, sessionId: session.id);
+      await store.checkPayment(
+        studentId: student.id,
+        sessionId: session.id,
+        expectedAmount: store.payments.single.collectedAmount,
+      );
       await store.savePaymentReview(
         ReviewRequest(
           studentId: student.id,
@@ -281,6 +285,32 @@ void main() {
     },
   );
   test(
+    'later payment method correction preserves archived cash closing',
+    () async {
+      await enter(EntryMode.single);
+      final payment = store.payments.single;
+      await store.closeSession(session.id);
+      await store.finalizeSession(sessionId: session.id, actualCash: 7500);
+      final archived = store.closings.single;
+      final snapshot = jsonEncode(archived.toJson());
+      await store.reopenFinancialClosing(
+        closingId: archived.id,
+        reason: 'Review',
+      );
+      await store.correctPaymentMethod(
+        paymentId: payment.id,
+        method: 'تحويل',
+        reason: 'Receipt review',
+      );
+      expect(store.sessionFinancialSummary(session.id).expectedCash, 0);
+      expect(jsonEncode(store.allClosings.first.toJson()), snapshot);
+      await store.finalizeSession(sessionId: session.id, actualCash: 0);
+      expect(store.allClosings, hasLength(2));
+      expect(store.allClosings.first.summary.expectedCash, 7500);
+      expect(store.closings.single.summary.expectedCash, 0);
+    },
+  );
+  test(
     'unused package refund is full and used package or makeup dependencies cannot be corrupted',
     () async {
       await store.renewPackage(
@@ -440,7 +470,7 @@ void main() {
         options: OpenDatabaseOptions(singleInstance: false),
       );
       await db.execute(
-        "CREATE TRIGGER reject_correction BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        "CREATE TRIGGER reject_correction BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
       );
       await expectLater(
         store.reverseEntry(attendanceId: id, reason: 'خطأ'),

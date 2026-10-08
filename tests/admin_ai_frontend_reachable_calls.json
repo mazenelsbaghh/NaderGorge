@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 538,
+  "reachableFileCount": 549,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -73,6 +73,10 @@
     },
     {
       "file": "frontend/src/app/admin/center-desktop/DesktopReleaseList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/center-desktop/DesktopStudentsPanel.tsx",
       "route": null
     },
     {
@@ -474,6 +478,10 @@
     {
       "file": "frontend/src/app/admin/media/page.tsx",
       "route": "/admin/media"
+    },
+    {
+      "file": "frontend/src/app/admin/mim-studio/connect/page.tsx",
+      "route": "/admin/mim-studio/connect"
     },
     {
       "file": "frontend/src/app/admin/operations/AdminOperationsPageClient.tsx",
@@ -1616,6 +1624,38 @@
       "route": null
     },
     {
+      "file": "frontend/src/features/mim-studio/archive.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/contract.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/HiggsfieldConnection.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/LessonMimStudioTab.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/MimEpisodeVideoPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/MimSceneVideoPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/MimScriptView.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/mim-studio/service.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/features/platform-finance/FinanceLedgerDetails.tsx",
       "route": null
     },
@@ -1877,6 +1917,10 @@
     },
     {
       "file": "frontend/src/lib/safe-return-url.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/sales-coupon-payload.ts",
       "route": null
     },
     {
@@ -2156,7 +2200,7 @@
       "route": null
     }
   ],
-  "callCount": 534,
+  "callCount": 552,
   "calls": [
     {
       "method": "ANY",
@@ -2165,6 +2209,15 @@
       "source": {
         "file": "frontend/src/services/learning-center-service.ts",
         "line": 155
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/{root}/connection",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 26
       }
     },
     {
@@ -2403,6 +2456,78 @@
     },
     {
       "method": "GET",
+      "path": "/{root}/connection",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 23
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/connection/tools",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 27
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/lessons/{lessonId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 7
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/lessons/{lessonId}/episode-video",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 16
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/lessons/{lessonId}/episode-video/file",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 18
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/lessons/{lessonId}/scenes/{scene}/video",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 15
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/lessons/{lessonId}/sources",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 8
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{root}/video-models",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 19
+      }
+    },
+    {
+      "method": "GET",
       "path": "/{scope}/content/summary",
       "dynamic": true,
       "source": {
@@ -2534,6 +2659,15 @@
       "source": {
         "file": "frontend/src/services/center-desktop-service.ts",
         "line": 44
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/center-desktop/uploads/{encodeURIComponentid}/students",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 64
       }
     },
     {
@@ -3145,7 +3279,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 203
+        "line": 204
       }
     },
     {
@@ -3154,7 +3288,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 212
+        "line": 213
       }
     },
     {
@@ -3217,7 +3351,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 164
+        "line": 165
       }
     },
     {
@@ -3226,7 +3360,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 167
+        "line": 168
       }
     },
     {
@@ -3235,7 +3369,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 197
+        "line": 198
       }
     },
     {
@@ -3244,7 +3378,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 176
+        "line": 177
       }
     },
     {
@@ -3253,7 +3387,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 182
+        "line": 183
       }
     },
     {
@@ -4500,6 +4634,69 @@
     },
     {
       "method": "POST",
+      "path": "/{root}/connection/complete",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 25
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/connection/start",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 24
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/lessons/{lessonId}/episode-video",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 17
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/lessons/{lessonId}/scenes/{scene}/video",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 22
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/lessons/{lessonId}/scenes/{scene}/video/quote",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 20
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/lessons/{lessonId}/scenes/{scene}/video/review",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 21
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{root}/lessons/{lessonId}/scenes/next",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 12
+      }
+    },
+    {
+      "method": "POST",
       "path": "/admin/assessments/ocr/questions",
       "dynamic": false,
       "source": {
@@ -5089,7 +5286,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 206
+        "line": 207
       }
     },
     {
@@ -5098,7 +5295,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 209
+        "line": 210
       }
     },
     {
@@ -5188,7 +5385,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 170
+        "line": 171
       }
     },
     {
@@ -5197,7 +5394,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 200
+        "line": 201
       }
     },
     {
@@ -5206,7 +5403,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 179
+        "line": 180
       }
     },
     {
@@ -5215,7 +5412,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 185
+        "line": 186
       }
     },
     {
@@ -5224,7 +5421,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 190
+        "line": 191
       }
     },
     {
@@ -6561,6 +6758,15 @@
     },
     {
       "method": "PUT",
+      "path": "/{root}/lessons/{lessonId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 10
+      }
+    },
+    {
+      "method": "PUT",
       "path": "/admin/auto-repair/control",
       "dynamic": false,
       "source": {
@@ -6754,7 +6960,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 173
+        "line": 174
       }
     },
     {
@@ -7027,7 +7233,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 98
+        "line": 97
       }
     },
     {
@@ -7036,7 +7242,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 107
+        "line": 106
       }
     },
     {
@@ -7045,7 +7251,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 109
+        "line": 108
       }
     },
     {
@@ -7054,7 +7260,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 111
+        "line": 110
       }
     },
     {
@@ -7063,7 +7269,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 113
+        "line": 112
       }
     },
     {
@@ -7306,7 +7512,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 100
+        "line": 99
       }
     },
     {
@@ -7315,7 +7521,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 102
+        "line": 101
       }
     },
     {
@@ -7324,7 +7530,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 115
+        "line": 114
       }
     },
     {
@@ -7436,5 +7642,5 @@
       }
     }
   ],
-  "digest": "112d91a85e61e11a2ce75913d5cc95de5f99df82df4223eb175c7ecd5bfb2091"
+  "digest": "4e27c3d8aa2102f26a103668bf4bd321b81a8a7831c4e82e86b143e30b0dd8ce"
 }

@@ -12,12 +12,15 @@ import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory directory;
   late CenterStore store;
   late StudyGroup group;
+  late Map<int, String> months;
   late Student student;
   late LessonSession session;
 
@@ -42,7 +45,33 @@ void main() {
           twoSessionPrice: 21000,
           threeSessionPrice: 30000,
           packagePrice: 41000,
+          monthPlans: const [
+            GroupMonthPlan(
+              id: 'four',
+              name: 'الشهر الكامل',
+              sessions: 4,
+              price: 41000,
+            ),
+            GroupMonthPlan(
+              id: 'two',
+              name: 'شهر حصتين',
+              sessions: 2,
+              price: 21000,
+            ),
+            GroupMonthPlan(
+              id: 'three',
+              name: 'شهر ثلاث حصص',
+              sessions: 3,
+              price: 30000,
+            ),
+          ],
         ),
+      );
+      months = await seedAttendanceMonths(
+        store,
+        fourPrice: 41000,
+        twoPrice: 21000,
+        threePrice: 30000,
       );
       group = store.groups.single;
       student = await store.registerStudent(
@@ -65,6 +94,7 @@ void main() {
         ),
       );
       session = store.sessions.single;
+      await store.startSession(session.id);
       await (FontLoader('Tajawal')
             ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))
             ..addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf')))
@@ -119,11 +149,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> scan(WidgetTester tester, String code) async {
-    await tester.enterText(search, code);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-  }
+  Future<void> scan(WidgetTester tester, String code) =>
+      previewAttendanceStudent(tester, code);
 
   Future<void> openDiscount(WidgetTester tester) async {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
@@ -148,7 +175,11 @@ void main() {
         await tester.tap(find.byKey(const Key('save-student-discount')));
         await saved.future.timeout(const Duration(seconds: 5));
         expectNoFinance();
-        await acknowledgeNotice(tester, message: 'تم حفظ الخصم الثابت للطالب.');
+        await waitForUiCondition(
+          tester,
+          () => discountDialog.evaluate().isEmpty,
+          reason: 'Saved discount editor closes',
+        );
       } finally {
         store.removeListener(observe);
       }
@@ -190,10 +221,7 @@ void main() {
       await open(tester);
       await scan(tester, student.code);
       final audits = store.audit.length;
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await tester.pumpAndSettle();
+      await selectAttendanceMonth(tester, 'شهر ثلاث حصص · 3 حصص');
       await openDiscount(tester);
       final reference = find.descendant(
         of: discountDialog,
@@ -201,7 +229,7 @@ void main() {
       );
       expect(
         tester.state<FormFieldState<String>>(reference).value,
-        'package-3',
+        'month-${months[3]}',
       );
       expect(
         tester
@@ -212,11 +240,11 @@ void main() {
       );
       await tester.tap(reference);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('باقة حصتين').last);
+      await tester.tap(find.text('شهر حصتين · 2 حصص').last);
       await tester.pumpAndSettle();
       expect(
         tester.state<FormFieldState<String>>(reference).value,
-        'package-2',
+        'month-${months[2]}',
       );
       expect(
         tester
@@ -242,12 +270,15 @@ void main() {
                 sessionId: session.id,
                 mode: EntryMode.package,
                 packageSessions: 2,
+                monthPlanId: months[2],
               ),
             )
             .netAmount,
         12001,
       );
-      await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.keyM));
+      await tester.runAsync(
+        () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyN),
+      );
       await tester.pumpAndSettle();
       expect(paymentDialog, findsOneWidget);
       expect(
@@ -296,7 +327,7 @@ void main() {
         expect(store.students.single.discountPercent, 25.5);
         expectNoFinance();
         await tester.runAsync(
-          () => tester.sendKeyEvent(LogicalKeyboardKey.keyL),
+          () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL),
         );
         await tester.pumpAndSettle();
         expect(paymentDialog, findsOneWidget);
@@ -356,7 +387,9 @@ void main() {
       );
       expect(store.audit, hasLength(audits + 1));
       expectNoFinance();
-      await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.keyL));
+      await tester.runAsync(
+        () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL),
+      );
       await tester.pumpAndSettle();
       expect(paymentDialog, findsOneWidget);
       expect(
@@ -376,10 +409,10 @@ void main() {
           expect(store.payments.single.netAmount, 9197);
           expect(store.payments.single.discountPercent, 25.5);
           expect(store.attendances.single.fixedDiscountPercent, 25.5);
-          await acknowledgeNotice(
+          await waitForUiCondition(
             tester,
-            message:
-                'تم تسجيل ${student.name} · ${student.code}. المبلغ ${money(9197)} · نقدي.',
+            () => paymentDialog.evaluate().isEmpty,
+            reason: 'Payment confirmation closes after durable write',
           );
         } finally {
           store.removeListener(observe);
@@ -390,7 +423,7 @@ void main() {
       expect(store.payments.single.studentId, student.id);
       expect(store.payments.single.baseAmount, 12345);
       expect(store.packages, isEmpty);
-      expect(store.audit, hasLength(audits + 2));
+      expect(store.audit, hasLength(audits + 3));
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(() async {
         await store.close();
@@ -442,9 +475,10 @@ void main() {
                 .netAmount,
             3000,
           );
-          await acknowledgeNotice(
+          await waitForUiCondition(
             tester,
-            message: 'تم حفظ الخصم الثابت للطالب.',
+            () => discountDialog.evaluate().isEmpty,
+            reason: 'Saved discount editor closes',
           );
         } finally {
           store.removeListener(observe);
@@ -509,7 +543,7 @@ void main() {
   }
 
   for (final role in [StaffRole.cashier, StaffRole.assistant]) {
-    testWidgets('$role cannot open discount editor with S or button', (
+    testWidgets('$role can review a discount while cancel preserves finance', (
       tester,
     ) async {
       await tester.runAsync(() async {
@@ -525,11 +559,17 @@ void main() {
       final audits = store.audit.length;
       await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
       await tester.pumpAndSettle();
-      expect(discountDialog, findsNothing);
+      expect(discountDialog, findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
       final button = find.byKey(const Key('attendance-discount'));
-      if (button.evaluate().isNotEmpty) {
-        expect(tester.widget<ButtonStyleButton>(button).onPressed, isNull);
-      }
+      await tester.ensureVisible(button);
+      expect(tester.widget<ButtonStyleButton>(button).onPressed, isNotNull);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(discountDialog, findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
       expectNoFinance();
       expect(store.students.single.toJson(), student.toJson());
       expect(store.audit, hasLength(audits));
@@ -553,7 +593,7 @@ void main() {
       expectNoFinance();
       await tester.tap(find.byKey(const Key('cancel-student-note')));
       await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
+      await requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL);
       await tester.pumpAndSettle();
       expect(paymentDialog, findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyS);

@@ -2,22 +2,25 @@ namespace NaderGorge.Application.Features.MimStudio;
 
 public sealed record MimShot(int Start, int End, string Title, string Action, string Camera, string Dialogue, string Sound);
 public sealed record MimScene(string Title, string EducationalPoint, Guid[] SourceChapterIds, MimShot[] Shots, string Prompt);
-public sealed record MimStudioDocument(int SchemaVersion, string Title, string Premise, string Style, string Continuity, MimScene[] Scenes, string? SourceText = null);
+public sealed record MimStudioDocument(int SchemaVersion, string Title, string Premise, string Style, string Continuity, MimScene[] Scenes, string? SourceText = null, int TargetSceneCount = 4, string? EpisodeContext = null);
 public sealed record SaveMimStudio(Guid? Version, Guid? SourceVideoId, int SourceRevision, MimStudioDocument Document);
 public sealed record MimStudioSnapshot(Guid Version, Guid? SourceVideoId, int SourceRevision, bool Stale, MimStudioDocument Document, DateTime? UpdatedAt, bool Generating = false);
 
 public static class MimStudioContract
 {
+    public const int MaximumSceneCount = 20;
     public static void Validate(MimStudioDocument? doc, IReadOnlySet<Guid> chapterIds)
     {
         if (doc is null || doc.SchemaVersion != 1 || !Text(doc.Title, 200) || !Text(doc.Premise, 3000) ||
-            !Text(doc.Style, 3000) || !Text(doc.Continuity, 6000) || doc.Scenes is null || doc.Scenes.Length is < 1 or > 4)
-            throw new ArgumentException("السيناريو لازم يحتوي على مشهد إلى أربعة مشاهد وبيانات القصة والشخصيات.");
+            !Text(doc.Style, 3000) || !Text(doc.Continuity, 6000) || doc.TargetSceneCount is < 1 or > MaximumSceneCount ||
+            doc.Scenes is null || doc.Scenes.Length < 1 || doc.Scenes.Length > doc.TargetSceneCount ||
+            (doc.EpisodeContext is not null && !Text(doc.EpisodeContext, 2000, true)))
+            throw new ArgumentException("اختار من مشهد إلى ٢٠ مشهدًا، وراجع بيانات قصة الحلقة والشخصيات.");
         if (doc.SourceText is not null && !Text(doc.SourceText, 24000))
             throw new ArgumentException("نص الشرح غير صالح أو أكبر من ٢٤ ألف حرف.");
         foreach (var scene in doc.Scenes)
         {
-            if (scene is null || !Text(scene.Title, 200) || !Text(scene.EducationalPoint, 2000) || !Text(scene.Prompt, 16000) ||
+            if (scene is null || !Text(scene.Title, 200) || !Text(scene.EducationalPoint, 2000) || !Text(scene.Prompt, 100000) ||
                 scene.SourceChapterIds is null || scene.SourceChapterIds.Length > 16 || (chapterIds.Count > 0 && scene.SourceChapterIds.Length == 0) ||
                 scene.SourceChapterIds.Distinct().Count() != scene.SourceChapterIds.Length ||
                 scene.SourceChapterIds.Any(id => !chapterIds.Contains(id)) || scene.Shots is null || scene.Shots.Length is < 6 or > 15)
@@ -39,4 +42,4 @@ public static class MimStudioContract
         value is not null && value.Length <= max && (empty || !string.IsNullOrWhiteSpace(value));
 }
 
-public sealed record GenerateMimScene(Guid? Version, Guid? SourceVideoId, int SourceRevision, string? SourceText, int ExpectedSceneCount);
+public sealed record GenerateMimScene(Guid? Version, Guid? SourceVideoId, int SourceRevision, string? SourceText, int ExpectedSceneCount, int TargetSceneCount = 4, string? EpisodeContext = null);

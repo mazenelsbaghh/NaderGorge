@@ -773,6 +773,23 @@
     "permissions": []
   },
   {
+    "route": "api/admin/center-desktop/uploads/{id}/students",
+    "controller": "AdminCenterDesktop",
+    "action": "Students",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/Admin/chapters/{chapterId:guid}/regenerate-mindmap",
     "controller": "Admin",
     "action": "RegenerateChapterMindmap",
@@ -2846,6 +2863,346 @@
     "permissions": [
       "media.manage",
       "media.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/connection",
+    "controller": "AdminMimStudio",
+    "action": "Connection",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/connection",
+    "controller": "AdminMimStudio",
+    "action": "Disconnect",
+    "methods": [
+      "DELETE"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/connection/complete",
+    "controller": "AdminMimStudio",
+    "action": "Complete",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/connection/start",
+    "controller": "AdminMimStudio",
+    "action": "Connect",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/connection/tools",
+    "controller": "AdminMimStudio",
+    "action": "Tools",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}",
+    "controller": "AdminMimStudio",
+    "action": "Read",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}",
+    "controller": "AdminMimStudio",
+    "action": "Save",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/episode-video",
+    "controller": "AdminMimStudio",
+    "action": "Assemble",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/episode-video",
+    "controller": "AdminMimStudio",
+    "action": "Episode",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/episode-video/file",
+    "controller": "AdminMimStudio",
+    "action": "EpisodeFile",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/scenes/{scene:int}/video",
+    "controller": "AdminMimStudio",
+    "action": "Submit",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/scenes/{scene:int}/video",
+    "controller": "AdminMimStudio",
+    "action": "Video",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/scenes/{scene:int}/video/quote",
+    "controller": "AdminMimStudio",
+    "action": "Quote",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/scenes/{scene:int}/video/review",
+    "controller": "AdminMimStudio",
+    "action": "Review",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/scenes/next",
+    "controller": "AdminMimStudio",
+    "action": "Generate",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/lessons/{lessonId:guid}/sources",
+    "controller": "AdminMimStudio",
+    "action": "Sources",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/mim-studio/video-models",
+    "controller": "AdminMimStudio",
+    "action": "Models",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
     ]
   },
   {
@@ -7997,6 +8354,28 @@
     ],
     "authorization": [],
     "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/exam-room/whatsapp/webhook",
+    "controller": "ExamWhatsAppWebhook",
+    "action": "ReceiveWebhook",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
+    "route": "api/exam-room/whatsapp/webhook",
+    "controller": "ExamWhatsAppWebhook",
+    "action": "VerifyWebhook",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
     "permissions": []
   },
   {

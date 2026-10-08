@@ -11,6 +11,7 @@ import '../../domain/models.dart';
 import '../../domain/student_lookup.dart';
 import '../../lan/lan_transport.dart';
 import '../../shared/scrollable_dialog.dart';
+import '../../shared/performance_trace.dart';
 import 'management_widgets.dart';
 
 part 'academic_excel_import_review.dart';
@@ -125,7 +126,10 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
   @override
   void didUpdateWidget(AcademicExcelImportDialog oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.store != widget.store) {
+    if (oldWidget.store != widget.store ||
+        oldWidget.groupId != widget.groupId ||
+        oldWidget.sessionId != widget.sessionId ||
+        oldWidget.activityId != widget.activityId) {
       oldWidget.store.removeListener(_storeChanged);
       widget.store.addListener(_storeChanged);
       _revision++;
@@ -134,6 +138,8 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       _students = {};
       _existing = {};
       _sheetContextReviewed = false;
+      _scopeReadRevision = null;
+      _observedReferences = null;
       _observedActor = widget.store.currentUser?.id;
       _observedScope = _scopeFingerprint();
     }
@@ -145,9 +151,30 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     super.dispose();
   }
 
+  Object? _scopeReadRevision;
+  List<Object?>? _observedReferences;
+
   void _storeChanged() {
+    final readRevision = widget.store.academicImportReadRevision;
+    if (_scopeReadRevision == readRevision) return;
+    _scopeReadRevision = readRevision;
+    final references = _scopeReferences();
+    final previous = _observedReferences;
+    _observedReferences = references;
+    if (previous != null &&
+        previous.length == references.length &&
+        Iterable<int>.generate(references.length).every(
+          (index) => previous[index] is List && references[index] is List
+              ? listEquals(previous[index] as List, references[index] as List)
+              : previous[index] == references[index],
+        )) {
+      return;
+    }
     final actor = widget.store.currentUser?.id;
+    final trace = PerformanceTrace('academic.import.scope', budgetMs: 32);
     final scope = _scopeFingerprint();
+    trace.stage('scope');
+    trace.finish();
     if (_observedScope == scope && _observedActor == actor) return;
     final changedActor = _observedActor != actor;
     _observedScope = scope;
@@ -174,6 +201,21 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     }
   }
 
+  List<Object?> _scopeReferences() => [
+    jsonEncode(widget.store.currentUser?.toJson()),
+    widget.store.remoteConnected,
+    _group?.name,
+    widget.store.isCairoGroup(widget.groupId),
+    _session,
+    _activity,
+    widget.store.academicRosterForGroup(widget.groupId),
+    widget.store
+        .academicRecordsForSession(widget.sessionId)
+        .where((record) => record.activityId == widget.activityId)
+        .toList(),
+    widget.store.academicAttendanceForSession(widget.sessionId),
+  ];
+
   String _scopeFingerprint() => jsonEncode({
     'actor': widget.store.currentUser?.toJson(),
     'connected': !widget.store.isRemote || widget.store.remoteConnected,
@@ -181,11 +223,12 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     'cairo': widget.store.isCairoGroup(widget.groupId),
     'session': _session?.toJson(),
     'activity': _activity?.toJson(),
-    'students': widget.store.students
-        .where((student) => student.groupIds.contains(widget.groupId))
+    'students': widget.store
+        .academicRosterForGroup(widget.groupId)
         .map((student) => student.toJson())
         .toList(),
-    'records': widget.store.academics
+    'records': widget.store
+        .academicRecordsForSession(widget.sessionId)
         .where(
           (record) =>
               record.sessionId == widget.sessionId &&
@@ -193,8 +236,8 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
         )
         .map((record) => record.toJson())
         .toList(),
-    'attendance': widget.store.attendances
-        .where((record) => record.sessionId == widget.sessionId)
+    'attendance': widget.store
+        .academicAttendanceForSession(widget.sessionId)
         .map((record) => record.toJson())
         .toList(),
   });
@@ -214,7 +257,15 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       if (file.bytes.length > AcademicExcelLimits.maxFileBytes) {
         throw const FormatException('حجم الملف أكبر من ٨ ميجابايت.');
       }
-      final workbook = await compute(readAcademicExcel, file.bytes);
+      final trace = PerformanceTrace('academic.import.read', budgetMs: 250);
+      final AcademicExcelWorkbook workbook;
+      try {
+        workbook = await compute(readAcademicExcel, file.bytes);
+      } finally {
+        trace.stage('decode');
+        trace.counts['bytes'] = file.bytes.length;
+        trace.finish();
+      }
       if (!mounted) return;
       _workbook = workbook;
       _fileName = file.name;
@@ -254,11 +305,15 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
               record.activityId == widget.activityId)
             record.studentId: record,
       };
+      final trace = PerformanceTrace('academic.import.match', budgetMs: 150);
       final matches = await compute(_matchRows, (
         rows: _workbook!.sheets[_sheet].rows,
         students: students,
         groupId: widget.groupId,
       ));
+      trace.stage('match');
+      trace.counts['rows'] = matches.length;
+      trace.finish();
       if (!mounted) return;
       if (_actorRevision != actorRevision) {
         _stale = true;

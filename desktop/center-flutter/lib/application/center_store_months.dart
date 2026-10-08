@@ -202,12 +202,13 @@ extension CenterStoreMonths on CenterStore {
     validateState(migrated);
     // Preserve the old logical database before applying forward-only defaults.
     if (_state.staff.isNotEmpty && _lastAutomaticBackupAt == null) {
-      await _saveAutomaticBackup();
+      await _saveAutomaticBackup(_state.copyForBackup());
     }
     await _database!.transaction((transaction) async {
-      final updated = await transaction.update('state', {
-        'payload': jsonEncode(migrated.toJson()),
-      }, where: 'id = 1');
+      final updated = await replaceRecordState(
+        transaction,
+        _stateEncoder.encodeStorageFields(migrated),
+      );
       if (updated != 1) {
         throw const CenterException(
           'لم تُحفظ إعدادات الأشهر؛ بياناتك القديمة محفوظة.',

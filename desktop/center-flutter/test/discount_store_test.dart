@@ -160,7 +160,7 @@ void main() {
 
   for (final role in [StaffRole.cashier, StaffRole.assistant]) {
     test(
-      '$role cannot change a fixed discount; rejected writes leave data and audit untouched',
+      '$role can change a fixed discount with attributed audit and durable precision',
       () async {
         await store.saveStaff(
           name: 'موظف الخصم',
@@ -170,17 +170,18 @@ void main() {
         await store.signIn('موظف الخصم', password);
         final before = store.students.single.toJson();
         final audit = store.audit.map((e) => e.toJson()).toList();
-        await expectLater(
-          store.saveStudentDiscount(
-            studentId: student.id,
-            percent: 33.333333333333336,
-          ),
-          throwsA(isA<CenterException>()),
+        final actorId = store.currentUser!.id;
+        await store.saveStudentDiscount(
+          studentId: student.id,
+          percent: 33.333333333333336,
         );
-        expect(store.students.single.toJson(), before);
-        expect(store.audit.map((e) => e.toJson()).toList(), audit);
+        final expected = {...before, 'discountPercent': 33.333333333333336};
+        expect(store.students.single.toJson(), expected);
+        expect(store.audit.take(audit.length).map((e) => e.toJson()), audit);
+        expect(store.audit.length, audit.length + 1);
+        expect(store.audit.last.staffId, actorId);
         await reopen();
-        expect(store.students.single.toJson(), before);
+        expect(store.students.single.toJson(), expected);
       },
     );
   }
@@ -343,7 +344,7 @@ void main() {
       );
       try {
         await db.execute(
-          "CREATE TRIGGER reject_discount BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER reject_discount BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
         );
         await expectLater(
           store.saveStudentDiscount(studentId: student.id, percent: 25.5),

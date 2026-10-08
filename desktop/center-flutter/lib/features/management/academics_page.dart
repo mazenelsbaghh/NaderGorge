@@ -7,6 +7,8 @@ import 'package:massar_center/shared/notice_dialog.dart'
 import 'package:massar_center/shared/theme.dart';
 
 import 'academic_quick_entry.dart';
+import '../../lan/lan_controller.dart';
+import 'mobile_homework_dialog.dart';
 import 'academic_excel_import_dialog.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/application/center_store.dart';
@@ -16,8 +18,14 @@ import 'package:massar_center/shared/formatters.dart';
 import 'management_widgets.dart';
 
 class AcademicsPage extends StatefulWidget {
-  const AcademicsPage({super.key, required this.store, this.cairo = false});
+  const AcademicsPage({
+    super.key,
+    required this.store,
+    this.cairo = false,
+    this.lanController,
+  });
   final CenterStore store;
+  final LanController? lanController;
   final bool cairo;
   @override
   State<AcademicsPage> createState() => _AcademicsPageState();
@@ -283,7 +291,9 @@ class _AcademicsPageState extends State<AcademicsPage> {
     } finally {
       if (mounted) {
         setState(() => _editing = false);
-        if (!automatic) _focusCode();
+        if (session.id == _selectedSession?.id && activity?.id == _activityId) {
+          _focusCode();
+        }
       }
     }
   }
@@ -793,7 +803,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                     ).firstOrNull?.id;
                   }
                   _resetEntry();
-                }),
+                }, focusCode: _monthId != null && id != null),
         ),
       ),
       if (_monthId == null)
@@ -902,6 +912,21 @@ class _AcademicsPageState extends State<AcademicsPage> {
                       : null,
                   icon: const Icon(Icons.assignment_outlined),
                   label: const Text('إضافة واجب'),
+                ),
+              if (!widget.cairo)
+                OutlinedButton.icon(
+                  key: const Key('academics-mobile-homework'),
+                  onPressed: !_editing && widget.store.canAssess
+                      ? () => showMobileHomeworkDialog(
+                          context,
+                          store: widget.store,
+                          lan: widget.lanController,
+                          session: selected,
+                          activityId: activity?.id,
+                        )
+                      : null,
+                  icon: const Icon(Icons.phone_android),
+                  label: const Text('واجب الموبايل'),
                 ),
               Tooltip(
                 message:

@@ -14,6 +14,7 @@ void main() {
   late StudyGroup group;
   late Student student;
   late LessonSession session;
+  late StudyMonth month;
   var backupNumber = 0;
 
   setUp(() async {
@@ -52,7 +53,16 @@ void main() {
         createdAt: DateTime.now(),
       ),
     );
-    session = store.sessions.single;
+    month = await store.saveStudyMonth(
+      store.studyMonths.first.copyWith(
+        name: 'شهر الأنشطة',
+        lessons: [for (var n = 1; n <= 3; n++) PreparedLesson(number: n)],
+      ),
+    );
+    session = await store.startPreparedLesson(
+      groupId: group.id,
+      preparedLessonId: month.lessons.first.id,
+    );
   });
   tearDown(() async {
     await store.close();
@@ -64,7 +74,15 @@ void main() {
     int maxScore = 20,
     String? sessionId,
   }) => AcademicActivity(
-    sessionId: sessionId ?? session.id,
+    preparedLessonId: month.lessons
+        .firstWhere(
+          (lesson) =>
+              lesson.number ==
+              store.sessions
+                  .firstWhere((entry) => entry.id == (sessionId ?? session.id))
+                  .number,
+        )
+        .id,
     kind: kind,
     name: name,
     maxScore: maxScore,
@@ -90,6 +108,14 @@ void main() {
     maxScore: maxScore ?? activity?.maxScore ?? 10,
     updatedAt: DateTime.now(),
   );
+  Future<void> markPresent() => store.recordAttendance(
+    EntryRequest(
+      studentId: student.id,
+      sessionId: session.id,
+      mode: EntryMode.single,
+    ),
+  );
+
   Future<void> reopen() async {
     await store.close();
     store = await CenterStore.open(directory: directory.path);
@@ -241,6 +267,7 @@ void main() {
   test(
     'multiple named exams and homework results remain independent and never copy or replace legacy combined results',
     () async {
+      await markPresent();
       await store.saveAcademic(
         result(score: 8, homework: HomeworkStatus.complete),
       );
@@ -265,7 +292,7 @@ void main() {
           (jsonDecode(await File(definitionsBackup).readAsString())
                   as Map)['data']
               as Map;
-      expect(definitionData['schemaVersion'], 3);
+      expect(definitionData['schemaVersion'], 10);
       await store.saveAcademic(result(activity: first, score: 0));
       await store.saveAcademic(result(activity: second));
       await store.saveAcademic(
@@ -319,8 +346,9 @@ void main() {
   );
 
   test(
-    'definition name uniqueness is serialized per kind and session, and prevents editing or canceling its lesson',
+    'definition names are unique per kind and prepared lesson, and recorded attendance protects its session',
     () async {
+      await markPresent();
       final attempts = await Future.wait(
         [' Test ', 'test'].map((name) async {
           try {
@@ -367,7 +395,14 @@ void main() {
       final canceled = store.sessions.last;
       await store.cancelSession(canceled.id);
       await expectLater(
-        store.saveAcademicActivity(definition('ملغاة', sessionId: canceled.id)),
+        store.saveAcademicActivity(
+          AcademicActivity(
+            sessionId: canceled.id,
+            name: 'ملغاة',
+            kind: AcademicActivityKind.exam,
+            createdAt: DateTime.now(),
+          ),
+        ),
         throwsA(isA<CenterException>()),
       );
     },
@@ -376,6 +411,7 @@ void main() {
   test(
     'exam maximum is editable before results but locked after even an unreviewed result; identity and createdAt remain stable',
     () async {
+      await markPresent();
       final exam = await store.saveAcademicActivity(
         definition(' امتحان ', maxScore: 10),
       );
@@ -414,7 +450,7 @@ void main() {
       );
       await expectLater(
         store.saveAcademicActivity(
-          changed.copyWith(sessionId: store.sessions.last.id),
+          changed.copyWith(preparedLessonId: month.lessons[1].id),
         ),
         throwsA(isA<CenterException>()),
       );
@@ -432,6 +468,7 @@ void main() {
   test(
     'named result validates activity, session, kind, score range and record identity without partial writes',
     () async {
+      await markPresent();
       final exam = await store.saveAcademicActivity(definition('امتحان'));
       final homework = await store.saveAcademicActivity(
         definition('واجب', kind: AcademicActivityKind.homework),
@@ -558,8 +595,9 @@ void main() {
   }
 
   test(
-    'actual historical academics allow named results after leaving the group without copying legacy results or widening legacy eligibility',
+    'actual attendance preserves named and legacy result eligibility after group transfer without admitting nonattendees',
     () async {
+      await markPresent();
       await store.saveAcademic(
         result(score: 8, homework: HomeworkStatus.complete),
       );
@@ -572,10 +610,9 @@ void main() {
       expect(store.academics.first.toJson(), legacy.toJson());
       await store.saveAcademic(result(activity: exam, score: 11));
       expect(store.academics.last.score, 11);
-      await expectLater(
-        store.saveAcademic(result(score: 9)),
-        throwsA(isA<CenterException>()),
-      );
+      await store.saveAcademic(result(score: 9));
+      expect(store.academics.first.id, legacy.id);
+      expect(store.academics.first.score, 9);
       await store.saveStudent(
         Student(
           name: 'بلا تاريخ في الحصة',
@@ -590,6 +627,10 @@ void main() {
         ),
         throwsA(isA<CenterException>()),
       );
+      await expectLater(
+        store.saveAcademic(result(studentId: store.students.last.id, score: 5)),
+        throwsA(isA<CenterException>()),
+      );
       expect(store.academics, hasLength(2));
     },
   );
@@ -597,13 +638,21 @@ void main() {
   test(
     'legacy schema1 and schema2 backups without definitions remain combined and are never cloned into new activities',
     () async {
+      await markPresent();
       await store.saveAcademic(
         result(score: 0, homework: HomeworkStatus.missing),
       );
       final legacy = store.academics.single.toJson();
       for (final schema in [1, 2]) {
         final backup = await editedBackup((data) {
-          expect(data['schemaVersion'], 2);
+          data.remove('studyMonths');
+          data.remove('defaultMonthPriceVersion');
+          for (final row in data['groups'] as List) {
+            (row as Map).remove('monthPlans');
+          }
+          for (final row in data['sessions'] as List) {
+            (row as Map).remove('preparedLessonId');
+          }
           data['schemaVersion'] = schema;
           data.remove('academicActivities');
           if (schema == 1) {
@@ -627,7 +676,15 @@ void main() {
         expect(store.academics.single.toJson(), legacy);
         expect(store.academics.single.activityId, isNull);
       }
-      await store.saveAcademicActivity(definition('جديد'));
+      await store.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: store.studyMonths.first.lessons.first.id,
+          name: 'جديد',
+          kind: AcademicActivityKind.exam,
+          maxScore: 20,
+          createdAt: DateTime.now(),
+        ),
+      );
       expect(store.academics.single.toJson(), legacy);
       await reopen();
       expect(store.academics.single.activityId, isNull);
@@ -638,6 +695,7 @@ void main() {
   test(
     'academic definitions and results remain independent from immutable financial closings and survive backup plus reopen',
     () async {
+      await markPresent();
       await store.closeSession(session.id);
       await store.finalizeSession(sessionId: session.id, actualCash: 0);
       final originalClosing = store.closings.single.toJson();
@@ -667,6 +725,7 @@ void main() {
   test(
     'forged backups reject duplicate definitions/results and cross-kind or cross-session references before writing SQLite',
     () async {
+      await markPresent();
       final exam = await store.saveAcademicActivity(definition('امتحان'));
       await store.saveAcademic(result(activity: exam, score: 10));
       final originalActivity = store.academicActivities.single.toJson();
@@ -677,8 +736,9 @@ void main() {
           'id': 'duplicate-name',
         }),
         (data) =>
-            ((data['academicActivities'] as List).single as Map)['sessionId'] =
-                'missing-session',
+            ((data['academicActivities'] as List).single
+                    as Map)['preparedLessonId'] =
+                'missing-prepared-lesson',
         (data) =>
             ((data['academicActivities'] as List).single as Map)['maxScore'] =
                 0,
@@ -713,12 +773,13 @@ void main() {
   test(
     'failed SQLite writes rollback definition creation and results including their audit, and successful retry returns the persisted id',
     () async {
+      await markPresent();
       final db = await databaseFactoryFfi.openDatabase(
         store.databasePath,
         options: OpenDatabaseOptions(singleInstance: false),
       );
       Future<void> block() => db.execute(
-        "CREATE TRIGGER reject_activity BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        "CREATE TRIGGER reject_activity BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
       );
       Future<void> unblock() => db.execute('DROP TRIGGER reject_activity');
       try {

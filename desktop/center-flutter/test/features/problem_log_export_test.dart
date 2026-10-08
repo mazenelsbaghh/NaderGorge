@@ -14,6 +14,7 @@ import 'package:massar_center/shared/problem_log.dart';
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -179,9 +180,17 @@ void main() {
       await tester.runAsync(() async {
         action();
         action();
-        await acknowledgeNotice(
+        await waitForUiCondition(
           tester,
-          message: 'تم تصدير سجل المشاكل للدعم بنجاح.',
+          () =>
+              File(destination!).existsSync() &&
+              tester
+                      .widget<OutlinedButton>(
+                        find.byKey(const Key('export-problem-log')),
+                      )
+                      .onPressed !=
+                  null,
+          reason: 'Diagnostics export finishes and re-enables its button.',
         );
       });
       expect(chooserCalls, 1);
@@ -263,7 +272,11 @@ void main() {
       expect(chooserCalls, 1);
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('copy-problem-log-path')));
-        await acknowledgeNotice(tester, message: 'تم نسخ مسار سجل المشاكل.');
+        await waitForUiCondition(
+          tester,
+          () => copiedPath == log.directoryPath,
+          reason: 'The clipboard receives the actual log directory.',
+        );
       });
       expect(copiedPath, log.directoryPath);
       expect(

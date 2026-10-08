@@ -104,19 +104,31 @@ void main() {
     );
   }
 
+  testWidgets('success leaves scanner focus and notice queue available', (
+    tester,
+  ) async {
+    await open(tester);
+    await showMassarNotice(caller, 'تم التحصيل.', kind: NoticeKind.success);
+    await tester.pumpAndSettle();
+    expect(hasPendingMassarNotice(caller), isFalse);
+    expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
+    expect(codeFocus.hasFocus, isTrue);
+    expect(code.text, 'MS-123');
+  });
+
   testWidgets(
     'queue shows one notice at a time and held Enter or scanner cannot reach entry underneath',
     (tester) async {
       await open(tester);
       unawaited(
-        showMassarNotice(caller, 'تم التحصيل.', kind: NoticeKind.success),
+        showMassarNotice(caller, 'راجع التحصيل.', kind: NoticeKind.info),
       );
       expect(hasPendingMassarNotice(caller), isTrue);
       unawaited(
         showMassarNotice(caller, 'راجع الكود.', kind: NoticeKind.warning),
       );
       await tester.pumpAndSettle();
-      expect(find.text('تم التحصيل.'), findsOneWidget);
+      expect(find.text('راجع التحصيل.'), findsOneWidget);
       expect(find.text('راجع الكود.'), findsNothing);
       expect(
         (observer.last as TransitionRoute).transitionDuration,
@@ -127,7 +139,7 @@ void main() {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
-      expect(find.text('تم التحصيل.'), findsOneWidget);
+      expect(find.text('راجع التحصيل.'), findsOneWidget);
       expect(underlyingEntries, 0);
       expect(code.text, 'MS-123');
       await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);

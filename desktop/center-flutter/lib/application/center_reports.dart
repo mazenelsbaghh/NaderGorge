@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import '../shared/performance_trace.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -177,28 +180,39 @@ abstract final class CenterReports {
     CorrectionAction.closingReopened => 'إعادة فتح التقفيلة',
   };
 
+  static final _readContexts = Expando<_ReportContext>();
+
   static CenterReportData build(
     CenterStore store,
     CenterReportKind kind,
     CenterReportFilter filter,
   ) {
     _authorize(store, kind);
-    final context = _ReportContext(store, filter);
+    final trace = PerformanceTrace('reports.build', budgetMs: 32);
+    final context = _ReportContext(store, filter, cached: _readContexts[store]);
+    _readContexts[store] = context;
     context.validateActivity(kind);
-    return switch (kind) {
-      CenterReportKind.students => context.studentReport(),
-      CenterReportKind.groups => context.groupReport(),
-      CenterReportKind.sessions => context.sessionReport(),
-      CenterReportKind.attendance => context.attendanceReport(),
-      CenterReportKind.packages => context.packageReport(),
-      CenterReportKind.payments => context.paymentReport(),
-      CenterReportKind.exams => context.examReport(),
-      CenterReportKind.homework => context.homeworkReport(),
-      CenterReportKind.reviews => context.reviewReport(),
-      CenterReportKind.closings => context.closingReport(),
-      CenterReportKind.cards => context.studentCardReport(),
-      CenterReportKind.debts => context.debtReport(),
-    };
+    try {
+      final report = switch (kind) {
+        CenterReportKind.students => context.studentReport(),
+        CenterReportKind.groups => context.groupReport(),
+        CenterReportKind.sessions => context.sessionReport(),
+        CenterReportKind.attendance => context.attendanceReport(),
+        CenterReportKind.packages => context.packageReport(),
+        CenterReportKind.payments => context.paymentReport(),
+        CenterReportKind.exams => context.examReport(),
+        CenterReportKind.homework => context.homeworkReport(),
+        CenterReportKind.reviews => context.reviewReport(),
+        CenterReportKind.closings => context.closingReport(),
+        CenterReportKind.cards => context.studentCardReport(),
+        CenterReportKind.debts => context.debtReport(),
+      };
+      trace.counts['rows'] = report.rows.length;
+      return report;
+    } finally {
+      trace.stage('build');
+      trace.finish();
+    }
   }
 
   static void _authorize(CenterStore store, CenterReportKind kind) {
@@ -226,16 +240,19 @@ abstract final class CenterReports {
     await file.create(exclusive: true);
     final temporary = File('${file.path}.${const Uuid().v4()}.tmp');
     try {
-      final lines = [
-        report.columns,
-        ...report.rows,
-      ].map((row) => row.map(_csvCell).join(',')).join('\r\n');
-      await temporary.writeAsBytes([
-        0xef,
-        0xbb,
-        0xbf,
-        ...utf8.encode('$lines\r\n'),
-      ], flush: true);
+      await temporary.create(exclusive: true);
+      final trace = PerformanceTrace('reports.export', budgetMs: 250);
+      try {
+        await compute(_writeReportCsv, (
+          temporary.path,
+          report.columns,
+          report.rows,
+        ));
+      } finally {
+        trace.stage('write');
+        trace.counts['rows'] = report.rows.length;
+        trace.finish();
+      }
       _authorize(store, kind);
       if (store.currentUser!.id != exportingUser.id ||
           store.currentUser!.role != exportingUser.role) {
@@ -320,12 +337,45 @@ String _percentage(num attended, int records) {
 }
 
 class _ReportContext {
-  _ReportContext(this.store, this.filter) {
+  _ReportContext(this.store, this.filter, {_ReportContext? cached})
+    : revision = store.readRevision {
     if (filter.from != null &&
         filter.until != null &&
         _calendarDay(filter.from!).isAfter(_calendarDay(filter.until!))) {
       throw const CenterException('بداية الفترة يجب أن تكون قبل نهايتها.');
     }
+    if (cached != null && identical(cached.revision, revision)) {
+      students = cached.students;
+      groups = cached.groups;
+      sessions = cached.sessions;
+      catalogs = cached.catalogs;
+      staff = cached.staff;
+      attendance = cached.attendance;
+      payments = cached.payments;
+      activePaymentIds = cached.activePaymentIds;
+      activePackageIds = cached.activePackageIds;
+      activeClosingIds = cached.activeClosingIds;
+      activeClosingsBySession = cached.activeClosingsBySession;
+      academics = cached.academics;
+      paymentsById = cached.paymentsById;
+      cardPaymentsById = cached.cardPaymentsById;
+      moneyPairs = cached.moneyPairs;
+      attendanceById = cached.attendanceById;
+      academicByPair = cached.academicByPair;
+      academicPairs = cached.academicPairs;
+      academicByActivity = cached.academicByActivity;
+      activities = cached.activities;
+      attendancePairs = cached.attendancePairs;
+      actualAttendancePairs = cached.actualAttendancePairs;
+      activitiesBySession = cached.activitiesBySession;
+      studentsByGroup = cached.studentsByGroup;
+      historicalStudentsBySession = cached.historicalStudentsBySession;
+      _validateFilters();
+      return;
+    }
+    activitiesBySession = {};
+    studentsByGroup = {};
+    historicalStudentsBySession = {};
     students = {for (final student in store.students) student.id: student};
     groups = {for (final group in store.groups) group.id: group};
     sessions = {for (final session in store.sessions) session.id: session};
@@ -427,6 +477,7 @@ class _ReportContext {
     _validateFilters();
   }
   final CenterStore store;
+  final Object revision;
   final CenterReportFilter filter;
   final DateTime generatedAt = DateTime.now();
   late final Map<String, Student> students;
@@ -447,10 +498,10 @@ class _ReportContext {
   late final Set<(String, String)> actualAttendancePairs;
   late final Map<(String, String, String), AcademicRecord> academicByActivity;
   late final Map<String, AcademicActivity> activities;
-  final Map<(String, AcademicActivityKind), List<AcademicActivity>>
-  activitiesBySession = {};
-  final Map<String, List<String>> studentsByGroup = {};
-  final Map<String, Set<String>> historicalStudentsBySession = {};
+  late final Map<(String, AcademicActivityKind), List<AcademicActivity>>
+  activitiesBySession;
+  late final Map<String, List<String>> studentsByGroup;
+  late final Map<String, Set<String>> historicalStudentsBySession;
 
   void _validateFilters() {
     if ([
@@ -2180,4 +2231,33 @@ class _ReportMoneyMovement {
   final String? sessionId;
   final DebtKind kind;
   final List<Object?> cells;
+}
+
+Future<void> _writeReportCsv(
+  (String, List<String>, List<List<Object?>>) captured,
+) async {
+  final file = File(captured.$1);
+  final sink = file.openWrite();
+  final pending = BytesBuilder(copy: false)..add(const [0xef, 0xbb, 0xbf]);
+  try {
+    for (final row in <List<Object?>>[captured.$2].followedBy(captured.$3)) {
+      pending.add(
+        utf8.encode('${row.map(CenterReports._csvCell).join(',')}\r\n'),
+      );
+      if (pending.length >= 65536) {
+        sink.add(pending.takeBytes());
+        await sink.flush();
+      }
+    }
+    sink.add(pending.takeBytes());
+    await sink.flush();
+  } finally {
+    await sink.close();
+  }
+  final written = await file.open(mode: FileMode.append);
+  try {
+    await written.flush();
+  } finally {
+    await written.close();
+  }
 }

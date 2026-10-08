@@ -16,8 +16,12 @@ public sealed partial class LessonMimStudioService
         CheckIdle(row);
         var previous = row is null ? null : JsonSerializer.Deserialize<MimStudioDocument>(row.DocumentJson, JsonOptions);
         var count = previous?.Scenes.Length ?? 0;
-        if (request.ExpectedSceneCount != count || count >= 4)
-            throw new MimStudioConflictException("حدّث الاسكربت قبل كتابة المشهد التالي. الحد الأقصى أربعة مشاهد.");
+        if (request.TargetSceneCount is < 1 or > MimStudioContract.MaximumSceneCount || request.EpisodeContext?.Length > 2000)
+            throw new ArgumentException("اختار من مشهد إلى ٢٠ مشهدًا، وسياق الحلقة بحد أقصى ٢٠٠٠ حرف.");
+        if (request.ExpectedSceneCount != count || count >= request.TargetSceneCount)
+            throw new MimStudioConflictException("حدّث الاسكربت قبل كتابة المشهد التالي. اكتمل العدد المطلوب أو اتغيّرت النسخة.");
+        if (count > 0 && (previous!.TargetSceneCount != request.TargetSceneCount || previous.EpisodeContext != request.EpisodeContext))
+            throw new MimStudioConflictException("كمّل بنفس عدد المشاهد وسياق الحلقة المحفوظين، علشان ترتيب القصة يفضل متماسك.");
         if (count > 0 && row is not null && (row.SourceVideoId != request.SourceVideoId || row.SourceRevision != request.SourceRevision || previous?.SourceText != request.SourceText))
             throw new MimStudioConflictException("استخدم نفس مصدر المشاهد المحفوظة علشان تكمل القصة.");
         var source = await WritingSourceAsync(lessonId, request.SourceVideoId, request.SourceRevision, request.SourceText, ct);
@@ -30,14 +34,14 @@ public sealed partial class LessonMimStudioService
         if (row is null)
         {
             row = new LessonMimStudio { LessonId = lessonId, SourceVideoId = request.SourceVideoId, SourceRevision = request.SourceRevision,
-                DocumentJson = JsonSerializer.Serialize(new MimStudioDocument(1, lesson.Title, "", "", "", [], source.Text), JsonOptions) };
+                DocumentJson = JsonSerializer.Serialize(new MimStudioDocument(1, lesson.Title, "", "", "", [], source.Text, request.TargetSceneCount, request.EpisodeContext), JsonOptions) };
             db.Add(row);
         }
         if (count == 0)
         {
             row.SourceVideoId = request.SourceVideoId;
             row.SourceRevision = request.SourceRevision;
-            row.DocumentJson = JsonSerializer.Serialize(new MimStudioDocument(1, lesson.Title, "", "", "", [], source.Text), JsonOptions);
+            row.DocumentJson = JsonSerializer.Serialize(new MimStudioDocument(1, lesson.Title, "", "", "", [], source.Text, request.TargetSceneCount, request.EpisodeContext), JsonOptions);
         }
         row.GenerationStartedAt = DateTime.UtcNow;
         row.UpdatedByUserId = actor;
@@ -46,7 +50,10 @@ public sealed partial class LessonMimStudioService
         var claim = row.Version;
         try
         {
-            var generated = await writer.WriteAsync(new(lesson.Title, source, count == 0 ? null : previous, opening), ct);
+            var ending = count == 0 ? null : previous!.Scenes[^1].Shots.TakeLast(2).ToArray();
+            var generated = await writer.WriteAsync(new(lesson.Title, source, count == 0 ? null : previous, opening,
+                request.TargetSceneCount, request.EpisodeContext, ending), ct);
+            generated = generated with { TargetSceneCount = request.TargetSceneCount, EpisodeContext = request.EpisodeContext };
             MimStudioContract.Validate(generated, source.Chapters.Select(x => x.Id).ToHashSet());
             if (generated.Scenes.Length != 1) throw new MimStudioGenerationException("خدمة الكتابة رجّعت أكثر من مشهد. لم يتم تغيير الاسكربت.");
             // Recheck the video source after inference; a changed/deleted source cannot receive stale output.
@@ -54,6 +61,7 @@ public sealed partial class LessonMimStudioService
             if (JsonSerializer.Serialize(source) != JsonSerializer.Serialize(currentSource))
                 throw new MimStudioConflictException("الشرح اتغيّر أثناء كتابة المشهد. راجع المصدر وأعد المحاولة.");
             var doc = count == 0 ? generated with { SourceText = source.Text } : previous! with { Scenes = [.. previous!.Scenes, generated.Scenes[0]] };
+            doc.Scenes[^1] = doc.Scenes[^1] with { Prompt = MimVideoPrompt.Build(doc, count) };
             row.DocumentJson = JsonSerializer.Serialize(doc, JsonOptions);
             row.GenerationStartedAt = null;
             row.UpdatedAt = DateTime.UtcNow;

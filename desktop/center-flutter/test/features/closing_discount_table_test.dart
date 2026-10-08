@@ -139,10 +139,12 @@ void main() {
       String? cell(String key) =>
           tester.widget<Text>(find.byKey(Key(key))).data;
 
-      await (FontLoader('Tajawal')
-            ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))
-            ..addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf')))
-          .load();
+      await tester.runAsync(() async {
+        await (FontLoader('Tajawal')
+              ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))
+              ..addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf')))
+            .load();
+      });
 
       Future<void> open({
         required double width,

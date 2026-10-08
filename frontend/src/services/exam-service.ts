@@ -42,7 +42,6 @@ export interface AnswerSubmissionDto {
   selectedOptionId?: string;
   answerText?: string;
   selectedText?: string;
-  audioUrl?: string;
 }
 
 export interface ExamResultDto {

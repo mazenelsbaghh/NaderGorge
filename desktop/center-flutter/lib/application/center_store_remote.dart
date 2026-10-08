@@ -9,9 +9,14 @@ class _RemoteCenterStore extends CenterStore {
   final File _pendingFile;
   String? _staffSession;
   bool _connected = false;
+  bool _supportsLiveRefresh = false;
+  @override
+  bool get supportsLiveRefresh => _supportsLiveRefresh;
   bool _canConfigureCards = false;
   String? _snapshotFingerprint;
   String? _snapshotVersion;
+  Future<void>? _backgroundRefresh;
+  int _refreshGeneration = 0, _foregroundRequests = 0;
   Map<String, dynamic> _remoteSupportStatus = const {'configured': false};
   @override
   Map<String, dynamic> get supportStatus => _remoteSupportStatus;
@@ -67,6 +72,7 @@ class _RemoteCenterStore extends CenterStore {
   bool get canConfigureCards => canManage && _canConfigureCards;
 
   void _apply(Map<String, dynamic> response) {
+    final trace = PerformanceTrace('lan.refresh', budgetMs: 32);
     final version = response['stateVersion'] as String?;
     final unchanged = response['stateUnchanged'] == true;
     final delta = response['stateDelta'];
@@ -120,12 +126,18 @@ class _RemoteCenterStore extends CenterStore {
             'credentials': <String, dynamic>{},
           });
     _state = nextState;
+    if (response.containsKey('stateWatch')) {
+      _supportsLiveRefresh = response['stateWatch'] == true;
+    }
     _remoteSupportStatus = nextSupport;
     _currentUser = nextUser;
     _canConfigureCards = response['canConfigureCards'] == true;
     _connected = true;
     _snapshotFingerprint = fingerprint;
     _snapshotVersion = version;
+    trace.stage('apply');
+    trace.counts[delta != null ? 'delta' : 'full'] = stateChanged ? 1 : 0;
+    trace.finish();
     if (changed && !_closed) notifyListeners();
   }
 
@@ -135,18 +147,7 @@ class _RemoteCenterStore extends CenterStore {
     required bool command,
   }) async {
     if (_staffSession != session) return;
-    try {
-      _apply(response);
-      return;
-    } on FormatException {
-      // The command receipt may already be committed. Only refresh its view.
-    } on TypeError {
-      // A malformed patch must never mutate or discard the previous snapshot.
-    } on CenterException {
-      // Unsupported state schemas must not be mistaken for a business rejection.
-    } on ArgumentError {
-      // Invalid enum values in a row also require an authoritative full refresh.
-    }
+    if (_tryApply(response)) return;
     try {
       final full = await transport.get('/api/state', staffSession: session);
       if (_staffSession != session) {
@@ -179,6 +180,35 @@ class _RemoteCenterStore extends CenterStore {
         stackTrace: stack,
       );
     }
+  }
+
+  bool _tryApply(Map<String, dynamic> response) {
+    try {
+      _apply(response);
+      return true;
+    } on FormatException {
+      // Recover malformed snapshots through an authoritative full read.
+    } on TypeError {
+      // A malformed row must not partially mutate the current snapshot.
+    } on CenterException {
+      // Unsupported schemas need full recovery, including after a commit.
+    } on ArgumentError {
+      // Invalid row enum values also require full recovery.
+    }
+    return false;
+  }
+
+  Future<void> _foreground(
+    Future<void> Function() work, {
+    required String operation,
+  }) {
+    _refreshGeneration++;
+    transport.cancelStateWait();
+    _foregroundRequests++;
+    return _exclusive(
+      work,
+      operation: operation,
+    ).whenComplete(() => _foregroundRequests--);
   }
 
   void _requireCommandReceipt(Map<String, dynamic> response) {
@@ -234,7 +264,7 @@ class _RemoteCenterStore extends CenterStore {
   }
 
   @override
-  Future<void> prepareLanSwitch() => _exclusive(() async {
+  Future<void> prepareLanSwitch() => _foreground(() async {
     if (!await _pendingFile.exists()) return;
     if (_staffSession == null || !_connected) {
       throw const CenterException(
@@ -247,7 +277,7 @@ class _RemoteCenterStore extends CenterStore {
   @override
   Future<void> signIn(String name, String password) {
     final revision = _logoutRevision;
-    return _exclusive(() async {
+    return _foreground(() async {
       final response = await transport.post('/api/login', {
         'name': name,
         'password': password,
@@ -263,6 +293,7 @@ class _RemoteCenterStore extends CenterStore {
 
   @override
   void signOut() {
+    _refreshGeneration++;
     final session = _staffSession;
     _staffSession = null;
     _canConfigureCards = false;
@@ -286,9 +317,29 @@ class _RemoteCenterStore extends CenterStore {
   }
 
   @override
-  Future<void> refreshRemote() => _exclusive(() async {
+  Future<void> refreshRemote({bool waitForChanges = false}) {
+    return _backgroundRefresh ??= _refreshInBackground(
+      waitForChanges: waitForChanges,
+    ).whenComplete(() => _backgroundRefresh = null);
+  }
+
+  Future<void> _refreshInBackground({required bool waitForChanges}) async {
+    if (_closed || _foregroundRequests != 0) return;
+    final generation = _refreshGeneration;
+    final session = _staffSession;
+    final version = _snapshotVersion;
+    bool currentInteraction() =>
+        !_closed &&
+        _foregroundRequests == 0 &&
+        generation == _refreshGeneration &&
+        session == _staffSession;
+    bool currentSnapshot() =>
+        currentInteraction() && version == _snapshotVersion;
+
     try {
-      if (_staffSession == null) {
+      // Waiting for a background GET must not hold the command queue. Apply
+      // only against its captured session/version, inside that same queue.
+      if (session == null) {
         final health = await transport.health();
         if (health['hostId'] != transport.endpoint.hostId ||
             health['protocol'] != 1) {
@@ -296,43 +347,70 @@ class _RemoteCenterStore extends CenterStore {
             'الجهاز المتصل لا يطابق جهاز السنتر المحفوظ.',
           );
         }
-        if (!_connected) {
-          _connected = true;
-          notifyListeners();
-        }
+        await _exclusive(() async {
+          if (currentSnapshot() && !_connected) {
+            _connected = true;
+            notifyListeners();
+          }
+        }, operation: 'lan.refresh');
       } else {
-        final session = _staffSession;
         final response = await transport.get(
           '/api/state',
           staffSession: session,
-          stateVersion: _snapshotVersion,
+          stateVersion: version,
           statePatches: true,
+          waitForChanges: waitForChanges,
         );
-        if (_staffSession != session) return;
-        await _applyResponse(response, session!, command: false);
-        if (_staffSession != session) return;
-        await _reconcile();
+        var needsFullState = false;
+        await _exclusive(() async {
+          if (!currentSnapshot()) return;
+          if (!_tryApply(response)) {
+            needsFullState = true;
+            return;
+          }
+          await _reconcile();
+        }, operation: 'lan.refresh');
+        if (!needsFullState || !currentSnapshot()) return;
+        final full = await transport.get('/api/state', staffSession: session);
+        await _exclusive(() async {
+          if (!currentSnapshot()) return;
+          if (!full.containsKey('state')) {
+            throw const FormatException('Expected full state recovery');
+          }
+          _apply(full);
+          await _reconcile();
+        }, operation: 'lan.refresh');
       }
-    } on LanAuthorizationException {
-      signOut();
-      _connected = false;
-      notifyListeners();
-      rethrow;
-    } catch (_) {
-      if (_connected) {
-        _connected = false;
-        notifyListeners();
-      }
-      rethrow;
+    } catch (error, stack) {
+      // An obsolete read's failure cannot disconnect a newer command or login.
+      if (!currentInteraction()) return;
+      var relevant = false;
+      await _exclusive(() async {
+        if (!currentInteraction()) return;
+        relevant = true;
+        if (error is LanAuthorizationException) signOut();
+        if (_connected) {
+          _connected = false;
+          notifyListeners();
+        }
+      }, operation: 'lan.refresh');
+      if (!relevant) return;
+      if (error is CenterException) rethrow;
+      throw LanConnectionException(
+        'تعذر تحديث بيانات الجهاز من الرئيسي. أعد الاتصال للمحاولة مجددًا.',
+        outcomeUnknown: false,
+        cause: error,
+        stackTrace: stack,
+      );
     }
-  }, operation: 'lan.refresh');
+  }
 
   Future<Object?> _command(
     String operation,
     Map<String, dynamic> arguments,
   ) async {
     Object? result;
-    await _exclusive(() async {
+    await _foreground(() async {
       if (_staffSession == null || !_connected || currentUser == null) {
         throw const CenterException(
           'الاتصال بالرئيسي غير متاح أو يلزم تسجيل الدخول؛ لم يُرسل الطلب.',
@@ -439,6 +517,7 @@ class _RemoteCenterStore extends CenterStore {
   @override
   Future<void> close() async {
     if (_closed) return;
+    _refreshGeneration++;
     await _exclusive(() async {
       transport.close();
       _staffSession = null;

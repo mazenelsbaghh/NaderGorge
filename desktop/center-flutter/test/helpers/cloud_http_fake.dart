@@ -42,7 +42,11 @@ class CloudHttpRequest implements HttpClientRequest {
   @override
   int contentLength = -1;
   final bytes = <int>[];
-  String get body => utf8.decode(bytes);
+  String get body => utf8.decode(
+    headers.value(HttpHeaders.contentEncodingHeader) == 'gzip'
+        ? gzip.decode(bytes)
+        : bytes,
+  );
   @override
   void add(List<int> chunk) => bytes.addAll(chunk);
   @override

@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../helpers/attendance_ui_helpers.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -99,13 +100,16 @@ void main() {
             createdAt: DateTime.now().subtract(const Duration(days: 10)),
           ),
         );
-        await store.saveSession(
-          LessonSession(
-            groupId: store.groups.single.id,
-            number: 1,
-            createdAt: DateTime.now(),
-            startsAt: DateTime.now().add(const Duration(minutes: 1)),
+        final month = await store.saveStudyMonth(
+          StudyMonth(
+            name: 'شهر الاختبار',
+            price: 24000,
+            lessons: [const PreparedLesson(number: 1)],
           ),
+        );
+        await store.startPreparedLesson(
+          groupId: store.groups.single.id,
+          preparedLessonId: month.lessons.single.id,
         );
         store.signOut();
         final fonts = FontLoader('Tajawal')
@@ -201,9 +205,15 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('التحضير والتحصيل'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('student-search')), '321');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.tap(
+        find.widgetWithText(DropdownButtonFormField<String>, 'المجموعة'),
+      );
       await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(store.groupLabel(store.groups.single.id)).last,
+      );
+      await tester.pumpAndSettle();
+      await previewAttendanceStudent(tester, '321');
       expect(find.text('ملاحظة الطالب المحفوظة'), findsOneWidget);
       await tester.tap(find.byKey(const Key('edit-student-note')));
       await tester.pumpAndSettle();

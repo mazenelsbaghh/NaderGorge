@@ -13,6 +13,7 @@ import 'package:massar_center/features/management/academics_page.dart';
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/academic_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ void main() {
   late CenterStore store;
   late Student student;
   late LessonSession session;
+  late List<Map<String, dynamic>> originalAttendance;
   late AcademicActivity exam;
   late AcademicActivity homework;
   late AcademicRecord legacy;
@@ -64,10 +66,17 @@ void main() {
           createdAt: DateTime.now().subtract(const Duration(days: 3)),
         ),
       );
-      session = store.sessions.single;
+      session = await prepareAcademicFixture(
+        store,
+        store.sessions.single,
+        store.students,
+      );
+      originalAttendance = store.attendances
+          .map((row) => row.toJson())
+          .toList();
       exam = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.exam,
           name: 'امتحان الحركة',
           maxScore: 20,
@@ -76,7 +85,7 @@ void main() {
       );
       homework = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.homework,
           name: 'واجب الحركة',
           createdAt: DateTime.now(),
@@ -129,7 +138,10 @@ void main() {
   void expectNoFinanceAndLegacyPreserved() {
     expect(store.payments, isEmpty);
     expect(store.packages, isEmpty);
-    expect(store.attendances, isEmpty);
+    expect(
+      store.attendances.map((row) => row.toJson()).toList(),
+      originalAttendance,
+    );
     expect(store.cardPayments, isEmpty);
     expect(
       store.academics
@@ -143,13 +155,34 @@ void main() {
       expect(editor(tester, code).focusNode.hasFocus, isTrue);
 
   Future<void> choose(WidgetTester tester, String label, String option) async {
-    final picker = selector(label);
-    await tester.ensureVisible(picker);
-    await tester.pumpAndSettle();
-    await tester.tap(picker);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(option).last);
-    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      final picker = selector(label);
+      await tester.ensureVisible(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(option).last);
+      await tester.pump(const Duration(milliseconds: 200));
+      if (label == 'اختر الامتحان أو الواجب' && option.startsWith('واجب:')) {
+        for (var attempt = 0; attempt < 100; attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await tester.pump(const Duration(milliseconds: 20));
+          if (store.academics
+                      .where((record) => record.activityId == homework.id)
+                      .length ==
+                  2 &&
+              tester.widget<TextField>(code).enabled == true) {
+            break;
+          }
+        }
+        expect(
+          store.academics.where((record) => record.activityId == homework.id),
+          hasLength(2),
+        );
+        expect(tester.widget<TextField>(code).enabled, isTrue);
+      }
+      await tester.pumpAndSettle();
+    });
   }
 
   Future<void> open(
@@ -179,14 +212,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await choose(tester, 'المجموعة', store.groupLabel(store.groups.single.id));
-    final picker = selector('اختر الحصة للرصد');
-    await tester.ensureVisible(picker);
-    await tester.pumpAndSettle();
-    await tester.tap(picker);
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('حصة 1 —').last);
-    await tester.pumpAndSettle();
+    await selectAcademicFixtureSession(tester, store, session);
     expect(
       tester
           .widget<DropdownButtonFormField<String>>(
@@ -223,6 +249,15 @@ void main() {
   Future<void> submitCode(WidgetTester tester, String query) async {
     await tester.enterText(code, query);
     await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.enter));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openRow(WidgetTester tester) async {
+    await tester.enterText(code, student.code);
+    await tester.pumpAndSettle();
+    final action = find.widgetWithText(TextButton, 'رصد').first;
+    await tester.ensureVisible(action);
+    await tester.tap(action);
     await tester.pumpAndSettle();
   }
 
@@ -354,7 +389,7 @@ void main() {
         ('missing', HomeworkStatus.missing),
         ('incomplete', HomeworkStatus.incomplete),
       ]) {
-        await submitCode(tester, student.code);
+        await openRow(tester);
         expect(quick, findsOneWidget);
         expect(score, findsNothing);
         expect(find.byKey(const Key('academic-quick-save')), findsNothing);
@@ -379,7 +414,7 @@ void main() {
         expect(named(homework.id).examAbsent, isFalse);
         expect(named(exam.id).toJson(), savedExam.toJson());
       }
-      expect(store.academics, hasLength(3));
+      expect(store.academics, hasLength(4));
       expect(store.audit, hasLength(audits + 3));
       expect(tester.takeException(), isNull);
     },
@@ -414,6 +449,9 @@ void main() {
       expect(store.audit, hasLength(audits));
       await tester.tap(find.byKey(const Key('academic-quick-cancel')));
       await tester.pumpAndSettle();
+      expect(find.text('تعديلات لم تُحفظ'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'خروج بدون حفظ'));
+      await tester.pumpAndSettle();
       expect(quick, findsNothing);
       expectCodeFocus(tester);
       expectNoFinanceAndLegacyPreserved();
@@ -440,8 +478,8 @@ void main() {
         findsOneWidget,
       );
       for (final label in [
-        'المجموعة',
-        'اختر الحصة للرصد',
+        'المجموعة التي بدأت الحصة',
+        'الحصة المجهزة لكل المجموعات',
         'اختر الامتحان أو الواجب',
       ]) {
         expect(
@@ -458,8 +496,8 @@ void main() {
       expectCodeFocus(tester);
       expect(store.audit, hasLength(audits));
       for (final label in [
-        'المجموعة',
-        'اختر الحصة للرصد',
+        'المجموعة التي بدأت الحصة',
+        'الحصة المجهزة لكل المجموعات',
         'اختر الامتحان أو الواجب',
       ]) {
         expect(
@@ -470,13 +508,13 @@ void main() {
         );
       }
       await choose(tester, 'اختر الامتحان أو الواجب', 'واجب: ${homework.name}');
-      await submitCode(tester, student.code);
+      await openRow(tester);
       expect(score, findsNothing);
       expectNoFinanceAndLegacyPreserved();
       await tester.tap(find.byKey(const Key('academic-quick-cancel')));
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
-      expect(store.audit, hasLength(audits));
+      expect(store.audit, hasLength(audits + 1));
       expect(tester.takeException(), isNull);
     },
   );
@@ -519,6 +557,9 @@ void main() {
       await tester.ensureVisible(cancel);
       await tester.tap(cancel);
       await tester.pumpAndSettle();
+      expect(find.text('تعديلات لم تُحفظ'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'خروج بدون حفظ'));
+      await tester.pumpAndSettle();
       expect(quick, findsNothing);
       expectCodeFocus(tester);
       expect(store.academics.map((record) => record.toJson()).toList(), before);
@@ -540,8 +581,18 @@ void main() {
               createdAt: DateTime.now().subtract(const Duration(days: 10)),
             ),
           );
+          await store.recordAttendance(
+            EntryRequest(
+              studentId: store.students.last.id,
+              sessionId: session.id,
+              mode: EntryMode.single,
+            ),
+          );
         }
       });
+      originalAttendance = store.attendances
+          .map((row) => row.toJson())
+          .toList();
       await open(tester, size: const Size(960, 400), textScale: 2);
       expect(tester.takeException(), isNull);
       final audits = store.audit.length;
@@ -583,14 +634,19 @@ void main() {
       for (final (query, message) in [
         (
           'unknown-code',
-          'لا يوجد طالب بهذا الكود أو الاسم مسجل لهذه الحصة وقت إقامتها.',
+          'لا يوجد طالب بهذا الكود أو الباركود أو الاسم حاضر أو معوّض فعليًا في هذه الحصة.',
         ),
         ('أحمد', 'الاسم يطابق 2 طلبة. اختر الطالب من الجدول أو اكتب كوده.'),
       ]) {
         await tester.runAsync(() async {
           await tester.enterText(code, query);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-          await acknowledgeNotice(tester, message: message);
+          if (query == 'أحمد') {
+            await tester.pumpAndSettle();
+            await cancelAcademicStudentChoice(tester);
+          } else {
+            await acknowledgeNotice(tester, message: message);
+          }
         });
         await tester.pumpAndSettle();
         expect(quick, findsNothing);

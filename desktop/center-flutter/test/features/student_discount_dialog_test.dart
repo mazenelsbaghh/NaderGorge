@@ -12,7 +12,6 @@ import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/attendance/student_discount_dialog.dart';
 import 'package:massar_center/shared/theme.dart';
 
-import '../helpers/notice_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -172,7 +171,10 @@ void main() {
   Future<void> changePrice(WidgetTester tester, String label) async {
     await tester.runAsync(
       () => tester.tap(
-        find.widgetWithText(DropdownButtonFormField<String>, 'احسب الخصم على'),
+        find.widgetWithText(
+          DropdownButtonFormField<String>,
+          'مرجع حساب الخصم — النسبة ثابتة لكل الدفع',
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -198,7 +200,8 @@ void main() {
       try {
         await gesture();
         await completed.future.timeout(const Duration(seconds: 5));
-        await acknowledgeNotice(tester, message: 'تم حفظ الخصم الثابت للطالب.');
+        await Future<void>(() {});
+        await tester.pump();
       } finally {
         store.removeListener(changed);
       }
@@ -246,9 +249,12 @@ void main() {
       await tester.pump();
       expect(store.students.single.discountPercent, 25);
       expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(store.students.single.discountPercent, 25);
       await saveMutation(
         tester,
-        () => tester.sendKeyUpEvent(LogicalKeyboardKey.enter),
+        () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
         25.5,
       );
       await tester.runAsync(() => store.close());
@@ -360,24 +366,15 @@ void main() {
   }
 
   testWidgets(
-    'actor changes while discount draft is open show permission error and retain the draft for authorized retry',
+    'signout disables discount submission and retains the draft for authorized retry',
     (tester) async {
       await open(tester);
       await enter(tester, percent, '30.5');
       await tester.runAsync(() async {
-        await store.saveStaff(
-          name: 'الاستقبال',
-          password: 'cashier-password',
-          role: StaffRole.cashier,
-        );
         store.signOut();
-        await store.signIn('الاستقبال', 'cashier-password');
-        await tester.tap(save);
-        await acknowledgeNotice(
-          tester,
-          message: 'ليس لديك صلاحية لهذا الإجراء.',
-        );
       });
+      await tester.pump();
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(percent).controller!.text, '30.5');
       expect(store.students.single.discountPercent, 25);
@@ -428,13 +425,18 @@ void main() {
       await enter(tester, amount, '٩١٫٩٧');
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('كود الطالب: 501'));
       final codeBounds = tester.getRect(find.text('كود الطالب: 501'));
       expect(codeBounds.top, greaterThanOrEqualTo(0));
       expect(codeBounds.bottom, lessThanOrEqualTo(800));
+      await tester.ensureVisible(
+        find.text('مرجع حساب النسبة: سعر الحصة داخل المجموعة'),
+      );
       final priceBounds = tester.getRect(
-        find.text('الحساب على: سعر الحصة داخل المجموعة'),
+        find.text('مرجع حساب النسبة: سعر الحصة داخل المجموعة'),
       );
       expect(priceBounds.bottom, lessThanOrEqualTo(800));
+      await tester.ensureVisible(save);
       final bounds = tester.getRect(save);
       expect(bounds.top, greaterThanOrEqualTo(0));
       expect(bounds.bottom, lessThanOrEqualTo(800));

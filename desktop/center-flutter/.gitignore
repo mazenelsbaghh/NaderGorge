@@ -41,6 +41,11 @@ migrate_working_dir/
 /assets/installation_seed.json
 /private-import/
 
+# Recoverable, temporary Windows client packaging state.
+/.massar-windows-package.json
+/.massar-windows-build.lock
+/.massar-package-*
+
 # Symbolication related
 app.*.symbols
 

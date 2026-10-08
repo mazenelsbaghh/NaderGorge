@@ -19,6 +19,7 @@ import 'lan/lan_controller.dart';
 import 'shared/appearance.dart';
 import 'shared/notice_dialog.dart';
 import 'shared/problem_log.dart';
+import 'shared/performance_trace.dart';
 import 'shared/problem_log_health.dart';
 import 'shared/problem_reporting.dart';
 import 'shared/theme.dart';
@@ -29,6 +30,7 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       installProblemHandlers();
       await _initializeProblemLog();
+      PerformanceMonitor();
       runApp(const CenterBootstrap());
     },
     (error, stackTrace) {
@@ -239,16 +241,24 @@ class _CenterAppState extends State<CenterApp> {
       clientOnly: widget.clientOnly || widget.store.isClientWorkspace,
     )..addListener(_lanChanged);
     final dataDirectory = File(widget.store.databasePath).parent;
+    void requireSupportHost() {
+      if (!identical(_lan.activeStore, widget.store)) {
+        throw const CenterException(
+          'ارفع بيانات السنتر من الجهاز الرئيسي المتصل.',
+        );
+      }
+    }
+
     _cloud = CloudSupportController(
       directory: Directory(p.join(dataDirectory.path, 'support')),
       clientOnly: widget.clientOnly || widget.store.isClientWorkspace,
       snapshot: () {
-        if (!identical(_lan.activeStore, widget.store)) {
-          throw const CenterException(
-            'ارفع بيانات السنتر من الجهاز الرئيسي المتصل.',
-          );
-        }
+        requireSupportHost();
         return widget.store.captureSupportSnapshot(automatic: true);
+      },
+      snapshotRevision: () {
+        requireSupportHost();
+        return widget.store.supportSnapshotRevision();
       },
       diagnostics: () async {
         final log = ProblemLog.current;
@@ -481,6 +491,7 @@ class _CenterAppState extends State<CenterApp> {
                   AttendanceWorkspace(
                     key: ValueKey(store),
                     store: store,
+                    lanController: _lan,
                     initialSessionId: _initialSessionId,
                     workspaceContext: _attendanceContext,
                     onExit: () => setState(() {

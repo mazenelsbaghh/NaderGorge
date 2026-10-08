@@ -48,7 +48,8 @@ void main() {
         store.removeListener(observeAdmin);
         await tester.pumpAndSettle();
         expect(find.text('إنشاء حساب الإدارة على هذا الجهاز'), findsNothing);
-        expect(find.text('أساس النظام'), findsWidgets);
+        expect(find.byKey(const Key('management-navigation')), findsOneWidget);
+        expect(store.currentUser?.name, 'نادر');
         expect(tester.takeException(), isNull);
         for (final section in ['التقارير', 'مراجعة', 'تقفيلة الحسابات']) {
           final sectionTile = find.widgetWithText(ListTile, section);

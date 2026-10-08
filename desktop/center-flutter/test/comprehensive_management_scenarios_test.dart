@@ -96,8 +96,11 @@ void main() {
     group = store.groups.first;
     otherGroup = store.groups.last;
     final starts = DateTime.now().add(const Duration(days: 1));
+    final month = store.studyMonths.first;
     await store.saveSession(
       LessonSession(
+        preparedLessonId: month.lessons.first.id,
+        monthNumber: month.number,
         groupId: group.id,
         number: 1,
         startsAt: starts,
@@ -205,7 +208,11 @@ void main() {
         final paidFull = store.payments.singleWhere(
           (payment) => payment.studentId == full.id,
         );
-        await store.checkPayment(studentId: full.id, sessionId: session.id);
+        await store.checkPayment(
+          studentId: full.id,
+          sessionId: session.id,
+          expectedAmount: paidFull.collectedAmount,
+        );
         await store.savePaymentReview(
           ReviewRequest(
             studentId: full.id,
@@ -329,7 +336,7 @@ void main() {
         expect(purchased['الحصص الأصلية'], scenario.sessions);
         expect(purchased['المتبقي حاليًا'], scenario.sessions - 1);
         expect(
-          purchased['المبلغ المدفوع (جنيه مصري)'],
+          purchased['المحصل حتى الآن (جنيه مصري)'],
           reportAmount(scenario.packageNet),
         );
         final attendance = report(
@@ -373,9 +380,18 @@ void main() {
         'طالب مجموعة أخرى',
         groupId: otherGroup.id,
       );
+      for (final student in [full, discounted, absent, exempt, prepaid]) {
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+      }
       final exam = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.exam,
           name: 'امتحان "الحركة"\nالنهائي',
           maxScore: 25,
@@ -384,7 +400,7 @@ void main() {
       );
       final homework = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.homework,
           name: 'واجب الحركة',
           createdAt: DateTime.now(),
@@ -581,7 +597,7 @@ void main() {
         await store.finalizeSession(sessionId: session.id, actualCash: 13154);
         final exam = await store.saveAcademicActivity(
           AcademicActivity(
-            sessionId: session.id,
+            preparedLessonId: session.preparedLessonId,
             kind: AcademicActivityKind.exam,
             name: 'رصد بعد التقفيل',
             maxScore: 25,
@@ -725,10 +741,10 @@ void main() {
         expect(row['الحصص الأصلية'], 2);
         expect(row['المتبقي حاليًا'], 1);
         expect(
-          packages.columns.contains('المبلغ المدفوع (جنيه مصري)'),
+          packages.columns.contains('المحصل حتى الآن (جنيه مصري)'),
           financial,
         );
-        if (financial) expect(row['المبلغ المدفوع (جنيه مصري)'], '128.27');
+        if (financial) expect(row['المحصل حتى الآن (جنيه مصري)'], '128.27');
         final path = '${directory.path}/package-${role.name}.csv';
         await CenterReports.exportCsv(
           store: store,
@@ -737,14 +753,15 @@ void main() {
           destination: path,
         );
         final csv = await File(path).readAsString();
-        expect(csv.contains('المبلغ المدفوع (جنيه مصري)'), financial);
+        expect(csv.contains('المحصل حتى الآن (جنيه مصري)'), financial);
         expect(csv.contains('128.27'), financial);
         final publicPrices = report(CenterReportKind.groups);
         expect(
           publicPrices.columns,
-          contains('سعر باقة حصتين الحالي (جنيه مصري)'),
+          contains('الأشهر المتاحة حاليًا — الاسم / الحصص / السعر'),
         );
-        expect(publicPrices.rows.first, contains('171.03'));
+        expect(publicPrices.rows.first.last, contains('210.00'));
+        expect(publicPrices.rows.first, contains('101.03'));
         for (final kind in [
           CenterReportKind.payments,
           CenterReportKind.reviews,
@@ -819,12 +836,8 @@ class _PausedCsvFile extends Fake implements File {
   @override
   String get path => actual.path;
   @override
-  Future<File> writeAsBytes(
-    List<int> bytes, {
-    FileMode mode = FileMode.write,
-    bool flush = false,
-  }) async {
-    await actual.writeAsBytes(bytes, mode: mode, flush: flush);
+  Future<File> create({bool recursive = false, bool exclusive = false}) async {
+    await actual.create(recursive: recursive, exclusive: exclusive);
     written.complete();
     await resume;
     return this;

@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 841,
-  "frontendCallCount": 723,
+  "endpointCount": 861,
+  "frontendCallCount": 724,
   "missingFrontendRouteCount": 0,
-  "digest": "eb8041c6145f2c07aa53fada229e82cc47be19d00a6c9720d68e9bc06c24059d",
+  "digest": "a56dd0c3ea1761ce7277217c276bb261dc2926e91db058aa02aa5a04bf2e5b3c",
   "endpoints": [
     {
       "controller": "AdminAIAgentController",
@@ -369,7 +369,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
-        "line": 27
+        "line": 32
       }
     },
     {
@@ -417,7 +417,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
-        "line": 30
+        "line": 35
+      }
+    },
+    {
+      "controller": "AdminCenterDesktopController",
+      "action": "Students",
+      "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/students",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/students",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 27
       }
     },
     {
@@ -2782,6 +2794,210 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
         "line": 96
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Disconnect",
+      "method": "DELETE",
+      "path": "/api/admin/mim-studio/connection",
+      "routeTemplate": "/api/admin/mim-studio/connection",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 83
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Connection",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/connection",
+      "routeTemplate": "/api/admin/mim-studio/connection",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 73
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Complete",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/connection/complete",
+      "routeTemplate": "/api/admin/mim-studio/connection/complete",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 79
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Connect",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/connection/start",
+      "routeTemplate": "/api/admin/mim-studio/connection/start",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 76
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Tools",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/connection/tools",
+      "routeTemplate": "/api/admin/mim-studio/connection/tools",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 86
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Read",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 15
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Save",
+      "method": "PUT",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 21
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Episode",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/episode-video",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/episode-video",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 29
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Assemble",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/episode-video",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/episode-video",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 32
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "EpisodeFile",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/episode-video/file",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/episode-video/file",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 36
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Video",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/scenes/{scene}/video",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 55
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Submit",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/scenes/{scene}/video",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 65
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Quote",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video/quote",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/scenes/{scene}/video/quote",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 58
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Review",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video/review",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/scenes/{scene}/video/review",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 69
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Generate",
+      "method": "POST",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/scenes/next",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/scenes/next",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 25
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Sources",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/lessons/{lessonid}/sources",
+      "routeTemplate": "/api/admin/mim-studio/lessons/{lessonId}/sources",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 18
+      }
+    },
+    {
+      "controller": "AdminMimStudioController",
+      "action": "Models",
+      "method": "GET",
+      "path": "/api/admin/mim-studio/video-models",
+      "routeTemplate": "/api/admin/mim-studio/video-models",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 62
       }
     },
     {
@@ -5362,6 +5578,30 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
         "line": 107
+      }
+    },
+    {
+      "controller": "ExamWhatsAppWebhookController",
+      "action": "VerifyWebhook",
+      "method": "GET",
+      "path": "/api/exam-room/whatsapp/webhook",
+      "routeTemplate": "/api/exam-room/whatsapp/webhook",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamWhatsAppWebhookController.cs",
+        "line": 17
+      }
+    },
+    {
+      "controller": "ExamWhatsAppWebhookController",
+      "action": "ReceiveWebhook",
+      "method": "POST",
+      "path": "/api/exam-room/whatsapp/webhook",
+      "routeTemplate": "/api/exam-room/whatsapp/webhook",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamWhatsAppWebhookController.cs",
+        "line": 29
       }
     },
     {
@@ -9705,7 +9945,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 248
+        "line": 255
       }
     },
     {
@@ -9717,7 +9957,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 263
+        "line": 270
       }
     },
     {
@@ -9729,7 +9969,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 183
+        "line": 190
       }
     },
     {
@@ -9741,7 +9981,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 214
+        "line": 221
       }
     },
     {
@@ -9753,7 +9993,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 84
+        "line": 91
       }
     },
     {
@@ -9765,7 +10005,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 108
+        "line": 115
       }
     },
     {
@@ -9777,7 +10017,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 109
+        "line": 116
       }
     },
     {
@@ -10844,7 +11084,7 @@
       "rawExpression": "'/admin/sales/coupons'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 164
+        "line": 165
       }
     },
     {
@@ -10858,7 +11098,7 @@
       "rawExpression": "`/admin/sales/coupons/${id}`",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 167
+        "line": 168
       }
     },
     {
@@ -10867,12 +11107,12 @@
       "routeTemplate": "/api/admin/sales/coupons",
       "origin": "backend-api",
       "queryParameters": [],
-      "payloadHint": "payload",
+      "payloadHint": "prepareSalesCouponPayload(payload)",
       "payloadFields": [],
       "rawExpression": "'/admin/sales/coupons'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 170
+        "line": 171
       }
     },
     {
@@ -10881,12 +11121,12 @@
       "routeTemplate": "/api/admin/sales/coupons/{id}",
       "origin": "backend-api",
       "queryParameters": [],
-      "payloadHint": "payload",
+      "payloadHint": "prepareSalesCouponPayload(payload)",
       "payloadFields": [],
       "rawExpression": "`/admin/sales/coupons/${id}`",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 173
+        "line": 174
       }
     },
     {
@@ -10900,7 +11140,7 @@
       "rawExpression": "'/admin/sales/stacking-policies'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 176
+        "line": 177
       }
     },
     {
@@ -10914,7 +11154,7 @@
       "rawExpression": "'/admin/sales/stacking-policies'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 179
+        "line": 180
       }
     },
     {
@@ -10928,7 +11168,7 @@
       "rawExpression": "'/admin/sales/templates'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 182
+        "line": 183
       }
     },
     {
@@ -10942,7 +11182,7 @@
       "rawExpression": "'/admin/sales/templates'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 185
+        "line": 186
       }
     },
     {
@@ -10956,7 +11196,7 @@
       "rawExpression": "'/admin/sales/templates/background-image'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 190
+        "line": 191
       }
     },
     {
@@ -10970,7 +11210,7 @@
       "rawExpression": "'/admin/sales/printable-batches'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 197
+        "line": 198
       }
     },
     {
@@ -10984,7 +11224,7 @@
       "rawExpression": "'/admin/sales/printable-batches'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 200
+        "line": 201
       }
     },
     {
@@ -10998,7 +11238,7 @@
       "rawExpression": "'/admin/public-exams'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 203
+        "line": 204
       }
     },
     {
@@ -11012,7 +11252,7 @@
       "rawExpression": "'/admin/public-exams'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 206
+        "line": 207
       }
     },
     {
@@ -11026,7 +11266,7 @@
       "rawExpression": "'/admin/public-exams/new'",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 209
+        "line": 210
       }
     },
     {
@@ -11040,7 +11280,7 @@
       "rawExpression": "`/admin/public-exams/${productId}/results`",
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 212
+        "line": 213
       }
     },
     {
@@ -14278,6 +14518,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/center-desktop/uploads/{id}/students",
+      "routeTemplate": "/api/admin/center-desktop/uploads/{id}/students",
+      "origin": "backend-api",
+      "queryParameters": [
+        "q"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/center-desktop/uploads/${encodeURIComponent(id)}/students`",
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 64
+      }
+    },
+    {
+      "method": "GET",
       "path": "/api/chat/rooms",
       "routeTemplate": "/api/chat/rooms",
       "origin": "backend-api",
@@ -14841,20 +15097,6 @@
     },
     {
       "method": "POST",
-      "path": "/api/exams/{examid}/attempts/{attemptid}/questions/{questionid}/swap",
-      "routeTemplate": "/api/exams/{examId}/attempts/{attemptId}/questions/{questionId}/swap",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "",
-      "payloadFields": [],
-      "rawExpression": "`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`",
-      "source": {
-        "file": "frontend/src/services/exam-service.ts",
-        "line": 100
-      }
-    },
-    {
-      "method": "POST",
       "path": "/api/exams/{examid}/start",
       "routeTemplate": "/api/exams/{examId}/start",
       "origin": "backend-api",
@@ -14864,7 +15106,7 @@
       "rawExpression": "`/exams/${examId}/start`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 102
+        "line": 101
       }
     },
     {
@@ -14878,7 +15120,7 @@
       "rawExpression": "`/exams/${examId}/latest-passed-result`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 107
+        "line": 106
       }
     },
     {
@@ -14892,7 +15134,7 @@
       "rawExpression": "`/exams/${examId}/latest-result`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 109
+        "line": 108
       }
     },
     {
@@ -14906,7 +15148,7 @@
       "rawExpression": "`/exams/attempts/${attemptId}/grading-status`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 111
+        "line": 110
       }
     },
     {
@@ -14920,7 +15162,7 @@
       "rawExpression": "`/exams/attempts/${attemptId}/result`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 113
+        "line": 112
       }
     },
     {
@@ -14936,7 +15178,7 @@
       "rawExpression": "`/exams/${examId}/submit/${attemptId}`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 115
+        "line": 114
       }
     },
     {
@@ -14950,7 +15192,21 @@
       "rawExpression": "`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`",
       "source": {
         "file": "frontend/src/services/exam-service.ts",
-        "line": 98
+        "line": 97
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/exams/{examid}/attempts/{attemptid}/questions/{questionid}/swap",
+      "routeTemplate": "/api/exams/{examId}/attempts/{attemptId}/questions/{questionId}/swap",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 99
       }
     },
     {

@@ -1,3 +1,4 @@
+import '../helpers/academic_fixture.dart';
 import '../helpers/notice_helpers.dart';
 import 'dart:io';
 import 'dart:async';
@@ -18,6 +19,7 @@ void main() {
   late StudyGroup group, otherGroup;
   late LessonSession closed;
   late Student student;
+  late AttendanceWorkspaceContext workspaceContext;
   final captureKey = GlobalKey();
 
   setUp(
@@ -65,7 +67,11 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
-      closed = store.sessions.single;
+      closed = await prepareAcademicFixture(
+        store,
+        store.sessions.single,
+        const [],
+      );
       await store.closeSession(closed.id);
     }),
   );
@@ -92,12 +98,27 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
-      added = store.sessions.last;
+      added = await prepareAcademicFixture(
+        store,
+        store.sessions.last,
+        const [],
+      );
     });
     return added;
   }
 
+  Future<void> pumpModalFrame(WidgetTester tester) async {
+    // A submission stays busy while the modal is open; settle only its route animation.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+  }
+
   Future<void> open(WidgetTester tester, {bool dark = false}) async {
+    workspaceContext = AttendanceWorkspaceContext()
+      ..groupId = group.id
+      ..sessionId = closed.id
+      ..closedViewSessionId = closed.id;
     await tester.binding.setSurfaceSize(const Size(1280, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.runAsync(() async {
@@ -117,42 +138,51 @@ void main() {
           theme: dark ? MassarTheme.dark : MassarTheme.light,
           builder: (context, child) =>
               Directionality(textDirection: TextDirection.rtl, child: child!),
-          home: AttendanceWorkspace(store: store, onExit: () {}),
+          home: AttendanceWorkspace(
+            store: store,
+            onExit: () {},
+            initialSessionId: closed.id,
+            workspaceContext: workspaceContext,
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpModalFrame(tester);
   }
 
   Future<void> scan(WidgetTester tester) async {
-    await tester.enterText(
-      find.byKey(const Key('student-search')),
-      student.code,
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.enterText(
+        find.byKey(const Key('student-search')),
+        student.code,
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await pumpModalFrame(tester);
+    });
   }
 
   Future<void> selectClosed(WidgetTester tester) async {
-    final selector = find.byWidgetPredicate(
-      (widget) =>
-          widget is DropdownButtonFormField<String> &&
-          widget.key is ValueKey<String> &&
-          (widget.key! as ValueKey<String>).value.startsWith('session-'),
+    expect(
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.widgetWithText(
+              DropdownButtonFormField<String>,
+              'الحصة المعدّة',
+            ),
+          )
+          .initialValue,
+      closed.preparedLessonId,
     );
-    await tester.runAsync(() => tester.tap(selector));
-    await tester.pumpAndSettle();
-    await tester.runAsync(
-      () => tester.tap(
-        find.text('حصة 1 · ${shortDate(closed.startsAt)} · مغلقة').last,
-      ),
-    );
-    await tester.pumpAndSettle();
+    if (find.byKey(const Key('closed-session-dialog')).evaluate().isEmpty &&
+        find.text('فتح أو عرض الحصة').evaluate().isNotEmpty) {
+      await tester.runAsync(() => tester.tap(find.text('فتح أو عرض الحصة')));
+      await pumpModalFrame(tester);
+    }
   }
 
   Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
     await tester.runAsync(() => tester.sendKeyEvent(key));
-    await tester.pumpAndSettle();
+    await pumpModalFrame(tester);
   }
 
   void expectCodeFocus(WidgetTester tester) {
@@ -180,7 +210,7 @@ void main() {
 
   Future<void> startReopening(WidgetTester tester) async {
     await tester.tap(find.byKey(const Key('closed-session-reopen')));
-    await tester.pumpAndSettle();
+    await pumpModalFrame(tester);
     expect(
       find.byKey(const Key('reopen-session-confirmation')),
       findsOneWidget,
@@ -218,7 +248,7 @@ void main() {
         store.removeListener(changed);
       }
     });
-    await tester.pumpAndSettle();
+    await pumpModalFrame(tester);
   }
 
   Future<void> capture(WidgetTester tester, String name) async {
@@ -240,7 +270,7 @@ void main() {
   }
 
   testWidgets(
-    'closed selection warns once; Enter Esc L M and scanner repeats cannot write',
+    'closed receiving warns once; Enter Esc L N and scanner repeats cannot write',
     (tester) async {
       await addSession(tester, 2);
       final auditCount = store.audit.length;
@@ -256,11 +286,11 @@ void main() {
       );
       await capture(tester, 'closed-session-popup-light-1280');
       expect(tester.getRect(find.text('إلغاء')).bottom, lessThanOrEqualTo(800));
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyM);
-      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyM);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyN);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyN);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyN);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
       await press(tester, LogicalKeyboardKey.enter);
       expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
@@ -268,7 +298,7 @@ void main() {
       for (final key in [
         LogicalKeyboardKey.enter,
         LogicalKeyboardKey.keyL,
-        LogicalKeyboardKey.keyM,
+        LogicalKeyboardKey.keyN,
       ]) {
         await press(tester, key);
         expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
@@ -277,14 +307,14 @@ void main() {
       }
       // Release a held shortcut only after dismissing the warning: its repeat
       // and key-up must not type a letter or reopen the modal on the code field.
-      for (final key in [LogicalKeyboardKey.keyL, LogicalKeyboardKey.keyM]) {
+      for (final key in [LogicalKeyboardKey.keyL, LogicalKeyboardKey.keyN]) {
         await tester.runAsync(() => tester.sendKeyDownEvent(key));
-        await tester.pumpAndSettle();
+        await pumpModalFrame(tester);
         expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
         await press(tester, LogicalKeyboardKey.escape);
         await tester.sendKeyRepeatEvent(key);
         await tester.sendKeyUpEvent(key);
-        await tester.pumpAndSettle();
+        await pumpModalFrame(tester);
         expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
         expect(
           tester
@@ -297,8 +327,6 @@ void main() {
       }
       // A scanner's numeric payload resolves the student, never registers entry.
       await scan(tester);
-      expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
-      await press(tester, LogicalKeyboardKey.enter);
       expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
       await press(tester, LogicalKeyboardKey.numpadEnter);
@@ -315,18 +343,18 @@ void main() {
       final auditCount = store.audit.length;
       await open(tester, dark: true);
       await tester.tap(find.text('بحث عن طالب'));
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       await selectClosed(tester);
       await scan(tester);
       await press(tester, LogicalKeyboardKey.enter);
       expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
       await tester.runAsync(() => tester.tap(find.text('التحضير')));
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
       await tester.runAsync(
         () => tester.tap(find.byKey(const Key('closed-session-view-only'))),
       );
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
       expect(
         find.text('عرض البيانات والسجل فقط؛ لا يُسجل حضور أو دفع.'),
@@ -350,7 +378,7 @@ void main() {
       await scan(tester);
       await selectClosed(tester);
       await tester.tap(find.byKey(const Key('closed-session-choose-open')));
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       final choice = tester.widget<DropdownButtonFormField<String>>(
         find.byKey(const Key('closed-session-open-choice')),
       );
@@ -374,14 +402,36 @@ void main() {
         isNull,
       );
       await tester.tap(find.byKey(const Key('closed-session-open-choice')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('حصة 3 · ${shortDate(third.startsAt)}').last);
-      await tester.pumpAndSettle();
-      await tester.runAsync(
-        () => tester.tap(find.byKey(const Key('closed-session-choose-open'))),
+      await pumpModalFrame(tester);
+      await tester.tap(
+        find.text('${sessionLabel(third)} · ${sessionDateLabel(third)}').last,
       );
-      await tester.pumpAndSettle();
-      expect(find.byKey(ValueKey('session-${third.id}')), findsOneWidget);
+      await pumpModalFrame(tester);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('closed-session-choose-open')));
+        await pumpModalFrame(tester);
+        for (var attempt = 0; attempt < 100; attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await tester.pump(const Duration(milliseconds: 20));
+          if (tester
+              .widget<TextField>(find.byKey(const Key('student-search')))
+              .focusNode!
+              .hasFocus) {
+            break;
+          }
+        }
+      });
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.widgetWithText(
+                DropdownButtonFormField<String>,
+                'الحصة المعدّة',
+              ),
+            )
+            .initialValue,
+        third.preparedLessonId,
+      );
       expect(find.byKey(const Key('closed-session-dialog')), findsNothing);
       expectCodeFocus(tester);
       expectNoEntryWrites(auditCount);
@@ -414,7 +464,7 @@ void main() {
       await capture(tester, 'closed-session-popup-dark-1280');
       expect(tester.getRect(find.text('إلغاء')).bottom, lessThanOrEqualTo(800));
       await tester.runAsync(() => tester.tap(find.text('إلغاء')));
-      await tester.pumpAndSettle();
+      await pumpModalFrame(tester);
       expectCodeFocus(tester);
       expectNoEntryWrites(auditCount);
       expect(tester.takeException(), isNull);
@@ -439,7 +489,7 @@ void main() {
       expectNoEntryWrites(auditCount);
       for (final key in [
         LogicalKeyboardKey.digit1,
-        LogicalKeyboardKey.keyM,
+        LogicalKeyboardKey.keyN,
         LogicalKeyboardKey.keyL,
       ]) {
         await press(tester, LogicalKeyboardKey.enter);
@@ -504,8 +554,18 @@ void main() {
       );
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-      expect(find.byKey(ValueKey('session-${closed.id}')), findsOneWidget);
+      await pumpModalFrame(tester);
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.widgetWithText(
+                DropdownButtonFormField<String>,
+                'الحصة المعدّة',
+              ),
+            )
+            .initialValue,
+        closed.preparedLessonId,
+      );
       expect(
         store.sessions.firstWhere((e) => e.id == closed.id).status,
         SessionStatus.open,
@@ -514,7 +574,13 @@ void main() {
       expect(store.allClosings.single.toJson(), oldClosing.toJson());
       expect(store.allAttendances.single.toJson(), oldAttendance.toJson());
       expectAccountsUnchanged();
-      expect(find.textContaining('الحصة اتفتحت.'), findsNothing);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('attendance-operation-status')))
+            .data,
+        contains('الحصة اتفتحت.'),
+      );
+      expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
       expectCodeFocus(tester);
       await tester.runAsync(() async {
         await store.close();

@@ -79,9 +79,12 @@ void main() {
     },
   );
   test(
-    'auto backup precedes first daily write and invalid relations cannot commit',
+    'automatic reopen backup is retained and invalid relations cannot commit',
     () async {
       await store.setupAdmin('نادر', 'private-pass-123');
+      await store.close();
+      store = await CenterStore.open(directory: directory.path);
+      await store.signIn('نادر', 'private-pass-123');
       await expectLater(
         store.saveGroup(
           const StudyGroup(
@@ -95,7 +98,7 @@ void main() {
       );
       expect(store.groups, isEmpty);
       final files = await Directory(
-        '${directory.path}/backups',
+        store.automaticBackupDirectory!,
       ).list().toList();
       expect(files.any((e) => e.path.contains('auto-')), true);
       await store.close();
@@ -173,15 +176,23 @@ void main() {
     },
   );
   test(
-    'failed daily backup reports CenterException with cause and saves nothing',
+    'failed pre-update backup blocks opening without losing saved data',
     () async {
       await store.setupAdmin('نادر', 'private-pass-123');
-      final obstruction = File('${directory.path}/backups');
+      await store.saveCatalog(
+        const CatalogEntry(name: 'فيزياء', kind: CatalogKind.subject),
+      );
+      final audited = store.audit.map((entry) => entry.toJson()).toList();
+      final backupFolder = Directory(store.automaticBackupDirectory!);
+      await store.close();
+      await File('${directory.path}/last-opened-build.json').delete();
+      if (await backupFolder.exists()) {
+        await backupFolder.delete(recursive: true);
+      }
+      final obstruction = File(backupFolder.path);
       await obstruction.writeAsString('not a directory');
       await expectLater(
-        store.saveCatalog(
-          const CatalogEntry(name: 'فيزياء', kind: CatalogKind.subject),
-        ),
+        CenterStore.open(directory: directory.path),
         throwsA(
           isA<CenterException>().having(
             (error) => error.cause,
@@ -190,13 +201,18 @@ void main() {
           ),
         ),
       );
-      expect(store.catalogs, isEmpty);
-      expect(store.audit, hasLength(1));
       await obstruction.delete();
-      await store.saveCatalog(
-        const CatalogEntry(name: 'فيزياء', kind: CatalogKind.subject),
-      );
+      store = await CenterStore.open(directory: directory.path);
+      await store.signIn('نادر', 'private-pass-123');
       expect(store.catalogs.single.name, 'فيزياء');
+      expect(store.audit.map((entry) => entry.toJson()), audited);
+      expect(
+        await backupFolder
+            .list()
+            .where((entry) => entry.path.contains('auto-'))
+            .length,
+        1,
+      );
     },
   );
   test(
@@ -206,7 +222,9 @@ void main() {
       final backup = await store.createBackup(
         destination: '${directory.path}/saved.json',
       );
-      final obstruction = File('${directory.path}/backups');
+      final folder = Directory('${directory.path}/backups');
+      if (await folder.exists()) await folder.delete(recursive: true);
+      final obstruction = File(folder.path);
       await obstruction.writeAsString('not a directory');
       await expectLater(
         store.restoreBackup(backup),
@@ -220,6 +238,7 @@ void main() {
       );
       expect(store.currentUser?.name, 'نادر');
       expect(store.audit, hasLength(1));
+      await obstruction.delete();
       await store.close();
       store = await CenterStore.open(directory: directory.path);
       await store.signIn('نادر', 'private-pass-123');
@@ -238,7 +257,7 @@ void main() {
         options: OpenDatabaseOptions(singleInstance: false),
       );
       await database.execute(
-        "CREATE TRIGGER deny_write BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'simulated storage failure'); END",
+        "CREATE TRIGGER deny_write BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'simulated storage failure'); END",
       );
       await expectLater(
         store.saveCatalog(

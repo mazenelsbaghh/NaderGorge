@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../helpers/notice_helpers.dart';
+import '../helpers/academic_fixture.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
@@ -68,7 +69,11 @@ void main() {
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
     );
-    session = store.sessions.single;
+    session = await prepareAcademicFixture(
+      store,
+      store.sessions.single,
+      store.students,
+    );
     await store.saveAcademic(
       AcademicRecord(
         studentId: store.students.last.id,
@@ -127,22 +132,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'الامتحانات والواجب'));
+    await tester.tap(find.widgetWithText(ListTile, 'رصد الامتحانات والواجبات'));
     await tester.pumpAndSettle();
-    final groupPicker = find.widgetWithText(
-      DropdownButtonFormField<String>,
-      'المجموعة',
-    );
-    await tester.tap(groupPicker);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(store.groupLabel(store.groups.first.id)).last);
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(DropdownButtonFormField<String>, 'اختر الحصة للرصد'),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('حصة 8 —').last);
-    await tester.pumpAndSettle();
+    await selectAcademicFixtureSession(tester, store, session);
   }
 
   Future<void> submit(WidgetTester tester, String query) async {
@@ -173,19 +165,14 @@ void main() {
         await tester.runAsync(() async {
           await openPage(tester, dark: dark, size: const Size(1280, 900));
           expect(
-            find.text(
-              'النتائج: 3 من 3 طالب — القائمة تخص المسجلين قبل الحصة وأصحاب السجلات الفعلية.',
-            ),
+            find.text('النتائج: 3 من 3 طالب — الحاضرون والمعوّضون فعليًا فقط.'),
             findsOneWidget,
           );
           expect(find.text('طالب انضم بعد الحصة'), findsNothing);
           expect(find.text('مينا منتقل'), findsOneWidget);
           await submit(tester, 'أحمد');
           expect(store.academics, hasLength(1));
-          await acknowledgeNotice(
-            tester,
-            message: 'الاسم يطابق 2 طلبة. اختر الطالب من الجدول أو اكتب كوده.',
-          );
+          await cancelAcademicStudentChoice(tester);
           expect(find.byType(AlertDialog), findsNothing);
           expect(find.text('أحمد محمد'), findsOneWidget);
           expect(find.text('أحمد سامح'), findsOneWidget);
@@ -203,9 +190,11 @@ void main() {
             find.widgetWithText(TextFormField, 'درجة الطالب'),
             '٠',
           );
-          await tester.ensureVisible(find.widgetWithText(FilledButton, 'حفظ'));
-          await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
-          await acknowledgeNotice(tester, message: 'حُفظت البيانات بنجاح.');
+          await tester.ensureVisible(
+            find.widgetWithText(FilledButton, 'حفظ الرصد'),
+          );
+          await tester.tap(find.widgetWithText(FilledButton, 'حفظ الرصد'));
+          expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
           for (var attempt = 0; attempt < 40; attempt++) {
             await Future<void>.delayed(const Duration(milliseconds: 25));
             await tester.pumpAndSettle();
@@ -228,21 +217,21 @@ void main() {
           final selected = tester.widget<DropdownButtonFormField<String>>(
             find.widgetWithText(
               DropdownButtonFormField<String>,
-              'اختر الحصة للرصد',
+              'الحصة المجهزة لكل المجموعات',
             ),
           );
-          expect(selected.initialValue, session.id);
+          expect(selected.initialValue, session.preparedLessonId);
           await submit(tester, '999');
           expect(store.academics, hasLength(2));
           await acknowledgeNotice(
             tester,
             message:
-                'لا يوجد طالب بهذا الكود أو الاسم مسجل لهذه الحصة وقت إقامتها.',
+                'لا يوجد طالب بهذا الكود أو الباركود أو الاسم حاضر أو معوّض فعليًا في هذه الحصة.',
           );
           expect(find.byType(AlertDialog), findsNothing);
           await submit(tester, '103');
           expect(find.text('رصد مينا منتقل — حصة 8'), findsOneWidget);
-          await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+          await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
           await tester.pumpAndSettle();
           await tester.tap(find.byTooltip('كل طلبة الحصة'));
           await tester.pumpAndSettle();

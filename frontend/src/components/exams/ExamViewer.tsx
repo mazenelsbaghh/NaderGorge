@@ -27,7 +27,6 @@ import {
   examService,
   AnswerSubmissionDto,
 } from '@/services/exam-service';
-import { studentService } from '@/services/student-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { shuffleArray } from '@/lib/utils';
@@ -558,8 +557,6 @@ function QuestionCard({
   onUseHint,
   hasUsedSwap,
   onUseSwap,
-  audioAnswers,
-  onAudioAnswer,
 }: {
   q: ActiveExamAttemptDto['questions'][number];
   qIndex: number;
@@ -579,8 +576,6 @@ function QuestionCard({
   onUseHint: (qId: string) => void;
   hasUsedSwap: boolean;
   onUseSwap: (qId: string) => void;
-  audioAnswers: Record<string, string>;
-  onAudioAnswer: (qId: string, value: string) => void;
 }) {
   const isSkipped = skipped.has(q.id);
   const hasAnswer = !!answers[q.id];
@@ -730,61 +725,6 @@ function QuestionCard({
               value={answers[q.id] || ''}
               onChange={(e) => onAnswer(q.id, e.target.value)}
             />
-            {/* Audio Upload */}
-            <div className="mt-4 border-t border-border/20 pt-4">
-              <label className="mb-2 block text-xs font-black uppercase tracking-widest text-muted-foreground">
-                إرفاق إجابة صوتية (اختياري)
-              </label>
-              {audioAnswers[q.id] ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex-1">
-                    <audio src={resolveMediaUrl(audioAnswers[q.id])} controls className="h-9 w-full" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onAudioAnswer(q.id, '');
-                    }}
-                    className="rounded-xl bg-destructive/10 px-3 py-2 text-xs font-black text-destructive hover:bg-destructive/20 transition-colors"
-                  >
-                    حذف الصوت
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    id={`audio-upload-${q.id}`}
-                    className="sr-only"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      if (!file.type.startsWith('audio/')) {
-                        alert('عذراً، يجب اختيار ملف صوتي فقط.');
-                        return;
-                      }
-                      try {
-                        const res = await studentService.uploadAudio(file);
-                        if (res && res.url) {
-                          onAudioAnswer(q.id, res.url);
-                        }
-                      } catch {
-                        alert('فشل رفع الملف الصوتي. يرجى التأكد من نوع الملف وحجمه.');
-                      }
-                    }}
-                  />
-                  <label
-                    htmlFor={`audio-upload-${q.id}`}
-                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200"
-                  >
-                    <span className="text-sm font-bold text-muted-foreground group-hover:text-primary">
-                      اختر ملف صوتي للرفع
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -858,7 +798,6 @@ export function ExamViewer({
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const draftId = `${attempt.attemptId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
-  const [audioAnswers, setAudioAnswers] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ExamResultDto | null>(null);
@@ -886,7 +825,6 @@ export function ExamViewer({
   // Restore draft answers from localStorage
   useEffect(() => {
     setAnswers({});
-    setAudioAnswers({});
     setSkipped(new Set());
     setHiddenOptions(new Set());
     setHasUsedFiftyFifty(false);
@@ -904,10 +842,7 @@ export function ExamViewer({
       if (saved) {
         setAnswers(JSON.parse(saved));
       }
-      const savedAudio = localStorage.getItem('exam_audio_answers_' + draftId);
-      if (savedAudio) {
-        setAudioAnswers(JSON.parse(savedAudio));
-      }
+      localStorage.removeItem('exam_audio_answers_' + draftId);
     } catch {
       // ignore JSON parse or localStorage errors
     }
@@ -943,21 +878,6 @@ export function ExamViewer({
         return next;
       });
     }
-  }, [draftId]);
-
-  const handleAudioAnswer = useCallback((qId: string, value: string) => {
-    setAudioAnswers((prev) => {
-      const next = { ...prev };
-      if (!value) {
-        delete next[qId];
-      } else {
-        next[qId] = value;
-      }
-      try {
-        localStorage.setItem('exam_audio_answers_' + draftId, JSON.stringify(next));
-      } catch { /* ignore */ }
-      return next;
-    });
   }, [draftId]);
 
   const handleSwap = async (qId: string) => {
@@ -998,7 +918,7 @@ export function ExamViewer({
 
   const handleSubmit = async (isTimeout = false) => {
     if (!isTimeout) {
-      const answeredCount = attempt.questions.filter(q => answers[q.id] || audioAnswers[q.id]).length;
+      const answeredCount = attempt.questions.filter(q => answers[q.id]).length;
       const missing = attempt.questions.length - answeredCount;
       if (missing > 0) {
         setPendingMissing(missing);
@@ -1010,14 +930,12 @@ export function ExamViewer({
     setError('');
     setShowConfirm(false);
 
-    const allQuestionIds = Array.from(new Set([...Object.keys(answers), ...Object.keys(audioAnswers)]));
-    const submissions: AnswerSubmissionDto[] = allQuestionIds.map((qId) => {
+    const submissions: AnswerSubmissionDto[] = Object.keys(answers).map((qId) => {
       const q = shuffledQuestions.find((x) => x.id === qId);
       if (q?.type === 'Essay') {
         return {
           examQuestionId: qId,
-          answerText: answers[qId] || '',
-          audioUrl: audioAnswers[qId] || undefined
+          answerText: answers[qId] || ''
         };
       }
       if (q?.type === 'FindTheMistake') return { examQuestionId: qId, selectedText: answers[qId] };
@@ -1213,8 +1131,6 @@ export function ExamViewer({
                 attemptId={attempt.attemptId}
                 loading={loading}
                 onAnswer={handleAnswer}
-                audioAnswers={audioAnswers}
-                onAudioAnswer={handleAudioAnswer}
                 onSkip={() => {
                   setSkipped((prev) => new Set([...prev, currentQ.id]));
                   if (currentIdx < totalQ - 1) navigateTo(currentIdx + 1);

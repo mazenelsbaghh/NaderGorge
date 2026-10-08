@@ -1,3 +1,4 @@
+import '../helpers/attendance_ui_helpers.dart';
 import '../helpers/notice_helpers.dart';
 import 'dart:async';
 import 'dart:io';
@@ -10,7 +11,6 @@ import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/attendance/attendance_workspace.dart';
 import 'package:massar_center/features/management/review_page.dart';
-import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/theme.dart';
 
 void main() {
@@ -19,6 +19,7 @@ void main() {
   late StudyGroup group, otherGroup;
   late Student paid, unpaid;
   late LessonSession old, upcoming, foreign;
+  late AttendanceWorkspaceContext workspaceContext;
   final captureKey = GlobalKey();
   final reviewButton = find.byKey(const Key('session-payment-review'));
   final reviewCode = find.byKey(const Key('payment-check-code'));
@@ -83,7 +84,10 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
-      old = store.sessions.single;
+      old = await store.startPreparedLesson(
+        groupId: group.id,
+        preparedLessonId: store.studyMonths.first.lessons.first.id,
+      );
       await store.collectAndAttend(
         EntryRequest(
           studentId: paid.id,
@@ -100,7 +104,10 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
-      upcoming = store.sessions.last;
+      upcoming = await store.startPreparedLesson(
+        groupId: group.id,
+        preparedLessonId: store.studyMonths.first.lessons[1].id,
+      );
       await store.saveSession(
         LessonSession(
           groupId: otherGroup.id,
@@ -120,6 +127,7 @@ void main() {
   );
 
   Future<void> open(WidgetTester tester, {bool dark = false}) async {
+    workspaceContext = AttendanceWorkspaceContext();
     await tester.binding.setSurfaceSize(const Size(1280, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.runAsync(() async {
@@ -143,6 +151,7 @@ void main() {
             store: store,
             onExit: () {},
             initialSessionId: upcoming.id,
+            workspaceContext: workspaceContext,
           ),
         ),
       ),
@@ -156,31 +165,50 @@ void main() {
   }
 
   Future<void> showStudent(WidgetTester tester) async {
+    await tester.tap(find.text('بحث عن طالب'));
+    await tester.pumpAndSettle();
     await tester.enterText(attendanceCode, paid.code);
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('التحضير').last);
+    await tester.pumpAndSettle();
+    if (find.byKey(const Key('closed-session-dialog')).evaluate().isNotEmpty) {
+      await press(tester, LogicalKeyboardKey.escape);
+    }
+    await tester.ensureVisible(attendanceCode);
+    await tester.tap(attendanceCode);
+    await tester.pump();
   }
 
   Future<void> selectSession(WidgetTester tester, LessonSession session) async {
-    final selector = find.byWidgetPredicate(
-      (widget) =>
-          widget is DropdownButtonFormField<String> &&
-          widget.key is ValueKey<String> &&
-          (widget.key! as ValueKey<String>).value.startsWith('session-'),
+    final selector = find.widgetWithText(
+      DropdownButtonFormField<String>,
+      'الحصة المعدّة',
     );
-    await tester.runAsync(() => tester.tap(selector));
+    await tester.tap(selector);
     await tester.pumpAndSettle();
-    await tester.runAsync(
-      () => tester.tap(
-        find
-            .text(
-              'حصة ${session.number} · ${shortDate(session.startsAt)}${session.id == old.id ? ' · مغلقة' : ''}',
-            )
-            .last,
-      ),
+    final lesson = store.studyMonths.first.lessons.firstWhere(
+      (e) => e.id == session.preparedLessonId,
+    );
+    await tester.tap(
+      find
+          .text(
+            lesson.name.isEmpty
+                ? 'حصة ${lesson.number}'
+                : 'حصة ${lesson.number} · ${lesson.name}',
+          )
+          .last,
     );
     await tester.pumpAndSettle();
-    if (session.id == old.id) await press(tester, LogicalKeyboardKey.escape);
+    if (session.id == old.id) {
+      await tester.tap(find.text('فتح أو عرض الحصة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('closed-session-view-only')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('التحضير').last);
+      await tester.pumpAndSettle();
+      await press(tester, LogicalKeyboardKey.escape);
+    }
   }
 
   Future<void> openReview(WidgetTester tester) async {
@@ -190,6 +218,12 @@ void main() {
       find.byKey(const Key('attendance-session-review-dialog')),
       findsOneWidget,
     );
+    await tester.enterText(
+      find.byKey(const Key('payment-review-custom-amount')),
+      '100',
+    );
+    await tester.tap(reviewCode);
+    await tester.pump();
     expect(tester.widget<TextField>(reviewCode).focusNode!.hasFocus, isTrue);
   }
 
@@ -219,7 +253,7 @@ void main() {
         store.removeListener(changed);
       }
     });
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
   }
 
   Map<String, Object> accountSnapshot() => {
@@ -240,7 +274,7 @@ void main() {
 
   void expectReviewRowsVisible(WidgetTester tester, int count) {
     final tableFinder = find.descendant(
-      of: find.byType(ReviewPage),
+      of: find.byKey(const Key('reviewed-students-table')),
       matching: find.byType(Table),
     );
     final table = tester.renderObject<RenderTable>(tableFinder);
@@ -297,8 +331,8 @@ void main() {
     'review checks the explicitly chosen old closed session and restores student and search draft',
     (tester) async {
       await open(tester);
-      await showStudent(tester);
       await selectSession(tester, old);
+      await showStudent(tester);
       await tester.enterText(attendanceCode, 'مسودة بحث');
       final snapshot = accountSnapshot();
       await openReview(tester);
@@ -314,28 +348,26 @@ void main() {
         findsNothing,
       );
       expect(find.text('مقارنة مبلغ الورق'), findsNothing);
-      for (final student in [paid, unpaid]) {
-        await tester.enterText(reviewCode, student.code);
-        await mutate(
-          tester,
-          () => tester.testTextInput.receiveAction(TextInputAction.search),
-        );
-        final field = tester.widget<TextField>(reviewCode);
-        expect(field.focusNode!.hasFocus, isTrue);
-        expect(
-          field.controller!.selection,
-          TextSelection(baseOffset: 0, extentOffset: student.code.length),
-        );
-      }
-      expect(store.paymentChecks.map((e) => e.sessionId).toSet(), {old.id});
+      await tester.enterText(reviewCode, paid.code);
+      await mutate(
+        tester,
+        () => tester.testTextInput.receiveAction(TextInputAction.search),
+      );
+      expect(store.paymentChecks.single.sessionId, old.id);
       expect(
-        store.paymentChecks.firstWhere((e) => e.studentId == paid.id).status,
+        store.paymentChecks.single.status,
         StudentPaymentStatus.paidSingle,
       );
+      await tester.enterText(reviewCode, unpaid.code);
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.runAsync(() => acknowledgeNotice(tester));
+      expect(store.paymentChecks, hasLength(1));
       expect(
-        store.paymentChecks.firstWhere((e) => e.studentId == unpaid.id).status,
-        StudentPaymentStatus.notPaid,
+        store.paymentChecks.any((check) => check.studentId == unpaid.id),
+        isFalse,
       );
+      expect(tester.widget<TextField>(reviewCode).focusNode!.hasFocus, isTrue);
       expect(
         store.paymentChecks.any(
           (e) => e.sessionId == upcoming.id || e.sessionId == foreign.id,
@@ -343,16 +375,34 @@ void main() {
         isFalse,
       );
       expect(accountSnapshot(), snapshot);
-      expectReviewRowsVisible(tester, 2);
+      await tester.ensureVisible(
+        find.byKey(const Key('reviewed-students-table')),
+      );
+      await tester.pumpAndSettle();
+      expectReviewRowsVisible(tester, 1);
       await capture(tester, 'attendance-session-review-light-1280');
       await tester.binding.setSurfaceSize(const Size(960, 800));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expectReviewRowsVisible(tester, 2);
+      await tester.ensureVisible(
+        find.byKey(const Key('reviewed-students-table')),
+      );
+      await tester.pumpAndSettle();
+      expectReviewRowsVisible(tester, 1);
       await capture(tester, 'attendance-session-review-light-960');
       await press(tester, LogicalKeyboardKey.escape);
       expect(find.byType(ReviewPage), findsNothing);
-      expect(find.byKey(ValueKey('session-${old.id}')), findsOneWidget);
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.widgetWithText(
+                DropdownButtonFormField<String>,
+                'الحصة المعدّة',
+              ),
+            )
+            .initialValue,
+        old.preparedLessonId,
+      );
       expect(find.text('سجل ${paid.name}'), findsOneWidget);
       expect(
         tester.widget<TextField>(attendanceCode).controller!.text,
@@ -393,16 +443,16 @@ void main() {
         tester.widget<ReviewPage>(find.byType(ReviewPage)).sessionId,
         upcoming.id,
       );
-      await tester.enterText(reviewCode, unpaid.code);
-      await mutate(
-        tester,
-        () => tester.testTextInput.receiveAction(TextInputAction.search),
+      await tester.enterText(
+        find.byKey(const Key('payment-review-custom-amount')),
+        '100',
       );
-      expect(store.paymentChecks.single.studentId, unpaid.id);
-      expect(store.paymentChecks.single.sessionId, upcoming.id);
-      expect(store.paymentChecks.single.status, StudentPaymentStatus.notPaid);
+      await tester.enterText(reviewCode, unpaid.code);
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.runAsync(() => acknowledgeNotice(tester));
+      expect(store.paymentChecks, isEmpty);
       expect(accountSnapshot(), snapshot);
-      expectReviewRowsVisible(tester, 1);
       await capture(tester, 'attendance-session-review-dark-1280');
       await press(tester, LogicalKeyboardKey.escape);
       expectAttendanceFocus(tester);
@@ -415,6 +465,15 @@ void main() {
   testWidgets(
     'closing during a pending check keeps its frozen class and restores attendance safely',
     (tester) async {
+      await tester.runAsync(
+        () => store.collectAndAttend(
+          EntryRequest(
+            studentId: paid.id,
+            sessionId: upcoming.id,
+            mode: EntryMode.single,
+          ),
+        ),
+      );
       await open(tester);
       await showStudent(tester);
       final snapshot = accountSnapshot();
@@ -468,7 +527,8 @@ void main() {
       await tester.tap(find.text('التحضير'));
       await tester.pumpAndSettle();
       final review = tester.widget<OutlinedButton>(reviewButton).onPressed!;
-      await press(tester, LogicalKeyboardKey.keyL);
+      await requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL);
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('entry-confirmation-dialog')),
         findsOneWidget,
@@ -514,6 +574,18 @@ void main() {
         collect();
         review();
       });
+      expect(find.byType(ReviewPage), findsNothing);
+      await tester.runAsync(() async {
+        for (
+          var attempt = 0;
+          attempt < 100 && (store.payments.length != 2 || !enabled(tester));
+          attempt++
+        ) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+      });
+      await tester.pumpAndSettle();
       expect(find.byType(ReviewPage), findsNothing);
       expect(store.paymentChecks, isEmpty);
       expect(store.attendanceCount(upcoming.id), 1);

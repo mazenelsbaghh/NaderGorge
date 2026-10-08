@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/features/auth/auth_screen.dart';
 import 'package:massar_center/shared/theme.dart';
-import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   testWidgets(
-    'failed real sign-in shows error popup and preserves login draft',
+    'failed real sign-in shows inline error and preserves login draft',
     (tester) async {
       late Directory directory;
       late CenterStore store;
@@ -39,7 +39,14 @@ void main() {
       );
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('auth-submit')));
-        await acknowledgeNotice(tester);
+        await waitForUiCondition(
+          tester,
+          () => find
+              .text('اسم المستخدم أو كلمة المرور غير صحيحة.')
+              .evaluate()
+              .isNotEmpty,
+          reason: 'The rejected sign-in displays its inline error.',
+        );
       });
       expect(store.currentUser, isNull);
       expect(

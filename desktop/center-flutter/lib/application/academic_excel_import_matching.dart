@@ -41,7 +41,9 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
       .toList();
   final byCode = <String, Set<Student>>{};
   final byPhone = <String, Set<Student>>{};
+  final normalized = <String, _NormalizedStudentMatch>{};
   for (final student in roster) {
+    normalized[student.id] = _NormalizedStudentMatch(student);
     for (final code in studentIdentifiers(
       student,
     ).map(normalizeStudentIdentifier)) {
@@ -61,9 +63,6 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
     final key = _attemptKey(row);
     if (key != null) attemptCounts.update(key, (n) => n + 1, ifAbsent: () => 1);
   }
-  final names = {
-    for (final student in roster) student.id: _nameTokens(student.name),
-  };
   for (final row in rows) {
     final code = normalizeStudentIdentifier(row.code);
     final phone = _normalizedPhone(row.phone);
@@ -120,7 +119,7 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
         matchReason: matchReason,
         issues: issues,
         suggestions: selected == null
-            ? _suggestions(row, roster, names, codeMatches, phoneMatches)
+            ? _suggestions(row, roster, normalized, codeMatches, phoneMatches)
             : const [],
       ),
     );
@@ -181,7 +180,7 @@ Set<String> _nameTokens(String value) => _normalizedWords(
 List<AcademicExcelSuggestion> _suggestions(
   AcademicExcelRow row,
   List<Student> roster,
-  Map<String, Set<String>> names,
+  Map<String, _NormalizedStudentMatch> normalized,
   Set<Student> codeMatches,
   Set<Student> phoneMatches,
 ) {
@@ -190,7 +189,8 @@ List<AcademicExcelSuggestion> _suggestions(
   final code = normalizeStudentIdentifier(row.code);
   final phone = _normalizedPhone(row.phone);
   for (final student in roster) {
-    final tokens = names[student.id]!;
+    final fields = normalized[student.id]!;
+    final tokens = fields.tokens;
     final overlap = rowTokens.intersection(tokens).length;
     final nameSimilarity = rowTokens.isEmpty || tokens.isEmpty
         ? 0.0
@@ -202,24 +202,22 @@ List<AcademicExcelSuggestion> _suggestions(
       reason = 'الكود مطابق؛ راجع تعارض البيانات';
     } else if (phoneMatches.contains(student)) {
       similarity = .98;
-      final ownPhone = _normalizedPhone(student.phone) == phone;
+      final ownPhone = fields.phone == phone;
       reason = ownPhone
           ? 'هاتف الطالب مطابق؛ يحتاج مراجعة'
           : 'هاتف ولي الأمر مطابق؛ يحتاج مراجعة';
     } else {
       final nearCode =
           code.length >= 4 &&
-          studentIdentifiers(student).any(
-            (identifier) => _oneCharacterDifferent(
-              code,
-              normalizeStudentIdentifier(identifier),
-            ),
+          fields.codes.any(
+            (identifier) => _oneCharacterDifferent(code, identifier),
           );
       final nearPhone =
           phone.length >= 10 &&
-          [student.phone, student.guardianPhone].any(
-            (value) => _oneCharacterDifferent(phone, _normalizedPhone(value)),
-          );
+          [
+            fields.phone,
+            fields.guardianPhone,
+          ].any((number) => _oneCharacterDifferent(phone, number));
       if (nearCode || nearPhone) {
         similarity = math.max(similarity, .6 + nameSimilarity * .2);
         reason = nearCode
@@ -229,19 +227,22 @@ List<AcademicExcelSuggestion> _suggestions(
         continue;
       }
     }
-    result.add(
-      AcademicExcelSuggestion(
-        student: student,
-        reason: reason,
-        similarity: similarity,
-      ),
+    final suggestion = AcademicExcelSuggestion(
+      student: student,
+      reason: reason,
+      similarity: similarity,
     );
+    final insertion = result.indexWhere(
+      (existing) => _compareSuggestion(suggestion, existing) < 0,
+    );
+    if (insertion >= 0) {
+      result.insert(insertion, suggestion);
+    } else if (result.length < 3) {
+      result.add(suggestion);
+    }
+    if (result.length > 3) result.removeLast();
   }
-  result.sort((a, b) {
-    final comparison = b.similarity.compareTo(a.similarity);
-    return comparison != 0 ? comparison : a.student.id.compareTo(b.student.id);
-  });
-  return result.take(3).toList(growable: false);
+  return List.unmodifiable(result);
 }
 
 bool _oneCharacterDifferent(String first, String second) {
@@ -251,4 +252,25 @@ bool _oneCharacterDifferent(String first, String second) {
     if (first[i] != second[i] && ++differences > 1) return false;
   }
   return differences == 1;
+}
+
+int _compareSuggestion(
+  AcademicExcelSuggestion first,
+  AcademicExcelSuggestion second,
+) {
+  final score = second.similarity.compareTo(first.similarity);
+  return score != 0 ? score : first.student.id.compareTo(second.student.id);
+}
+
+class _NormalizedStudentMatch {
+  _NormalizedStudentMatch(Student student)
+    : tokens = _nameTokens(student.name),
+      codes = studentIdentifiers(
+        student,
+      ).map(normalizeStudentIdentifier).toList(),
+      phone = _normalizedPhone(student.phone),
+      guardianPhone = _normalizedPhone(student.guardianPhone);
+  final Set<String> tokens;
+  final List<String> codes;
+  final String phone, guardianPhone;
 }

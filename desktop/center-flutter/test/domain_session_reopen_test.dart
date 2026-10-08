@@ -250,6 +250,7 @@ void main() {
       'later counted $usage prevents reopening original while future empty schedules remain safe',
       () async {
         final first = await addSession();
+        await store.startSession(first.id);
         await store.closeSession(first.id);
         final later = await addSession();
         await store.reopenSession(first.id);
@@ -411,7 +412,7 @@ void main() {
       );
       try {
         await db.execute(
-          "CREATE TRIGGER reject_session_reopen BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER reject_session_reopen BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
         );
         await expectLater(
           store.reopenSession(session.id),

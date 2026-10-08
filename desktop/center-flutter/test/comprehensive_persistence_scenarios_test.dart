@@ -68,8 +68,16 @@ void main() {
     }
     firstStudent = store.students[0];
     secondStudent = store.students[1];
+    final month = await store.saveStudyMonth(
+      StudyMonth(
+        name: 'شهر الاختبار',
+        lessons: [const PreparedLesson(number: 1)],
+      ),
+    );
     await store.saveSession(
       LessonSession(
+        preparedLessonId: month.lessons.single.id,
+        monthNumber: month.number,
         groupId: group.id,
         number: 1,
         startsAt: DateTime.now().add(const Duration(hours: 1)),
@@ -283,8 +291,8 @@ void main() {
       final previousAudits = store.audit.map((e) => e.id).toList();
       try {
         await database.execute(
-          '''CREATE TRIGGER remove_snapshot BEFORE UPDATE ON state
-          WHEN json_extract(NEW.payload, '\$.payments[0].studentId') = '${firstStudent.id}'
+          '''CREATE TRIGGER remove_snapshot BEFORE INSERT ON state_records
+          WHEN NEW.section='payments' AND json_extract(NEW.payload, '\$.studentId') = '${firstStudent.id}'
           BEGIN DELETE FROM state WHERE id = 1; END''',
         );
         final results = await Future.wait([

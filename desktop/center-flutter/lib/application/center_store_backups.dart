@@ -9,33 +9,48 @@ extension _AutomaticCenterBackups on CenterStore {
     if (_lastAutomaticBackupAt == null) unawaited(_runAutomaticBackup());
   }
 
-  Future<void> _runAutomaticBackup() async {
+  Future<void> _runAutomaticBackup() {
     if (_closed || _automaticBackupRunning || _automaticBackupTimer == null) {
-      return;
+      return Future<void>.value();
     }
     _automaticBackupRunning = true;
+    return _automaticBackupFuture = _captureAndSaveAutomaticBackup()
+        .whenComplete(() {
+          _automaticBackupRunning = false;
+          _automaticBackupFuture = null;
+          if (!_closed) _notifyBackupStatus();
+        });
+  }
+
+  Future<void> _captureAndSaveAutomaticBackup() async {
+    final trace = PerformanceTrace('backup.automatic', budgetMs: 250);
     try {
+      CenterState? captured;
       await _exclusive(() async {
-        if (_automaticBackupTimer == null || _state.staff.isEmpty) return;
-        await _saveAutomaticBackup();
+        if (_automaticBackupTimer != null && _state.staff.isNotEmpty) {
+          captured = _state.copyForBackup();
+        }
       }, operation: 'backup.automatic');
-    } on CenterException catch (error) {
-      // _exclusive records the underlying failure before wrapping it.
-      _automaticBackupError = error.message;
+      trace.stage('capture');
+      if (captured != null) await _saveAutomaticBackup(captured!);
+      trace.stage('write');
+    } catch (error, stack) {
+      reportProblem(error, stack, operation: 'backup.automatic');
+      _automaticBackupError =
+          'تعذر حفظ النسخة الاحتياطية التلقائية. راجع سجل المشاكل.';
     } finally {
-      _automaticBackupRunning = false;
-      if (!_closed) _notifyBackupStatus();
+      trace.finish(failed: _automaticBackupError != null);
     }
   }
 
-  Future<void> _saveAutomaticBackup() async {
+  Future<void> _saveAutomaticBackup(CenterState captured) async {
     final now = DateTime.now().toUtc();
     final stamp = now.toIso8601String().replaceAll(':', '-');
     final destination = p.join(
       automaticBackupDirectory!,
       'auto-$stamp-${CenterStore._uuid.v4()}.json',
     );
-    await _writeBackup(destination, _state);
+    await _writeBackup(destination, captured);
     _lastAutomaticBackupAt = now;
     await _pruneAutomaticBackups(destination);
     _automaticBackupError = null;
@@ -64,7 +79,7 @@ extension _AutomaticCenterBackups on CenterStore {
     }
     if (previousBuild == build) return;
     // Missing metadata on an existing installation is treated as an update.
-    if (existingDatabase) await _saveAutomaticBackup();
+    if (existingDatabase) await _saveAutomaticBackup(_state.copyForBackup());
     final temporary = File('${marker.path}.${CenterStore._uuid.v4()}.tmp');
     try {
       await temporary.writeAsString(

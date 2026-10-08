@@ -9,8 +9,8 @@ using NaderGorge.Infrastructure.Services.MimStudio;
 namespace NaderGorge.API.Controllers;
 
 [ApiController, Authorize(Roles = "Admin"), HasPermission("content.manage")]
-[Route("api/admin/mim-studio"), RequestSizeLimit(250_000)]
-public sealed class AdminMimStudioController(LessonMimStudioService studio, HiggsfieldMcpConnectionService connection, MimSceneVideoService videos) : ControllerBase
+[Route("api/admin/mim-studio"), RequestSizeLimit(2_000_000)]
+public sealed class AdminMimStudioController(LessonMimStudioService studio, HiggsfieldMcpConnectionService connection, MimSceneVideoService videos, MimEpisodeVideoService episodes) : ControllerBase
 {
     [HttpGet("lessons/{lessonId:guid}")]
     public Task<IActionResult> Read(Guid lessonId, CancellationToken ct) => Run(() => studio.ReadAsync(lessonId, ct));
@@ -25,6 +25,32 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
     [HttpPost("lessons/{lessonId:guid}/scenes/next")]
     public Task<IActionResult> Generate(Guid lessonId, GenerateMimScene request, CancellationToken ct) =>
         Run(() => studio.GenerateAsync(User.RequireUserId(), lessonId, request, ct));
+
+    [HttpGet("lessons/{lessonId:guid}/episode-video")]
+    public Task<IActionResult> Episode(Guid lessonId, CancellationToken ct) => Run(() => episodes.ReadAsync(User.RequireUserId(), lessonId, ct));
+
+    [HttpPost("lessons/{lessonId:guid}/episode-video")]
+    public Task<IActionResult> Assemble(Guid lessonId, MimEpisodeApproval request, CancellationToken ct) =>
+        Run(() => episodes.AssembleAsync(User.RequireUserId(), lessonId, request, ct));
+
+    [HttpGet("lessons/{lessonId:guid}/episode-video/file")]
+    public async Task<IActionResult> EpisodeFile(Guid lessonId, CancellationToken ct)
+    {
+        try
+        {
+            var response = await episodes.FileAsync(User.RequireUserId(), lessonId, Request.Headers.Range.ToString(), ct);
+            Response.RegisterForDispose(response);
+            Response.StatusCode = (int)response.StatusCode;
+            Response.Headers.CacheControl = "private, no-store";
+            if (response.Content.Headers.ContentRange is { } range) Response.Headers.ContentRange = range.ToString();
+            if (response.Content.Headers.ContentLength is { } length) Response.ContentLength = length;
+            return File(await response.Content.ReadAsStreamAsync(ct), "video/mp4");
+        }
+        catch (ArgumentException ex) { return BadRequest(ApiResponse.Fail(ex.Message)); }
+        catch (KeyNotFoundException) { return NotFound(ApiResponse.Fail("الحصة غير موجودة.")); }
+        catch (MimStudioConflictException ex) { return Conflict(ApiResponse.Fail(ex.Message)); }
+        catch (MimStudioGenerationException ex) { return StatusCode(503, ApiResponse.Fail(ex.Message)); }
+    }
 
     [HttpGet("lessons/{lessonId:guid}/scenes/{scene:int}/video")]
     public Task<IActionResult> Video(Guid lessonId, int scene, CancellationToken ct) => Run(() => videos.ReadAsync(User.RequireUserId(), lessonId, scene, ct));

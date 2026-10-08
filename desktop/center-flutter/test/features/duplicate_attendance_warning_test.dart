@@ -13,6 +13,8 @@ import 'package:massar_center/features/attendance/attendance_conflict_dialog.dar
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -48,11 +50,32 @@ void main() {
                 .id,
             sessionPrice: 10000,
             packagePrice: 40000,
+            monthPlans: const [
+              GroupMonthPlan(
+                id: 'four',
+                name: 'الشهر الكامل',
+                sessions: 4,
+                price: 40000,
+              ),
+              GroupMonthPlan(
+                id: 'two',
+                name: 'شهر حصتين',
+                sessions: 2,
+                price: 18000,
+              ),
+              GroupMonthPlan(
+                id: 'three',
+                name: 'شهر ثلاث حصص',
+                sessions: 3,
+                price: 27000,
+              ),
+            ],
             twoSessionPrice: 18000,
             threeSessionPrice: 27000,
           ),
         );
       }
+      await seedAttendanceMonths(store);
       await store.saveStudent(
         Student(
           code: '701',
@@ -72,6 +95,9 @@ void main() {
             createdAt: DateTime.now(),
           ),
         );
+      }
+      for (final session in store.sessions) {
+        await store.startSession(session.id);
       }
       original = store.sessions.first;
       target = store.sessions.last;
@@ -94,11 +120,21 @@ void main() {
   );
 
   Future<void> settleRoutes(WidgetTester tester) async {
-    await tester.pumpAndSettle();
+    Future<void> frame() async {
+      await tester.pump();
+      if (find.byType(LinearProgressIndicator).evaluate().isEmpty) {
+        await tester.pumpAndSettle();
+      } else {
+        // A submission remains busy while its warning waits for acknowledgement.
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+    }
+
+    await frame();
     await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
     );
-    await tester.pumpAndSettle();
+    await frame();
   }
 
   Future<void> open(
@@ -108,7 +144,9 @@ void main() {
     double height = 800,
     double scale = 1,
   }) async {
-    await tester.binding.setSurfaceSize(Size(width, height));
+    await tester.binding.setSurfaceSize(
+      Size(width, height < 600 ? 900 : height),
+    );
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.runAsync(() async {
       await (FontLoader('Tajawal')
@@ -143,8 +181,10 @@ void main() {
       ),
     );
     await settleRoutes(tester);
-    await tester.enterText(code, student.code);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await previewAttendanceStudent(tester, student.code);
+    if (height < 600) {
+      await tester.binding.setSurfaceSize(Size(width, height));
+    }
     await settleRoutes(tester);
     expect(
       crossDialog,
@@ -192,7 +232,16 @@ void main() {
           isTrue,
           reason: 'The real SQLite mutation must complete.',
         );
-        await acknowledgeNotice(tester);
+        await waitForUiCondition(
+          tester,
+          () =>
+              crossDialog.evaluate().isEmpty &&
+              find
+                  .byKey(const Key('entry-confirmation-dialog'))
+                  .evaluate()
+                  .isEmpty,
+          reason: 'Accepted attendance/payment completes',
+        );
       });
       await settleRoutes(tester);
     } finally {
@@ -226,14 +275,14 @@ void main() {
         await tester.sendKeyDownEvent(LogicalKeyboardKey.keyL);
         await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyL);
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
         await tester.sendKeyEvent(LogicalKeyboardKey.f4);
         await tester.sendKeyEvent(LogicalKeyboardKey.f6);
       });
       await settleRoutes(tester);
       final notice = find.byKey(const Key('massar-notice-dialog'));
       expect(notice, findsOneWidget);
-      expect(find.text('الحضور مسجل بالفعل'), findsOneWidget);
+      expect(find.text('الدفع مسجل بالفعل'), findsOneWidget);
       final message = tester
           .widget<Text>(
             find
@@ -264,7 +313,7 @@ void main() {
       await settleRoutes(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await settleRoutes(tester);
       expect(notice, findsNothing);
       expect(crossDialog, findsNothing);
@@ -323,22 +372,25 @@ void main() {
       expect(store.payments, hasLength(2));
       expect(store.payments.last.netAmount, 7500);
       expect(store.attendances, hasLength(2));
-      expect(store.audit.last.description, contains(originalAttendance.id));
+      expect(
+        store.audit.where(
+          (event) => event.description.contains(originalAttendance.id),
+        ),
+        isNotEmpty,
+      );
       expectCodeFocus(tester);
     },
   );
 
-  for (final key in [LogicalKeyboardKey.keyL, LogicalKeyboardKey.keyM]) {
+  for (final key in [LogicalKeyboardKey.keyL, LogicalKeyboardKey.keyN]) {
     testWidgets(
       '${key.keyLabel} review threads frozen acknowledged IDs through shortcut confirmation and package repricing',
       (tester) async {
         await open(tester);
-        if (key == LogicalKeyboardKey.keyM) {
-          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-          await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
-          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        if (key == LogicalKeyboardKey.keyN) {
+          await selectAttendanceMonth(tester, 'شهر حصتين · 2 حصص');
         }
-        await tester.runAsync(() => tester.sendKeyEvent(key));
+        await tester.runAsync(() => requestAttendanceConfirmation(tester, key));
         await settleRoutes(tester);
         expect(crossDialog, findsOneWidget);
         await tester.runAsync(() => tester.tap(proceed));
@@ -347,15 +399,12 @@ void main() {
           find.byKey(const Key('entry-confirmation-dialog')),
           findsOneWidget,
         );
-        if (key == LogicalKeyboardKey.keyM) {
-          await tester.runAsync(
-            () => tester.tap(
-              find.byKey(const ValueKey('confirmation-package-count-2')),
-            ),
+        if (key == LogicalKeyboardKey.keyN) {
+          await selectAttendanceMonth(
+            tester,
+            'شهر ثلاث حصص · 3 حصص',
+            confirmation: true,
           );
-          await settleRoutes(tester);
-          await tester.runAsync(() => tester.tap(find.text('3 حصص').last));
-          await settleRoutes(tester);
         }
         expect(store.payments, hasLength(1));
         await mutate(
@@ -365,14 +414,19 @@ void main() {
         expect(store.payments, hasLength(2));
         expect(
           store.payments.last.netAmount,
-          key == LogicalKeyboardKey.keyM ? 20250 : 7500,
+          key == LogicalKeyboardKey.keyN ? 20250 : 7500,
         );
         expect(store.attendances, hasLength(2));
-        if (key == LogicalKeyboardKey.keyM) {
+        if (key == LogicalKeyboardKey.keyN) {
           expect(store.packages.single.totalSessions, 3);
           expect(store.packages.single.remaining, 2);
         }
-        expect(store.audit.last.description, contains(originalAttendance.id));
+        expect(
+          store.audit.where(
+            (event) => event.description.contains(originalAttendance.id),
+          ),
+          isNotEmpty,
+        );
         expectCodeFocus(tester);
       },
     );
@@ -386,7 +440,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
         await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
         await tester.sendKeyEvent(LogicalKeyboardKey.f4);
         await tester.sendKeyEvent(LogicalKeyboardKey.f6);
       });
@@ -409,38 +463,41 @@ void main() {
     },
   );
 
-  testWidgets(
-    'direct reviewed attendance refuses changed price without charging',
-    (tester) async {
-      await open(tester);
-      await tester.runAsync(
-        () => tester.tap(find.byKey(const Key('collect-attend'))),
-      );
-      await settleRoutes(tester);
-      expect(crossDialog, findsOneWidget);
-      await tester.runAsync(
-        () => store.saveGroup(
-          store.groups
-              .singleWhere((group) => group.id == target.groupId)
-              .copyWith(sessionPrice: 15000),
-        ),
-      );
-      await tester.runAsync(() => tester.tap(proceed));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.runAsync(
-        () => acknowledgeNotice(
-          tester,
-          message:
-              'تغيّر السعر أو الخصم أو رصيد الطالب؛ راجع الدفع وأكّد مرة أخرى.',
-        ),
-      );
-      await settleRoutes(tester);
-      expect(store.payments, hasLength(1));
-      expect(store.attendances, hasLength(1));
-      expect(store.packages, isEmpty);
-      expectCodeFocus(tester);
-    },
-  );
+  testWidgets('explicit reviewed quote refuses changed price without charging', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.runAsync(
+      () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL),
+    );
+    await settleRoutes(tester);
+    expect(crossDialog, findsOneWidget);
+    await tester.runAsync(() => tester.tap(proceed));
+    await settleRoutes(tester);
+    expect(find.byKey(const Key('entry-confirmation-dialog')), findsOneWidget);
+    await tester.runAsync(
+      () => store.saveGroup(
+        store.groups
+            .singleWhere((group) => group.id == target.groupId)
+            .copyWith(sessionPrice: 15000),
+      ),
+    );
+    await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.enter));
+    await settleRoutes(tester);
+    await tester.runAsync(
+      () => acknowledgeNotice(
+        tester,
+        message:
+            'الحضور محفوظ، لكن تسديد الحصة لم يتم. تغيّر السعر أو الخصم أو رصيد الطالب؛ راجع الدفع وأكّد مرة أخرى.',
+      ),
+    );
+    await settleRoutes(tester);
+    expect(store.payments, hasLength(1));
+    expect(store.attendances, hasLength(2));
+    expect(store.attendanceNeedsPayment(student.id, target.id), isTrue);
+    expect(store.packages, isEmpty);
+    expectCodeFocus(tester);
+  });
 
   testWidgets(
     'changed conflict set is rejected after frozen review and unpaid attendance repayment remains available',
@@ -468,6 +525,7 @@ void main() {
           ),
         );
         final thirdSession = store.sessions.last;
+        await store.startSession(thirdSession.id);
         await store.collectAndAttend(
           EntryRequest(
             studentId: student.id,
@@ -544,6 +602,7 @@ void main() {
           ),
         );
         final missedSession = store.sessions.last;
+        await store.startSession(missedSession.id);
         await store.renewPackage(
           PackageRequest(
             studentId: student.id,

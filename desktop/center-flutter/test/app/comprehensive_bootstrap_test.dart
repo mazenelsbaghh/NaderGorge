@@ -14,6 +14,8 @@ import 'package:massar_center/main.dart';
 import 'package:massar_center/shared/problem_log.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
+import '../helpers/synthetic_installer_assets.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +35,17 @@ void main() {
   setUp(
     () => TestWidgetsFlutterBinding.instance.runAsync(() async {
       await initializeDateFormatting('ar_EG');
+      installSyntheticInstallerAssets(
+        InstallationAdmin(
+          id: 'synthetic-bootstrap-owner',
+          name: 'synthetic-bootstrap-owner',
+          credential: {
+            'salt': base64Encode(List<int>.filled(24, 1)),
+            'hash': base64Encode(List<int>.filled(32, 2)),
+            'algorithm': 'pbkdf2-sha256-120000',
+          },
+        ),
+      );
       directory = await Directory.systemTemp.createTemp(
         'massar-bootstrap-scenarios-',
       );
@@ -181,7 +194,14 @@ void main() {
         final action = tester.widget<OutlinedButton>(exportButton()).onPressed!;
         action();
         action();
-        await acknowledgeNotice(tester, message: 'تم تصدير سجل المشاكل.');
+        await waitForUiCondition(
+          tester,
+          () =>
+              File(destination!).existsSync() &&
+              tester.widget<OutlinedButton>(exportButton()).onPressed != null,
+          reason:
+              'The exported diagnostics file is complete and export is enabled again.',
+        );
         expect(chooserCalls, 2);
         final exported = await File(destination!).readAsString();
         final rows = const LineSplitter()

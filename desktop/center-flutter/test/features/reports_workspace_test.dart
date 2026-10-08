@@ -12,7 +12,6 @@ import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/management_workspace.dart';
 import 'package:massar_center/features/attendance/student_history_panel.dart';
 import 'package:massar_center/shared/theme.dart';
-import '../helpers/notice_helpers.dart';
 
 void main() {
   final captureKey = GlobalKey();
@@ -192,19 +191,16 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       await tester.pump(const Duration(milliseconds: 50));
       if (await File(csvDestination).exists() &&
-          find.byKey(const Key('massar-notice-dialog')).evaluate().isNotEmpty) {
+          find.text('جارٍ التصدير…').evaluate().isEmpty) {
         break;
       }
     }
     expect(await File(csvDestination).exists(), isTrue);
-    expect(find.byKey(const Key('massar-notice-dialog')), findsOneWidget);
+    expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
   }
 
   Future<void> acknowledgeExport(WidgetTester tester) async {
-    await acknowledgeNotice(
-      tester,
-      message: 'حُفظ التقرير بالفلاتر المختارة. يمكنك فتحه في Excel.',
-    );
+    await tester.pumpAndSettle();
     expect(find.text('جارٍ التصدير…'), findsNothing);
     expect(
       tester
@@ -282,7 +278,11 @@ void main() {
       await tester.runAsync(() async {
         final student = store.students[1];
         final session = store.sessions.single;
-        await store.checkPayment(studentId: student.id, sessionId: session.id);
+        await store.checkPayment(
+          studentId: student.id,
+          sessionId: session.id,
+          expectedAmount: store.paymentReviewAmountFor(student.id, session.id),
+        );
         await store.savePaymentReview(
           ReviewRequest(
             studentId: student.id,
@@ -297,7 +297,7 @@ void main() {
         await chooseReport(tester, 'مراجعة الدفع');
         await scanCode(tester, '202');
         expect(find.text('مراجعات الأكواد: 1'), findsOneWidget);
-        expect(find.text('دافع حصة'), findsOneWidget);
+        expect(find.text('مسجل دفع حصة'), findsOneWidget);
         expect(find.text('الورق (جنيه مصري)'), findsNothing);
         expect(find.text('مطابق'), findsNothing);
         await capture(tester, 'reports-code-check-1280');
@@ -396,7 +396,9 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(
-            find.text('اكتب عددًا صحيحًا في حقل أقل درجة. الصفر درجة فعلية.'),
+            find.text(
+              'اكتب درجة رقمية في حقل أقل درجة، مثل 8.5. الصفر درجة فعلية.',
+            ),
             findsOneWidget,
           );
           expect(await File(csvDestination).exists(), isFalse);
@@ -485,7 +487,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('المدفوعات الأصلية'), findsOneWidget);
-        expect(find.text('ملغاة — مستردة'), findsOneWidget);
+        expect(find.text('ملغاة'), findsNWidgets(2));
         expect(find.text('الاستردادات'), findsOneWidget);
         expect(find.text('سجل التصحيحات'), findsOneWidget);
         expect(find.text('أُلغي التسجيل'), findsOneWidget);
@@ -506,12 +508,12 @@ void main() {
           store.students.first.copyWith(discountPercent: 100),
         );
         await openReports(tester, const Size(1280, 900));
-        await chooseReport(tester, 'تقفيلات الحصص');
+        await chooseReport(tester, 'تقرير الحصة والتقفيلات');
         await tester.tap(
           find.byType(DropdownButtonFormField<ClosingReportMode>),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('فئات الطلبة').last);
+        await tester.tap(find.text('تقفيلات محفوظة — الفئات').last);
         await tester.pumpAndSettle();
         expect(find.text('فئات الطلبة وقت التقفيل'), findsOneWidget);
         expect(find.text('باقة بخصم 25٪'), findsOneWidget);
@@ -554,7 +556,7 @@ void main() {
         expect(dropdown, findsWidgets);
         expect(find.text('المدفوعات'), findsNothing);
         expect(find.text('مراجعة الدفع'), findsNothing);
-        expect(find.text('تقفيلات الحصص'), findsNothing);
+        expect(find.text('تقرير الحصة والتقفيلات'), findsNothing);
         expect(find.text('الامتحانات'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });

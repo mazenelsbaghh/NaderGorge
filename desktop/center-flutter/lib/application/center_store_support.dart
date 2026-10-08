@@ -1,6 +1,28 @@
 part of 'center_store.dart';
 
+final _supportStoreNonces = Expando<String>();
+
 extension CenterStoreSupport on CenterStore {
+  /// Includes receipt-only writes and other connections' commits. Rollbacks
+  /// may invalidate this token too, which only causes a conservative capture.
+  Future<String> supportSnapshotRevision() async {
+    late String revision;
+    await _exclusive(() async {
+      final database = _database;
+      if (_closed || isRemote || isClientWorkspace || database == null) {
+        throw const CenterException('نسخة البيانات تُجهّز على الرئيسي فقط.');
+      }
+      final nonce = _supportStoreNonces[this] ??= CenterStore._uuid.v4();
+      final changes = await database.rawQuery(
+        'SELECT total_changes() AS changes',
+      );
+      final external = await database.rawQuery('PRAGMA data_version');
+      revision =
+          '$nonce:${changes.single['changes']}:${external.single['data_version']}';
+    }, operation: 'cloud.revision');
+    return revision;
+  }
+
   /// Captures one committed logical database under the same queue as reception.
   /// Network transfer happens afterwards; the live SQLite file is never copied.
   Future<Map<String, dynamic>> captureSupportSnapshot({
@@ -9,7 +31,8 @@ extension CenterStoreSupport on CenterStore {
     if (isRemote || isClientWorkspace || _database == null) {
       throw const CenterException('نسخة البيانات تُجهّز على الرئيسي فقط.');
     }
-    late String stateJson, exportedAt;
+    late String stateJson;
+    late String exportedAt;
     late List<Map<String, Object?>> receipts;
     String? actorId;
     final authorize = Zone.current[_lanAuthorizationKey] as bool Function()?;
@@ -27,15 +50,16 @@ extension CenterStoreSupport on CenterStore {
     await _exclusive(() async {
       actorId = currentUser?.id;
       authorizeCapture();
-      // Every writer uses this queue, including atomic LAN command receipts.
-      // Copy the committed JSON, then release reception before decoding it.
-      final rows = await _database.query(
-        'state',
-        columns: ['payload'],
-        where: 'id = 1',
-      );
-      stateJson = rows.single['payload'] as String;
-      receipts = await _database.query('lan_commands');
+      // A read transaction also protects evidence from other connections' commits.
+      await _database.transaction((tx) async {
+        final rows = await tx.query(
+          'state',
+          columns: ['payload'],
+          where: 'id=1',
+        );
+        stateJson = rows.single['payload'] as String;
+        receipts = await tx.query('lan_commands');
+      });
       exportedAt = DateTime.now().toUtc().toIso8601String();
       authorizeCapture();
     }, operation: 'cloud.snapshot');
@@ -70,5 +94,5 @@ extension CenterStoreSupport on CenterStore {
   }
 }
 
-Map<String, dynamic> _decodeSupportState(String payload) =>
-    jsonDecode(payload) as Map<String, dynamic>;
+Map<String, dynamic> _decodeSupportState(String stateJson) =>
+    jsonDecode(stateJson) as Map<String, dynamic>;

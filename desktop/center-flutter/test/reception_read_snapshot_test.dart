@@ -190,7 +190,7 @@ void main() {
         store.databasePath,
       );
       await database.execute(
-        "CREATE TRIGGER deny_reception_write BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'test write failure'); END",
+        "CREATE TRIGGER deny_reception_write BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'test write failure'); END",
       );
       try {
         await expectLater(collect(), throwsA(isA<CenterException>()));

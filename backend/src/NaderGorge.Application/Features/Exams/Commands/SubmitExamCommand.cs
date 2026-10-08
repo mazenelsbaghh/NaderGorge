@@ -40,6 +40,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
     public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
     {
+        if (request.Answers?.Any(answer => !string.IsNullOrWhiteSpace(answer.AudioUrl)) == true)
+            return ApiResponse<ExamResultDto>.Fail("الإجابات الصوتية غير مسموح بها في الامتحان. اكتب إجابتك ثم أرسلها.");
+
         var exam = await _db.Exams
             .AsNoTracking()
             .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
@@ -410,19 +413,16 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             QuestionId = examQuestion.Question.Id,
             StudentExamAttemptId = answer.StudentExamAttemptId,
             AnswerText = answerText ?? string.Empty,
-            AudioUrl = string.IsNullOrWhiteSpace(submission.AudioUrl) ? null : submission.AudioUrl.Trim(),
             Status = EssaySubmissionStatus.WaitAI
         };
 
         _db.EssaySubmissions.Add(essaySubmission);
 
-        var studentAudioUrl = string.IsNullOrWhiteSpace(submission.AudioUrl) ? null : submission.AudioUrl.Trim();
         questionSnapshotsByQuestion[examQuestion.Id] = new QuestionReviewSnapshot(
             answerText,
-            !string.IsNullOrWhiteSpace(answerText) || !string.IsNullOrWhiteSpace(studentAudioUrl),
+            !string.IsNullOrWhiteSpace(answerText),
             false,
-            0,
-            studentAudioUrl);
+            0);
     }
 
     private static decimal HandleFindTheMistakeSubmission(

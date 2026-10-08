@@ -205,7 +205,7 @@ void main() {
       final roster = report(CenterReportKind.students);
       expect(roster.rows, hasLength(4));
       expect(studentRow(roster, inactive.code)['نسبة الحضور'], '—');
-      expect(studentRow(roster, absent.code)['تعويض'], 1);
+      expect(studentRow(roster, absent.code)['معوّض'], 1);
       expect(studentRow(roster, absent.code)['نسبة الحضور'], '50.00٪');
       final groupReport = report(CenterReportKind.groups);
       expect(groupReport.rows, hasLength(2));
@@ -222,7 +222,7 @@ void main() {
       );
       expect(report(CenterReportKind.sessions).rows, hasLength(2));
       final attendance = report(CenterReportKind.attendance);
-      expect(attendance.summary, containsPair('تعويض', '1'));
+      expect(attendance.summary, containsPair('معوّض', '1'));
       expect(
         attendance.rows.any((row) => row.contains('غائب — تم التعويض')),
         isTrue,
@@ -372,41 +372,53 @@ void main() {
   );
 
   test(
-    'code checks report historical coverage without inventing paper amounts',
+    'code review reports export only current receipts and preserve amount reviews separately',
     () async {
-      for (final (student, session) in [
-        (ahmed, firstSession),
-        (mina, firstSession),
-        (absent, secondSession),
-        (inactive, secondSession),
-      ]) {
-        await store.checkPayment(studentId: student.id, sessionId: session.id);
+      for (final student in [ahmed, mina]) {
+        final payment = store.payments.singleWhere(
+          (p) => p.studentId == student.id && p.sessionId == firstSession.id,
+        );
+        await store.checkPayment(
+          studentId: student.id,
+          sessionId: firstSession.id,
+          expectedAmount: payment.collectedAmount,
+        );
+      }
+      for (final student in [absent, inactive]) {
+        await expectLater(
+          store.checkPayment(
+            studentId: student.id,
+            sessionId: secondSession.id,
+            expectedAmount: 10025,
+          ),
+          throwsA(isA<CenterException>()),
+        );
       }
       var checks = report(CenterReportKind.reviews);
-      expect(checks.rows, hasLength(4));
+      expect(checks.rows, hasLength(2));
       expect(checks.columns, isNot(contains('الورق (جنيه مصري)')));
-      expect(checks.summary['دافع باقة'], '1');
-      expect(checks.summary['دافع حصة'], '1');
-      expect(checks.summary['تعويض مجاني'], '1');
-      expect(checks.summary['غير دافع وقت المراجعة'], '1');
-      final packageRow = studentRow(checks, ahmed.code);
-      final payment = store.payments.firstWhere((p) => p.studentId == ahmed.id);
-      expect(packageRow['رقم عملية الدفع'], payment.id);
-      expect(packageRow['رقم الباقة'], payment.packageId);
+      final payment = store.payments.singleWhere(
+        (p) => p.studentId == ahmed.id,
+      );
+      expect(studentRow(checks, ahmed.code)['رقم عملية الدفع'], payment.id);
+      expect(studentRow(checks, ahmed.code)['رقم الباقة'], payment.packageId);
       expect(checks.rows.any((row) => row.contains('مطابق')), isFalse);
       final all = report(
         CenterReportKind.reviews,
         const CenterReportFilter(reviewMode: ReviewReportMode.all),
       );
-      expect(all.rows, hasLength(6));
+      expect(all.rows, hasLength(4));
       for (final row in all.rows.where(
         (row) => row[all.columns.indexOf('نوع المراجعة')] == 'مراجعة كود',
       )) {
-        expect(row[all.columns.indexOf('المسجل (جنيه مصري)')], isNull);
-        expect(row[all.columns.indexOf('الورق (جنيه مصري)')], isNull);
-        expect(row[all.columns.indexOf('الفرق (جنيه مصري)')], isNull);
+        for (final column in [
+          'المقبوض الأصلي وقت المراجعة (جنيه مصري)',
+          'الورق (جنيه مصري)',
+          'الفرق (جنيه مصري)',
+        ]) {
+          expect(row[all.columns.indexOf(column)], isNull);
+        }
       }
-      expect(all.summary['غير محسومة'], '2');
       await store.collectAndAttend(
         EntryRequest(
           studentId: inactive.id,
@@ -414,15 +426,14 @@ void main() {
           mode: EntryMode.single,
         ),
       );
+      expect(report(CenterReportKind.reviews).rows, hasLength(2));
+      await store.checkPayment(
+        studentId: inactive.id,
+        sessionId: secondSession.id,
+        expectedAmount: 10025,
+      );
       checks = report(CenterReportKind.reviews);
-      expect(
-        studentRow(checks, inactive.code)['الحالة'],
-        'غير دافع وقت المراجعة',
-      );
-      expect(
-        store.paymentStatusFor(inactive.id, secondSession.id).status,
-        StudentPaymentStatus.paidSingle,
-      );
+      expect(checks.rows, hasLength(3));
       final exact = CenterReportFilter(
         studentId: inactive.id,
         sessionId: secondSession.id,
@@ -438,7 +449,8 @@ void main() {
         destination: path,
       );
       final csv = await File(path).readAsString();
-      expect(csv, contains('غير دافع وقت المراجعة'));
+      expect(csv, contains(inactive.code));
+      expect(csv, contains('100.25'));
       expect(csv, isNot(contains('أحمد')));
       expect(csv, isNot(contains('الورق (جنيه مصري)')));
       expect(
@@ -451,17 +463,10 @@ void main() {
         ).rows,
         isEmpty,
       );
-      await store.checkPayment(
-        studentId: inactive.id,
-        sessionId: secondSession.id,
-      );
-      checks = report(CenterReportKind.reviews);
-      expect(checks.rows, hasLength(4));
-      expect(studentRow(checks, inactive.code)['الحالة'], 'دافع حصة');
       await store.close();
       store = await CenterStore.open(directory: directory.path);
       await store.signIn('الإدارة', 'test-password-2026');
-      expect(report(CenterReportKind.reviews).rows, hasLength(4));
+      expect(report(CenterReportKind.reviews).rows, hasLength(3));
       expect(
         report(
           CenterReportKind.reviews,
@@ -608,7 +613,7 @@ void main() {
       expect(fullPackage[detail.columns.indexOf('عدد الطلبة داخل الفئة')], 1);
       expect(fullPackage[detail.columns.indexOf('عدد عمليات الدفع')], 2);
       expect(
-        fullPackage[detail.columns.indexOf('صافي الوحدة (جنيه مصري)')],
+        fullPackage[detail.columns.indexOf('المحصل للوحدة (جنيه مصري)')],
         '800.00',
       );
       final prepaid = detail.rows.firstWhere(
@@ -616,15 +621,19 @@ void main() {
       );
       expect(prepaid[detail.columns.indexOf('نسبة الخصم ٪')], 25);
       expect(
-        prepaid[detail.columns.indexOf('صافي الوحدة (جنيه مصري)')],
+        prepaid[detail.columns.indexOf('المحصل للوحدة (جنيه مصري)')],
         '0.00',
       );
       expect(prepaid[detail.columns.indexOf('عدد عمليات الدفع')], 0);
       final exempt = detail.rows.firstWhere(
-        (row) => row[labelIndex] == 'حصة بإعفاء 100٪',
+        (row) => row[labelIndex] == 'حضور مجاني أو بإعفاء من رسوم المدرس',
       );
-      expect(exempt[detail.columns.indexOf('نسبة الخصم ٪')], 100);
-      expect(exempt[detail.columns.indexOf('صافي الوحدة (جنيه مصري)')], '0.00');
+      expect(exempt[detail.columns.indexOf('نسبة الخصم ٪')], isNull);
+      expect(exempt[detail.columns.indexOf('عدد عمليات الدفع')], 0);
+      expect(
+        exempt[detail.columns.indexOf('المحصل للوحدة (جنيه مصري)')],
+        '0.00',
+      );
       expect(
         detail.rows.any((row) => row[labelIndex] == 'حضور حصة مجانية'),
         isFalse,
@@ -656,11 +665,10 @@ void main() {
         summary.columns,
         summary.rows.single,
       );
-      expect(closingRow['إعفاء 100٪'], contains('1 طالب، 1 عملية'));
-      expect(
-        closingRow['السداد الكامل حسب الفئة'],
-        contains('1 طالب، 2 عملية'),
-      );
+      expect(closingRow['إعفاء 100٪'], '0 طالب');
+      expect(closingRow['توزيع الخصم الثابت للحاضرين'], contains('100'));
+      expect(closingRow['كل الحضور المجاني والإعفاء'], 1);
+      expect(closingRow['دفع بلا خصم حسب الفئة'], contains('1 طالب، 2 عملية'));
       expect(closingRow['حضور من رصيد سابق'], contains('1 طالب، 0 عملية'));
       expect(closingRow['تفصيل نسب الخصم'], '0 طالب');
       expect(detail.caption, contains('قد تتداخل'));
@@ -721,13 +729,13 @@ void main() {
       final makeupRow = Map.fromIterables(
         makeup.columns,
         makeup.rows.firstWhere(
-          (row) => row[makeup.columns.indexOf('فئة الطلبة')] == 'تعويض مجاني',
+          (row) => row[makeup.columns.indexOf('فئة الطلبة')] == 'تعويض',
         ),
       );
-      expect(makeupRow['فئة الطلبة'], 'تعويض مجاني');
+      expect(makeupRow['فئة الطلبة'], 'تعويض');
       expect(makeupRow['عدد الطلبة داخل الفئة'], 1);
       expect(makeupRow['عدد عمليات الدفع'], 0);
-      expect(makeupRow['صافي الوحدة (جنيه مصري)'], '0.00');
+      expect(makeupRow['المحصل للوحدة (جنيه مصري)'], '0.00');
       await store.saveStudent(inactive.copyWith(discountPercent: 100));
       await store.saveSession(
         LessonSession(
@@ -756,7 +764,7 @@ void main() {
         ),
       );
       final freeRow = Map.fromIterables(detail.columns, detail.rows.single);
-      expect(freeRow['فئة الطلبة'], 'حضور حصة مجانية');
+      expect(freeRow['فئة الطلبة'], 'حضور مجاني أو بإعفاء من رسوم المدرس');
       expect(freeRow['نسبة الخصم ٪'], isNull);
       expect(freeRow['عدد عمليات الدفع'], 0);
       expect(freeRow['عدد الطلبة داخل الفئة'], 1);
@@ -814,7 +822,7 @@ void main() {
         'كل الحضور المجاني والإعفاء',
         'توزيع الخصم الثابت للحاضرين',
         'عدد مشتري الباقة في الحصة',
-        'الدافعون حسب صافي السعر',
+        'التحصيل حسب المبلغ المقبوض',
         'تفصيل الدفع والرصيد السابق',
       ]) {
         expect(sessionRow[field], 'غير متوفر في هذه النسخة', reason: field);
@@ -957,8 +965,8 @@ void main() {
       expect(row['توزيع الخصم الثابت للحاضرين'], contains('25'));
       expect(row['توزيع الخصم الثابت للحاضرين'], isNot(contains('100')));
       expect(row['عدد مشتري الباقة في الحصة'], 2);
-      expect(row['الدافعون حسب صافي السعر'], contains('300.38'));
-      expect(row['الدافعون حسب صافي السعر'], contains('320.40'));
+      expect(row['التحصيل حسب المبلغ المقبوض'], contains('300.38'));
+      expect(row['التحصيل حسب المبلغ المقبوض'], contains('320.40'));
       expect(row['كل الحضور المجاني والإعفاء'], 0);
       await store.closeSession(secondSession.id);
       final makeup = report(
@@ -966,8 +974,9 @@ void main() {
         CenterReportFilter(sessionId: secondSession.id),
       );
       final second = Map.fromIterables(makeup.columns, makeup.rows.single);
-      expect(second['كل الحضور المجاني والإعفاء'], 1);
-      expect(second['الدافعون حسب صافي السعر'], '0 عملية');
+      expect(second['كل الحضور المجاني والإعفاء'], 0);
+      expect(second['معوّض'], 1);
+      expect(second['التحصيل حسب المبلغ المقبوض'], '0 عملية');
       expect(second['توزيع الخصم الثابت للحاضرين'], contains('20'));
       await store.saveStaff(
         name: 'مساعد التقارير',
@@ -977,7 +986,7 @@ void main() {
       store.signOut();
       await store.signIn('مساعد التقارير', 'test-password-2026');
       final readonly = report(CenterReportKind.sessions);
-      expect(readonly.columns, isNot(contains('الدافعون حسب صافي السعر')));
+      expect(readonly.columns, isNot(contains('التحصيل حسب المبلغ المقبوض')));
       expect(readonly.columns, contains('توزيع الخصم الثابت للحاضرين'));
     },
   );
@@ -1066,7 +1075,7 @@ void main() {
         expect(row['المتبقي حاليًا'], count - 1);
         expect(row['المستهلك'], 1);
         expect(
-          row['المبلغ المدفوع (جنيه مصري)'],
+          row['المحصل حتى الآن (جنيه مصري)'],
           reportAmount(configuredPrice),
         );
         final groups = report(CenterReportKind.groups);
@@ -1074,19 +1083,18 @@ void main() {
           groups.columns,
           groups.rows.firstWhere((row) => row.first == secondGroup.name),
         );
-        expect(
-          groupRow['سعر باقة حصتين الحالي (جنيه مصري)'],
-          reportAmount(99000),
-        );
-        expect(
-          groupRow['سعر باقة ٣ حصص الحالي (جنيه مصري)'],
-          reportAmount(98000),
-        );
-        final oldGroup = Map.fromIterables(
-          groups.columns,
-          groups.rows.firstWhere((row) => row.first == firstGroup.name),
-        );
-        expect(oldGroup['سعر باقة حصتين الحالي (جنيه مصري)'], 'غير محدد');
+        final plans = groupRow['الأشهر المتاحة حاليًا — الاسم / الحصص / السعر'];
+        for (final plan
+            in store.groups
+                .singleWhere((g) => g.id == secondGroup.id)
+                .effectiveMonthPlans) {
+          expect(
+            plans,
+            contains(
+              '${plan.name} — ${plan.sessions} حصص — ${reportAmount(plan.price)} ج',
+            ),
+          );
+        }
         final destination = '${directory.path}/package-$count.csv';
         await CenterReports.exportCsv(
           store: store,

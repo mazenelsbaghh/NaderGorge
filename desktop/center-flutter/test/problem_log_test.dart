@@ -473,4 +473,38 @@ void main() {
       );
     },
   );
+  test(
+    'slow operation export preserves timings and strips arbitrary metric keys',
+    () async {
+      await log.recordPerformance(
+        operation: 'cloud.transfer',
+        durationUs: 250000,
+        budgetMs: 150,
+        phasesUs: {'sqlite': 190000, secret: 1000},
+        counts: {
+          'rows': 3,
+          'rawBytes': 16000000,
+          'wireBytes': 1000000,
+          secret: 5,
+        },
+      );
+      await log.recordPerformance(
+        operation: secret,
+        durationUs: 500000,
+        budgetMs: 150,
+      );
+      final rows = await exported();
+      final events = rows.where((row) => row['kind'] == 'performance').toList();
+      expect(events, hasLength(1));
+      expect(events.single['durationUs'], 250000);
+      expect(events.single['phasesUs'], {'sqlite': 190000});
+      expect(events.single['counts'], {
+        'rows': 3,
+        'rawBytes': 16000000,
+        'wireBytes': 1000000,
+        'repeats': 0,
+      });
+      expect(jsonEncode(rows), isNot(contains(secret)));
+    },
+  );
 }

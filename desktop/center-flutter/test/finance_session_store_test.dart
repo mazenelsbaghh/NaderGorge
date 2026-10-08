@@ -100,7 +100,7 @@ void main() {
   });
 
   test(
-    'code check distinguishes coverage without inventing paper equality or revenue',
+    'code checks require actual receipt and attendance without inventing income',
     () async {
       final cash = store.sessionFinancialSummary(current.id).totalCollected;
       final paymentCount = store.payments.length;
@@ -116,43 +116,50 @@ void main() {
         store.paymentStatusFor(students[5].id, current.id).status,
         StudentPaymentStatus.makeup,
       );
-      expect(
-        store.paymentStatusFor(students[5].id, store.sessions.first.id).status,
-        StudentPaymentStatus.paidPackage,
-      );
-      expect(
-        store.paymentStatusFor(students[4].id, current.id).status,
-        StudentPaymentStatus.notPaid,
-      );
+      for (final index in [2, 4, 5]) {
+        await expectLater(
+          store.checkPayment(
+            studentId: students[index].id,
+            sessionId: current.id,
+            expectedAmount: 7500,
+          ),
+          throwsA(isA<CenterException>()),
+        );
+      }
+      expect(store.paymentChecks, isEmpty);
       await store.checkPayment(
-        studentId: students[4].id,
+        studentId: students[0].id,
         sessionId: current.id,
+        expectedAmount: 7500,
       );
       final old = store.paymentChecks.single;
+      await expectLater(
+        store.checkPayment(
+          studentId: students[0].id,
+          sessionId: current.id,
+          expectedAmount: 7500,
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.paymentChecks.single.id, old.id);
+      expect(store.paymentChecks.single.amount, 7500);
+      expect(store.isPaymentCheckCurrent(students[0].id, current.id), isTrue);
       await store.renewPackage(
         PackageRequest(studentId: students[4].id, groupId: group.id),
       );
-      final eligible = store.paymentStatusFor(students[4].id, current.id);
-      expect(eligible.status, StudentPaymentStatus.paidPackage);
-      expect(eligible.packageId, store.packages.last.id);
-      expect(store.paymentChecks.single.status, StudentPaymentStatus.notPaid);
-      await store.checkPayment(
-        studentId: students[4].id,
-        sessionId: current.id,
-      );
-      expect(store.paymentChecks.single.id, old.id);
       expect(
-        store.paymentChecks.single.status,
+        store.paymentStatusFor(students[4].id, current.id).status,
         StudentPaymentStatus.paidPackage,
       );
-      expect(
-        store.paymentChecks.single.checkedAt.isBefore(old.checkedAt),
-        false,
+      await expectLater(
+        store.checkPayment(
+          studentId: students[4].id,
+          sessionId: current.id,
+          expectedAmount: 40000,
+        ),
+        throwsA(isA<CenterException>()),
       );
-      expect(
-        store.audit.where((e) => e.action == 'payment_check'),
-        hasLength(2),
-      );
+      expect(store.paymentChecks, hasLength(1));
       expect(store.reviews, isEmpty);
       expect(store.payments, hasLength(paymentCount + 1));
       expect(store.sessionFinancialSummary(current.id).totalCollected, cash);
@@ -164,9 +171,11 @@ void main() {
       );
       await store.closeSession(current.id);
       await store.finalizeSession(sessionId: current.id, actualCash: 43500);
+      await store.clearPaymentChecks(sessionId: current.id);
       await store.checkPayment(
-        studentId: students[4].id,
+        studentId: students[0].id,
         sessionId: current.id,
+        expectedAmount: 7500,
       );
       expect(store.paymentChecks, hasLength(1));
       expect(store.closings.single.summary.totalCollected, cash);
@@ -174,9 +183,10 @@ void main() {
   );
 
   test(
-    'free and separately priced sessions do not use eligible package balances',
+    'free and separately priced sessions preserve credit and only real receipts can be checked',
     () async {
       await store.closeSession(current.id);
+      final credit = store.remainingFor(students[2].id, group.id);
       for (final kind in [SessionKind.free, SessionKind.extra]) {
         await store.saveSession(
           LessonSession(
@@ -197,49 +207,62 @@ void main() {
               : StudentPaymentStatus.notPaid,
         );
         expect(status.packageId, isNull);
-        await store.checkPayment(
-          studentId: students[2].id,
-          sessionId: session.id,
+        await expectLater(
+          store.checkPayment(
+            studentId: students[2].id,
+            sessionId: session.id,
+            expectedAmount: 5000,
+          ),
+          throwsA(isA<CenterException>()),
         );
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: students[2].id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+        expect(store.remainingFor(students[2].id, group.id), credit);
         if (kind == SessionKind.free) {
-          final check = store.paymentChecks.last;
-          final audited = store.audit.length;
-          final reviewedClassError = throwsA(
-            isA<CenterException>().having(
-              (e) => e.message,
-              'specific reviewed-class explanation',
-              contains('مراجعة الدفع بالكود'),
+          await expectLater(
+            store.checkPayment(
+              studentId: students[2].id,
+              sessionId: session.id,
+              expectedAmount: 5000,
             ),
+            throwsA(isA<CenterException>()),
           );
-          await expectLater(
-            store.saveSession(session.copyWith(kind: SessionKind.extra)),
-            reviewedClassError,
+          expect(store.paymentChecks, isEmpty);
+        } else {
+          await store.checkPayment(
+            studentId: students[2].id,
+            sessionId: session.id,
+            expectedAmount: 5000,
           );
-          await expectLater(
-            store.cancelSession(session.id),
-            reviewedClassError,
-          );
-          expect(store.sessions.last.kind, SessionKind.free);
+          final check = store.paymentChecks.single;
+          final audited = store.audit.length;
+          for (final edit in [
+            () => store.saveSession(session.copyWith(kind: SessionKind.free)),
+            () => store.cancelSession(session.id),
+          ]) {
+            await expectLater(
+              edit(),
+              throwsA(
+                isA<CenterException>().having(
+                  (e) => e.message,
+                  'reviewed class',
+                  contains('مراجعة الدفع بالكود'),
+                ),
+              ),
+            );
+          }
+          expect(store.sessions.last.kind, SessionKind.extra);
           expect(store.sessions.last.status, SessionStatus.open);
-          expect(store.paymentChecks.last.id, check.id);
-          expect(store.paymentChecks.last.status, StudentPaymentStatus.free);
+          expect(store.paymentChecks.single.id, check.id);
+          expect(check.status, StudentPaymentStatus.paidSingle);
           expect(store.audit.length, audited);
         }
       }
-      final extra = store.sessions.last;
-      await store.collectAndAttend(
-        EntryRequest(
-          studentId: students[2].id,
-          sessionId: extra.id,
-          mode: EntryMode.single,
-        ),
-      );
-      expect(
-        store.paymentStatusFor(students[2].id, extra.id).status,
-        StudentPaymentStatus.paidSingle,
-      );
-      final before = store.paymentChecks.last.status;
-      expect(before, StudentPaymentStatus.notPaid);
     },
   );
 
@@ -268,11 +291,15 @@ void main() {
         store.paymentStatusFor(students[5].id, store.sessions.first.id).status,
         StudentPaymentStatus.paidPackage,
       );
-      await store.checkPayment(
-        studentId: students[5].id,
-        sessionId: store.sessions.first.id,
+      await expectLater(
+        store.checkPayment(
+          studentId: students[5].id,
+          sessionId: store.sessions.first.id,
+          expectedAmount: 40000,
+        ),
+        throwsA(isA<CenterException>()),
       );
-      expect(store.paymentChecks.single.packageId, store.packages.first.id);
+      expect(store.paymentChecks, isEmpty);
     },
   );
 
@@ -282,6 +309,7 @@ void main() {
       await store.checkPayment(
         studentId: students[0].id,
         sessionId: current.id,
+        expectedAmount: 7500,
       );
       final id = store.paymentChecks.single.id;
       final backup = await store.createBackup();
@@ -613,7 +641,7 @@ void main() {
       );
       final zeroSummary = store.sessionFinancialSummary(zero.id);
       expect(zeroSummary.singlePaymentCount, 1);
-      expect(zeroSummary.freeCount, 0);
+      expect(zeroSummary.freeCount, 1);
       expect(zeroSummary.grossAmount, 10000);
       expect(zeroSummary.discountAmount, 10000);
       expect(zeroSummary.totalCollected, 0);
@@ -621,7 +649,7 @@ void main() {
   );
 
   test(
-    'schema2 backup restores finance and rejects forged expected and settlement totals',
+    'current backup restores finance and rejects forged expected and settlement totals',
     () async {
       final payment = store.payments.firstWhere(
         (e) => e.studentId == students[0].id && e.sessionId == current.id,
@@ -638,7 +666,7 @@ void main() {
       final backup = await store.createBackup();
       final original =
           jsonDecode(await File(backup).readAsString()) as Map<String, dynamic>;
-      expect((original['data'] as Map)['schemaVersion'], 2);
+      expect((original['data'] as Map)['schemaVersion'], 10);
       for (final field in ['review', 'closing']) {
         final forged = jsonDecode(jsonEncode(original)) as Map<String, dynamic>;
         final data = forged['data'] as Map;

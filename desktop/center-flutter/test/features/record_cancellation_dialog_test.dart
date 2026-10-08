@@ -12,6 +12,7 @@ import 'package:massar_center/features/attendance/attendance_workspace.dart';
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -106,18 +107,21 @@ void main() {
           theme: dark ? MassarTheme.dark : MassarTheme.light,
           home: Directionality(
             textDirection: TextDirection.rtl,
-            child: AttendanceWorkspace(store: store, onExit: () {}),
+            child: AttendanceWorkspace(
+              store: store,
+              onExit: () {},
+              initialSessionId: session.id,
+              workspaceContext: AttendanceWorkspaceContext()
+                ..groupId = session.groupId
+                ..sessionId = session.id
+                ..closedViewSessionId = session.id,
+            ),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('student-search')),
-      student.code,
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    await previewAttendanceStudent(tester, student.code);
   }
 
   Future<void> openCancellation(WidgetTester tester, bool isPayment) async {
@@ -165,7 +169,7 @@ void main() {
       try {
         await gesture();
         await completed.future.timeout(const Duration(seconds: 5));
-        await acknowledgeNotice(tester, message: message);
+        await Future<void>(() {});
       } finally {
         store.removeListener(changed);
       }
@@ -271,7 +275,7 @@ void main() {
           if (isPayment && !both) {
             expect(
               find.text(
-                'حضور الطالب مسجل — لا يوجد دفع ساري. حصّل الحساب دون تكرار الحضور.',
+                'حاضر — غير مدفوع. الحضور محفوظ؛ L للحصة أو N للشهر بدون تكرار الحضور.',
               ),
               findsOneWidget,
             );
@@ -348,7 +352,9 @@ void main() {
           .toSet();
       await open(tester, dark: true);
       expect(find.text('مسددة مسبقًا — تسجيل حضور · L'), findsOneWidget);
-      await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.keyL));
+      await tester.runAsync(
+        () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL),
+      );
       await tester.pumpAndSettle();
       final dialog = find.byKey(const Key('entry-confirmation-dialog'));
       expect(dialog, findsOneWidget);
@@ -395,16 +401,20 @@ void main() {
   testWidgets(
     'financial closing rejection preserves cancellation reason and escape restores scanner focus without writes',
     (tester) async {
-      await TestWidgetsFlutterBinding.instance.runAsync(() async {
-        await store.closeSession(session.id);
-        await store.finalizeSession(sessionId: session.id, actualCash: 7500);
-      });
       await open(tester);
       await openCancellation(tester, true);
       await tester.enterText(reason, 'سبب يبقى بعد الرفض');
       await tester.ensureVisible(confirm);
+      final staleConfirm = tester.widget<FilledButton>(confirm).onPressed!;
+      // Another view finalizes the session while the cancellation draft is open.
       await tester.runAsync(() async {
-        await tester.tap(confirm);
+        await store.closeSession(session.id);
+        await store.finalizeSession(sessionId: session.id, actualCash: 7500);
+      });
+      await tester.pump();
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+      await tester.runAsync(() async {
+        staleConfirm();
         await acknowledgeNotice(tester);
       });
       await tester.pumpAndSettle();
@@ -419,12 +429,29 @@ void main() {
       expect(store.refunds, isEmpty);
       expect(store.payments, hasLength(1));
       expect(store.closings, hasLength(1));
-      expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
       await tester.runAsync(
         () => tester.sendKeyEvent(LogicalKeyboardKey.escape),
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('record-cancellation-dialog')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('student-search')))
+            .focusNode!
+            .hasFocus,
+        isFalse,
+      );
+      await tester.runAsync(
+        () => tester.tap(find.widgetWithText(OutlinedButton, 'فتح أو عرض الحصة')),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);
+      await tester.runAsync(
+        () => tester.tap(find.byKey(const Key('closed-session-view-only'))),
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
       expectCodeFocus(tester);
     },
   );
@@ -460,8 +487,8 @@ void main() {
       );
       expect(find.text('السجل الكامل'), findsOneWidget);
       expect(
-        find.descendant(of: full, matching: find.text('ملغاة — مستردة')),
-        findsOneWidget,
+        find.descendant(of: full, matching: find.text('ملغاة')),
+        findsNWidgets(2),
       );
       final canceledButton = find.descendant(
         of: full,

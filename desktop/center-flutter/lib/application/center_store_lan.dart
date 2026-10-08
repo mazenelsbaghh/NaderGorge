@@ -2,6 +2,8 @@ part of 'center_store.dart';
 
 enum LanStateEncoding { map, json }
 
+enum LanCommandResponse { state, receipt }
+
 final _lanActorKey = Object();
 final _lanExecutionKey = Object();
 final _lanTransactionKey = Object();
@@ -101,12 +103,17 @@ extension CenterStoreLanHost on CenterStore {
     LanStateEncoding stateEncoding = LanStateEncoding.map,
     String? knownStateVersion,
     String? patchVersion,
+    LanCommandResponse responseKind = LanCommandResponse.state,
   }) async {
     late Map<String, dynamic> response;
     Object? responseFailure;
     StackTrace? responseStack;
     void captureCommittedResponse(Map<String, dynamic> receipt) {
       try {
+        if (responseKind == LanCommandResponse.receipt) {
+          response = receipt;
+          return;
+        }
         response = {
           ...receipt,
           ..._lanSnapshot(

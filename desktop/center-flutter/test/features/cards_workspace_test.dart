@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
@@ -134,15 +134,10 @@ void main() {
   }
 
   Future<void> page(WidgetTester tester, String label) async {
-    final target = find.widgetWithText(ListTile, label);
-    await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
-    await tester.pumpAndSettle();
-    await tester.tap(target);
-    await tester.pumpAndSettle();
+    await navigateManagementPage(tester, label);
   }
 
   Future<void> waitOperation(WidgetTester tester, {bool notice = true}) async {
-    if (notice) await acknowledgeNotice(tester);
     for (var attempt = 0; attempt < 80; attempt++) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       await tester.pumpAndSettle();
@@ -229,7 +224,15 @@ void main() {
             isNull,
           );
           await tester.tap(find.byKey(const Key('pay-student-card')));
-          await tester.tap(find.byKey(const Key('pay-student-card')));
+          await tester.pumpAndSettle();
+          expect(store.cardPayments, isEmpty);
+          final confirm = tester
+              .widget<FilledButton>(
+                find.byKey(const Key('confirm-paid-amount')),
+              )
+              .onPressed!;
+          confirm();
+          confirm();
           await waitOperation(tester);
           expect(store.cardPayments, hasLength(1));
           expect(store.cardPayments.single.netAmount, 3769);

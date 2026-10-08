@@ -36,26 +36,48 @@ public class EssayGradingWorkflowTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SubmittedEssayQueuesTextForAiAndRecordingForTeacherReview(bool hasRecording)
+    [InlineData(null)]
+    [InlineData("Gravity pulls objects together.")]
+    public async Task SubmittedRecordingIsRejectedWithoutSavingOtherAnswers(string? answerText)
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "501");
+        var (exam, mcq, essay, _, _, correct, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+
+        var result = await new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer()).Handle(
+            new(exam.Id, attempt.Id, student.Id,
+                [new(mcq.Id, correct.Id, null), new(essay.Id, null, answerText, AudioUrl: "/answer.webm")]),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("الإجابات الصوتية غير مسموح بها", result.Message);
+        Assert.Empty(await db.EssaySubmissions.ToListAsync());
+        Assert.Empty(await db.OutboxEvents.ToListAsync());
+        db.ChangeTracker.Clear();
+        Assert.Null((await db.StudentExamAttempts.SingleAsync()).Evaluation);
+        Assert.All(await db.StudentAnswers.ToListAsync(), answer =>
+        {
+            Assert.Null(answer.SubmittedText);
+            Assert.Null(answer.SelectedOptionId);
+        });
+    }
+
+    [Fact]
+    public async Task SubmittedTextEssayQueuesForAi()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "501");
         var (exam, mcqExamQuestion, essayExamQuestion, _, _, correctOption, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
         var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
 
-        var handler = new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer());
-        var result = await handler.Handle(
-            new SubmitExamCommand(exam.Id, attempt.Id, student.Id, new List<AnswerSubmissionDto>
-            {
-                new(mcqExamQuestion.Id, correctOption.Id, null),
-                new(essayExamQuestion.Id, null, "Gravity pulls objects together.", AudioUrl: hasRecording ? "/answer.webm" : null)
-            }),
+        var result = await new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer()).Handle(
+            new(exam.Id, attempt.Id, student.Id,
+                [new(mcqExamQuestion.Id, correctOption.Id, null), new(essayExamQuestion.Id, null, "Gravity pulls objects together.")]),
             CancellationToken.None);
 
         Assert.True(result.Success);
-        var expectedState = hasRecording ? "PartiallyGraded" : "Pending";
+        var expectedState = "Pending";
         Assert.Equal(expectedState, result.Data!.ResultState);
         Assert.False(result.Data.IsPassed);
         var pendingEssayReview = result.Data.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
@@ -63,19 +85,16 @@ public class EssayGradingWorkflowTests
         Assert.Null(pendingEssayReview.WrittenCorrection);
         Assert.Null(pendingEssayReview.GradingFeedback);
         var savedEssay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
-        Assert.Equal(hasRecording ? EssaySubmissionStatus.WaitTeacher : EssaySubmissionStatus.WaitAI, savedEssay.Status);
+        Assert.Equal(EssaySubmissionStatus.WaitAI, savedEssay.Status);
+        Assert.Null(savedEssay.AudioUrl);
         var queuedEvaluations = db.OutboxEvents.Where(e => e.Type == "EssayEvaluationQueued").ToList();
-        if (hasRecording) Assert.Empty(queuedEvaluations);
-        else
-        {
-            var bridge = new FakeJobEnqueuer();
-            await NaderGorge.API.BackgroundServices.EssayEvaluationOutboxQueueDispatcher.DispatchAsync(Assert.Single(queuedEvaluations), bridge, db, default);
-            using var payload = System.Text.Json.JsonDocument.Parse(Assert.Single(bridge.Payloads));
-            Assert.Equal(savedEssay.Id, payload.RootElement.GetProperty("essaySubmissionId").GetGuid());
-            Assert.Equal("Explain gravity", payload.RootElement.GetProperty("questionText").GetString());
-            Assert.Equal("A force attracting masses.", payload.RootElement.GetProperty("expectedAnswer").GetString());
-            Assert.Equal("Gravity pulls objects together.", payload.RootElement.GetProperty("answerText").GetString());
-        }
+        var bridge = new FakeJobEnqueuer();
+        await NaderGorge.API.BackgroundServices.EssayEvaluationOutboxQueueDispatcher.DispatchAsync(Assert.Single(queuedEvaluations), bridge, db, default);
+        using var payload = System.Text.Json.JsonDocument.Parse(Assert.Single(bridge.Payloads));
+        Assert.Equal(savedEssay.Id, payload.RootElement.GetProperty("essaySubmissionId").GetGuid());
+        Assert.Equal("Explain gravity", payload.RootElement.GetProperty("questionText").GetString());
+        Assert.Equal("A force attracting masses.", payload.RootElement.GetProperty("expectedAnswer").GetString());
+        Assert.Equal("Gravity pulls objects together.", payload.RootElement.GetProperty("answerText").GetString());
 
         var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
         var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);

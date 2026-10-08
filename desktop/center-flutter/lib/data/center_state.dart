@@ -1,4 +1,5 @@
 import '../domain/models.dart';
+import 'copy_on_write_list.dart';
 
 part 'center_state_patch.dart';
 
@@ -297,32 +298,37 @@ class CenterState {
   CenterState();
 
   // Entities are immutable; isolate mutable containers for transaction rollback.
+  CenterState copyForBackup() => copyForMutation()
+    ..groups = groups
+        .map((group) => StudyGroup.fromJson(group.toJson()))
+        .toList();
+
   CenterState copyForMutation() => CenterState()
     ..installationSeedId = installationSeedId
-    ..appliedDataRepairs = List.of(appliedDataRepairs)
+    ..appliedDataRepairs = forkRows(appliedDataRepairs)
     ..defaultMonthPriceVersion = defaultMonthPriceVersion
-    ..catalogs = List.of(catalogs)
+    ..catalogs = forkRows(catalogs)
     ..groups = List.of(groups)
-    ..studyMonths = List.of(studyMonths)
-    ..students = List.of(students)
-    ..sessions = List.of(sessions)
-    ..packages = List.of(packages)
-    ..attendances = List.of(attendances)
-    ..payments = List.of(payments)
-    ..centerFees = List.of(centerFees)
-    ..debtSettlements = List.of(debtSettlements)
-    ..academics = List.of(academics)
-    ..academicActivities = List.of(academicActivities)
-    ..audit = List.of(audit)
-    ..staff = List.of(staff)
-    ..reviews = List.of(reviews)
-    ..closings = List.of(closings)
-    ..paymentChecks = List.of(paymentChecks)
-    ..corrections = List.of(corrections)
-    ..refunds = List.of(refunds)
+    ..studyMonths = forkRows(studyMonths)
+    ..students = forkRows(students)
+    ..sessions = forkRows(sessions)
+    ..packages = forkRows(packages)
+    ..attendances = forkRows(attendances)
+    ..payments = forkRows(payments)
+    ..centerFees = forkRows(centerFees)
+    ..debtSettlements = forkRows(debtSettlements)
+    ..academics = forkRows(academics)
+    ..academicActivities = forkRows(academicActivities)
+    ..audit = forkRows(audit)
+    ..staff = forkRows(staff)
+    ..reviews = forkRows(reviews)
+    ..closings = forkRows(closings)
+    ..paymentChecks = forkRows(paymentChecks)
+    ..corrections = forkRows(corrections)
+    ..refunds = forkRows(refunds)
     ..cardSettings = cardSettings
-    ..cardPayments = List.of(cardPayments)
-    ..cardReceipts = List.of(cardReceipts)
+    ..cardPayments = forkRows(cardPayments)
+    ..cardReceipts = forkRows(cardReceipts)
     ..credentials = {
       for (final credential in credentials.entries)
         credential.key: Map.of(credential.value),

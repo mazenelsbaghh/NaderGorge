@@ -46,6 +46,7 @@ class LanController extends ChangeNotifier {
   LanHostReady? _hostReady;
   StreamSubscription<int>? _exitSubscription;
   Timer? _pollTimer;
+  DateTime? _nextPollAt;
   Future<void> _queue = Future.value();
   bool _busy = false, _closed = false, _disposed = false, _polling = false;
   List<LanEndpoint> _endpoints = [];
@@ -53,6 +54,37 @@ class LanController extends ChangeNotifier {
   String? _pairingCode;
   DateTime? _pairingExpiresAt;
   LanConnectionStatus _status = LanConnectionStatus.standalone;
+
+  Future<List<String>> openMobileHomework(
+    String sessionId,
+    String activityId,
+  ) async {
+    final bridge = _bridge;
+    if (!isHost || bridge == null || _hostReady == null) {
+      throw const CenterException(
+        'افتح هذه الميزة على الهوست بعد تشغيل الربط المحلي.',
+      );
+    }
+    bridge.mobileHomework.revoke();
+    final response = await _hostProcess.startMobileHomework();
+    final urls = (response['urls'] as List).cast<String>();
+    if (urls.isEmpty) {
+      await _hostProcess.stopMobileHomework();
+      throw const CenterException(
+        'وصّل كابل الشبكة أو شغّل الهوت سبوت، ثم افتح الصفحة من جديد.',
+      );
+    }
+    if (!identical(_bridge, bridge)) {
+      throw const CenterException('تغير اتصال الهوست. افتح الصفحة من جديد.');
+    }
+    final grant = await bridge.mobileHomework.open(sessionId, activityId);
+    return urls.map((url) => '$url#${grant.token}').toList();
+  }
+
+  Future<void> closeMobileHomework() async {
+    _bridge?.mobileHomework.revoke();
+    if (_hostReady != null) await _hostProcess.stopMobileHomework();
+  }
 
   CenterStore get activeStore => _activeStore;
   LanConfiguration? get configuration => _configuration;
@@ -87,8 +119,7 @@ class LanController extends ChangeNotifier {
   }
 
   Future<T> _exclusive<T>(Future<T> Function() operation) {
-    final result = _queue.then((_) async {
-      if (_closed) throw const CenterException('تم إغلاق ربط الأجهزة.');
+    return _serialized(() async {
       _busy = true;
       _notify();
       try {
@@ -97,6 +128,13 @@ class LanController extends ChangeNotifier {
         _busy = false;
         _notify();
       }
+    });
+  }
+
+  Future<T> _serialized<T>(Future<T> Function() operation) {
+    final result = _queue.then((_) async {
+      if (_closed) throw const CenterException('تم إغلاق ربط الأجهزة.');
+      return operation();
     });
     _queue = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
@@ -128,7 +166,7 @@ class LanController extends ChangeNotifier {
       await _activateClient(_configuration!);
       await _checkConnection(recoverAddress: true);
     }
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _poll());
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _poll());
   });
 
   void _poll() {
@@ -138,10 +176,32 @@ class LanController extends ChangeNotifier {
         _configuration?.mode != LanMode.client) {
       return;
     }
+    final now = DateTime.now();
+    final signedIn =
+        activeStore.remoteConnected && activeStore.currentUser != null;
+    if (_nextPollAt != null && now.isBefore(_nextPollAt!)) return;
+    _nextPollAt = now.add(
+      !signedIn
+          ? const Duration(seconds: 5)
+          : activeStore.supportsLiveRefresh
+          ? const Duration(milliseconds: 100)
+          : const Duration(seconds: 1),
+    );
     _polling = true;
-    _exclusive(() => _checkConnection(recoverAddress: true))
+    // Unchanged background reads must not rebuild the entire workspace or
+    // briefly disable connection controls every second.
+    _serialized(() async {
+          final previousStatus = _status;
+          await _checkConnection(recoverAddress: true, waitForChanges: true);
+          if (_status != previousStatus) _notify();
+        })
         .whenComplete(() {
           _polling = false;
+          if (!_closed &&
+              activeStore.remoteConnected &&
+              activeStore.currentUser != null) {
+            Timer(const Duration(milliseconds: 100), _poll);
+          }
         })
         .catchError((Object error, StackTrace stackTrace) {
           reportProblem(error, stackTrace, operation: 'lan.connection');
@@ -274,9 +334,12 @@ class LanController extends ChangeNotifier {
     }
   });
 
-  Future<void> _checkConnection({required bool recoverAddress}) async {
+  Future<void> _checkConnection({
+    required bool recoverAddress,
+    bool waitForChanges = false,
+  }) async {
     try {
-      await _verifyConnection();
+      await _verifyConnection(waitForChanges: waitForChanges);
       _status = LanConnectionStatus.connected;
       return;
     } catch (error, stackTrace) {
@@ -316,8 +379,11 @@ class LanController extends ChangeNotifier {
     }
   }
 
-  Future<void> _verifyConnection() async {
-    await activeStore.refreshRemote();
+  Future<void> _verifyConnection({bool waitForChanges = false}) async {
+    await activeStore.refreshRemote(waitForChanges: waitForChanges);
+    if (!activeStore.remoteConnected) {
+      throw const CenterException('تعذر تأكيد الاتصال بالجهاز الرئيسي.');
+    }
   }
 
   void _requireHostAdmin() {

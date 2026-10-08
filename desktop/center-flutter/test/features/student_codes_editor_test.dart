@@ -11,7 +11,6 @@ import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/attendance/student_editor_dialog.dart';
 import 'package:massar_center/shared/theme.dart';
-import '../helpers/notice_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -144,7 +143,10 @@ void main() {
 
   Finder field(String label) => find.widgetWithText(TextFormField, label);
   Finder getCode() => find.byKey(const Key('student-editor-code'));
-  Finder getSave() => find.widgetWithText(FilledButton, 'حفظ الطالب');
+  Finder getSave() =>
+      find.widgetWithText(FilledButton, 'حفظ الطالب').evaluate().isNotEmpty
+      ? find.widgetWithText(FilledButton, 'حفظ الطالب')
+      : find.widgetWithText(FilledButton, 'حفظ التعديلات');
 
   String shownCode(WidgetTester tester) =>
       tester.widget<TextFormField>(getCode()).controller!.text;
@@ -165,7 +167,7 @@ void main() {
         if (doubleClick) staleCallback();
         await persisted.future.timeout(const Duration(seconds: 5));
         await Future<void>(() {});
-        await acknowledgeNotice(tester, message: 'تم حفظ بيانات الطالب.');
+        await tester.pump();
       } finally {
         store.removeListener(changed);
       }
@@ -381,7 +383,11 @@ void main() {
       final preview = store.nextStudentCode;
       await openEditor(tester);
       await tester.enterText(field('اسم الطالب'), 'مسودة ملغاة');
-      await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
+      await tester.ensureVisible(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('student-editor-discard')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('student-editor-discard-changes')));
       await tester.pumpAndSettle();
       expect(await dialogResult.future, isNull);
       expect(store.students, isEmpty);

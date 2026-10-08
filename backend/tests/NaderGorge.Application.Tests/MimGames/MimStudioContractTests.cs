@@ -1,4 +1,6 @@
 using NaderGorge.Application.Features.MimStudio;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace NaderGorge.Application.Tests.MimGames;
 
@@ -26,7 +28,10 @@ public sealed class MimStudioContractTests
     [Fact]
     public void AcceptsFourCompleteGroundedScenesButRejectsAnIncompleteEnding()
     {
-        var document = Episode();
+        var saved = JsonSerializer.SerializeToNode(Episode())!.AsObject();
+        saved.Remove("TargetSceneCount");
+        saved.Remove("EpisodeContext");
+        var document = saved.Deserialize<MimStudioDocument>()!;
         MimStudioContract.Validate(document, new HashSet<Guid> { Chapter });
         document.Scenes[3].Shots[^1] = document.Scenes[3].Shots[^1] with { End = 29 };
         Assert.Throws<ArgumentException>(() => MimStudioContract.Validate(document, new HashSet<Guid> { Chapter }));

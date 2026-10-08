@@ -5,12 +5,13 @@ import { useEffect, useState } from 'react';
 import { Clapperboard, Copy, Download, Save, Sparkles, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import preparedEpisode from './prepared-episode.json';
-import { characterReferences, lessonOpeningDirection, mcpBrief, preparedSourceMatches, type McpConnection, type MimDocument, type MimSnapshot, type MimSource, type MimVideoModel } from './contract';
+import { characterReferences, lessonOpeningDirection, maximumSceneCount, targetSceneCount, mcpBrief, preparedSourceMatches, type McpConnection, type MimDocument, type MimSnapshot, type MimSource, type MimVideoModel } from './contract';
 import { createEpisodeArchive } from './archive';
 import { mimStudioService, studioError } from './service';
 import { copyStudioText, MimScriptView } from './MimScriptView';
 import { MimSceneVideoPanel } from './MimSceneVideoPanel';
 import { HiggsfieldConnection } from './HiggsfieldConnection';
+import { MimEpisodeVideoPanel } from './MimEpisodeVideoPanel';
 
 const prepared = preparedEpisode as MimDocument;
 
@@ -23,6 +24,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   const [models, setModels] = useState<MimVideoModel[]>([]);
   const [model, setModel] = useState('wan3_0_prime');
   const [sourceText, setSourceText] = useState('');
+  const [sceneCount, setSceneCount] = useState(4);
+  const [episodeContext, setEpisodeContext] = useState('');
   const [generating, setGenerating] = useState(false);
   const [connection, setConnection] = useState<McpConnection | null>(null);
   const [selected, setSelected] = useState(0);
@@ -33,6 +36,7 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const source = sources.find(item => item.id === sourceId);
+  const target = document?.scenes.length ? targetSceneCount(document) : sceneCount;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,6 +50,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
         setSourceMode(saved && !saved.sourceVideoId ? 'text' : 'video');
         setSourceText(saved?.document.sourceText ?? '');
         setDocument(saved?.document ?? (matching ? structuredClone(prepared) : null));
+        setSceneCount(saved ? targetSceneCount(saved.document) : 4);
+        setEpisodeContext(saved?.document.episodeContext ?? '');
         setDirty(!saved && Boolean(matching)); setSelected(0);
       }).catch(cause => { if (!controller.signal.aborted) setError(studioError(cause, 'تعذر تحميل استوديو الحصة.')); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -80,7 +86,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
     setGenerating(true); setError('');
     try {
       const saved = await mimStudioService.generateNext(lessonId, snapshot?.version ?? null, source,
-        source ? null : sourceText, document?.scenes.length ?? 0);
+        source ? null : sourceText, { expectedSceneCount: document?.scenes.length ?? 0, targetSceneCount: target,
+          episodeContext: document?.scenes.length ? document.episodeContext ?? null : episodeContext.trim() || null });
       setSnapshot(saved); setDocument(saved.document); setDirty(false); setSelected(saved.document.scenes.length - 1);
       toast.success('المشهد جاهز ومحفوظ. راجعه قبل كتابة اللي بعده.');
     } catch (cause) { await refresh(); setError(studioError(cause, 'تعذر كتابة المشهد. حدّث الحالة قبل إعادة المحاولة.')); }
@@ -107,7 +114,7 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
     <header className="flex flex-wrap items-start justify-between gap-5 border-b border-[var(--admin-border)] pb-6">
       <div>
         <h2 id="mim-studio-heading" className="flex items-center gap-3 text-2xl font-black text-[var(--admin-text)]"><Clapperboard className="h-6 w-6 text-[var(--admin-primary)]" />استوديو ميم</h2>
-        <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">قصة الحصة في ٤ مشاهد · ٣٠ ثانية لكل مشهد · ميم وبابا نادر</p>
+        <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">حلقة من {target} مشاهد · ٣٠ ثانية لكل مشهد · المدة النهائية {target * 30} ثانية</p>
         {source && <p className="mt-1 text-sm font-bold text-[var(--admin-text)]">مصدر الشرح: {source.title}</p>}
       </div>
       {document && <div className="flex flex-wrap items-center gap-2">
@@ -125,6 +132,20 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
       <p className="text-sm leading-7 text-[var(--admin-muted)]">جيمناي يكتب الاسكربت من ملخصات الفيديو اللي تختاره. الموديل هنا يحوّل المشهد لفيديو بالصوت ومراجع ميم ونادر؛ التكلفة بتظهر قبل التوليد.</p>
     </div>
     <section aria-label="كتابة المشاهد" className="space-y-4 border-b border-[var(--admin-border)] py-6">
+      <div className="max-w-3xl space-y-3">
+        {!snapshot && !!document?.scenes.length && <button type="button" className="admin-btn-ghost min-h-11" disabled={saving || generating}
+          onClick={() => { setDocument(null); setDirty(false); setSelected(0); }}>اختيار موقف وعدد مشاهد لحلقة جديدة</button>}
+        <label htmlFor="mim-scene-count" className="block text-sm font-bold text-[var(--admin-text)]">عدد مشاهد الحلقة</label>
+        <select id="mim-scene-count" value={target} disabled={!!document?.scenes.length || generating || snapshot?.generating}
+          onChange={event => setSceneCount(Number(event.target.value))} className="admin-input min-h-11 w-full max-w-xs">
+          {Array.from({ length: maximumSceneCount }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count} مشاهد — {count * 30} ثانية</option>)}
+        </select>
+        <label htmlFor="mim-episode-context" className="block text-sm font-bold text-[var(--admin-text)]">موقف الحلقة <span className="font-normal">(اختياري)</span></label>
+        <textarea id="mim-episode-context" rows={3} maxLength={2000} value={document?.scenes.length ? document.episodeContext ?? '' : episodeContext}
+          disabled={!!document?.scenes.length || generating || snapshot?.generating} onChange={event => setEpisodeContext(event.target.value)}
+          className="admin-input w-full leading-7" placeholder="مثال: نادر وميم بيطبخوا، وميم لخبط المقادير. أو سيبه فاضي ليختار جيمناي موقف يناسب محتوى الحصة." />
+        <p className="text-sm leading-7 text-[var(--admin-muted)]">جيمناي يوزّع محتوى الحصة على العدد ده داخل قصة واحدة، وكل مشهد يكمل من نهاية السابق. العدد والموقف بيتثبتوا بعد أول مشهد. الفيديو من غير أي كتابة ظاهرة.</p>
+      </div>
       {!document?.scenes.length && <>
         <h3 className="text-lg font-black text-[var(--admin-text)]">ابدأ بمصدر شرح الحصة</h3>
         <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">اختار فيديو الشرح من الحصة. جيمناي هيحلل ملخصات فصوله ويكتب مشهد واحد مدته ٣٠ ثانية، وبعد مراجعته تقدر تبدأ التالي.</p>
@@ -154,13 +175,13 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
         </div>}
       </>}
       <div className="flex flex-wrap items-center gap-3">
-        {(document?.scenes.length ?? 0) < 4 && <button type="button" onClick={() => void generateNext()}
+        {(document?.scenes.length ?? 0) < target && <button type="button" onClick={() => void generateNext()}
           disabled={generating || saving || dirty || snapshot?.generating || snapshot?.stale || (sourceMode === 'video' ? !source || !source.chapters.some(chapter => chapter.summary?.trim()) : sourceText.trim().length < 100)}
           className="admin-btn-primary min-h-11 disabled:opacity-50"><Sparkles className="h-4 w-4" />
-          {generating || snapshot?.generating ? 'جاري كتابة المشهد…' : document?.scenes.length ? `كتابة المشهد التالي (${document.scenes.length + 1} من ٤)` : 'كتابة المشهد الأول'}
+          {generating || snapshot?.generating ? 'جاري كتابة المشهد…' : document?.scenes.length ? `كتابة المشهد التالي (${document.scenes.length + 1} من ${target})` : 'كتابة المشهد الأول'}
         </button>}
         {snapshot && !dirty && <button type="button" onClick={() => void refresh()} disabled={generating} className="admin-btn-ghost min-h-11"><RefreshCw className="h-4 w-4" />تحديث الحالة</button>}
-        <p role="status" className="text-sm leading-7 text-[var(--admin-muted)]">{dirty ? 'احفظ تعديلاتك قبل كتابة المشهد التالي.' : document?.scenes.length ? `${document.scenes.length} من ٤ مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.` : 'كل ضغطة تكتب مشهد واحد فقط.'}</p>
+        <p role="status" className="text-sm leading-7 text-[var(--admin-muted)]">{dirty ? 'احفظ تعديلاتك قبل كتابة المشهد التالي.' : document?.scenes.length ? `${document.scenes.length} من ${target} مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.` : 'كل ضغطة تكتب مشهد واحد فقط.'}</p>
       </div>
     </section>
     <div className="grid gap-7 pt-6 xl:grid-cols-[16rem_minmax(0,1fr)]">
@@ -200,6 +221,8 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
           <MimScriptView key={selected} document={document} selected={selected} disabled={saving || generating || snapshot?.generating} onChange={next => { setDocument(next); setDirty(true); }} />
           <MimSceneVideoPanel key={`video-${selected}`} lessonId={lessonId} scene={selected} scriptVersion={snapshot?.version ?? null}
             model={model} connected={connection.connected} disabled={dirty || saving || generating || !!snapshot?.generating || !!snapshot?.stale} />
+          <MimEpisodeVideoPanel lessonId={lessonId} scriptVersion={snapshot?.version ?? null} sceneCount={target}
+            complete={document.scenes.length === target} disabled={dirty || saving || generating || !!snapshot?.generating || !!snapshot?.stale} />
           <footer className="mt-7 flex flex-wrap gap-3 border-t border-[var(--admin-border)] pt-5">
             <button type="button" className="admin-btn-ghost min-h-11 disabled:opacity-50" disabled={exporting} onClick={() => void downloadPackage()}><Download className="h-4 w-4" />{exporting ? 'جاري تجهيز الشيتين والاسكربت…' : 'تنزيل الاسكربت والشيتين'}</button>
             <button type="button" className="admin-btn-ghost min-h-11" onClick={() => void copyStudioText(mcpBrief(document))}><Copy className="h-4 w-4" />نسخ طلب Higgsfield MCP</button>

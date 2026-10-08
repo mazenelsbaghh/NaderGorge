@@ -65,14 +65,32 @@ void main() {
         createdAt: classDate,
       ),
     );
-    session = store.sessions.single;
+    final month = await store.saveStudyMonth(
+      store.studyMonths.first.copyWith(
+        name: 'شهر التقارير',
+        lessons: [for (var n = 1; n <= 3; n++) PreparedLesson(number: n)],
+      ),
+    );
+    session = await store.startPreparedLesson(
+      groupId: group.id,
+      preparedLessonId: month.lessons.first.id,
+    );
+    for (final student in [first, second]) {
+      await store.recordAttendance(
+        EntryRequest(
+          studentId: student.id,
+          sessionId: session.id,
+          mode: EntryMode.single,
+        ),
+      );
+    }
     Future<AcademicActivity> activity(
       String name,
       AcademicActivityKind kind,
       int max,
     ) => store.saveAcademicActivity(
       AcademicActivity(
-        sessionId: session.id,
+        preparedLessonId: session.preparedLessonId,
         kind: kind,
         name: name,
         maxScore: max,
@@ -209,7 +227,7 @@ void main() {
       expect(
         all.rows
             .where((row) => row.last == homeworkA.name)
-            .map((row) => row[5]),
+            .map((row) => row[all.columns.indexOf('حالة الواجب')]),
         ['كامل', 'لم يُراجع'],
       );
       final done = report(
@@ -272,6 +290,13 @@ void main() {
         CenterReportFilter(activityId: examA.id),
       );
       expect(historical.rows.map((row) => row[0]), contains(first.code));
+      await store.recordAttendance(
+        EntryRequest(
+          studentId: lateStudent.id,
+          sessionId: session.id,
+          mode: EntryMode.single,
+        ),
+      );
       await store.saveAcademic(
         AcademicRecord(
           studentId: lateStudent.id,
@@ -360,18 +385,35 @@ void main() {
             createdAt: classDate,
           ),
         );
+        if (number <= 3) {
+          return store.startPreparedLesson(
+            groupId: group.id,
+            preparedLessonId: store.studyMonths.first.lessons
+                .firstWhere((lesson) => lesson.number == number)
+                .id,
+          );
+        }
         return store.sessions.last;
       }
 
       final examOnly = await addClass(2);
       await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: examOnly.id,
+          preparedLessonId: examOnly.preparedLessonId,
           kind: AcademicActivityKind.exam,
           name: 'امتحان مستقل',
           createdAt: classDate,
         ),
       );
+      for (final student in [first, second, lateStudent]) {
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: examOnly.id,
+            mode: EntryMode.single,
+          ),
+        );
+      }
       expect(
         report(
           CenterReportKind.homework,
@@ -389,12 +431,21 @@ void main() {
       final homeworkOnly = await addClass(3);
       await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: homeworkOnly.id,
+          preparedLessonId: homeworkOnly.preparedLessonId,
           kind: AcademicActivityKind.homework,
           name: 'واجب مستقل',
           createdAt: classDate,
         ),
       );
+      for (final student in [first, second, lateStudent]) {
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: homeworkOnly.id,
+            mode: EntryMode.single,
+          ),
+        );
+      }
       expect(
         report(
           CenterReportKind.exams,
@@ -424,6 +475,13 @@ void main() {
         ).rows,
         hasLength(3),
       );
+      await store.recordAttendance(
+        EntryRequest(
+          studentId: first.id,
+          sessionId: examOnly.id,
+          mode: EntryMode.single,
+        ),
+      );
       await store.saveAcademic(
         AcademicRecord(
           studentId: first.id,
@@ -438,7 +496,10 @@ void main() {
       );
       expect(actualLegacy.rows, hasLength(1));
       expect(actualLegacy.rows.single.last, 'رصد سابق بدون اسم');
-      expect(actualLegacy.rows.single[5], 'كامل');
+      expect(
+        actualLegacy.rows.single[actualLegacy.columns.indexOf('حالة الواجب')],
+        'كامل',
+      );
     },
   );
 
@@ -555,19 +616,32 @@ void main() {
       expect(find.text(examA.name), findsNWidgets(2));
       await choose(find.byKey(const Key('report-kind')), find.text('الواجبات'));
       expect(find.text(examA.name), findsNothing);
+      // Homework opens on missing submissions; explicitly choose all statuses
+      // before exercising independent activity/session filtering.
+      await choose(
+        find.byWidgetPredicate(
+          (widget) => widget is DropdownButtonFormField<HomeworkStatus>,
+        ),
+        find.text('كل الحالات'),
+      );
       expect(find.text(homeworkA.name), findsNWidgets(2));
       expect(find.text(homeworkB.name), findsNWidgets(2));
       await choose(activityField(), find.textContaining(homeworkB.name));
       expect(find.text(homeworkA.name), findsNothing);
-      final sessionField = find.byWidgetPredicate(
+      Finder homeworkScope(String prefix) => find.byWidgetPredicate(
         (widget) =>
             widget is DropdownButtonFormField<String> &&
             widget.key is ValueKey &&
-            (widget.key as ValueKey).value.toString().startsWith(
-              'report-session-',
-            ),
+            (widget.key as ValueKey).value.toString().startsWith(prefix),
       );
-      await choose(sessionField, find.textContaining('حصة 1 —'));
+      await choose(
+        homeworkScope('homework-report-month-'),
+        find.text('شهر التقارير'),
+      );
+      await choose(
+        homeworkScope('homework-report-lesson-'),
+        find.textContaining('حصة 1 ·'),
+      );
       expect(find.text(homeworkA.name), findsNWidgets(2));
       expect(find.text(homeworkB.name), findsNWidgets(2));
       expect(tester.takeException(), isNull);

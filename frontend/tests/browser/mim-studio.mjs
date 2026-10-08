@@ -10,7 +10,20 @@ const videoId = '00000000-0000-4000-8000-000000000002';
 const source = { id: videoId, title: 'شرح التحولات الكبرى', sourceRevision: 1,
   chapters: episode.scenes.flatMap(scene => scene.sourceChapterIds).map(id => ({ id, title: 'فصل من الشرح', summary: 'ملخص الفصل', startTime: 0, endTime: 300 })) };
 
-async function openStudio(page, matches = true, availableVideos = null, savedVideo = null) {
+test('finished episode offers Fade assembly, private preview and download (synthetic API)', { timeout:90000 }, async () => {
+  const browser = await chromium.launch({ channel:'chrome' });
+  try {
+    const page = await browser.newPage();
+    await openStudio(page, false, null, { state:'completed', model:'wan3_0_prime', version:'clip-version', urls:['https://cdn.example/clip.mp4'] }, true);
+    const button = page.getByRole('button', { name:'تجميع الحلقة بانتقالات Fade', exact:true });
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(page.getByLabel('معاينة الحلقة المجمعة', { exact:true })).toBeVisible();
+    await expect(page.getByRole('link', { name:'تنزيل فيديو الحلقة', exact:true })).toHaveAttribute('href', /^blob:/);
+  } finally { await browser.close(); }
+});
+
+async function openStudio(page, matches = true, availableVideos = null, savedVideo = null, assemblyReady = false) {
   const user = { id: '00000000-0000-4000-8000-000000000003', fullName: 'أدمن الاختبار', roles: ['Admin'], permissions: ['content.manage'],
     allowedDomains: ['admin'], allowedNavbarItems: [], profileComplete: true, authorizationVersion: 1 };
   await page.addInitScript(user => {
@@ -18,8 +31,9 @@ async function openStudio(page, matches = true, availableVideos = null, savedVid
   }, user);
   const saves = [];
   let snapshot = savedVideo ? { version:'saved-script', sourceVideoId:null, sourceRevision:0, stale:false, generating:false,
-    document:{ ...episode, sourceText:'شرح محفوظ', scenes:[{ ...episode.scenes[0], sourceChapterIds:[] }] } } : null;
+    document:{ ...episode, targetSceneCount:assemblyReady ? 1 : 4, sourceText:'شرح محفوظ', scenes:[{ ...episode.scenes[0], sourceChapterIds:[] }] } } : null;
   let video = savedVideo;
+  let assembly = { state:assemblyReady ? 'not_started' : 'waiting', progress:0, sceneCount:1, duration:30 };
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
     let response = [];
@@ -31,9 +45,17 @@ async function openStudio(page, matches = true, availableVideos = null, savedVid
       const request = route.request().postDataJSON();
       const scenes = [...(snapshot?.document.scenes ?? []), { ...structuredClone(episode.scenes[request.expectedSceneCount]), sourceChapterIds: [] }];
       snapshot = { version: `version-${scenes.length}`, sourceVideoId: null, sourceRevision: 0, stale: false, generating: false,
-        document: { ...episode, scenes, sourceText: request.sourceText } };
+        document: { ...episode, scenes, sourceText: request.sourceText, targetSceneCount:request.targetSceneCount, episodeContext:request.episodeContext } };
       response = snapshot;
     }
+    if (path.endsWith('/episode-video')) {
+      if (route.request().method() === 'POST') {
+        assert.equal(route.request().postDataJSON().version, snapshot.version);
+        assembly = { ...assembly, state:'completed', progress:100 };
+      }
+      response = assembly;
+    }
+    if (path.endsWith('/episode-video/file')) return route.fulfill({ contentType:'video/mp4', body:Buffer.from('synthetic preview') });
     if (path.endsWith('/video/review')) {
       const review = route.request().postDataJSON();
       assert.equal(review.version, video.version);
@@ -59,7 +81,7 @@ async function openStudio(page, matches = true, availableVideos = null, savedVid
     }
     await route.fulfill({ json: { success: true, data: response } });
   });
-  await page.goto(`http://127.0.0.1:8740/admin/content/lessons/${lessonId}?tab=mim-studio`);
+  await page.goto(`http://localhost:8740/admin/content/lessons/${lessonId}?tab=mim-studio`);
   return saves;
 }
 
@@ -108,6 +130,25 @@ test('unrelated lessons do not display the prepared history episode (synthetic A
   } finally { await browser.close(); }
 });
 
+test('an unsaved prepared episode can be replaced with a chosen situation and count', { timeout:90000 }, async () => {
+  const browser = await chromium.launch({ channel:'chrome' });
+  try {
+    const page = await browser.newPage();
+    await openStudio(page);
+    await page.getByRole('button', { name:'اختيار موقف وعدد مشاهد لحلقة جديدة', exact:true }).click();
+    await expect(page.getByLabel('عدد مشاهد الحلقة', { exact:true })).toBeEnabled();
+    await page.getByLabel('عدد مشاهد الحلقة', { exact:true }).selectOption('9');
+    await page.locator('#mim-episode-context').fill('مركب بتغرق وميم بيحاول يصلحها');
+    const sent = page.waitForRequest(request => request.url().endsWith('/scenes/next'));
+    await page.getByRole('button', { name:'كتابة المشهد الأول', exact:true }).click();
+    const request = (await sent).postDataJSON();
+    assert.equal(request.targetSceneCount, 9);
+    assert.equal(request.expectedSceneCount, 0);
+    assert.equal(request.sourceVideoId, videoId);
+    assert.equal(request.episodeContext, 'مركب بتغرق وميم بيحاول يصلحها');
+  } finally { await browser.close(); }
+});
+
 
 test('empty lesson writes one scene per click and video waits for explicit cost approval (synthetic API)', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ channel: 'chrome' });
@@ -119,8 +160,8 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
     await page.getByRole('radio', { name:'إدخال نص يدويًا' }).check();
     await page.getByLabel('نص شرح الحصة', { exact: true }).fill('شرح تفصيلي للحصة ومفاهيمها وأمثلتها، يستند إليه الكاتب في إعداد المشاهد دون اختلاق معلومات جديدة. '.repeat(4));
     await first.click();
-    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (2 من ٤)', exact: true })).toBeVisible();
-    await expect(page.getByText('1 من ٤ مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.', { exact:true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (2 من 4)', exact: true })).toBeVisible();
+    await expect(page.getByText('1 من 4 مشاهد محفوظة. راجع الحوار والحركة قبل المتابعة.', { exact:true })).toBeVisible();
     assert.equal(submissions.length, 0);
     await page.getByRole('button', { name: 'عرض تكلفة هذا المشهد', exact:true }).click();
     const approve = page.getByRole('button', { name: 'توليد هذا المشهد وخصم التكلفة المعروضة', exact:true });
@@ -133,8 +174,8 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
     await approve.click();
     await expect(page.getByText('المشهد قيد التوليد على Higgsfield.', { exact:false })).toBeVisible();
     assert.equal(submissions.length, 1);
-    await page.getByRole('button', { name: 'كتابة المشهد التالي (2 من ٤)', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (3 من ٤)', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'كتابة المشهد التالي (2 من 4)', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (3 من 4)', exact: true })).toBeVisible();
     assert.equal(submissions.length, 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await page.getByRole('heading', { name: 'استوديو ميم', exact:true }).scrollIntoViewIfNeeded();
@@ -143,7 +184,7 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
 });
 
 
-test('admin selects a video and Gemini receives that video identity, not another source (synthetic API)', { timeout: 90000 }, async () => {
+test('admin selects a video and fixes the chosen episode count and situation (synthetic API)', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ channel: 'chrome' });
   try {
     const page = await browser.newPage();
@@ -153,14 +194,25 @@ test('admin selects a video and Gemini receives that video identity, not another
     await expect(first).toBeDisabled();
     await expect(page.getByLabel('موديل توليد الفيديو', { exact:true })).toHaveValue('wan3_0_prime');
     await page.getByLabel('فيديو الشرح', { exact:true }).selectOption(videoId);
+    await page.getByLabel('عدد مشاهد الحلقة', { exact:true }).selectOption('6');
+    await page.locator('#mim-episode-context').fill('نادر وميم بيطبخوا والحلة فاضت');
     await page.getByText('عرض الملخصات اللي جيمناي هيستخدمها (1)', { exact:true }).click();
     await expect(page.getByText('تتبخر المياه ثم تتكثف وتسقط الأمطار.', { exact:true })).toBeVisible();
     const sent = page.waitForRequest(request => request.url().endsWith('/scenes/next'));
     await first.click();
     const request = (await sent).postDataJSON();
+    assert.equal(request.targetSceneCount, 6);
+    assert.equal(request.episodeContext, 'نادر وميم بيطبخوا والحلة فاضت');
+    await expect(page.getByLabel('عدد مشاهد الحلقة', { exact:true })).toBeDisabled();
+    await expect(page.locator('#mim-episode-context')).toBeDisabled();
+    const continued = page.waitForRequest(request => request.url().endsWith('/scenes/next'));
+    await page.getByRole('button', { name:'كتابة المشهد التالي (2 من 6)', exact:true }).click();
+    const next = (await continued).postDataJSON();
+    assert.equal(next.targetSceneCount, 6);
+    assert.equal(next.episodeContext, request.episodeContext);
     assert.equal(request.sourceVideoId, videoId);
     assert.equal(request.sourceText, null);
-    await expect(page.getByRole('button', { name:'كتابة المشهد التالي (2 من ٤)', exact:true })).toBeVisible();
+    await expect(page.getByRole('button', { name:'كتابة المشهد التالي (3 من 6)', exact:true })).toBeVisible();
   } finally { await browser.close(); }
 });
 

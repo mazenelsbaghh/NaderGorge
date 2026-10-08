@@ -12,6 +12,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 import '../data/center_state.dart';
 import '../data/center_state_encoder.dart';
+import '../data/record_state_storage.dart';
+import '../data/copy_on_write_list.dart';
 import '../domain/models.dart';
 import '../domain/discount_calculation.dart';
 import '../domain/student_lookup.dart';
@@ -19,6 +21,7 @@ import 'session_finance.dart';
 import 'historical_academic_import.dart';
 import 'academic_import_command.dart';
 import '../shared/problem_reporting.dart';
+import '../shared/performance_trace.dart';
 import '../lan/lan_transport.dart';
 export '../domain/models.dart' show CenterException;
 
@@ -71,16 +74,47 @@ class CenterStore extends ChangeNotifier {
   CenterState? _lanVersionState;
   String? _lanStateVersion;
   final _stateEncoder = CenterStateEncoder();
+  CenterState? _storedFieldsState;
+  EncodedStorageFields? _storedFields;
   _CenterReadIndex? _cachedReadIndex;
   CenterState? _lookupState;
   StudentLookupIndex? _receptionLookup;
   bool _changingState = false;
+  Object get readRevision => _state;
+  Object get academicImportReadRevision => (
+    rowsIdentity(_state.students),
+    rowsIdentity(_state.academics),
+    rowsIdentity(_state.attendances),
+    rowsIdentity(_state.sessions),
+    rowsIdentity(_state.academicActivities),
+    _state.groups,
+    _state.catalogs,
+    currentUser,
+    remoteConnected,
+  );
+  List<Student> academicRosterForGroup(String groupId) =>
+      _readIndex?.studentsByGroup[groupId] ??
+      List.unmodifiable(
+        _state.students.where((student) => student.groupIds.contains(groupId)),
+      );
+  List<AcademicRecord> academicRecordsForSession(String sessionId) =>
+      _readIndex?.academicsBySession[sessionId] ??
+      List.unmodifiable(
+        _state.academics.where((record) => record.sessionId == sessionId),
+      );
+  List<AttendanceRecord> academicAttendanceForSession(String sessionId) =>
+      _readIndex?.attendancesBySession[sessionId] ??
+      List.unmodifiable(
+        _activeAttendances.where((record) => record.sessionId == sessionId),
+      );
+  CenterState? _financialSummaryState;
+  final _financialSummaries = <String, SessionFinancialSummary>{};
 
   // Mutations read live lists; committed and remote snapshots get their own index.
   _CenterReadIndex? get _readIndex {
     if (_changingState) return null;
     if (!identical(_cachedReadIndex?.state, _state)) {
-      _cachedReadIndex = _CenterReadIndex(_state);
+      _cachedReadIndex = _CenterReadIndex(_state, previous: _cachedReadIndex);
     }
     return _cachedReadIndex;
   }
@@ -108,6 +142,7 @@ class CenterStore extends ChangeNotifier {
   static const automaticBackupLimit = 50;
   Timer? _automaticBackupTimer;
   bool _automaticBackupRunning = false;
+  Future<void>? _automaticBackupFuture;
   DateTime? _lastAutomaticBackupAt;
   String? _automaticBackupError;
 
@@ -135,6 +170,7 @@ class CenterStore extends ChangeNotifier {
 
   bool _closed = false;
   static const _uuid = Uuid();
+  static final _performanceTraceKey = Object();
   static final _passwordAlgorithm = Pbkdf2(
     macAlgorithm: Hmac.sha256(),
     iterations: 120000,
@@ -190,7 +226,7 @@ class CenterStore extends ChangeNotifier {
       db = await databaseFactoryFfi.openDatabase(
         file,
         options: OpenDatabaseOptions(
-          version: 1,
+          version: 2,
           onCreate: (db, version) async {
             if (databaseAlreadyExists) {
               throw const CenterException(
@@ -201,18 +237,66 @@ class CenterStore extends ChangeNotifier {
                 ? CenterState()
                 : await initialState();
             validateState(installedState);
-            await db.execute(
-              'CREATE TABLE state (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL)',
+            await createRecordStateStorage(db);
+            await db.insert('state_identity', {'id': 1});
+            await replaceRecordState(
+              db,
+              CenterStateEncoder().encodeStorageFields(installedState),
             );
-            await db.insert('state', {
-              'id': 1,
-              'payload': jsonEncode(installedState.toJson()),
-            });
           },
           onUpgrade: (db, oldVersion, newVersion) async {
-            throw const CenterException(
-              'قاعدة البيانات تحتاج ترقية آمنة لم يدعمها هذا الإصدار. البيانات لم تُستبدل.',
-            );
+            if (oldVersion != 1 || newVersion != 2) {
+              throw const CenterException(
+                'قاعدة البيانات تحتاج ترقية غير مدعومة. لم تُستبدل البيانات.',
+              );
+            }
+            final trace = PerformanceTrace('database.migrate', budgetMs: 250);
+            var failed = false;
+            try {
+              final rows = await db.query('state', where: 'id=1');
+              if (rows.length != 1) {
+                throw const CenterException(
+                  'ملف البيانات غير مكتمل؛ لم تتم الترقية.',
+                );
+              }
+              final previous = CenterState.fromJson(
+                jsonDecode(rows.single['payload'] as String)
+                    as Map<String, dynamic>,
+              );
+              validateState(previous);
+              final backupPath = p.join(
+                base,
+                'backups',
+                'pre-storage-v2-${DateTime.now().microsecondsSinceEpoch}.json',
+              );
+              await compute(_writeCapturedBackup, (backupPath, previous));
+              trace.stage('write');
+              await db.execute('DROP TABLE state');
+              await createRecordStateStorage(db);
+              await db.insert('state_identity', {'id': 1});
+              await replaceRecordState(
+                db,
+                CenterStateEncoder().encodeStorageFields(previous),
+              );
+              final migrated = await db.query('state', where: 'id=1');
+              if (jsonEncode(
+                    CenterState.fromJson(
+                      jsonDecode(migrated.single['payload'] as String)
+                          as Map<String, dynamic>,
+                    ).toJson(),
+                  ) !=
+                  jsonEncode(previous.toJson())) {
+                throw const CenterException(
+                  'لم تطابق بيانات الترقية الأصل؛ لم تُحفظ الترقية.',
+                );
+              }
+            } catch (_) {
+              failed = true;
+              rethrow;
+            } finally {
+              trace.stage('sqlite');
+              trace.finish(failed: failed);
+            }
           },
           onDowngrade: (db, oldVersion, newVersion) async {
             throw const CenterException(
@@ -246,6 +330,14 @@ class CenterStore extends ChangeNotifier {
       await store._applyBundledDataRepair();
       await store._migrateStudyMonths();
       await store._applyHistoricalAcademicImport();
+      // Legacy logical snapshots may omit fields that the model supplies.
+      // Trust deltas only when the loaded bytes already have the canonical shape.
+      if (store._stateEncoder.encode(store._state) == row.single['payload']) {
+        store._storedFields = store._stateEncoder.encodeStorageFields(
+          store._state,
+        );
+        store._storedFieldsState = store._state;
+      }
       store._startAutomaticBackups();
       return store;
     } catch (error, stackTrace) {
@@ -410,6 +502,52 @@ class CenterStore extends ChangeNotifier {
       _readIndex?.attendances ?? List.unmodifiable(_activeAttendances);
   List<PaymentRecord> get payments =>
       _readIndex?.payments ?? List.unmodifiable(_activePayments);
+  List<AttendanceRecord> attendancesForStudent(String studentId) {
+    final index = _readIndex;
+    return index != null
+        ? index.attendancesByStudent[studentId] ?? const []
+        : List.unmodifiable(
+            _activeAttendances.where((entry) => entry.studentId == studentId),
+          );
+  }
+
+  List<PaymentRecord> paymentsForStudent(String studentId) {
+    final index = _readIndex;
+    return index != null
+        ? index.paymentsByStudent[studentId] ?? const []
+        : List.unmodifiable(
+            _activePayments.where((payment) => payment.studentId == studentId),
+          );
+  }
+
+  List<PrepaidPackage> packagesForStudent(String studentId, {String? groupId}) {
+    final index = _readIndex;
+    if (index != null) {
+      return (groupId == null
+              ? index.packagesByStudent[studentId]
+              : index.packagesByStudentGroup[(studentId, groupId)]) ??
+          const [];
+    }
+    return List.unmodifiable(
+      _activePackages.where(
+        (package) =>
+            package.studentId == studentId &&
+            (groupId == null || package.groupId == groupId),
+      ),
+    );
+  }
+
+  List<CenterFeeRecord> centerFeesFor(String studentId, String sessionId) {
+    final index = _readIndex;
+    return index != null
+        ? index.centerFeesByStudentSession[(studentId, sessionId)] ?? const []
+        : List.unmodifiable(
+            _state.centerFees.where(
+              (fee) => fee.studentId == studentId && fee.sessionId == sessionId,
+            ),
+          );
+  }
+
   List<AcademicRecord> get academics => List.unmodifiable(_state.academics);
   List<AcademicActivity> get academicActivities =>
       List.unmodifiable(_state.academicActivities);
@@ -433,7 +571,8 @@ class CenterStore extends ChangeNotifier {
   bool get isRemote => false;
   bool get isClientWorkspace => false;
   bool get remoteConnected => true;
-  Future<void> refreshRemote() async {}
+  bool get supportsLiveRefresh => false;
+  Future<void> refreshRemote({bool waitForChanges = false}) async {}
   Future<void> prepareLanSwitch() async {}
   void _notifyLanCommit() => notifyListeners();
   void _notifyBackupStatus() => notifyListeners();
@@ -692,11 +831,15 @@ class CenterStore extends ChangeNotifier {
     String operation = 'database.operation',
   }) {
     if (Zone.current[_lanExecutionKey] == this) return work();
+    final trace = PerformanceTrace(operation);
     final future = _queue.then((_) async {
+      trace.stage('queue');
+      var failed = false;
       try {
         if (_closed) throw const CenterException('تم إغلاق ملف البيانات.');
-        await work();
+        await runZoned(work, zoneValues: {_performanceTraceKey: trace});
       } catch (error, stackTrace) {
+        failed = true;
         reportProblem(error, stackTrace, operation: operation);
         if (error is CenterException) rethrow;
         throw CenterException(
@@ -704,6 +847,9 @@ class CenterStore extends ChangeNotifier {
           cause: error,
           stackTrace: stackTrace,
         );
+      } finally {
+        trace.stage('work');
+        trace.finish(failed: failed);
       }
     });
     _queue = future.catchError((Object _) {});
@@ -733,9 +879,12 @@ class CenterStore extends ChangeNotifier {
         'جلسة الموظف انتهت. سجّل الدخول من جديد.',
       );
     }
+    final inheritedTrace =
+        Zone.current[_performanceTraceKey] as PerformanceTrace?;
+    final trace = inheritedTrace ?? PerformanceTrace(action, budgetMs: 100);
     _state = previous.copyForMutation();
+    trace.stage('copy');
     _changingState = true;
-    _cachedReadIndex = null;
     try {
       await work();
       if (authorize != null && !authorize()) {
@@ -752,22 +901,32 @@ class CenterStore extends ChangeNotifier {
         auditDescription?.call() ?? description,
         actorId ?? actor?.id ?? _currentUser?.id ?? '',
       );
+      trace.stage('work');
       validateState(_state);
+      trace.stage('validate');
+      final fields = _stateEncoder.encodeStorageFields(_state);
+      trace.stage('encode');
       Future<void> persist(DatabaseExecutor tx) async {
-        final updated = await tx.update('state', {
-          'payload': _stateEncoder.encode(_state),
-        }, where: 'id = 1');
+        // A restore, reopen or rolled-back outer LAN transaction changes this
+        // identity. Canonicalize with a full write before trusting field deltas.
+        final updated = identical(_storedFieldsState, previous)
+            ? await updateRecordState(tx, _storedFields!, fields)
+            : await replaceRecordState(tx, fields);
         if (updated != 1) {
           throw const CenterException(
             'سجل قاعدة البيانات مفقود؛ لم تُحفظ العملية.',
           );
         }
+        _storedFieldsState = _state;
+        _storedFields = fields;
       }
 
       final lanTransaction = Zone.current[_lanTransactionKey] as Transaction?;
       if (lanTransaction == null) {
         await _database!.transaction(persist);
+        trace.stage('sqlite');
         notifyListeners();
+        trace.stage('notify');
       } else {
         await persist(lanTransaction);
       }
@@ -783,8 +942,17 @@ class CenterStore extends ChangeNotifier {
         stackTrace: stackTrace,
       );
     } finally {
+      trace.stage('sqlite');
+      trace.counts.addAll({
+        'students': _state.students.length,
+        'attendances': _state.attendances.length,
+        'payments': _state.payments.length,
+        'closings': _state.closings.length,
+      });
+      if (inheritedTrace == null) {
+        trace.finish(failed: identical(_state, previous));
+      }
       _changingState = false;
-      _cachedReadIndex = null;
     }
   }, operation: action);
 
@@ -1529,12 +1697,17 @@ class CenterStore extends ChangeNotifier {
     return discountedAmount(amount, student.discountPercent);
   }
 
-  List<PrepaidPackage> _available(
+  Iterable<PrepaidPackage> _eligiblePackages(
     String studentId,
     String groupId, {
     LessonSession? forClosure,
   }) {
-    final result = _activePackages.where((package) {
+    final index = _readIndex;
+    final packages = index == null
+        ? _activePackages
+        : index.packagesByStudentGroup[(studentId, groupId)] ??
+              const <PrepaidPackage>[];
+    return packages.where((package) {
       if (package.studentId != studentId ||
           package.groupId != groupId ||
           package.remaining < 1) {
@@ -1544,12 +1717,19 @@ class CenterStore extends ChangeNotifier {
           !package.purchasedAt.isAfter(forClosure.startsAt)) {
         return true;
       }
-      return _activePayments.any(
-        (e) => e.id == package.paymentId && e.sessionId == forClosure.id,
-      );
-    }).toList()..sort((a, b) => a.purchasedAt.compareTo(b.purchasedAt));
-    return result;
+      return _paymentsForStudent(
+        studentId,
+      ).any((e) => e.id == package.paymentId && e.sessionId == forClosure.id);
+    });
   }
+
+  List<PrepaidPackage> _available(
+    String studentId,
+    String groupId, {
+    LessonSession? forClosure,
+  }) =>
+      _eligiblePackages(studentId, groupId, forClosure: forClosure).toList()
+        ..sort((a, b) => a.purchasedAt.compareTo(b.purchasedAt));
 
   void _consume(PrepaidPackage package) {
     final index = _state.packages.indexWhere((e) => e.id == package.id);
@@ -1750,7 +1930,7 @@ class CenterStore extends ChangeNotifier {
   }
 
   PaymentRecord? _sessionPayment(String studentId, String sessionId) =>
-      _activePayments
+      _paymentsForStudent(studentId)
           .where(
             (e) =>
                 e.studentId == studentId &&
@@ -1759,41 +1939,53 @@ class CenterStore extends ChangeNotifier {
           )
           .firstOrNull;
 
-  bool attendanceNeedsPayment(String studentId, String sessionId) =>
-      (_centerOnlyAttendance(studentId, sessionId)?.status !=
-              AttendanceStatus.absent &&
-          _centerOnlyAttendance(studentId, sessionId) != null &&
-          centerFeeRemainingFor(studentId, sessionId) > 0) ||
-      _sessionPayment(studentId, sessionId) == null &&
-          _activeAttendances.any(
-            (e) =>
-                e.studentId == studentId &&
-                e.sessionId == sessionId &&
-                (e.status == AttendanceStatus.present ||
-                    (e.status == AttendanceStatus.makeup &&
-                        e.makeupSourceGroupId != null)) &&
-                (e.centerFeeOnly ||
-                    _session(sessionId).kind != SessionKind.free ||
-                    e.makeupSourceGroupId != null) &&
-                e.packageId == null,
-          ) &&
-          (_activeAttendances.any(
-                (e) =>
-                    e.studentId == studentId &&
-                    e.sessionId == sessionId &&
-                    e.paymentPending,
-              ) ||
-              _state.corrections.any(
-                (e) =>
-                    e.action == CorrectionAction.paymentCanceled &&
-                    e.studentId == studentId &&
-                    e.sessionId == sessionId &&
-                    e.voidsPayment,
-              ));
+  bool attendanceNeedsPayment(String studentId, String sessionId) {
+    final centerOnly = _centerOnlyAttendance(studentId, sessionId);
+    if (centerOnly != null &&
+        centerOnly.status != AttendanceStatus.absent &&
+        centerFeeRemainingFor(studentId, sessionId) > 0) {
+      return true;
+    }
+    if (_sessionPayment(studentId, sessionId) != null) return false;
+    final attendance = _attendancesForStudent(studentId);
+    if (!attendance.any(
+      (e) =>
+          e.studentId == studentId &&
+          e.sessionId == sessionId &&
+          (e.status == AttendanceStatus.present ||
+              (e.status == AttendanceStatus.makeup &&
+                  e.makeupSourceGroupId != null)) &&
+          (e.centerFeeOnly ||
+              _session(sessionId).kind != SessionKind.free ||
+              e.makeupSourceGroupId != null) &&
+          e.packageId == null,
+    )) {
+      return false;
+    }
+    if (attendance.any(
+      (e) =>
+          e.studentId == studentId &&
+          e.sessionId == sessionId &&
+          e.paymentPending,
+    )) {
+      return true;
+    }
+    final index = _readIndex;
+    final corrections = index == null
+        ? _state.corrections
+        : index.correctionsByStudent[studentId] ?? const <CorrectionRecord>[];
+    return corrections.any(
+      (e) =>
+          e.action == CorrectionAction.paymentCanceled &&
+          e.studentId == studentId &&
+          e.sessionId == sessionId &&
+          e.voidsPayment,
+    );
+  }
 
   bool hasRetainedSessionPayment(String studentId, String sessionId) =>
       _sessionPayment(studentId, sessionId) != null &&
-      !_activeAttendances.any(
+      !_attendancesForStudent(studentId).any(
         (e) =>
             e.studentId == studentId &&
             e.sessionId == sessionId &&
@@ -3449,8 +3641,16 @@ class CenterStore extends ChangeNotifier {
   }
 
   SessionFinancialSummary sessionFinancialSummary(String sessionId) {
+    if (!_changingState) {
+      if (!identical(_financialSummaryState, _state)) {
+        _financialSummaries.clear();
+        _financialSummaryState = _state;
+      }
+      final cached = _financialSummaries[sessionId];
+      if (cached != null) return cached;
+    }
     final session = _session(sessionId);
-    return buildSessionFinancialSummary(
+    final summary = buildSessionFinancialSummary(
       session: session,
       packages: _state.packages,
       cardPayments: _state.cardPayments,
@@ -3460,6 +3660,8 @@ class CenterStore extends ChangeNotifier {
       payments: _financialPayments,
       refunds: _state.refunds,
     );
+    if (!_changingState) _financialSummaries[sessionId] = summary;
+    return summary;
   }
 
   /// Coverage for the selected class, never an assertion of paper-amount equality.
@@ -3888,7 +4090,7 @@ class CenterStore extends ChangeNotifier {
     final session = _session(sessionId);
     final reserved =
         session.status == SessionStatus.open &&
-            _activeAttendances.any(
+            _attendancesForStudent(studentId).any(
               (e) =>
                   e.studentId == studentId &&
                   e.sessionId == sessionId &&
@@ -3897,23 +4099,34 @@ class CenterStore extends ChangeNotifier {
             )
         ? 1
         : 0;
-    return _available(
+    return _eligiblePackages(
       studentId,
       session.groupId,
       forClosure: session,
     ).fold(reserved, (total, package) => total + package.remaining);
   }
 
-  int remainingFor(String studentId, String groupId) => _activePackages
-      .where((e) => e.studentId == studentId && e.groupId == groupId)
-      .fold(0, (sum, e) => sum + e.remaining);
-  int attendanceCount(String sessionId) => _activeAttendances
-      .where(
-        (e) => e.sessionId == sessionId && e.status != AttendanceStatus.absent,
-      )
-      .map((e) => e.studentId)
-      .toSet()
-      .length;
+  int remainingFor(String studentId, String groupId) {
+    final index = _readIndex;
+    return index != null
+        ? index.remainingByStudentGroup[(studentId, groupId)] ?? 0
+        : _activePackages
+              .where((e) => e.studentId == studentId && e.groupId == groupId)
+              .fold(0, (sum, e) => sum + e.remaining);
+  }
+
+  int attendanceCount(String sessionId) {
+    final index = _readIndex;
+    final entries = index != null
+        ? index.attendancesBySession[sessionId] ?? const <AttendanceRecord>[]
+        : _activeAttendances.where((entry) => entry.sessionId == sessionId);
+    return entries
+        .where((entry) => entry.status != AttendanceStatus.absent)
+        .map((entry) => entry.studentId)
+        .toSet()
+        .length;
+  }
+
   List<StudyGroup> eligibleMakeupSourceGroups(
     String studentId,
     String targetSessionId,
@@ -3957,7 +4170,7 @@ class CenterStore extends ChangeNotifier {
         'اختر مجموعة أصلية مسجلًا فيها الطالب بنفس المادة والصف.',
       );
     }
-    return _available(
+    return _eligiblePackages(
       studentId,
       sourceGroupId,
       forClosure: _session(targetSessionId),
@@ -3974,11 +4187,12 @@ class CenterStore extends ChangeNotifier {
     if (targets.isEmpty) return [];
     final target = targets.first;
     final targetGroup = _group(target.groupId);
-    final usedOriginals = _activeAttendances
+    final attendance = _attendancesForStudent(studentId);
+    final usedOriginals = attendance
         .where((e) => e.originalAttendanceId != null)
         .map((e) => e.originalAttendanceId)
         .toSet();
-    return _activeAttendances.where((record) {
+    return attendance.where((record) {
       if (record.studentId != studentId ||
           record.status != AttendanceStatus.absent ||
           record.packageId == null ||
@@ -4036,25 +4250,8 @@ class CenterStore extends ChangeNotifier {
     }
   }
 
-  Future<void> _writeBackup(String destination, CenterState state) async {
-    final file = File(destination);
-    await file.parent.create(recursive: true);
-    final temporary = File('$destination.${_uuid.v4()}.tmp');
-    try {
-      await temporary.writeAsString(
-        jsonEncode({
-          'format': 'massar-center-backup',
-          'exportedAt': DateTime.now().toIso8601String(),
-          'data': state.toJson(),
-        }),
-        flush: true,
-      );
-      await temporary.rename(destination);
-    } catch (_) {
-      if (await temporary.exists()) await temporary.delete();
-      rethrow;
-    }
-  }
+  Future<void> _writeBackup(String destination, CenterState state) =>
+      compute(_writeCapturedBackup, (destination, state.copyForBackup()));
 
   Future<String> createBackup({String? destination}) async {
     String result = '';
@@ -4139,10 +4336,9 @@ class CenterStore extends ChangeNotifier {
         createdAt: DateTime.now(),
       ),
     );
+    final restoredFields = _stateEncoder.encodeStorageFields(restored);
     await _database!.transaction((tx) async {
-      final updated = await tx.update('state', {
-        'payload': jsonEncode(restored.toJson()),
-      }, where: 'id = 1');
+      final updated = await replaceRecordState(tx, restoredFields);
       if (updated != 1) {
         throw const CenterException(
           'سجل قاعدة البيانات مفقود؛ لم تُستعد النسخة.',
@@ -4150,6 +4346,8 @@ class CenterStore extends ChangeNotifier {
       }
     });
     _state = restored;
+    _storedFields = restoredFields;
+    _storedFieldsState = restored;
     _stateEncoder.clearPublicHistory();
     _authenticationRevision++;
     _currentUser = null;
@@ -4282,7 +4480,9 @@ class CenterStore extends ChangeNotifier {
     _automaticBackupTimer?.cancel();
     _automaticBackupTimer = null;
     if (_closed) return;
+    final backup = _automaticBackupFuture;
     await _exclusive(() async {
+      await backup;
       await _database!.close();
       await _fileLock!.unlock();
       await _fileLock.close();
@@ -4371,6 +4571,21 @@ void validateState(CenterState state) {
   final students = {for (final e in state.students) e.id: e};
   final sessions = {for (final e in state.sessions) e.id: e};
   final centerFeesById = {for (final fee in state.centerFees) fee.id: fee};
+  final collectors = state.staff
+      .where((e) => e.role != StaffRole.assistant)
+      .map((e) => e.id)
+      .toSet();
+  final centerFeeTopUps = <String, int>{};
+  for (final fee in state.centerFees) {
+    final originalId = fee.originalFeeId;
+    if (originalId != null) {
+      centerFeeTopUps.update(
+        originalId,
+        (paid) => paid + fee.paidAmount,
+        ifAbsent: () => fee.paidAmount,
+      );
+    }
+  }
   for (final fee in state.centerFees) {
     check(
       students.containsKey(fee.studentId) &&
@@ -4379,11 +4594,7 @@ void validateState(CenterState state) {
           fee.paidAmount >= 0 &&
           fee.paidAmount <= fee.amount &&
           fee.method.trim().isNotEmpty &&
-          (fee.staffId == null ||
-              state.staff.any(
-                (user) =>
-                    user.id == fee.staffId && user.role != StaffRole.assistant,
-              )),
+          (fee.staffId == null || collectors.contains(fee.staffId)),
       'رسوم السنتر مرتبطة بطالب أو حصة غير موجودة، أو مبلغ غير صالح.',
     );
     if (fee.originalFeeId != null) {
@@ -4399,12 +4610,7 @@ void validateState(CenterState state) {
         'إيصال سداد رسوم السنتر غير مرتبط بأصل الرسوم الصحيح.',
       );
     } else {
-      final paid = state.centerFees
-          .where((receipt) => receipt.originalFeeId == fee.id)
-          .fold<int>(
-            fee.paidAmount,
-            (sum, receipt) => sum + receipt.paidAmount,
-          );
+      final paid = fee.paidAmount + (centerFeeTopUps[fee.id] ?? 0);
       check(paid <= fee.amount, 'تحصيل رسوم السنتر أكبر من المبلغ المستحق.');
     }
   }
@@ -4416,13 +4622,10 @@ void validateState(CenterState state) {
   final closingById = {for (final e in state.closings) e.id: e};
   final voidAttendances = <String>{};
   final voidPayments = <String>{};
+  final paymentCanceledAt = <String, DateTime>{};
   final voidPackages = <String>{};
   final reopenedClosings = <String>{};
   final effectiveMethods = <String, String>{};
-  final collectors = state.staff
-      .where((e) => e.role != StaffRole.assistant)
-      .map((e) => e.id)
-      .toSet();
   check(
     state.cardSettings.price == null || state.cardSettings.price! >= 0,
     'سعر الكارت المحفوظ غير صالح.',
@@ -4519,6 +4722,7 @@ void validateState(CenterState state) {
             (e.voidsPackage && e.packageId == payment.packageId),
         'استرداد شراء الباقة يجب أن يلغي الباقة نفسها.',
       );
+      paymentCanceledAt[payment.id] = e.createdAt;
     }
     if (e.voidsPackage) {
       final package = packages[e.packageId];
@@ -4652,13 +4856,9 @@ void validateState(CenterState state) {
       'تسديد المديونية مرتبط بهوية أو مبلغ أو تاريخ غير صالح.',
     );
     if (lesson != null) {
+      final canceledAt = paymentCanceledAt[lesson.id];
       check(
-        !state.corrections.any(
-          (e) =>
-              e.voidsPayment &&
-              e.paymentId == lesson.id &&
-              settlement.createdAt.isAfter(e.createdAt),
-        ),
+        canceledAt == null || !settlement.createdAt.isAfter(canceledAt),
         'لا يمكن تسجيل تسديد بعد إلغاء أصل المديونية.',
       );
     }
@@ -4922,6 +5122,18 @@ void validateState(CenterState state) {
       'قائمة طلاب الحصة المستوردة تحتوي هوية غير صالحة أو مكررة.',
     );
   }
+  // Historical receipts may reference attendance that a later correction voided.
+  late final makeupPaymentLinks = state.attendances
+      .where((record) => record.status == AttendanceStatus.makeup)
+      .map(
+        (record) => (
+          record.studentId,
+          record.sessionId,
+          record.makeupSourceGroupId,
+          record.packageId,
+        ),
+      )
+      .toSet();
   for (final payment in state.payments) {
     check(
       students.containsKey(payment.studentId) &&
@@ -4944,14 +5156,12 @@ void validateState(CenterState state) {
     if (payment.sessionId != null) {
       check(
         sessions[payment.sessionId]?.groupId == payment.groupId ||
-            state.attendances.any(
-              (record) =>
-                  record.studentId == payment.studentId &&
-                  record.sessionId == payment.sessionId &&
-                  record.status == AttendanceStatus.makeup &&
-                  record.makeupSourceGroupId == payment.groupId &&
-                  record.packageId == payment.packageId,
-            ),
+            makeupPaymentLinks.contains((
+              payment.studentId,
+              payment.sessionId!,
+              payment.groupId,
+              payment.packageId,
+            )),
         'الدفع مرتبط بحصة مختلفة.',
       );
     }
@@ -5006,6 +5216,13 @@ void validateState(CenterState state) {
   }
   final attendanceKeys = <String>{};
   final makeupKeys = <String>{};
+  late final centerFeePairs = state.centerFees
+      .map((fee) => (fee.studentId, fee.sessionId))
+      .toSet();
+  late final singlePaymentSources = state.payments
+      .where((payment) => payment.packageId == null)
+      .map((payment) => (payment.studentId, payment.sessionId, payment.groupId))
+      .toSet();
   for (final record in state.attendances) {
     final session = sessions[record.sessionId];
     check(
@@ -5023,11 +5240,10 @@ void validateState(CenterState state) {
                   record.originalAttendanceId == null &&
                   (record.paymentPending ||
                       record.status == AttendanceStatus.absent ||
-                      state.centerFees.any(
-                        (fee) =>
-                            fee.studentId == record.studentId &&
-                            fee.sessionId == record.sessionId,
-                      ))),
+                      centerFeePairs.contains((
+                        record.studentId,
+                        record.sessionId,
+                      )))),
       'حضور السنتر فقط يجب أن يحتفظ بإعفاء المدرس ورسوم منفصلة دون استهلاك باقة.',
     );
     check(
@@ -5117,13 +5333,11 @@ void validateState(CenterState state) {
                               payments[packages[record.packageId]!.paymentId]
                                       ?.sessionId ==
                                   session.id)
-                    : state.payments.any(
-                            (payment) =>
-                                payment.studentId == record.studentId &&
-                                payment.sessionId == record.sessionId &&
-                                payment.groupId == sourceGroup.id &&
-                                payment.packageId == null,
-                          ) &&
+                    : singlePaymentSources.contains((
+                            record.studentId,
+                            record.sessionId,
+                            sourceGroup.id,
+                          )) &&
                           (voidAttendances.contains(record.id) ||
                               activeSinglePairs.contains(
                                 '${record.studentId}:${record.sessionId}',
@@ -5202,7 +5416,7 @@ void validateState(CenterState state) {
     );
   }
   final academicKeys = <(String, String, String?)>{};
-  final historicalAcademicAttendees = state.attendances
+  late final historicalAcademicAttendees = state.attendances
       .where(
         (entry) =>
             entry.status == AttendanceStatus.present ||
@@ -5260,31 +5474,25 @@ void validateState(CenterState state) {
   }
 
   // Historical checks include canceled records and filter them at checkedAt.
-  final reviewAttendances = _recordsBy(
+  late final reviewAttendances = _recordsBy(
     state.attendances,
     (entry) => (entry.studentId, entry.sessionId),
   );
-  final reviewPayments = _recordsBy(
+  late final reviewPayments = _recordsBy(
     state.payments,
     (payment) => payment.studentId,
   );
-  final reviewSettlements = _recordsBy(
+  late final reviewSettlements = _recordsBy(
     state.debtSettlements,
     (settlement) => settlement.studentId,
   );
-  final reviewFees = _recordsBy(
+  late final reviewFees = _recordsBy(
     state.centerFees,
     (fee) => (fee.studentId, fee.sessionId),
   );
-  final financialStaffIds = state.staff
-      .where((e) => e.role != StaffRole.assistant)
-      .map((e) => e.id)
-      .toSet();
-  final paymentVoidedAt = {
-    for (final correction in state.corrections)
-      if (correction.voidsPayment) correction.paymentId!: correction.createdAt,
-  };
-  final attendanceVoidedAt = {
+  final financialStaffIds = collectors;
+  final paymentVoidedAt = paymentCanceledAt;
+  late final attendanceVoidedAt = {
     for (final correction in state.corrections)
       if (correction.attendanceId != null)
         correction.attendanceId!: correction.createdAt,
@@ -5430,22 +5638,44 @@ void validateState(CenterState state) {
       );
     }
   }
-  final attendanceBySession = <String, List<AttendanceRecord>>{};
-  final paymentsBySession = <String, List<PaymentRecord>>{};
-  for (final record in activeAttendance) {
-    attendanceBySession.putIfAbsent(record.sessionId, () => []).add(record);
-  }
-  for (final record in state.payments) {
-    if (record.sessionId != null) {
-      paymentsBySession
-          .putIfAbsent(record.sessionId!, () => [])
-          .add(
-            record.copyWith(
-              method: effectiveMethods[record.id] ?? record.method,
-            ),
-          );
-    }
-  }
+  late final attendanceBySession = _recordsBy(
+    activeAttendance,
+    (record) => record.sessionId,
+  );
+  late final rawPaymentsBySession = _recordsBy(
+    state.payments.where((record) => record.sessionId != null),
+    (record) => record.sessionId!,
+  );
+  late final paymentsBySession = _recordsBy(
+    state.payments
+        .where((record) => record.sessionId != null)
+        .map(
+          (record) => record.copyWith(
+            method: effectiveMethods[record.id] ?? record.method,
+          ),
+        ),
+    (record) => record.sessionId!,
+  );
+  late final cardPaymentsBySession = _recordsBy(
+    state.cardPayments,
+    (record) => record.sessionId,
+  );
+  late final feesBySession = _recordsBy(
+    state.centerFees,
+    (record) => record.sessionId,
+  );
+  late final settlementsBySession = _recordsBy(
+    state.debtSettlements,
+    (record) => record.sessionId,
+  );
+  late final refundsBySession = _recordsBy(
+    state.refunds,
+    (record) => record.sessionId,
+  );
+  late final allAttendanceBySession = _recordsBy(
+    state.attendances,
+    (record) => record.sessionId,
+  );
   final closingSessions = <String>{};
   for (final closing in state.closings) {
     final session = sessions[closing.sessionId];
@@ -5463,34 +5693,54 @@ void validateState(CenterState state) {
     );
     check(
       reopenedClosings.contains(closing.id) ||
-          state.cardPayments
-              .where((e) => e.sessionId == closing.sessionId)
+          (cardPaymentsBySession[closing.sessionId] ??
+                  const <StudentCardPayment>[])
               .every((e) => !e.createdAt.isAfter(closing.createdAt)),
       'دفع الكارت تم بعد التقفيلة المالية المحفوظة.',
     );
     check(
       reopenedClosings.contains(closing.id) ||
-          state.debtSettlements
-              .where((e) => e.sessionId == closing.sessionId)
+          (settlementsBySession[closing.sessionId] ?? const <DebtSettlement>[])
               .every((e) => !e.createdAt.isAfter(closing.createdAt)),
       'تسديد مديونية تم بعد تقفيلة حصة التحصيل المحفوظة.',
     );
+    final sessionAttendances =
+        attendanceBySession[closing.sessionId] ?? const <AttendanceRecord>[];
+    final sessionPayments =
+        paymentsBySession[closing.sessionId] ?? const <PaymentRecord>[];
+    final packageIds = {
+      for (final record
+          in allAttendanceBySession[closing.sessionId] ??
+              const <AttendanceRecord>[])
+        if (record.packageId != null) record.packageId!,
+      for (final payment in sessionPayments)
+        if (payment.packageId != null) payment.packageId!,
+    };
+    final relatedPackages = [
+      for (final id in packageIds)
+        if (packages[id] != null) packages[id]!,
+    ];
+    final purchasePayments = [
+      for (final package in relatedPackages)
+        if (payments[package.paymentId] != null) payments[package.paymentId]!,
+    ];
     final computed = buildSessionFinancialSummary(
       session: session!,
       coverageClassificationVersion:
           closing.summary.coverageClassificationVersion ?? 0,
-      attendances: attendanceBySession[closing.sessionId] ?? [],
-      payments: paymentsBySession[closing.sessionId] ?? [],
-      packagePurchasePayments: state.payments,
-      packages: state.packages,
-      cardPayments: state.cardPayments,
-      centerFees: state.centerFees.where(
-        (fee) => !fee.recordedAt.isAfter(closing.createdAt),
-      ),
-      debtSettlements: state.debtSettlements.where(
-        (e) => !e.createdAt.isAfter(closing.createdAt),
-      ),
-      refunds: state.refunds,
+      attendances: sessionAttendances,
+      payments: sessionPayments,
+      packagePurchasePayments: purchasePayments,
+      packages: relatedPackages,
+      cardPayments: cardPaymentsBySession[closing.sessionId] ?? const [],
+      centerFees:
+          (feesBySession[closing.sessionId] ?? const <CenterFeeRecord>[]).where(
+            (fee) => !fee.recordedAt.isAfter(closing.createdAt),
+          ),
+      debtSettlements:
+          (settlementsBySession[closing.sessionId] ?? const <DebtSettlement>[])
+              .where((e) => !e.createdAt.isAfter(closing.createdAt)),
+      refunds: refundsBySession[closing.sessionId] ?? const [],
     );
     SessionFinancialSummary? historical;
     if (reopenedClosings.contains(closing.id)) {
@@ -5516,28 +5766,36 @@ void validateState(CenterState state) {
         session: session,
         coverageClassificationVersion:
             closing.summary.coverageClassificationVersion ?? 0,
-        packages: state.packages,
-        centerFees: state.centerFees.where(
-          (fee) => !fee.recordedAt.isAfter(closing.createdAt),
+        packagePurchasePayments: purchasePayments.where(
+          (payment) => !payment.createdAt.isAfter(closing.createdAt),
         ),
-        cardPayments: state.cardPayments.where(
-          (e) => !e.createdAt.isAfter(closing.createdAt),
-        ),
-        debtSettlements: state.debtSettlements.where(
-          (e) => !e.createdAt.isAfter(closing.createdAt),
-        ),
-        attendances: state.attendances.where(
-          (e) =>
-              !e.recordedAt.isAfter(closing.createdAt) &&
-              !laterReplacements.contains(e.id) &&
-              !priorVoids.contains(e.id),
-        ),
-        payments: state.payments
-            .where((e) => !e.createdAt.isAfter(closing.createdAt))
-            .map((e) => e.copyWith(method: priorMethods[e.id] ?? e.method)),
-        refunds: state.refunds.where(
-          (e) => !e.createdAt.isAfter(closing.createdAt),
-        ),
+        packages: relatedPackages,
+        centerFees:
+            (feesBySession[closing.sessionId] ?? const <CenterFeeRecord>[])
+                .where((fee) => !fee.recordedAt.isAfter(closing.createdAt)),
+        cardPayments:
+            (cardPaymentsBySession[closing.sessionId] ??
+                    const <StudentCardPayment>[])
+                .where((e) => !e.createdAt.isAfter(closing.createdAt)),
+        debtSettlements:
+            (settlementsBySession[closing.sessionId] ??
+                    const <DebtSettlement>[])
+                .where((e) => !e.createdAt.isAfter(closing.createdAt)),
+        attendances:
+            (allAttendanceBySession[closing.sessionId] ??
+                    const <AttendanceRecord>[])
+                .where(
+                  (e) =>
+                      !e.recordedAt.isAfter(closing.createdAt) &&
+                      !laterReplacements.contains(e.id) &&
+                      !priorVoids.contains(e.id),
+                ),
+        payments:
+            (rawPaymentsBySession[closing.sessionId] ?? const <PaymentRecord>[])
+                .where((e) => !e.createdAt.isAfter(closing.createdAt))
+                .map((e) => e.copyWith(method: priorMethods[e.id] ?? e.method)),
+        refunds: (refundsBySession[closing.sessionId] ?? const <RefundRecord>[])
+            .where((e) => !e.createdAt.isAfter(closing.createdAt)),
       );
     }
     final snapshot = closing.summary;
@@ -5748,5 +6006,25 @@ void validateState(CenterState state) {
       staffIds.contains(record.staffId),
       'سجل التدقيق مرتبط بموظف غير موجود.',
     );
+  }
+}
+
+Future<void> _writeCapturedBackup((String, CenterState) capture) async {
+  final file = File(capture.$1);
+  await file.parent.create(recursive: true);
+  final temporary = File('${capture.$1}.${const Uuid().v4()}.tmp');
+  try {
+    await temporary.writeAsString(
+      jsonEncode({
+        'format': 'massar-center-backup',
+        'exportedAt': DateTime.now().toUtc().toIso8601String(),
+        'data': capture.$2.toJson(),
+      }),
+      flush: true,
+    );
+    await temporary.rename(file.path);
+  } catch (_) {
+    if (await temporary.exists()) await temporary.delete();
+    rethrow;
   }
 }

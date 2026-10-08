@@ -75,7 +75,11 @@ void main() {
         ),
       );
       final original = store.payments.single;
-      await store.checkPayment(studentId: student.id, sessionId: session.id);
+      await store.checkPayment(
+        studentId: student.id,
+        sessionId: session.id,
+        expectedAmount: 7500,
+      );
       await store.savePaymentReview(
         ReviewRequest(
           studentId: student.id,
@@ -113,12 +117,14 @@ void main() {
             row[movements.columns.indexOf('رقم العملية')] == original.id,
       );
       expect(
-        refundedOriginal[movements.columns.indexOf('الصافي (جنيه مصري)')],
+        refundedOriginal[movements.columns.indexOf(
+          'الحركة الفعلية (جنيه مصري)',
+        )],
         '75.00',
       );
       expect(
         refundedOriginal[movements.columns.indexOf('الحالة الحالية')],
-        'ملغاة — مستردة',
+        'ملغاة — أُلغي الالتزام',
       );
       final packages = report(CenterReportKind.packages);
       expect(packages.rows, hasLength(1));
@@ -150,10 +156,7 @@ void main() {
         'حاضر · باقة',
       );
 
-      expect(
-        report(CenterReportKind.reviews).rows.single,
-        contains('دافع حصة'),
-      );
+      expect(report(CenterReportKind.reviews).rows, isEmpty);
       expect(
         report(
           CenterReportKind.reviews,

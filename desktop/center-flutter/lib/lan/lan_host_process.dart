@@ -183,6 +183,12 @@ class LanHostProcess {
   LanTransport get _activeControl =>
       _control ??
       (throw const CenterException('خدمة الربط المحلي لا تعمل حاليًا.'));
+  Future<Map<String, dynamic>> startMobileHomework() =>
+      _activeControl.post('/control/mobile/start', {});
+  Future<void> stopMobileHomework() async {
+    await _activeControl.post('/control/mobile/stop', {});
+  }
+
   Future<Map<String, dynamic>> controlPairing() =>
       _activeControl.post('/control/pairing', {});
   Future<List<Map<String, dynamic>>> devices() async {

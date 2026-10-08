@@ -352,7 +352,7 @@ void main() {
       final auditCount = store.audit.length;
       try {
         await db.execute(
-          "CREATE TRIGGER reject_entry_quote BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER reject_entry_quote BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
         );
         await expectLater(
           store.collectAndAttend(request(confirmation: quote)),

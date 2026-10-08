@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../helpers/notice_helpers.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -145,10 +144,7 @@ void main() {
     } finally {
       store.removeListener(listener);
     }
-    await acknowledgeNotice(
-      tester,
-      message: 'حُفظت التقفيلة النهائية والفرق كما هو، بدون تعديل المدفوعات.',
-    );
+    await tester.pumpAndSettle();
   }
 
   testWidgets(
@@ -247,7 +243,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.text('حصة 1 · ${store.groupLabel(group.id)}'),
+          find.text('شهر 1 · حصة 1 · ${store.groupLabel(group.id)}'),
           findsOneWidget,
         );
         expect(
@@ -284,11 +280,9 @@ void main() {
         );
         expect(
           tester
-              .widget<Text>(
-                find.byKey(const Key('category-label-single-100-0')),
-              )
+              .widget<Text>(find.byKey(const Key('category-label-free-none-0')))
               .data,
-          'حصة بإعفاء 100٪',
+          'حضور مجاني أو بإعفاء من رسوم المدرس',
         );
         expect(
           tester
@@ -320,7 +314,7 @@ void main() {
                 find.byKey(const Key('category-amount-prepaid-50-0')),
               )
               .data,
-          '—',
+          money(0),
         );
         expect(
           tester
@@ -351,7 +345,9 @@ void main() {
             await tester.pumpAndSettle();
             await tester.tap(
               find
-                  .text('حصة 1 · ${shortDate(session.startsAt)} · الحضور مغلق')
+                  .text(
+                    'شهر 1 · حصة 1 · ${shortDate(session.startsAt)} · الحضور مغلق',
+                  )
                   .last,
             );
             await tester.pumpAndSettle();
@@ -363,7 +359,15 @@ void main() {
               find.byKey(const Key('attendance-discount-25')),
               findsOneWidget,
             );
-            expect(find.text('حضور بخصم ثابت 25٪: 2 طالب'), findsOneWidget);
+            expect(find.byTooltip('حضور بخصم ثابت 25٪'), findsOneWidget);
+            expect(
+              tester
+                  .widget<Text>(
+                    find.byKey(const Key('attendance-discount-students-25')),
+                  )
+                  .data,
+              '2',
+            );
             expect(
               tester
                   .widget<Text>(
@@ -384,7 +388,10 @@ void main() {
                   .data,
               '2',
             );
-            expect(find.text('إجمالي الحضور بدون دفع: 1 طالب'), findsOneWidget);
+            expect(
+              find.text('إجمالي إعفاء رسوم المدرس: 1 طالب'),
+              findsOneWidget,
+            );
             expect(
               find.text('مشترو الباقات لهذه الحصة: 1 طالب'),
               findsOneWidget,
@@ -461,14 +468,8 @@ void main() {
               .data,
           '2',
         );
-        expect(
-          tester
-              .widget<TextFormField>(
-                find.byKey(const Key('closing-actual-cash')),
-              )
-              .enabled,
-          isFalse,
-        );
+        expect(find.byKey(const Key('closing-actual-cash')), findsNothing);
+        expect(find.text('النقدية المحفوظة في التقفيلة'), findsOneWidget);
         await capture(tester, 'closing-categories-saved');
         expect(tester.takeException(), isNull);
       });
@@ -513,7 +514,7 @@ void main() {
           tester
               .widget<Text>(find.byKey(const Key('category-label-free-none-0')))
               .data,
-          'حضور حصة مجانية',
+          'حضور مجاني أو بإعفاء من رسوم المدرس',
         );
         expect(
           tester
@@ -532,7 +533,7 @@ void main() {
           '0',
         );
         expect(store.payments, isEmpty);
-        expect(find.text('إجمالي الحضور بدون دفع: 2 طالب'), findsOneWidget);
+        expect(find.text('إجمالي إعفاء رسوم المدرس: 2 طالب'), findsOneWidget);
         expect(
           find.byKey(const Key('attendance-discount-100')),
           findsOneWidget,
@@ -541,7 +542,7 @@ void main() {
         await store.finalizeSession(sessionId: session.id, actualCash: 0);
         await store.saveStudent(exempt.copyWith(discountPercent: 0));
         await tester.pumpAndSettle();
-        expect(find.text('إجمالي الحضور بدون دفع: 2 طالب'), findsOneWidget);
+        expect(find.text('إجمالي إعفاء رسوم المدرس: 2 طالب'), findsOneWidget);
         expect(
           find.byKey(const Key('attendance-discount-100')),
           findsOneWidget,

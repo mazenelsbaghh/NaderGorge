@@ -270,7 +270,7 @@ void main() {
       final audits = store.audit.length;
       try {
         await db.execute(
-          "CREATE TRIGGER reject_registration BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER reject_registration BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
         );
         await expectLater(
           store.registerStudent(draft('لم يحفظ')),

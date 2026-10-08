@@ -545,7 +545,7 @@ void main() {
         options: OpenDatabaseOptions(singleInstance: false),
       );
       await db.execute(
-        "CREATE TRIGGER reject_note BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        "CREATE TRIGGER reject_note BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
       );
       await expectLater(
         store.saveStudentNote(studentId: student.id, notes: 'لم تحفظ'),

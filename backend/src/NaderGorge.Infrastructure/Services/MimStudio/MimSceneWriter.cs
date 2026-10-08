@@ -6,7 +6,8 @@ namespace NaderGorge.Infrastructure.Services.MimStudio;
 
 public sealed record MimWritingSource(Guid? Id, string Title, int Revision, MimWritingChapter[] Chapters, string? Text);
 public sealed record MimWritingChapter(Guid Id, string Title, string Summary);
-public sealed record MimWritingContext(string LessonTitle, MimWritingSource Source, MimStudioDocument? PreviousScenes, MimScene? PreviousLessonOpening);
+public sealed record MimWritingContext(string LessonTitle, MimWritingSource Source, MimStudioDocument? PreviousScenes, MimScene? PreviousLessonOpening,
+    int TargetSceneCount = 4, string? EpisodeContext = null, MimShot[]? PreviousSceneEnding = null);
 public sealed class MimSceneWriter(HttpClient client, IConfiguration configuration)
 {
     public async Task<MimStudioDocument> WriteAsync(MimWritingContext context, CancellationToken ct)

@@ -528,7 +528,7 @@ void main() {
         options: OpenDatabaseOptions(singleInstance: false),
       );
       Future<void> block() => db.execute(
-        "CREATE TRIGGER reject_card BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        "CREATE TRIGGER reject_card BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'blocked'); END",
       );
       Future<void> unblock() => db.execute('DROP TRIGGER reject_card');
       final audits = store.audit.length;

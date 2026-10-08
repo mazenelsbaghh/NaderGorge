@@ -8,6 +8,7 @@ import 'package:massar_center/application/admin_configuration.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/main.dart';
+import 'helpers/synthetic_installer_assets.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ void main() {
         'algorithm': 'pbkdf2-sha256-120000',
       },
     );
+    installSyntheticInstallerAssets(admin);
   });
 
   tearDown(() async => directory.delete(recursive: true));
@@ -136,10 +138,12 @@ void main() {
   );
 
   test(
-    'bundled installer configuration is valid and malformed credentials are rejected',
+    'installer asset is parsed into the configured owner and malformed credentials are rejected',
     () async {
       final bundled = await loadInstallationAdmin();
-      expect(bundled.name, 'mazenelsbagh');
+      expect(bundled.name, admin.name);
+      expect(bundled.id, admin.id);
+      expect(bundled.credential, admin.credential);
       expect(bundled.credential['algorithm'], 'pbkdf2-sha256-120000');
       expect(
         () => InstallationAdmin(

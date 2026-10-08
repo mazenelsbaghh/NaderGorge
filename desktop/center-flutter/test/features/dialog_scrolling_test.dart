@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../helpers/ui_wait_helpers.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 
@@ -358,18 +359,34 @@ void main() {
       final viewport = find.byType(SingleChildScrollView);
       await wheel(tester, viewport);
       final notes = find.widgetWithText(TextFormField, 'ملاحظات الطالب');
-      final cancel = find.widgetWithText(TextButton, 'رجوع');
+      final cancel = find.widgetWithText(TextButton, 'إلغاء');
       visible(tester, notes, viewport);
       visible(tester, cancel, viewport);
       visible(
         tester,
-        find.widgetWithText(FilledButton, 'حفظ الطالب'),
+        find.widgetWithText(FilledButton, 'حفظ التعديلات'),
         viewport,
       );
       await capture(tester, 'student-editor-scroll-dark960x400-bottom');
       await tester.enterText(notes, 'ملاحظة في المسودة فقط');
       await tester.tap(cancel);
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('student-editor-discard')), findsOneWidget);
+      expect(store.students.single.toJson(), original.toJson());
+      await tester.runAsync(() async {
+        await tester.ensureVisible(
+          find.byKey(const Key('student-editor-discard-changes')),
+        );
+        await tester.tap(
+          find.byKey(const Key('student-editor-discard-changes')),
+        );
+        await waitForUiCondition(
+          tester,
+          () => find.byType(StudentEditorDialog).evaluate().isEmpty,
+          reason:
+              'Discarding closes the editor after the confirmation route exits.',
+        );
+      });
       expect(find.byType(StudentEditorDialog), findsNothing);
       await tester.runAsync(() async {
         await store.close();

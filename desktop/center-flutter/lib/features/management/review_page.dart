@@ -395,7 +395,7 @@ class _ReviewPageState extends State<ReviewPage> {
         else
           SizedBox(
             height: 250,
-            child: ManagementTable(
+            child: ManagementTable.builder(
               key: const Key('reviewed-students-table'),
               columns: const [
                 'الطالب والكود',
@@ -404,7 +404,9 @@ class _ReviewPageState extends State<ReviewPage> {
                 'وقت المراجعة',
                 'الإجراء',
               ],
-              rows: checks.map((check) {
+              rowCount: checks.length,
+              rowBuilder: (index) {
+                final check = checks[index];
                 final entry = entries[check.studentId]!;
                 final student = students[check.studentId];
                 final time = check.checkedAt.toLocal();
@@ -439,7 +441,7 @@ class _ReviewPageState extends State<ReviewPage> {
                     ),
                   ],
                 );
-              }).toList(),
+              },
             ),
           ),
         const SizedBox(height: 16),

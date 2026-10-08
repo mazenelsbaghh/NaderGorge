@@ -10,6 +10,7 @@ import '../../application/center_store.dart';
 import '../../domain/models.dart';
 import '../../shared/formatters.dart';
 import 'management_widgets.dart';
+import '../../shared/performance_trace.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key, required this.store});
@@ -41,6 +42,8 @@ class _ReportsPageState extends State<ReportsPage> {
   ClosingReportMode _closingMode = ClosingReportMode.live;
   bool _unassignedOnly = false;
   bool _busy = false;
+  Object? _lookupRevision;
+  StudentLookupIndex? _lookup;
 
   @override
   void dispose() {
@@ -255,31 +258,48 @@ class _ReportsPageState extends State<ReportsPage> {
       optionsBuilder: (query) {
         final text = query.text.trim().toLowerCase();
         if (text.isEmpty) return const Iterable<Student>.empty();
-        return studentLookupCandidates(widget.store.students, text).take(30);
+        final trace = PerformanceTrace('reports.search', budgetMs: 32);
+        try {
+          if (!identical(_lookupRevision, widget.store.readRevision)) {
+            _lookup = StudentLookupIndex(widget.store.students);
+            _lookupRevision = widget.store.readRevision;
+          }
+          return _lookup!.candidates(text).take(30);
+        } finally {
+          trace.stage('match');
+          trace.finish();
+        }
       },
       onSelected: _selectStudent,
-      fieldViewBuilder: (context, controller, focusNode, submit) => TextField(
-        key: const Key('report-student-search'),
-        enabled: !_busy,
-        controller: controller,
-        focusNode: focusNode,
-        decoration: InputDecoration(
-          labelText: 'كل الطلبة / الكود أو الباركود أو الاسم',
-          prefixIcon: const Icon(Icons.person_search_outlined),
-          suffixIcon: _studentId == null && controller.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'كل الطلبة',
-                  onPressed: () => setState(() {
-                    _studentId = null;
-                    _studentSearch.clear();
-                  }),
-                  icon: const Icon(Icons.clear),
-                ),
-        ),
-        onChanged: (_) => setState(() => _studentId = null),
-        onSubmitted: (_) => _applyCode(),
-      ),
+      fieldViewBuilder: (context, controller, focusNode, submit) =>
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => TextField(
+              key: const Key('report-student-search'),
+              enabled: !_busy,
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                labelText: 'كل الطلبة / الكود أو الباركود أو الاسم',
+                prefixIcon: const Icon(Icons.person_search_outlined),
+                suffixIcon: _studentId == null && value.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'كل الطلبة',
+                        onPressed: () => setState(() {
+                          _studentId = null;
+                          _studentSearch.clear();
+                        }),
+                        icon: const Icon(Icons.clear),
+                      ),
+              ),
+              onChanged: (_) {
+                // Raw text changes suggestions; only selection changes the report.
+                if (_studentId != null) setState(() => _studentId = null);
+              },
+              onSubmitted: (_) => _applyCode(),
+            ),
+          ),
       optionsViewBuilder: (context, select, options) {
         final students = options.toList();
         return Align(
@@ -963,13 +983,18 @@ class _ReportsPageState extends State<ReportsPage> {
                 }),
               ),
             ),
-          if (_studentId == null && _studentSearch.text.isNotEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'اختر الطالب من النتائج، أو اضغط Enter بعد كتابة الكود لتطبيق الفلتر.',
-              ),
-            ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _studentSearch,
+            builder: (context, value, _) =>
+                _studentId == null && value.text.isNotEmpty
+                ? const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'اختر الطالب من النتائج، أو اضغط Enter بعد كتابة الكود لتطبيق الفلتر.',
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

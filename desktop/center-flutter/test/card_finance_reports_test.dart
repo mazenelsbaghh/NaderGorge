@@ -162,12 +162,12 @@ void main() {
         const CenterReportFilter(),
       );
       expect(cards.summary['لم يستلموا'], '1');
-      expect(cards.summary['دفعوا ولم يستلموا'], '1');
+      expect(cards.summary['مسددون ولم يستلموا'], '1');
       final legacyRow = cards.rows.firstWhere(
         (row) => row.first == legacy.code,
       );
       expect(
-        legacyRow[cards.columns.indexOf('المبلغ المسجل (جنيه مصري)')],
+        legacyRow[cards.columns.indexOf('المحصل حتى الآن (جنيه مصري)')],
         isNull,
       );
       expect(

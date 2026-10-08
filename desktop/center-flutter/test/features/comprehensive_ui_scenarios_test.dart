@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,6 +15,8 @@ import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/theme.dart';
 
 import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -84,14 +85,21 @@ void main() {
     }
     first = store.students.first;
     second = store.students.last;
-    await store.saveSession(
-      LessonSession(
-        groupId: group.id,
-        number: 17,
-        startsAt: DateTime.now().add(const Duration(minutes: 5)),
-        createdAt: DateTime.now(),
+    final month = await store.saveStudyMonth(
+      StudyMonth(
+        name: 'شهر الاختبار',
+        price: 27000,
+        lessons: [
+          for (var number = 1; number <= 3; number++)
+            PreparedLesson(number: number),
+        ],
       ),
     );
+    session = await store.startPreparedLesson(
+      groupId: group.id,
+      preparedLessonId: month.lessons.first.id,
+    );
+    group = store.groups.single;
     session = store.sessions.single;
   });
 
@@ -131,25 +139,22 @@ void main() {
   Future<void> mutate(
     WidgetTester tester,
     Future<void> Function() gesture,
-    bool Function() persisted, {
-    bool notice = true,
-  }) async {
+    bool Function() persisted,
+  ) async {
     await tester.runAsync(() async {
-      final completed = Completer<void>();
-      void observed() {
-        if (persisted() && !completed.isCompleted) completed.complete();
-      }
-
-      store.addListener(observed);
-      try {
-        await gesture();
-        await completed.future.timeout(const Duration(seconds: 5));
-        if (notice) await acknowledgeNotice(tester);
-      } finally {
-        store.removeListener(observed);
-      }
+      await gesture();
+      await Future<void>(() {});
+      await tester.pump(const Duration(milliseconds: 20));
+      await waitForUiCondition(
+        tester,
+        () =>
+            persisted() &&
+            find.byType(LinearProgressIndicator).evaluate().isEmpty &&
+            find.byType(CircularProgressIndicator).evaluate().isEmpty,
+        reason: 'The intended UI mutation must finish and persist.',
+      );
     });
-    if (notice) await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
   }
 
   Future<void> key(WidgetTester tester, LogicalKeyboardKey key) async {
@@ -157,14 +162,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> scan(WidgetTester tester, Student student) async {
-    await tester.enterText(
-      find.byKey(const Key('student-search')),
-      student.code,
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-  }
+  Future<void> scan(WidgetTester tester, Student student) =>
+      previewAttendanceStudent(tester, student.code);
 
   void expectCodeFocus(WidgetTester tester, String codeKey) => expect(
     tester.widget<TextField>(find.byKey(Key(codeKey))).focusNode!.hasFocus,
@@ -185,7 +184,7 @@ void main() {
         await tester.runAsync(
               () => store.saveAcademicActivity(
                 AcademicActivity(
-                  sessionId: session.id,
+                  preparedLessonId: session.preparedLessonId,
                   kind: AcademicActivityKind.exam,
                   name: 'الامتحان المحدد',
                   maxScore: 20,
@@ -194,6 +193,17 @@ void main() {
               ),
             )
             as AcademicActivity;
+    await tester.runAsync(() async {
+      for (final student in [first, second]) {
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+      }
+    });
     await open(
       tester,
       AnimatedBuilder(
@@ -201,7 +211,12 @@ void main() {
         builder: (context, _) => AcademicsPage(store: store),
       ),
     );
-    await choose(tester, 'اختر الحصة للرصد', 'حصة 17 —');
+    await choose(tester, 'الشهر المشترك', 'شهر الاختبار');
+    await choose(
+      tester,
+      'المجموعة التي بدأت الحصة',
+      store.groupLabel(group.id),
+    );
     expect(find.byKey(const Key('selected-academic-activity')), findsOneWidget);
     return activity;
   }
@@ -243,15 +258,10 @@ void main() {
         find.byKey(const Key('auth-confirm')),
         'keyboard-password',
       );
-      await mutate(
-        tester,
-        () async {
-          await tester.testTextInput.receiveAction(TextInputAction.done);
-          await tester.testTextInput.receiveAction(TextInputAction.done);
-        },
-        () => store.currentUser != null,
-        notice: false,
-      );
+      await mutate(tester, () async {
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+      }, () => store.currentUser != null);
       await tester.pumpAndSettle();
       expect(store.staff, hasLength(1));
       expect(store.currentUser!.name, 'حساب جديد');
@@ -264,69 +274,52 @@ void main() {
   );
 
   testWidgets(
-    'held payment Enter and scanner text in the resulting success notice never bill the next student',
+    'held confirmation Enter cannot charge the next code before a fresh Enter',
     (tester) async {
       await seedClass(tester);
-      await open(tester, AttendanceWorkspace(store: store, onExit: () {}));
+      await open(
+        tester,
+        AttendanceWorkspace(
+          store: store,
+          onExit: () {},
+          initialSessionId: session.id,
+        ),
+      );
       await scan(tester, first);
-      await key(tester, LogicalKeyboardKey.keyL);
+      await requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyL);
+      await tester.pumpAndSettle();
       await mutate(
         tester,
         () => tester.sendKeyDownEvent(LogicalKeyboardKey.enter),
         () => store.attendances.length == 1,
-        notice: false,
       );
-      await tester.runAsync(() async {
-        for (var attempt = 0; attempt < 30; attempt++) {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          await tester.pump(const Duration(milliseconds: 100));
-          if (find
-              .byKey(const Key('massar-notice-dialog'))
-              .evaluate()
-              .isNotEmpty) {
-            break;
-          }
-        }
-        await tester.pump(const Duration(milliseconds: 300));
-      });
-      expect(find.byKey(const Key('massar-notice-dialog')), findsOneWidget);
+      expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
+      await tester.enterText(
+        find.byKey(const Key('student-search')),
+        second.code,
+      );
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byKey(const Key('massar-notice-dialog')), findsOneWidget);
-      await tester.runAsync(() async {
-        for (final scanKey in [
-          LogicalKeyboardKey.digit2,
-          LogicalKeyboardKey.digit0,
-          LogicalKeyboardKey.digit2,
-        ]) {
-          await tester.sendKeyEvent(scanKey);
-        }
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-        await tester.pump(const Duration(milliseconds: 300));
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        await tester.pump(const Duration(milliseconds: 300));
-      });
       await tester.pumpAndSettle();
       expect(store.payments, hasLength(1));
       expect(store.payments.single.studentId, first.id);
       expect(store.attendances.single.studentId, first.id);
       expect(store.packages, isEmpty);
       expect(store.cardPayments, isEmpty);
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('student-search')))
-            .controller!
-            .text,
-        isEmpty,
-      );
-      expectCodeFocus(tester, 'student-search');
-      await scan(tester, second);
-      await key(tester, LogicalKeyboardKey.keyL);
       await mutate(
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
         () => store.attendances.length == 2,
+      );
+      expect(store.payments.single.studentId, first.id);
+      expect(store.attendances.map((entry) => entry.studentId).toSet(), {
+        first.id,
+        second.id,
+      });
+      await mutate(
+        tester,
+        () => tester.sendKeyEvent(LogicalKeyboardKey.keyL),
+        () => store.payments.length == 2,
       );
       expect(store.payments.map((payment) => payment.studentId).toSet(), {
         first.id,
@@ -348,10 +341,10 @@ void main() {
       await open(tester, CenterApp(store: store), app: true);
       await tester.tap(find.text('التحضير والتحصيل'));
       await tester.pumpAndSettle();
+      await choose(tester, 'الشهر', 'شهر الاختبار');
+      await choose(tester, 'المجموعة', store.groupLabel(group.id));
       await scan(tester, first);
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-      await key(tester, LogicalKeyboardKey.digit3);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await selectAttendanceMonth(tester, 'شهر الاختبار · 3 حصص');
       await tester.tap(find.byKey(const Key('edit-student-note')));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -406,8 +399,9 @@ void main() {
       await tester.tap(find.byKey(const Key('cancel-student-note')));
       await tester.pumpAndSettle();
       expectCodeFocus(tester, 'student-search');
-      await key(tester, LogicalKeyboardKey.keyM);
-      expect(find.text('شراء باقة 3 حصص وتسجيل الحضور'), findsOneWidget);
+      await requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyN);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('confirmation-net')), findsOneWidget);
       expect(
         tester.widget<Text>(find.byKey(const Key('confirmation-net'))).data,
         money(20250),
@@ -429,7 +423,7 @@ void main() {
       final score = find.widgetWithText(TextFormField, 'درجة الطالب');
       for (final invalid in ['-١', '٢٠٫٥', '٢١']) {
         await tester.enterText(score, invalid);
-        await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
+        await tester.tap(find.widgetWithText(FilledButton, 'حفظ الرصد'));
         await tester.pump();
         expect(find.text('الدرجة من صفر إلى الدرجة النهائية'), findsOneWidget);
         expect(store.academics, isEmpty);
@@ -438,7 +432,7 @@ void main() {
       await tester.enterText(score, '٠');
       await mutate(
         tester,
-        () => tester.tap(find.widgetWithText(FilledButton, 'حفظ')),
+        () => tester.tap(find.widgetWithText(FilledButton, 'حفظ الرصد')),
         () => store.academics.length == 1,
       );
       final saved = store.academics.single;
@@ -456,18 +450,21 @@ void main() {
             .text,
         '20',
       );
-      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
       await tester.pumpAndSettle();
       expect(store.academics, hasLength(1));
       expectCodeFocus(tester, 'academic-code-search');
-      expect(store.attendances, isEmpty);
+      expect(store.attendances.map((row) => row.studentId).toSet(), {
+        first.id,
+        second.id,
+      });
       expect(store.payments, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'permission change during academic editing rejects save but preserves the draft and safe cancel focus',
+    'revoked staff session rejects academic save while preserving the draft and safe cancel',
     (tester) async {
       await academicPage(tester);
       await gradeStudent(tester, first);
@@ -480,20 +477,16 @@ void main() {
         'مسودة قبل تبديل الموظف',
       );
       await tester.runAsync(() async {
-        await store.saveStaff(
-          name: 'الاستقبال',
-          password: 'cashier-password',
-          role: StaffRole.cashier,
-        );
         store.signOut();
-        await store.signIn('الاستقبال', 'cashier-password');
       });
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
-        await acknowledgeNotice(
+        await tester.tap(find.widgetWithText(FilledButton, 'حفظ الرصد'));
+        await waitForUiCondition(
           tester,
-          message: 'ليس لديك صلاحية لهذا الإجراء.',
+          () =>
+              find.textContaining('ليس لديك صلاحية لهذا الإجراء.').evaluate().isNotEmpty,
+          reason: 'The editor must keep the rejected academic save inline.',
         );
       });
       await tester.pumpAndSettle();
@@ -516,7 +509,12 @@ void main() {
             .text,
         'مسودة قبل تبديل الموظف',
       );
-      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
+      await tester.pumpAndSettle();
+      expect(find.text('الخروج بدون حفظ؟'), findsOneWidget);
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'تجاهل التعديلات والخروج'),
+      );
       await tester.pumpAndSettle();
       expectCodeFocus(tester, 'academic-code-search');
       expect(
@@ -549,7 +547,7 @@ void main() {
       await tester.tap(navigation);
       await tester.pumpAndSettle();
       await tester.runAsync(
-        () => tester.tap(find.widgetWithText(FilledButton, 'إضافة موظف')),
+        () => tester.tap(find.widgetWithText(FilledButton, 'إضافة موظف').last),
       );
       await tester.pumpAndSettle();
       final name = find.widgetWithText(TextFormField, 'اسم الدخول');
@@ -564,13 +562,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.runAsync(() => tester.tap(find.text('مساعد أكاديمي').last));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
+      await tester.tap(find.widgetWithText(FilledButton, 'إضافة موظف').last);
       await tester.pump();
       expect(find.text('استخدم ٨ أحرف على الأقل'), findsOneWidget);
       expect(tester.widget<TextFormField>(name).controller!.text, 'مساعد جديد');
       expect(store.staff, hasLength(1));
       await tester.enterText(password, 'assistant-password');
-      final save = find.widgetWithText(FilledButton, 'حفظ');
+      final save = find.widgetWithText(FilledButton, 'إضافة موظف').last;
       await mutate(tester, () async {
         await tester.tap(save);
         await tester.tap(save);
@@ -593,14 +591,13 @@ void main() {
         tester,
         () => tester.testTextInput.receiveAction(TextInputAction.done),
         () => store.currentUser != null,
-        notice: false,
       );
       await tester.pumpAndSettle();
       expect(store.currentUser!.role, StaffRole.assistant);
       expect(store.canAssess, isTrue);
       expect(store.canManage, isFalse);
       expect(store.canCollect, isFalse);
-      expect(find.text('الامتحانات والواجب'), findsOneWidget);
+      expect(find.text('رصد الامتحانات والواجبات'), findsOneWidget);
       expect(find.text('الموظفون'), findsNothing);
       expect(find.text('التحضير والتحصيل'), findsNothing);
       expect(find.text('إنشاء حصة'), findsNothing);
@@ -609,176 +606,155 @@ void main() {
     },
   );
 
+  Future<void> sessionsPage(WidgetTester tester) => open(
+    tester,
+    AnimatedBuilder(
+      animation: store,
+      builder: (context, _) =>
+          SessionsPage(store: store, onOpenAttendance: () {}),
+    ),
+  );
+
+  Future<void> prepareMonth(
+    WidgetTester tester,
+    String name, {
+    bool extra = false,
+  }) async {
+    await tester.tap(find.widgetWithText(FilledButton, 'إضافة شهر وحصصه'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.calendar_today_outlined), findsNothing);
+    expect(
+      find.widgetWithText(DropdownButtonFormField<String>, 'المجموعة'),
+      findsNothing,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'اسم الشهر'),
+      name,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'عدد الحصص المعدّة'),
+      extra ? '1' : '2',
+    );
+    await tester.tap(find.text('تجهيز الحصص'));
+    await tester.pumpAndSettle();
+    if (extra) {
+      final kind = find.widgetWithText(
+        DropdownButtonFormField<SessionKind>,
+        'حساب الحصة',
+      );
+      await tester.ensureVisible(kind);
+      await tester.tap(kind);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(sessionKindLabel(SessionKind.extra)).last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'سعر الحصة الإضافية بالجنيه'),
+        '٤٥٫٥٠',
+      );
+    }
+    final save = find.widgetWithText(FilledButton, 'إضافة شهر وحصصه').last;
+    await tester.ensureVisible(save);
+    await mutate(
+      tester,
+      () => tester.tap(save),
+      () => store.studyMonths.any((month) => month.name == name),
+    );
+  }
+
   testWidgets(
-    'all groups creation hides date and manual number while preserving the single group choice',
+    'shared lesson preparation creates no group sessions until each selected group starts',
     (tester) async {
       await seedClass(tester);
       await tester.runAsync(
         () => store.saveGroup(group.copyWith(id: '', name: 'المجموعة الثانية')),
       );
-      await open(
-        tester,
-        AnimatedBuilder(
-          animation: store,
-          builder: (context, _) =>
-              SessionsPage(store: store, onOpenAttendance: () {}),
-        ),
-      );
-      await tester.runAsync(
-        () => tester.tap(find.widgetWithText(FilledButton, 'إنشاء حصة')),
-      );
-      await tester.pumpAndSettle();
-      await choose(tester, 'المجموعة', group.name);
-      final all = find.widgetWithText(CheckboxListTile, 'كل المجموعات');
-      await tester.tap(all);
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextFormField, 'رقم الحصة'), findsNothing);
-      expect(find.byIcon(Icons.calendar_today_outlined), findsNothing);
-      await tester.tap(all);
-      await tester.pumpAndSettle();
+      final original = session.toJson();
+      await sessionsPage(tester);
+      await prepareMonth(tester, 'شهر مشترك جديد');
+      final month = store.studyMonths.last;
+      expect(month.lessons.map((lesson) => lesson.number), [1, 2]);
+      expect(store.sessions.single.toJson(), original);
+      expect(store.payments, isEmpty);
+      await open(tester, AttendanceWorkspace(store: store, onExit: () {}));
+      for (final selected in store.groups) {
+        await choose(tester, 'المجموعة', store.groupLabel(selected.id));
+        final before = store.sessions.length;
+        await mutate(tester, () async {
+          await tester.tap(find.byKey(const Key('start-attendance-session')));
+          await tester.pump(const Duration(milliseconds: 200));
+          expect(find.byKey(const Key('session-start-dialog')), findsOneWidget);
+          await tester.tap(find.byKey(const Key('session-start-confirm')));
+        }, () => store.sessions.length == before + 1);
+        final started = store.sessionForPreparedLesson(
+          selected.id,
+          month.lessons.first.id,
+        )!;
+        expect(started.number, 1);
+        expect(started.startedAt, isNotNull);
+        expect(started.groupId, selected.id);
+      }
+      expect(store.sessions, hasLength(3));
       expect(
-        tester
-            .widget<TextFormField>(
-              find.widgetWithText(TextFormField, 'رقم الحصة'),
-            )
-            .controller!
-            .text,
-        '18',
-      );
-      await tester.tap(all);
-      await tester.pumpAndSettle();
-      await mutate(
-        tester,
-        () => tester.tap(find.widgetWithText(FilledButton, 'حفظ')),
-        () => store.sessions.length == 3,
-      );
-      expect(
-        store.sessions
-            .where((session) => session.groupId == group.id)
-            .map((session) => session.number),
-        [17, 18],
-      );
-      expect(
-        store.sessions
-            .where((session) => session.groupId != group.id)
-            .single
-            .number,
-        1,
+        store.sessions.singleWhere((row) => row.id == session.id).toJson(),
+        original,
       );
       expect(store.payments, isEmpty);
-      expect(store.audit.last.action, 'sessions_create');
+      expect(store.attendances, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'session UI creates independently priced extra class edits it and requires explicit unused cancellation',
+    'extra lesson price is edited before starting and unused cancellation requires confirmation',
     (tester) async {
       await seedClass(tester);
-      await open(
-        tester,
-        AnimatedBuilder(
-          animation: store,
-          builder: (context, _) =>
-              SessionsPage(store: store, onOpenAttendance: () {}),
-        ),
-      );
-      await tester.runAsync(
-        () => tester.tap(find.widgetWithText(FilledButton, 'إنشاء حصة')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.calendar_today_outlined), findsNothing);
-      await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
-      await tester.pump();
-      expect(find.text('اختر المجموعة'), findsOneWidget);
+      await sessionsPage(tester);
+      await prepareMonth(tester, 'شهر إضافي', extra: true);
+      final month = store.studyMonths.last;
+      expect(month.lessons.single.extraPrice, 4550);
       expect(store.sessions, hasLength(1));
-      await choose(tester, 'المجموعة', group.name);
-      final number = find.widgetWithText(TextFormField, 'رقم الحصة');
-      expect(tester.widget<TextFormField>(number).controller!.text, '18');
-      await tester.runAsync(
-        () => tester.tap(
-          find.widgetWithText(
-            DropdownButtonFormField<SessionKind>,
-            'حساب الحصة',
-          ),
+      await tester.tap(find.text('تعديل الشهر وحصصه'));
+      await tester.pumpAndSettle();
+      final price = find.widgetWithText(
+        TextFormField,
+        'سعر الحصة الإضافية بالجنيه',
+      );
+      await tester.enterText(price, '٦٠');
+      final save = find.widgetWithText(FilledButton, 'حفظ التعديلات');
+      await tester.ensureVisible(save);
+      await mutate(
+        tester,
+        () => tester.tap(save),
+        () => store.studyMonths.last.lessons.single.extraPrice == 6000,
+      );
+      final beforeStart = DateTime.now();
+      final started = await tester.runAsync(
+        () => store.startPreparedLesson(
+          groupId: group.id,
+          preparedLessonId: month.lessons.single.id,
         ),
       );
       await tester.pumpAndSettle();
-      await tester.runAsync(
-        () => tester.tap(find.text(sessionKindLabel(SessionKind.extra)).last),
-      );
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'السعر المنفصل بالجنيه'),
-        '٤٥٫٥٠',
-      );
-      final beforeSave = DateTime.now();
-      await mutate(
-        tester,
-        () => tester.tap(find.widgetWithText(FilledButton, 'حفظ')),
-        () => store.sessions.length == 2,
-      );
-      final createdId = store.sessions
-          .singleWhere((row) => row.id != session.id)
-          .id;
-      var created = store.sessions.singleWhere((row) => row.id == createdId);
-      expect(created.number, 18);
-      expect(created.groupId, group.id);
-      expect(created.kind, SessionKind.extra);
-      expect(created.extraPrice, 4550);
-      expect(created.status, SessionStatus.open);
-      expect(created.startsAt.isBefore(beforeSave), isFalse);
-      expect(created.startsAt.isAfter(DateTime.now()), isFalse);
-      expect(created.startsAt, created.createdAt);
-      final originalDate = created.startsAt;
-      final edit = find.byTooltip('تعديل الحصة').last;
-      await tester.ensureVisible(edit);
-      await tester.runAsync(() => tester.tap(edit));
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
-      expect(
-        tester
-            .widget<DropdownButtonFormField<String>>(
-              find.widgetWithText(DropdownButtonFormField<String>, 'المجموعة'),
-            )
-            .onChanged,
-        isNull,
-      );
-      await tester.enterText(number, '19');
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'السعر المنفصل بالجنيه'),
-        '٦٠',
-      );
-      await mutate(
-        tester,
-        () => tester.tap(find.widgetWithText(FilledButton, 'حفظ')),
-        () =>
-            store.sessions.singleWhere((row) => row.id == createdId).number ==
-            19,
-      );
-      created = store.sessions.singleWhere((row) => row.id == createdId);
-      expect(created.extraPrice, 6000);
-      expect(created.startsAt, originalDate);
-      expect(created.createdAt, originalDate);
-      expect(created.id, createdId);
-      final cancel = find.byTooltip('إلغاء الحصة').last;
+      expect(started!.kind, SessionKind.extra);
+      expect(started.extraPrice, 6000);
+      expect(started.startsAt.isBefore(beforeStart), isFalse);
+      final cancel = find.byTooltip('إلغاء الحصة');
       await tester.ensureVisible(cancel);
-      await tester.runAsync(() => tester.tap(cancel));
+      await tester.tap(cancel);
       await tester.pumpAndSettle();
-      expect(find.text('إلغاء الحصة رقم 19'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
       await tester.pumpAndSettle();
       expect(
-        store.sessions.singleWhere((row) => row.id == createdId).status,
+        store.sessions.singleWhere((row) => row.id == started.id).status,
         SessionStatus.open,
       );
-      await tester.runAsync(() => tester.tap(cancel));
+      await tester.tap(cancel);
       await tester.pumpAndSettle();
       await mutate(
         tester,
         () => tester.tap(find.widgetWithText(FilledButton, 'إلغاء الحصة')),
         () =>
-            store.sessions.singleWhere((row) => row.id == createdId).status ==
+            store.sessions.singleWhere((row) => row.id == started.id).status ==
             SessionStatus.canceled,
       );
       expect(store.sessions, hasLength(2));
@@ -789,23 +765,12 @@ void main() {
       expect(store.attendances, isEmpty);
       expect(store.payments, isEmpty);
       expect(store.packages, isEmpty);
-      expect(
-        tester
-            .widget<IconButton>(
-              find.ancestor(
-                of: find.byTooltip('تعديل الحصة').last,
-                matching: find.byType(IconButton),
-              ),
-            )
-            .onPressed,
-        isNull,
-      );
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'used session editing and cancellation errors preserve draft and transactions then explicit closure registers absence',
+    'used lesson protects its number and kind, rejects cancellation, and explicit closure records absence',
     (tester) async {
       await seedClass(tester);
       await tester.runAsync(
@@ -819,38 +784,42 @@ void main() {
       );
       final originalPayment = store.payments.single;
       final originalAttendance = store.attendances.single;
-      await open(
-        tester,
-        AnimatedBuilder(
-          animation: store,
-          builder: (context, _) =>
-              SessionsPage(store: store, onOpenAttendance: () {}),
-        ),
+      await sessionsPage(tester);
+      await tester.tap(find.text('تعديل الشهر وحصصه'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(
+              find.descendant(
+                of: find
+                    .widgetWithText(TextFormField, 'رقم الحصة داخل الشهر')
+                    .first,
+                matching: find.byType(TextField),
+              ),
+            )
+            .readOnly,
+        isTrue,
       );
-      final edit = find.byTooltip('تعديل الحصة');
-      await tester.ensureVisible(edit);
-      await tester.runAsync(() => tester.tap(edit));
-      await tester.pumpAndSettle();
-      final number = find.widgetWithText(TextFormField, 'رقم الحصة');
-      await tester.enterText(number, '99');
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
-        await acknowledgeNotice(
-          tester,
-          message: 'لا يمكن تعديل حصة بها تسجيلات أو حصة مغلقة.',
-        );
-      });
-      await tester.pumpAndSettle();
-      expect(tester.widget<TextFormField>(number).controller!.text, '99');
-      expect(store.sessions.single.number, 17);
-      expect(store.sessions.single.status, SessionStatus.open);
-      expect(store.payments.single.id, originalPayment.id);
-      expect(store.attendances.single.id, originalAttendance.id);
-      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+      expect(
+        tester
+            .widget<DropdownButtonFormField<SessionKind>>(
+              find
+                  .widgetWithText(
+                    DropdownButtonFormField<SessionKind>,
+                    'حساب الحصة',
+                  )
+                  .first,
+            )
+            .onChanged,
+        isNull,
+      );
+      final cancelEditor = find.widgetWithText(TextButton, 'رجوع');
+      await tester.ensureVisible(cancelEditor);
+      await tester.tap(cancelEditor);
       await tester.pumpAndSettle();
       final cancel = find.byTooltip('إلغاء الحصة');
       await tester.ensureVisible(cancel);
-      await tester.runAsync(() => tester.tap(cancel));
+      await tester.tap(cancel);
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
         await tester.tap(find.widgetWithText(FilledButton, 'إلغاء الحصة'));
@@ -860,13 +829,13 @@ void main() {
               'لا يمكن إلغاء حصة مسجل بها حضور أو دفع أو رصد؛ سياسة الاسترداد لم تُحدد.',
         );
       });
-      await tester.pumpAndSettle();
       expect(store.sessions.single.status, SessionStatus.open);
+      expect(store.payments.single.id, originalPayment.id);
+      expect(store.attendances.single.id, originalAttendance.id);
       final close = find.byTooltip('إغلاق وتسجيل الغياب');
       await tester.ensureVisible(close);
-      await tester.runAsync(() => tester.tap(close));
+      await tester.tap(close);
       await tester.pumpAndSettle();
-      expect(find.text('إغلاق الحصة رقم 17'), findsOneWidget);
       await mutate(
         tester,
         () => tester.tap(
@@ -875,7 +844,6 @@ void main() {
         () => store.sessions.single.status == SessionStatus.closed,
       );
       expect(store.sessions.single.id, session.id);
-      expect(store.payments, hasLength(1));
       expect(store.payments.single.id, originalPayment.id);
       expect(store.payments.single.netAmount, 7500);
       expect(
@@ -893,20 +861,10 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.ancestor(
-                of: find.byTooltip('تعديل الحصة'),
-                matching: find.byType(IconButton),
-              ),
-            )
-            .onPressed,
-        isNull,
-      );
-      expect(
-        tester
-            .widget<IconButton>(
-              find.ancestor(
-                of: find.byTooltip('إغلاق وتسجيل الغياب'),
-                matching: find.byType(IconButton),
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton &&
+                    widget.tooltip == 'إغلاق وتسجيل الغياب',
               ),
             )
             .onPressed,

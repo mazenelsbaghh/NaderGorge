@@ -129,11 +129,7 @@ void main() {
         SessionStudentCategoryKind.single,
         percent: 50,
       );
-      final exempt = category(
-        summary,
-        SessionStudentCategoryKind.single,
-        percent: 100,
-      );
+      final exempt = category(summary, SessionStudentCategoryKind.free);
       expect(
         [full.studentCount, full.operationCount, full.unitAmount],
         [1, 1, 10000],
@@ -143,7 +139,9 @@ void main() {
       expect(exempt.label, contains('إعفاء'));
       expect(
         summary.studentCategories!.where(
-          (e) => e.kind == SessionStudentCategoryKind.free,
+          (e) =>
+              e.kind == SessionStudentCategoryKind.single &&
+              e.discountPercent == 100,
         ),
         isEmpty,
       );
@@ -411,8 +409,7 @@ void main() {
       expect(
         category(
           store.sessionFinancialSummary(session.id),
-          SessionStudentCategoryKind.single,
-          percent: 100,
+          SessionStudentCategoryKind.free,
         ).studentCount,
         1,
       );

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import '../shared/performance_trace.dart';
+import 'lan_snapshot_transfer.dart';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:massar_center/domain/models.dart';
@@ -87,6 +90,9 @@ class LanTransport {
   final LanEndpoint endpoint;
   final String deviceToken;
   late final HttpClient _client;
+  HttpClientRequest? _stateWait;
+  void cancelStateWait() => _stateWait?.abort();
+
   static const maxRequestBytes = 256 * 1024;
   static const maxResponseBytes = 16 * 1024 * 1024;
 
@@ -130,10 +136,12 @@ class LanTransport {
     String? staffSession,
     String? stateVersion,
     bool statePatches = false,
+    bool waitForChanges = false,
   }) => _request('GET', path, null, (
     staffSession: staffSession,
     stateVersion: stateVersion,
     statePatches: statePatches,
+    waitForChanges: waitForChanges,
   ));
   Future<Map<String, dynamic>> post(
     String path,
@@ -145,13 +153,20 @@ class LanTransport {
     staffSession: staffSession,
     stateVersion: stateVersion,
     statePatches: statePatches,
+    waitForChanges: false,
   ));
 
   Future<Map<String, dynamic>> _request(
     String method,
     String path,
     Map<String, dynamic>? body,
-    ({String? staffSession, String? stateVersion, bool statePatches}) metadata,
+    ({
+      String? staffSession,
+      String? stateVersion,
+      bool statePatches,
+      bool waitForChanges,
+    })
+    metadata,
   ) async {
     if (!path.startsWith('/') ||
         path.startsWith('//') ||
@@ -163,8 +178,20 @@ class LanTransport {
     if (encoded != null && encoded.length > maxRequestBytes) {
       throw const CenterException('الطلب أكبر من الحد المسموح للاتصال المحلي.');
     }
+    final trace = PerformanceTrace(
+      path == '/api/command' ? 'lan.command' : 'lan.refresh',
+      budgetMs: metadata.waitForChanges ? 15000 : 300,
+    );
+    HttpClientRequest? waitingRequest;
     try {
       final request = await _client.openUrl(method, endpoint.uri(path));
+      trace.stage('connect');
+      if (metadata.waitForChanges) {
+        waitingRequest = request;
+        _stateWait = request;
+        request.headers.set('X-Massar-State-Wait', '1');
+      }
+      request.headers.set('X-Massar-State-Chunks', '1');
       request.followRedirects = false;
       request.headers.contentType = ContentType.json;
       if (deviceToken.isNotEmpty &&
@@ -187,6 +214,7 @@ class LanTransport {
       final response = await request.close().timeout(
         const Duration(seconds: 20),
       );
+      trace.stage('response');
       if (response.statusCode >= 300 && response.statusCode < 400) {
         await response.drain<void>();
         if (path == '/api/command') {
@@ -215,7 +243,13 @@ class LanTransport {
           outcomeUnknown: path == '/api/command',
         );
       }
-      final decoded = jsonDecode(utf8.decode(bytes.takeBytes()));
+      trace.stage('receive');
+      trace.counts['bytes'] = bytes.length;
+      final received = bytes.takeBytes();
+      final decoded = received.length > 256 * 1024
+          ? await compute(_decodeLanResponse, received)
+          : _decodeLanResponse(received);
+      trace.stage('decode');
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException('Invalid LAN response');
       }
@@ -247,6 +281,23 @@ class LanTransport {
               : 'رفض جهاز السنتر الطلب.',
         );
       }
+      if (decoded.containsKey('snapshotTransfer')) {
+        if (path.startsWith('/api/state-chunk/')) {
+          throw const FormatException('Nested snapshot transfer');
+        }
+        try {
+          return await _readSnapshotTransfer(decoded, metadata.staffSession);
+        } on LanAuthorizationException {
+          rethrow;
+        } catch (error, stack) {
+          throw LanConnectionException(
+            'تعذر إكمال بيانات الجهاز الرئيسي. أعد الاتصال لمراجعة نتيجة العملية.',
+            outcomeUnknown: path == '/api/command',
+            cause: error,
+            stackTrace: stack,
+          );
+        }
+      }
       return decoded;
     } on CenterException {
       rethrow;
@@ -259,8 +310,66 @@ class LanTransport {
         cause: error,
         stackTrace: stackTrace,
       );
+    } finally {
+      if (identical(_stateWait, waitingRequest)) _stateWait = null;
+      trace.finish();
     }
+  }
+
+  Future<Map<String, dynamic>> _readSnapshotTransfer(
+    Map<String, dynamic> envelope,
+    String? existingSession,
+  ) async {
+    final descriptor = envelope['snapshotTransfer'];
+    final staffSession = envelope['staffSession'] ?? existingSession;
+    if (descriptor is! Map ||
+        staffSession is! String ||
+        descriptor['token'] is! String ||
+        !RegExp(r'^[0-9a-f-]{36}$').hasMatch(descriptor['token'] as String) ||
+        descriptor['chunks'] is! int ||
+        descriptor['bytes'] is! int ||
+        descriptor['sha256'] is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(descriptor['sha256'] as String)) {
+      throw const FormatException('Invalid snapshot transfer');
+    }
+    final count = descriptor['chunks'] as int;
+    final expectedBytes = descriptor['bytes'] as int;
+    if (expectedBytes <= 0 ||
+        expectedBytes > LanSnapshotTransferCache.maximumBytes ||
+        count !=
+            (expectedBytes + LanSnapshotTransferCache.chunkBytes - 1) ~/
+                LanSnapshotTransferCache.chunkBytes) {
+      throw const FormatException('Invalid snapshot transfer size');
+    }
+    final bytes = BytesBuilder(copy: false);
+    for (var index = 0; index < count; index++) {
+      final chunk = await get(
+        '/api/state-chunk/${descriptor['token']}/$index',
+        staffSession: staffSession,
+      );
+      if (chunk['token'] != descriptor['token'] ||
+          chunk['index'] != index ||
+          chunk['chunk'] is! String) {
+        throw const FormatException('Invalid snapshot chunk');
+      }
+      final part = base64Decode(chunk['chunk'] as String);
+      final expectedPart =
+          (expectedBytes - index * LanSnapshotTransferCache.chunkBytes).clamp(
+            0,
+            LanSnapshotTransferCache.chunkBytes,
+          );
+      if (part.length != expectedPart) {
+        throw const FormatException('Invalid snapshot chunk size');
+      }
+      bytes.add(part);
+    }
+    return compute(verifyTransferredSnapshot, (
+      Uint8List.fromList(bytes.takeBytes()),
+      descriptor['sha256'] as String,
+    ));
   }
 
   void close() => _client.close(force: true);
 }
+
+Object? _decodeLanResponse(List<int> bytes) => jsonDecode(utf8.decode(bytes));

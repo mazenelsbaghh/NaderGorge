@@ -1,6 +1,8 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'center_state.dart';
+import 'copy_on_write_list.dart';
 
 /// Reuses JSON for immutable records while still writing a complete snapshot.
 /// Group month plans remain mutable, so groups are always encoded afresh.
@@ -8,13 +10,54 @@ import 'center_state.dart';
 class CenterStateEncoder {
   final _records = Expando<String>();
   final _sections = <String, _EncodedSection>{};
+  final _sectionIdentities = <String, Object>{};
   final _publicHistory = <String, EncodedPublicCenterState>{};
-  static const _historyLimit = 4;
+  static const _historyLimit = 16;
   static const _historyTextBytes = 32 * 1024 * 1024;
 
   String encode(CenterState state) {
     final fields = state.mapJsonFields(_encodeRecords);
     return _encodeFields(fields);
+  }
+
+  /// Frozen local fields include credentials and must never enter LAN responses.
+  EncodedStorageFields encodeStorageFields(CenterState state) =>
+      EncodedStorageFields._({
+        for (final entry in state.mapJsonFields(_encodeRecords).entries)
+          entry.key: _freezeField(entry.value, null),
+      });
+
+  /// New attendance and audit rows usually extend immutable record lists.
+  /// Large batches and edits keep using complete section replacement.
+  Map<String, List<String>> encodeStorageAppends(
+    CenterState previous,
+    CenterState current,
+  ) {
+    final before = <String, List<Object>>{};
+    previous.mapJsonFields(<T extends Object>(section, records, toJson) {
+      if (centerStateImmutableRecordSections.contains(section)) {
+        before[section] = records;
+      }
+      return const [];
+    });
+    final appends = <String, List<String>>{};
+    current.mapJsonFields(<T extends Object>(section, records, toJson) {
+      final original = before[section];
+      if (original == null ||
+          records.length <= original.length ||
+          records.length - original.length > 16) {
+        return const [];
+      }
+      for (var index = 0; index < original.length; index++) {
+        if (!identical(original[index], records[index])) return const [];
+      }
+      appends[section] = [
+        for (final record in records.skip(original.length))
+          _records[record] ??= jsonEncode(toJson(record)),
+      ];
+      return const [];
+    });
+    return appends;
   }
 
   EncodedPublicCenterState encodePublicSnapshot(CenterState state) {
@@ -33,12 +76,15 @@ class CenterStateEncoder {
   }) {
     // Resolve the requested base before insertion can evict it from history.
     final previous = _publicHistory[baseVersion];
-    final current = _publicHistory[version] ?? encodePublicSnapshot(state);
+    final retained = _publicHistory[version];
+    final current = retained ?? encodePublicSnapshot(state);
     final delta = previous == null
         ? null
         : _encodeDelta(baseVersion!, previous, current);
-    _publicHistory[version] = current;
-    _prunePublicHistory();
+    if (retained == null) {
+      _publicHistory[version] = current;
+      _prunePublicHistory();
+    }
     return delta != null && delta.jsonLength < current.jsonLength
         ? {'stateDelta': delta}
         : {'state': current};
@@ -67,7 +113,7 @@ class CenterStateEncoder {
       } else if (before is _EncodedSection && after is _EncodedSection) {
         if (identical(before, after)) continue;
         final splice = _encodeSplice(before, after);
-        if (splice.length < after.json.length) {
+        if (splice.length < after.jsonLength) {
           splices[entry.key] = splice;
         } else {
           replacements[entry.key] = after;
@@ -121,14 +167,22 @@ class CenterStateEncoder {
   }
 
   int _retainedPublicTextBytes() {
-    final fragments = Set<String>.identity();
+    final fragments = Set<Object>.identity();
     for (final snapshot in _publicHistory.values) {
       for (final field in snapshot._fields.values) {
-        fragments.add(_frozenJson(field));
+        if (field is _EncodedSection) {
+          fragments.addAll(field.fragments);
+        } else {
+          fragments.add(field);
+        }
       }
     }
-    // Count shared fragments once; two bytes per code unit bounds string storage.
-    return fragments.fold(0, (bytes, json) => bytes + json.length * 2);
+    // Budget complete section text without joining it just for accounting.
+    // Shared sections count once; distinct sections are counted conservatively.
+    return fragments.fold(
+      0,
+      (bytes, field) => bytes + _frozenLength(field) * 2,
+    );
   }
 
   String _encodeFields(Map<String, dynamic> fields) {
@@ -148,16 +202,55 @@ class CenterStateEncoder {
       return records.map(toJson).toList();
     }
     final previous = _sections[section];
-    if (previous != null && previous.matches(records)) return previous;
-    final json =
-        '[${records.map((record) {
-          return _records[record] ??= jsonEncode(toJson(record));
-        }).join(',')}]';
+    final identity = rowsIdentity(records);
+    if (previous != null &&
+        ((records is CopyOnWriteList &&
+                identical(_sectionIdentities[section], identity)) ||
+            previous.matches(records))) {
+      _sectionIdentities[section] = identity;
+      return previous;
+    }
+    _sectionIdentities[section] = identity;
     return _sections[section] = _EncodedSection(
       List<Object>.unmodifiable(records),
-      json,
+      List<String>.unmodifiable(
+        records.map(
+          (record) => _records[record] ??= jsonEncode(toJson(record)),
+        ),
+      ),
     );
   }
+}
+
+/// Freezes mutable fields immediately; immutable sections join only if needed.
+/// This map contains credentials and belongs exclusively to local persistence.
+final class EncodedStorageFields extends UnmodifiableMapBase<String, String> {
+  EncodedStorageFields._(Map<String, Object> fields)
+    : _fields = Map.unmodifiable(fields);
+  final Map<String, Object> _fields;
+
+  @override
+  Iterable<String> get keys => _fields.keys;
+
+  @override
+  bool containsKey(Object? key) => _fields.containsKey(key);
+
+  @override
+  String? operator [](Object? key) {
+    final field = _fields[key];
+    return field == null ? null : _frozenJson(field);
+  }
+
+  List<String>? recordFragments(String section) {
+    final field = _fields[section];
+    if (field == null) return null;
+    return field is _EncodedSection
+        ? field.fragments
+        : _jsonArrayFragments(field as String);
+  }
+
+  Iterable<String> changedKeysFrom(EncodedStorageFields previous) =>
+      keys.where((key) => _fields[key] != previous._fields[key]);
 }
 
 /// The constructor is private so only structurally redacted state can be sent.
@@ -176,20 +269,28 @@ final class EncodedPublicCenterState {
             length +
             jsonEncode(entry.key).length +
             1 +
-            _frozenJson(entry.value).length,
+            _frozenLength(entry.value),
       );
 }
 
 String _frozenJson(Object field) =>
     field is _EncodedSection ? field.json : field as String;
 
+int _frozenLength(Object field) =>
+    field is _EncodedSection ? field.jsonLength : (field as String).length;
+
 String _encodeFrozenFields(Map<String, Object> fields) =>
     '{${fields.entries.map((entry) => '${jsonEncode(entry.key)}:${_frozenJson(entry.value)}').join(',')}}';
 
 class _EncodedSection {
-  const _EncodedSection(this.records, this.json);
+  _EncodedSection(this.records, this.fragments);
   final List<Object> records;
-  final String json;
+  final List<String> fragments;
+  late final String json = '[${fragments.join(',')}]';
+  late final int jsonLength =
+      2 +
+      (fragments.isEmpty ? 0 : fragments.length - 1) +
+      fragments.fold(0, (length, fragment) => length + fragment.length);
 
   bool matches(List<Object> next) {
     if (records.length != next.length) return false;
@@ -198,4 +299,9 @@ class _EncodedSection {
     }
     return true;
   }
+}
+
+List<String>? _jsonArrayFragments(String encoded) {
+  if (!encoded.startsWith('[')) return null;
+  return (jsonDecode(encoded) as List).map(jsonEncode).toList(growable: false);
 }

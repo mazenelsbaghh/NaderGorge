@@ -5,11 +5,11 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "79b152448625b8d3335d28ea83390d9cf16e435c7ba96e59155c69bff1ee4123"
+      "digest": "f29822b666e2a5a1bac32bba30e51de1afde3e763524b7eb32c6b6aecc943cac"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "5ebba2b2edc96772520707fb356907b7a6dcc36e02094fb2129389d4525875f2"
+      "digest": "f0029b5855ec34b048d86d31242b4b7cb92cf458627ef12bfc02d3ea8acde8a8"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -284,6 +284,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
         "line": 72
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:delete:api-admin-mim-studio-connection:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:83",
+      "kind": "backend-endpoint",
+      "method": "DELETE",
+      "route": "/api/admin/mim-studio/connection",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Disconnect",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-disconnect:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-disconnect:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 83
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -1143,7 +1173,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-center-desktop-releases:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:27",
+      "id": "be:get:api-admin-center-desktop-releases:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:32",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/center-desktop/releases",
@@ -1166,7 +1196,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
-        "line": 27
+        "line": 32
       }
     },
     {
@@ -1224,7 +1254,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-center-desktop-uploads-id-download:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:30",
+      "id": "be:get:api-admin-center-desktop-uploads-id-download:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:35",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/center-desktop/uploads/{id}/download",
@@ -1247,9 +1277,36 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
-        "line": 30
+        "line": 35
       },
       "blocker": "Human Admin-only export of a full private desktop snapshot; raw student records and credential hashes are excluded from AI reads. No executable AI adapter is authorized."
+    },
+    {
+      "id": "be:get:api-admin-center-desktop-uploads-id-students:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:27",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/center-desktop/uploads/{id}/students",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Students",
+      "inputSchema": "backend-endpoint:admincenterdesktopcontroller-students:input:v1",
+      "outputSchema": "backend-endpoint:admincenterdesktopcontroller-students:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCenterDesktopController.cs",
+        "line": 27
+      }
     },
     {
       "id": "be:get:api-admin-center-desktop-uploads:backend-src-nadergorge-api-controllers-admincenterdesktopcontroller-cs:19",
@@ -2437,6 +2494,222 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
         "line": 84
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-connection-tools:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:86",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/connection/tools",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Tools",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-tools:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-tools:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 86
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-connection:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:73",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/connection",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Connection",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-connection:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-connection:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 73
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-lessons-lessonid-episode-video-file:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:36",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/episode-video/file",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.EpisodeFile",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-episodefile:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-episodefile:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 36
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-lessons-lessonid-episode-video:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:29",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/episode-video",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Episode",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-episode:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-episode:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 29
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-lessons-lessonid-scenes-scene-video:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:55",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Video",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-video:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-video:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 55
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-lessons-lessonid-sources:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:18",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/sources",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Sources",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-sources:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-sources:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 18
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-lessons-lessonid:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:15",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Read",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-read:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-read:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 15
+      }
+    },
+    {
+      "id": "be:get:api-admin-mim-studio-video-models:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:62",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/mim-studio/video-models",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Models",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-models:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-models:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 62
       }
     },
     {
@@ -9430,6 +9703,216 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:post:api-admin-mim-studio-connection-complete:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:79",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/connection/complete",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Complete",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-complete:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-complete:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 79
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-connection-start:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:76",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/connection/start",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Connect",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-connect:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-connect:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 76
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-lessons-lessonid-episode-video:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:32",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/episode-video",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Assemble",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-assemble:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-assemble:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 32
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-lessons-lessonid-scenes-next:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:25",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/scenes/next",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Generate",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-generate:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-generate:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 25
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-lessons-lessonid-scenes-scene-video-quote:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:58",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video/quote",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Quote",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-quote:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-quote:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 58
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-lessons-lessonid-scenes-scene-video-review:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:69",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video/review",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Review",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-review:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-review:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 69
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-mim-studio-lessons-lessonid-scenes-scene-video:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:65",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}/scenes/{scene}/video",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Submit",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-submit:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-submit:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 65
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:post:api-admin-operations-tasks-id-resolve:backend-src-nadergorge-api-controllers-adminoperationscontroller-cs:59",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -16342,6 +16825,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:put:api-admin-mim-studio-lessons-lessonid:backend-src-nadergorge-api-controllers-adminmimstudiocontroller-cs:21",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/mim-studio/lessons/{lessonid}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminMimStudioController.Save",
+      "inputSchema": "backend-endpoint:adminmimstudiocontroller-save:input:v1",
+      "outputSchema": "backend-endpoint:adminmimstudiocontroller-save:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMimStudioController.cs",
+        "line": 21
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:put:api-admin-overrides-set-watch-count:backend-src-nadergorge-api-controllers-admincontroller-cs:1116",
       "kind": "backend-endpoint",
       "method": "PUT",
@@ -18082,6 +18595,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:delete:root-connection:frontend-src-features-mim-studio-service-ts:26",
+      "kind": "frontend-call",
+      "method": "DELETE",
+      "route": "/{root}/connection",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 26
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2555",
       "kind": "frontend-call",
       "method": "GET",
@@ -18432,6 +18975,33 @@
         "line": 44
       },
       "blocker": "Human Admin-only export of a full private desktop snapshot; raw student records and credential hashes are excluded from AI reads. No executable AI adapter is authorized."
+    },
+    {
+      "id": "fe:get:admin-center-desktop-uploads-encodeuricomponentid-students:frontend-src-services-center-desktop-service-ts:64",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/center-desktop/uploads/{encodeURIComponentid}/students",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminCenterDesktopController.Students",
+      "inputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-center-desktop-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/center-desktop-service.ts",
+        "line": 64
+      }
     },
     {
       "id": "fe:get:admin-center-desktop-uploads:frontend-src-services-center-desktop-service-ts:33",
@@ -20297,7 +20867,7 @@
       }
     },
     {
-      "id": "fe:get:admin-public-exams-productid-results:frontend-src-services-admin-sales-service-ts:212",
+      "id": "fe:get:admin-public-exams-productid-results:frontend-src-services-admin-sales-service-ts:213",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/public-exams/{productId}/results",
@@ -20320,11 +20890,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 212
+        "line": 213
       }
     },
     {
-      "id": "fe:get:admin-public-exams:frontend-src-services-admin-sales-service-ts:203",
+      "id": "fe:get:admin-public-exams:frontend-src-services-admin-sales-service-ts:204",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/public-exams",
@@ -20347,7 +20917,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 203
+        "line": 204
       }
     },
     {
@@ -20513,7 +21083,7 @@
       }
     },
     {
-      "id": "fe:get:admin-sales-coupons-id:frontend-src-services-admin-sales-service-ts:167",
+      "id": "fe:get:admin-sales-coupons-id:frontend-src-services-admin-sales-service-ts:168",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sales/coupons/{id}",
@@ -20536,11 +21106,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 167
+        "line": 168
       }
     },
     {
-      "id": "fe:get:admin-sales-coupons:frontend-src-services-admin-sales-service-ts:164",
+      "id": "fe:get:admin-sales-coupons:frontend-src-services-admin-sales-service-ts:165",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sales/coupons",
@@ -20563,11 +21133,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 164
+        "line": 165
       }
     },
     {
-      "id": "fe:get:admin-sales-printable-batches:frontend-src-services-admin-sales-service-ts:197",
+      "id": "fe:get:admin-sales-printable-batches:frontend-src-services-admin-sales-service-ts:198",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sales/printable-batches",
@@ -20590,11 +21160,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 197
+        "line": 198
       }
     },
     {
-      "id": "fe:get:admin-sales-stacking-policies:frontend-src-services-admin-sales-service-ts:176",
+      "id": "fe:get:admin-sales-stacking-policies:frontend-src-services-admin-sales-service-ts:177",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sales/stacking-policies",
@@ -20617,11 +21187,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 176
+        "line": 177
       }
     },
     {
-      "id": "fe:get:admin-sales-templates:frontend-src-services-admin-sales-service-ts:182",
+      "id": "fe:get:admin-sales-templates:frontend-src-services-admin-sales-service-ts:183",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sales/templates",
@@ -20644,7 +21214,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 182
+        "line": 183
       }
     },
     {
@@ -23429,6 +23999,222 @@
       }
     },
     {
+      "id": "fe:get:root-connection-tools:frontend-src-features-mim-studio-service-ts:27",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/connection/tools",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 27
+      }
+    },
+    {
+      "id": "fe:get:root-connection:frontend-src-features-mim-studio-service-ts:23",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/connection",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 23
+      }
+    },
+    {
+      "id": "fe:get:root-lessons-lessonid-episode-video-file:frontend-src-features-mim-studio-service-ts:18",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/lessons/{lessonId}/episode-video/file",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 18
+      }
+    },
+    {
+      "id": "fe:get:root-lessons-lessonid-episode-video:frontend-src-features-mim-studio-service-ts:16",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/lessons/{lessonId}/episode-video",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 16
+      }
+    },
+    {
+      "id": "fe:get:root-lessons-lessonid-scenes-scene-video:frontend-src-features-mim-studio-service-ts:15",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/lessons/{lessonId}/scenes/{scene}/video",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 15
+      }
+    },
+    {
+      "id": "fe:get:root-lessons-lessonid-sources:frontend-src-features-mim-studio-service-ts:8",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/lessons/{lessonId}/sources",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 8
+      }
+    },
+    {
+      "id": "fe:get:root-lessons-lessonid:frontend-src-features-mim-studio-service-ts:7",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/lessons/{lessonId}",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 7
+      }
+    },
+    {
+      "id": "fe:get:root-video-models:frontend-src-features-mim-studio-service-ts:19",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/{root}/video-models",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 19
+      }
+    },
+    {
       "id": "fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74",
       "kind": "frontend-call",
       "method": "GET",
@@ -25799,7 +26585,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-public-exams-new:frontend-src-services-admin-sales-service-ts:209",
+      "id": "fe:post:admin-public-exams-new:frontend-src-services-admin-sales-service-ts:210",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/public-exams/new",
@@ -25824,12 +26610,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 209
+        "line": 210
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-public-exams:frontend-src-services-admin-sales-service-ts:206",
+      "id": "fe:post:admin-public-exams:frontend-src-services-admin-sales-service-ts:207",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/public-exams",
@@ -25854,7 +26640,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 206
+        "line": 207
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -26129,7 +26915,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sales-coupons:frontend-src-services-admin-sales-service-ts:170",
+      "id": "fe:post:admin-sales-coupons:frontend-src-services-admin-sales-service-ts:171",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sales/coupons",
@@ -26154,12 +26940,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 170
+        "line": 171
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sales-printable-batches:frontend-src-services-admin-sales-service-ts:200",
+      "id": "fe:post:admin-sales-printable-batches:frontend-src-services-admin-sales-service-ts:201",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sales/printable-batches",
@@ -26184,12 +26970,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 200
+        "line": 201
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sales-stacking-policies:frontend-src-services-admin-sales-service-ts:179",
+      "id": "fe:post:admin-sales-stacking-policies:frontend-src-services-admin-sales-service-ts:180",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sales/stacking-policies",
@@ -26214,12 +27000,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 179
+        "line": 180
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sales-templates-background-image:frontend-src-services-admin-sales-service-ts:190",
+      "id": "fe:post:admin-sales-templates-background-image:frontend-src-services-admin-sales-service-ts:191",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sales/templates/background-image",
@@ -26244,12 +27030,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 190
+        "line": 191
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-sales-templates:frontend-src-services-admin-sales-service-ts:185",
+      "id": "fe:post:admin-sales-templates:frontend-src-services-admin-sales-service-ts:186",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sales/templates",
@@ -26274,7 +27060,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 185
+        "line": 186
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29864,6 +30650,216 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:post:root-connection-complete:frontend-src-features-mim-studio-service-ts:25",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/connection/complete",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 25
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-connection-start:frontend-src-features-mim-studio-service-ts:24",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/connection/start",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 24
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-lessons-lessonid-episode-video:frontend-src-features-mim-studio-service-ts:17",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/lessons/{lessonId}/episode-video",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 17
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-lessons-lessonid-scenes-next:frontend-src-features-mim-studio-service-ts:12",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/lessons/{lessonId}/scenes/next",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 12
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-lessons-lessonid-scenes-scene-video-quote:frontend-src-features-mim-studio-service-ts:20",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/lessons/{lessonId}/scenes/{scene}/video/quote",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 20
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-lessons-lessonid-scenes-scene-video-review:frontend-src-features-mim-studio-service-ts:21",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/lessons/{lessonId}/scenes/{scene}/video/review",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 21
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:root-lessons-lessonid-scenes-scene-video:frontend-src-features-mim-studio-service-ts:22",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/{root}/lessons/{lessonId}/scenes/{scene}/video",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 22
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:post:student-upload-audio:frontend-src-services-student-service-ts:439",
       "kind": "frontend-call",
       "method": "POST",
@@ -30704,7 +31700,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:admin-sales-coupons-id:frontend-src-services-admin-sales-service-ts:173",
+      "id": "fe:put:admin-sales-coupons-id:frontend-src-services-admin-sales-service-ts:174",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/sales/coupons/{id}",
@@ -30729,7 +31725,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-sales-service.ts",
-        "line": 173
+        "line": 174
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -31364,6 +32360,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:put:root-lessons-lessonid:frontend-src-features-mim-studio-service-ts:10",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/{root}/lessons/{lessonId}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-features-mim-studio-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/features/mim-studio/service.ts",
+        "line": 10
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:38",
       "kind": "frontend-call",
       "method": "PUT",
@@ -31621,5 +32647,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "5b4546c57d2c8c09f7d62fd6da0675f17374e1f17d19d35817681a0371d771af"
+  "digest": "a75c09198f35d2c067be3976642cbe3a5241c37543eef6734f834a9c961cad80"
 }

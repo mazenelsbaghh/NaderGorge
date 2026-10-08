@@ -5,7 +5,10 @@ import 'dart:math';
 import '../application/center_store.dart';
 import '../data/center_state_encoder.dart';
 import '../shared/problem_reporting.dart';
+import '../shared/performance_trace.dart';
 import 'lan_transport.dart';
+import 'mobile_homework_access.dart';
+import 'lan_snapshot_transfer.dart';
 
 class _StaffSession {
   const _StaffSession(this.deviceId, this.staffId, this.expiresAt);
@@ -17,11 +20,13 @@ class _StaffSession {
 /// session is bound to the verified device identity injected by that gateway.
 class CenterStoreHostBridge {
   CenterStoreHostBridge._(this.store, this._server, this.secret) {
+    mobileHomework = MobileHomeworkAccess(store);
     _subscription = _server.listen((request) {
       unawaited(_handle(request));
     });
   }
   final CenterStore store;
+  late final MobileHomeworkAccess mobileHomework;
   final HttpServer _server;
   final String secret;
   final _sessions = <String, _StaffSession>{};
@@ -29,6 +34,8 @@ class CenterStoreHostBridge {
   late final StreamSubscription<HttpRequest> _subscription;
   final _inFlight = <Future<void>>{};
   bool _closed = false;
+  final _stateWaiters = <Completer<void>>{};
+  final _transfers = LanSnapshotTransferCache();
   Uri get uri => Uri(scheme: 'http', host: '127.0.0.1', port: _server.port);
 
   static String _token() {
@@ -82,6 +89,13 @@ class CenterStoreHostBridge {
   }
 
   Future<void> _respond(HttpRequest request) async {
+    if (!_closed &&
+        request.connectionInfo?.remoteAddress.isLoopback == true &&
+        request.headers.value('X-Massar-Bridge-Secret') == secret &&
+        request.uri.path.startsWith('/mobile/')) {
+      await mobileHomework.respond(request);
+      return;
+    }
     var status = HttpStatus.ok;
     Map<String, dynamic> result;
     try {
@@ -134,8 +148,24 @@ class CenterStoreHostBridge {
         if (session == null) {
           status = HttpStatus.unauthorized;
           result = {'message': 'جلسة الموظف انتهت. سجّل الدخول من جديد.'};
+        } else if (request.uri.path.startsWith('/api/state-chunk/') &&
+            request.method == 'GET') {
+          final parts = request.uri.pathSegments;
+          if (parts.length != 4 ||
+              !RegExp(r'^[0-9]{1,3}$').hasMatch(parts[3])) {
+            throw const FormatException('Invalid snapshot chunk');
+          }
+          result = _transfers.chunk(
+            parts[2],
+            int.parse(parts[3]),
+            SnapshotTransferIdentity(
+              deviceId,
+              request.headers.value('X-Massar-Session')!,
+            ),
+          );
         } else if (request.uri.path == '/api/state' &&
             request.method == 'GET') {
+          final revision = store.readRevision;
           result = await store.snapshotLan(
             session.staffId,
             knownStateVersion: request.headers.value('X-Massar-State-Version'),
@@ -143,6 +173,20 @@ class CenterStoreHostBridge {
             stateEncoding: LanStateEncoding.json,
             patchVersion: request.headers.value('X-Massar-State-Patch'),
           );
+          if (result['stateUnchanged'] == true &&
+              request.headers.value('X-Massar-State-Wait') == '1') {
+            await _waitForChange(revision);
+            result = await store.snapshotLan(
+              session.staffId,
+              knownStateVersion: request.headers.value(
+                'X-Massar-State-Version',
+              ),
+              authorize: () => identical(_session(request, deviceId), session),
+              stateEncoding: LanStateEncoding.json,
+              patchVersion: request.headers.value('X-Massar-State-Patch'),
+            );
+          }
+          result['stateWatch'] = true;
         } else if (request.uri.path == '/api/support-upload' &&
             request.method == 'POST') {
           await _body(request);
@@ -194,7 +238,28 @@ class CenterStoreHostBridge {
       request.response.statusCode = status;
       request.response.headers.contentType = ContentType.json;
       request.response.headers.set('Cache-Control', 'no-store');
-      request.response.write(_encodeResponse(result));
+      final trace = PerformanceTrace('lan.host_response', budgetMs: 100);
+      try {
+        var encoded = _encodeResponse(result);
+        final staffSession =
+            result['staffSession'] as String? ??
+            request.headers.value('X-Massar-Session');
+        final deviceId = request.headers.value('X-Massar-Device-ID');
+        if (status == HttpStatus.ok &&
+            staffSession != null &&
+            deviceId != null &&
+            request.headers.value('X-Massar-State-Chunks') == '1' &&
+            (result.containsKey('state') || result.containsKey('stateDelta'))) {
+          encoded = await _transfers.envelope(
+            encoded,
+            SnapshotTransferIdentity(deviceId, staffSession),
+          );
+        }
+        trace.stage('encode');
+        request.response.write(encoded);
+      } finally {
+        trace.finish();
+      }
       await request.response.close();
     } catch (error, stack) {
       reportProblem(error, stack, operation: 'lan.host_response');
@@ -208,12 +273,37 @@ class CenterStoreHostBridge {
         return '${jsonEncode(entry.key)}:$encoded';
       }).join(',')}}';
 
+  Future<void> _waitForChange(Object revision) async {
+    final waiting = Completer<void>();
+    void changed() {
+      if (!waiting.isCompleted) waiting.complete();
+    }
+
+    _stateWaiters.add(waiting);
+    store.addListener(changed);
+    try {
+      if (!identical(store.readRevision, revision) || _closed) return;
+      await waiting.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {},
+      );
+    } finally {
+      store.removeListener(changed);
+      _stateWaiters.remove(waiting);
+    }
+  }
+
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    for (final waiting in _stateWaiters) {
+      if (!waiting.isCompleted) waiting.complete();
+    }
     await _server.close(force: true);
     await Future.wait(_inFlight.toList());
     await _subscription.cancel();
+    mobileHomework.dispose();
     _sessions.clear();
+    _transfers.clear();
   }
 }

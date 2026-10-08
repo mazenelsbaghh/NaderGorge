@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -135,9 +136,17 @@ void main() {
     store.addListener(listener);
     try {
       await gesture();
-      await changed.future.timeout(const Duration(seconds: 5));
+      await waitForUiCondition(
+        tester,
+        () =>
+            changed.isCompleted &&
+            find.byType(Dialog).evaluate().isEmpty &&
+            find.byType(LinearProgressIndicator).evaluate().isEmpty &&
+            find.byType(CircularProgressIndicator).evaluate().isEmpty,
+        reason: 'The confirmed correction persists and its dialog closes.',
+      );
       await Future<void>(() {});
-      await acknowledgeNotice(tester);
+      await tester.pumpAndSettle();
     } finally {
       store.removeListener(listener);
     }
@@ -226,7 +235,10 @@ void main() {
         final failure = failedAction();
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'تأكيد التصحيح'));
-        await acknowledgeNotice(tester, message: 'اختر وسيلة دفع مختلفة وصحيحة.');
+        await acknowledgeNotice(
+          tester,
+          message: 'اختر وسيلة دفع مختلفة وصحيحة.',
+        );
         await failure;
         await tester.pumpAndSettle();
         expect(store.corrections, isEmpty);
@@ -339,15 +351,14 @@ void main() {
         expect(store.payments, hasLength(1));
         await store.signIn('مدير السنتر', 'local-password-2026');
         for (final width in [1440.0, 1280.0]) {
+          await tester.pumpWidget(const SizedBox.shrink());
           await open(
             tester,
             ManagementWorkspace(store: store, onOpenAttendance: () {}),
           );
           await tester.binding.setSurfaceSize(Size(width, 900));
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('التصحيح والاسترداد'));
-          await tester.tap(find.text('التصحيح والاسترداد'));
-          await tester.pumpAndSettle();
+          await navigateManagementPage(tester, 'التصحيح والاسترداد');
           await lookup(tester, student.code);
           await select(
             tester,
@@ -356,6 +367,8 @@ void main() {
           );
           await chooseAction(tester, 'إلغاء حضور مسجل بالخطأ');
           final action = find.byKey(const Key('apply-correction'));
+          await tester.ensureVisible(action);
+          await tester.pumpAndSettle();
           expect(action.hitTestable(), findsOneWidget);
           expect(tester.getRect(action).bottom, lessThanOrEqualTo(900));
           expect(find.text(student.name), findsOneWidget);
@@ -452,14 +465,8 @@ void main() {
         );
         final original = store.closings.single;
         await open(tester, ClosingsPage(store: store));
-        expect(
-          tester
-              .widget<TextFormField>(
-                find.byKey(const Key('closing-actual-cash')),
-              )
-              .enabled,
-          isFalse,
-        );
+        expect(find.byKey(const Key('closing-actual-cash')), findsNothing);
+        expect(find.text('النقدية المحفوظة في التقفيلة'), findsOneWidget);
         final reopen = find.byKey(const Key('reopen-financial-closing'));
         await tester.ensureVisible(reopen);
         await tester.tap(reopen);
@@ -577,7 +584,19 @@ void main() {
     'single-entry correction previews and purchases the selected three-session independent price',
     (tester) async {
       await tester.runAsync(() async {
-        await store.saveGroup(group.copyWith(threeSessionPrice: 26000));
+        await store.saveGroup(
+          group.copyWith(
+            threeSessionPrice: 26000,
+            monthPlans: [
+              const GroupMonthPlan(
+                id: 'three-session-month',
+                name: 'شهر ثلاث حصص',
+                sessions: 3,
+                price: 26000,
+              ),
+            ],
+          ),
+        );
         await store.collectAndAttend(
           EntryRequest(
             studentId: student.id,
@@ -596,13 +615,13 @@ void main() {
         await chooseAction(tester, 'تغيير طريقة دخول الحصة');
         await chooseAction(
           tester,
-          'دخول بالباقة',
+          'دخول بالشهر / رصيد سابق',
           field: 'طريقة الدخول الصحيحة',
         );
         await chooseAction(
           tester,
-          '٣ حصص',
-          field: 'عدد حصص الباقة عند شراء رصيد جديد',
+          'شهر ثلاث حصص — 3 حصص — ${money(19500)}',
+          field: 'الشهر عند شراء رصيد جديد',
         );
         final reason = find.byKey(const Key('correction-reason'));
         await tester.ensureVisible(reason);
@@ -610,7 +629,7 @@ void main() {
         await tester.tap(find.byKey(const Key('apply-correction')));
         await tester.pumpAndSettle();
         expect(
-          find.textContaining('باقة 3 حصص بقيمة ${money(19500)}'),
+          find.textContaining('شهر ثلاث حصص — 3 حصص بقيمة ${money(19500)}'),
           findsWidgets,
         );
         await mutate(

@@ -45,12 +45,14 @@ void main() {
     ScriptedCloudHttp network, {
     bool clientOnly = false,
     Future<Map<String, dynamic>> Function()? snapshot,
+    Future<String> Function()? snapshotRevision,
     Future<String> Function()? diagnostics,
   }) {
     final controller = CloudSupportController(
       directory: sandbox,
       clientOnly: clientOnly,
       snapshot: snapshot ?? () async => {'students': [], 'synthetic': 1},
+      snapshotRevision: snapshotRevision,
       diagnostics: diagnostics ?? () async => '{"kind":"session"}\n',
       httpClientFactory: network.createClient,
     );
@@ -60,6 +62,49 @@ void main() {
 
   Future<void> configure(CloudSupportController controller) =>
       controller.configure(_origin, _configuration.centerId, _deviceToken);
+
+  test(
+    'compressed retry sends the original persisted snapshot and identity',
+    () async {
+      var reject = true;
+      final network = ScriptedCloudHttp(
+        (request) => reject
+            ? CloudHttpReply.json(503, {'error': 'synthetic unavailable'})
+            : CloudHttpReply.json(201, _ack(request)),
+      );
+      var current = 1;
+      final controller = create(
+        network,
+        snapshot: () async => {
+          'students': List.generate(
+            1000,
+            (i) => {
+              'code': i,
+              'value': current,
+              'padding': 'synthetic repeated snapshot',
+            },
+          ),
+        },
+      );
+      await configure(controller);
+      await expectLater(controller.syncNow(), throwsA(isA<CenterException>()));
+      final first = network.requests.single;
+      expect(first.headers.value(HttpHeaders.contentEncodingHeader), 'gzip');
+      expect(first.contentLength, first.bytes.length);
+      expect(first.bytes.length, lessThan(utf8.encode(first.body).length ~/ 4));
+      final persisted = await CloudSupportSettings(sandbox).readPending();
+      expect(persisted!.body, first.body);
+      current = 2;
+      reject = false;
+      await controller.syncNow();
+      expect(network.requests.last.body, persisted.body);
+      expect(
+        jsonDecode(network.requests.last.body)['uploadId'],
+        persisted.uploadId,
+      );
+      expect(controller.pending, isFalse);
+    },
+  );
 
   test(
     'automatic upload coalesces unchanged snapshots, persists digest and uploads later edits',
@@ -101,6 +146,48 @@ void main() {
       );
     },
   );
+  test(
+    'successful support timings do not trigger an automatic upload loop',
+    () async {
+      var diagnostics = '{"kind":"session"}\n';
+      final network = ScriptedCloudHttp(
+        (request) => CloudHttpReply.json(201, _ack(request)),
+      );
+      final controller = create(
+        network,
+        clientOnly: true,
+        diagnostics: () async => diagnostics,
+      );
+      await configure(controller);
+      await controller.syncNow(automatic: true);
+      for (final operation in [
+        'cloud.upload',
+        'cloud.transfer',
+        'cloud.snapshot',
+      ]) {
+        final event = jsonEncode({
+          'kind': 'performance',
+          'operation': operation,
+          'outcome': 'completed',
+          'durationUs': 1500000,
+        });
+        diagnostics += '$event\n';
+        await controller.syncNow(automatic: true);
+      }
+      expect(network.requests, hasLength(1));
+      await controller.syncNow();
+      expect(network.requests, hasLength(2));
+      expect(
+        jsonDecode(network.requests.last.body)['diagnostics'],
+        diagnostics,
+      );
+      diagnostics +=
+          '{"kind":"performance","operation":"cloud.transfer","outcome":"failed","durationUs":120000000}\n';
+      await controller.syncNow(automatic: true);
+      expect(network.requests, hasLength(3));
+    },
+  );
+
   test('automatic secondary upload never captures database', () async {
     final network = ScriptedCloudHttp(
       (request) => CloudHttpReply.json(201, _ack(request)),
@@ -109,6 +196,7 @@ void main() {
       network,
       clientOnly: true,
       snapshot: () async => throw StateError('database accessed'),
+      snapshotRevision: () async => throw StateError('host revision accessed'),
     );
     await configure(client);
     await client.syncNow(automatic: true);
@@ -116,6 +204,234 @@ void main() {
     expect(network.requests, hasLength(1));
     expect(jsonDecode(network.requests.single.body)['data'], isNull);
   });
+
+  test(
+    'unchanged automatic checks avoid captures but content edits and manual uploads remain fresh',
+    () async {
+      var captures = 0, revision = 1, exportNumber = 0;
+      var diagnosticEvents = '{"kind":"session"}\n';
+      final network = ScriptedCloudHttp(
+        (request) => CloudHttpReply.json(201, _ack(request)),
+      );
+      final controller = create(
+        network,
+        snapshot: () async {
+          captures++;
+          return {
+            'data': {'revision': revision},
+          };
+        },
+        snapshotRevision: () async => '$revision',
+        diagnostics: () async =>
+            '{"kind":"export","number":${exportNumber++}}\n$diagnosticEvents',
+      );
+      await configure(controller);
+      await controller.syncNow(automatic: true);
+      await controller.syncNow(automatic: true);
+      expect(captures, 1);
+      expect(network.requests, hasLength(1));
+      diagnosticEvents += '{"kind":"problem","operation":"synthetic.change"}\n';
+      await controller.syncNow(automatic: true);
+      expect(captures, 2);
+      expect(
+        jsonDecode(network.requests.last.body)['diagnostics'],
+        contains('synthetic.change'),
+      );
+      revision++;
+      await controller.syncNow(automatic: true);
+      expect(captures, 3);
+      expect(
+        jsonDecode(network.requests.last.body)['data']['data']['revision'],
+        2,
+      );
+      await controller.syncNow();
+      expect(captures, 4);
+      expect(network.requests, hasLength(4));
+      final ids = network.requests
+          .map((request) => jsonDecode(request.body)['uploadId'])
+          .toSet();
+      expect(ids, hasLength(4));
+    },
+  );
+
+  test(
+    'changes during snapshot capture cannot mark a newer revision as uploaded',
+    () async {
+      var revision = 1, captures = 0;
+      final network = ScriptedCloudHttp(
+        (request) => CloudHttpReply.json(201, _ack(request)),
+      );
+      final controller = create(
+        network,
+        snapshotRevision: () async => '$revision',
+        snapshot: () async {
+          final captured = revision;
+          if (captures++ == 0) revision++;
+          return {
+            'data': {'revision': captured},
+          };
+        },
+      );
+      await configure(controller);
+      await controller.syncNow(automatic: true);
+      await controller.syncNow(automatic: true);
+      await controller.syncNow(automatic: true);
+      expect(captures, 2);
+      expect(
+        network.requests.map(
+          (request) => jsonDecode(request.body)['data']['data']['revision'],
+        ),
+        [1, 2],
+      );
+    },
+  );
+
+  test(
+    'pending acknowledgment retains its original revision and does not hide later edits',
+    () async {
+      var revision = 1, captures = 0, offline = true;
+      var holdReply = true;
+      final sending = Completer<CloudHttpRequest>();
+      final reply = Completer<CloudHttpReply>();
+      final network = ScriptedCloudHttp((request) {
+        if (offline) throw const SocketException('synthetic offline');
+        if (holdReply) {
+          holdReply = false;
+          sending.complete(request);
+          return reply.future;
+        }
+        return CloudHttpReply.json(201, _ack(request));
+      });
+      final controller = create(
+        network,
+        snapshotRevision: () async => '$revision',
+        snapshot: () async {
+          captures++;
+          return {
+            'data': {'revision': revision},
+          };
+        },
+      );
+      await configure(controller);
+      await expectLater(
+        controller.syncNow(automatic: true),
+        throwsA(isA<CenterException>()),
+      );
+      revision++;
+      offline = false;
+      final automatic = controller.syncNow(automatic: true);
+      final request = await sending.future;
+      final manual = controller.syncNow();
+      reply.complete(CloudHttpReply.json(201, _ack(request)));
+      await Future.wait([automatic, manual]);
+      expect(captures, 1);
+      expect(network.requests, hasLength(2));
+      expect(network.requests[1].body, network.requests[0].body);
+      await controller.syncNow(automatic: true);
+      expect(captures, 2);
+      expect(
+        jsonDecode(network.requests.last.body)['data']['data']['revision'],
+        2,
+      );
+    },
+  );
+
+  test(
+    'restart and configuration changes recheck capture before establishing a new fast observation',
+    () async {
+      var captures = 0, sourceRevision = 1;
+      final network = ScriptedCloudHttp(
+        (request) => CloudHttpReply.json(201, _ack(request)),
+      );
+      CloudSupportController controller() => create(
+        network,
+        snapshotRevision: () async => 'source-$sourceRevision',
+        snapshot: () async {
+          captures++;
+          return {
+            'data': {'revision': 1},
+          };
+        },
+      );
+      final first = controller();
+      await configure(first);
+      await first.syncNow(automatic: true);
+      await first.close();
+      final restored = controller();
+      await restored.syncNow(automatic: true);
+      await restored.syncNow(automatic: true);
+      expect(captures, 2);
+      expect(network.requests, hasLength(1));
+      // Restoring equivalent data still changes the durable revision. Confirm
+      // the full fingerprint once before allowing the new token to skip work.
+      sourceRevision++;
+      await restored.syncNow(automatic: true);
+      await restored.syncNow(automatic: true);
+      expect(captures, 3);
+      expect(network.requests, hasLength(1));
+      await restored.configure(
+        _origin,
+        _configuration.centerId,
+        'replacement-device-token-1234567890',
+      );
+      await restored.syncNow(automatic: true);
+      await restored.syncNow(automatic: true);
+      expect(captures, 4);
+      expect(network.requests, hasLength(1));
+      await restored.configure(_origin, 'other-synthetic-center', _deviceToken);
+      await restored.syncNow(automatic: true);
+      expect(captures, 5);
+      expect(network.requests, hasLength(2));
+      expect(
+        jsonDecode(network.requests.last.body)['centerId'],
+        'other-synthetic-center',
+      );
+    },
+  );
+
+  test(
+    'manual request during an automatic unchanged check still captures and uploads',
+    () async {
+      var captures = 0;
+      final checking = Completer<void>(), release = Completer<void>();
+      var holdDiagnostics = false;
+      final network = ScriptedCloudHttp(
+        (request) => CloudHttpReply.json(201, _ack(request)),
+      );
+      final controller = create(
+        network,
+        snapshotRevision: () async => 'source-1',
+        snapshot: () async {
+          captures++;
+          return {
+            'data': {'revision': 1},
+          };
+        },
+        diagnostics: () async {
+          if (holdDiagnostics) {
+            holdDiagnostics = false;
+            checking.complete();
+            await release.future;
+          }
+          return '{"kind":"session"}\n';
+        },
+      );
+      await configure(controller);
+      await controller.syncNow(automatic: true);
+      holdDiagnostics = true;
+      final automatic = controller.syncNow(automatic: true);
+      await checking.future;
+      final manual = controller.syncNow();
+      release.complete();
+      await Future.wait([automatic, manual]);
+      expect(captures, 2);
+      expect(network.requests, hasLength(2));
+      expect(
+        jsonDecode(network.requests[0].body)['uploadId'],
+        isNot(jsonDecode(network.requests[1].body)['uploadId']),
+      );
+    },
+  );
 
   test(
     'automatic capture includes receipt-only and diagnostic-only changes',
@@ -236,6 +552,8 @@ void main() {
       );
       final restored = create(
         online,
+        snapshotRevision: () async =>
+            throw StateError('pending retry must not read a new revision'),
         snapshot: () async {
           captures++;
           throw StateError('durable pending must not recapture');

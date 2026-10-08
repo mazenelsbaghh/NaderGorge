@@ -8,7 +8,7 @@ import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/management_workspace.dart';
 import 'package:massar_center/shared/theme.dart';
 import 'package:massar_center/shared/formatters.dart';
-import '../helpers/notice_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -47,26 +47,27 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> commitAction(
-    WidgetTester tester,
-    Finder action, {
-    String message = 'حُفظت البيانات بنجاح.',
-  }) async {
+  Future<void> commitAction(WidgetTester tester, Finder action) async {
+    final auditCount = store.audit.length;
     await tester.ensureVisible(action);
     await tester.tap(action);
-    await acknowledgeNotice(tester, message: message);
-    for (var attempt = 0; attempt < 40; attempt++) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      await tester.pumpAndSettle(
-        const Duration(milliseconds: 50),
-        EnginePhase.sendSemanticsUpdate,
-        const Duration(seconds: 5),
-      );
-      if (find.byType(AlertDialog).evaluate().isEmpty) return;
-    }
-    fail(
-      'The saved dialog did not close: ${find.byType(Text).evaluate().map((element) => (element.widget as Text).data).join(' | ')}',
+    await waitForUiCondition(
+      tester,
+      () =>
+          store.audit.length > auditCount &&
+          find.byType(Dialog).evaluate().isEmpty &&
+          find.byType(LinearProgressIndicator).evaluate().isEmpty &&
+          find.byType(CircularProgressIndicator).evaluate().isEmpty,
+      reason: 'The UI operation must publish its durable store mutation.',
     );
+  }
+
+  Future<void> settleDialogFrames(WidgetTester tester) async {
+    // Renewing remains busy while the confirmation route is open.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   }
 
   Future<void> select(WidgetTester tester, String label, String option) async {
@@ -123,7 +124,29 @@ void main() {
             find.widgetWithText(TextFormField, 'الاسم'),
             entry.$2,
           );
-          await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
+          await commitAction(
+            tester,
+            find.widgetWithText(FilledButton, switch (entry.$1) {
+              'المواد' => 'إضافة مادة',
+              'السناتر' => 'إضافة سنتر',
+              _ => 'إضافة صف دراسي',
+            }),
+          );
+        }
+        final months = <StudyMonth>[];
+        for (final count in [2, 3, 4]) {
+          months.add(
+            await store.saveStudyMonth(
+              StudyMonth(
+                name: 'شهر $count حصص',
+                price: 21000,
+                lessons: [
+                  for (var number = 1; number <= count; number++)
+                    PreparedLesson(number: number),
+                ],
+              ),
+            ),
+          );
         }
         await tester.tap(find.widgetWithText(ListTile, 'المجموعات'));
         await tester.pumpAndSettle();
@@ -148,23 +171,33 @@ void main() {
           find.widgetWithText(TextFormField, 'سعر الحصة بالجنيه'),
           '100.25',
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'سعر باقة حصتين بالجنيه'),
-          '١٧٥٫٢٥',
+        for (final (index, price) in [
+          (0, '١٧٥٫٢٥'),
+          (1, '280.10'),
+          (2, '390.50'),
+        ]) {
+          await tester.enterText(
+            find.byKey(ValueKey('group-month-price-${months[index].id}')),
+            price,
+          );
+        }
+        await commitAction(
+          tester,
+          find.widgetWithText(FilledButton, 'إضافة مجموعة'),
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'سعر باقة ٣ حصص بالجنيه'),
-          '280.10',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'سعر باقة ٤ حصص بالجنيه'),
-          '390.50',
-        );
-        await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
         expect(store.groups.single.sessionPrice, 10025);
-        expect(store.groups.single.packagePrice, 39050);
-        expect(store.groups.single.twoSessionPrice, 17525);
-        expect(store.groups.single.threeSessionPrice, 28010);
+        expect(store.groups.single.monthPlans.map((p) => p.price), [
+          21000,
+          17525,
+          28010,
+          39050,
+        ]);
+        expect(store.groups.single.monthPlans.map((p) => p.sessions), [
+          4,
+          2,
+          3,
+          4,
+        ]);
         expect(
           store.catalogName(store.groups.single.gradeId),
           'الثالث الثانوي',
@@ -176,9 +209,18 @@ void main() {
         await store.close();
         store = await CenterStore.open(directory: directory.path);
         await store.signIn('مدير الاختبار', 'test-password-2026');
-        expect(store.groups.single.twoSessionPrice, 17525);
-        expect(store.groups.single.threeSessionPrice, 28010);
-        expect(store.groups.single.packagePrice, 39050);
+        expect(store.groups.single.monthPlans.map((p) => p.price), [
+          21000,
+          17525,
+          28010,
+          39050,
+        ]);
+        expect(store.groups.single.monthPlans.map((p) => p.sessions), [
+          4,
+          2,
+          3,
+          4,
+        ]);
       });
     },
   );
@@ -189,7 +231,22 @@ void main() {
       await tester.runAsync(() async {
         final group = await seedGroup();
         await store.saveGroup(
-          group.copyWith(twoSessionPrice: 15725, threeSessionPrice: 23999),
+          group.copyWith(
+            monthPlans: [
+              const GroupMonthPlan(
+                id: 'two',
+                name: 'شهر حصتين',
+                sessions: 2,
+                price: 15725,
+              ),
+              const GroupMonthPlan(
+                id: 'three',
+                name: 'شهر ثلاث حصص',
+                sessions: 3,
+                price: 23999,
+              ),
+            ],
+          ),
         );
         await store.saveStudent(
           Student(
@@ -202,35 +259,30 @@ void main() {
         );
         await openWorkspace(tester);
         await tester.tap(find.widgetWithText(ListTile, 'الطلبة'));
-        await tester.pumpAndSettle();
+        await settleDialogFrames(tester);
         for (final (count, label, amount, quote, balance) in [
-          (2, 'حصتان', 15725, 11794, 2),
-          (3, '٣ حصص', 23999, 17999, 5),
+          (2, 'شهر حصتين · 2 حصص', 15725, 11794, 2),
+          (3, 'شهر ثلاث حصص · 3 حصص', 23999, 17999, 5),
         ]) {
-          await tester.ensureVisible(find.byTooltip('تجديد الباقة'));
-          await tester.tap(find.byTooltip('تجديد الباقة'));
-          await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<DropdownButtonFormField<int>>(
-                  find.byKey(const Key('renew-package-sessions')),
-                )
-                .initialValue,
-            4,
+          await tester.ensureVisible(find.byTooltip('تجديد الشهر'));
+          await tester.ensureVisible(find.byTooltip('تجديد الشهر'));
+          await settleDialogFrames(tester);
+          await tester.tap(find.byTooltip('تجديد الشهر'));
+          await settleDialogFrames(tester);
+          final monthPicker = find.widgetWithText(
+            DropdownButtonFormField<int>,
+            'الشهر',
           );
-          await tester.tap(find.byKey(const Key('renew-package-sessions')));
-          await tester.pumpAndSettle();
+          await tester.tap(monthPicker);
+          await settleDialogFrames(tester);
           await tester.tap(find.text(label).last);
-          await tester.pumpAndSettle();
-          expect(
-            find.text('المطلوب بعد الخصم: ${money(quote)}'),
-            findsOneWidget,
+          await settleDialogFrames(tester);
+          expect(find.text('المطلوب: ${money(quote)}'), findsOneWidget);
+          expect(find.text('المدفوع الآن: ${money(quote)}'), findsOneWidget);
+          await commitAction(
+            tester,
+            find.byKey(const Key('confirm-paid-amount')),
           );
-          expect(
-            find.text('الرصيد بعد التجديد: $balance حصص.'),
-            findsOneWidget,
-          );
-          await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
           final package = store.packages.last;
           final payment = store.payments.last;
           expect(package.totalSessions, count);
@@ -249,10 +301,22 @@ void main() {
   );
 
   testWidgets(
-    'unconfigured short package is blocked while explicit zero price is available',
+    'renewal lists only configured months and permits an explicit zero-price month',
     (tester) async {
       await tester.runAsync(() async {
         final group = await seedGroup();
+        await store.saveGroup(
+          group.copyWith(
+            monthPlans: [
+              const GroupMonthPlan(
+                id: 'four',
+                name: 'شهر أربع حصص',
+                sessions: 4,
+                price: 40000,
+              ),
+            ],
+          ),
+        );
         await store.saveStudent(
           Student(
             name: 'مينا',
@@ -262,69 +326,68 @@ void main() {
           ),
         );
         await openWorkspace(tester);
-        await tester.tap(find.widgetWithText(ListTile, 'الطلبة'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.byTooltip('تجديد الباقة'));
-        await tester.tap(find.byTooltip('تجديد الباقة'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('renew-package-sessions')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('حصتان').last);
-        await tester.pumpAndSettle();
-        expect(
-          find.text(
-            'سعر الباقة المختارة غير محدد لهذه المجموعة. اختر باقة لها سعر أو حدد سعرها من المجموعات.',
-          ),
-          findsOneWidget,
+        await navigateManagementPage(tester, 'الطلبة');
+        await tester.ensureVisible(find.byTooltip('تجديد الشهر'));
+        await settleDialogFrames(tester);
+        await tester.tap(find.byTooltip('تجديد الشهر'));
+        await settleDialogFrames(tester);
+        final monthPicker = find.widgetWithText(
+          DropdownButtonFormField<int>,
+          'الشهر',
         );
-        expect(find.textContaining('المطلوب بعد الخصم:'), findsNothing);
-        await tester.ensureVisible(find.widgetWithText(FilledButton, 'حفظ'));
-        await tester.tap(find.widgetWithText(FilledButton, 'حفظ'));
-        await tester.pumpAndSettle();
         expect(
-          find.text('حدد سعر هذه الباقة في المجموعة قبل التجديد.'),
-          findsOneWidget,
+          tester
+              .widget<DropdownButton<int>>(
+                find.descendant(
+                  of: monthPicker,
+                  matching: find.byType(DropdownButton<int>),
+                ),
+              )
+              .items,
+          hasLength(2),
         );
-        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.tap(monthPicker);
+        await settleDialogFrames(tester);
+        await tester.tap(find.text('شهر أربع حصص · 4 حصص').last);
+        await settleDialogFrames(tester);
+        expect(find.text('المطلوب: ${money(40000)}'), findsOneWidget);
+        await tester.tap(find.text('إلغاء · Esc'));
+        await settleDialogFrames(tester);
         expect(store.packages, isEmpty);
         expect(store.payments, isEmpty);
-        await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(ListTile, 'المجموعات'));
-        await tester.pumpAndSettle();
-        expect(find.text('—'), findsNWidgets(2));
-        await tester.ensureVisible(find.byTooltip('تعديل المجموعة'));
-        await tester.tap(find.byTooltip('تعديل المجموعة'));
-        await tester.pumpAndSettle();
-        expect(
-          find.widgetWithText(TextFormField, 'سعة المجموعة'),
-          findsNothing,
+        await store.saveGroup(
+          store.groups.single.copyWith(
+            monthPlans: [
+              ...store.groups.single.monthPlans,
+              const GroupMonthPlan(
+                id: 'free-two',
+                name: 'شهر مجاني',
+                sessions: 2,
+                price: 0,
+              ),
+            ],
+          ),
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'المواعيد'),
-          'الأحد ٥ مساءً',
+        await tester.ensureVisible(find.byTooltip('تجديد الشهر'));
+        await settleDialogFrames(tester);
+        await tester.tap(find.byTooltip('تجديد الشهر'));
+        await settleDialogFrames(tester);
+        await tester.tap(
+          find.widgetWithText(DropdownButtonFormField<int>, 'الشهر'),
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'سعر باقة حصتين بالجنيه'),
-          '٠',
+        await settleDialogFrames(tester);
+        await tester.tap(find.text('شهر مجاني · 2 حصص').last);
+        await settleDialogFrames(tester);
+        expect(find.text('المطلوب: ${money(0)}'), findsOneWidget);
+        await commitAction(
+          tester,
+          find.byKey(const Key('confirm-paid-amount')),
         );
-        await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
-        expect(store.groups.single.twoSessionPrice, 0);
-        expect(store.groups.single.threeSessionPrice, isNull);
-        await tester.tap(find.widgetWithText(ListTile, 'الطلبة'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.byTooltip('تجديد الباقة'));
-        await tester.tap(find.byTooltip('تجديد الباقة'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('renew-package-sessions')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('حصتان').last);
-        await tester.pumpAndSettle();
-        expect(find.text('المطلوب بعد الخصم: ${money(0)}'), findsOneWidget);
-        await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
         expect(store.packages.single.totalSessions, 2);
         expect(store.payments.single.baseAmount, 0);
+        expect(store.payments.single.netAmount, 0);
         expect(store.remainingFor(store.students.single.id, group.id), 2);
+        expect(store.attendances, isEmpty);
         expect(tester.takeException(), isNull);
       });
     },
@@ -349,13 +412,16 @@ void main() {
             groupId: group.id,
           ),
         );
-        await store.saveSession(
-          LessonSession(
-            groupId: group.id,
-            number: 1,
-            startsAt: DateTime.now().add(const Duration(minutes: 1)),
-            createdAt: DateTime.now(),
+        final month = await store.saveStudyMonth(
+          StudyMonth(
+            name: 'شهر الإغلاق',
+            price: 40000,
+            lessons: [for (var n = 1; n <= 4; n++) PreparedLesson(number: n)],
           ),
+        );
+        await store.startPreparedLesson(
+          groupId: group.id,
+          preparedLessonId: month.lessons.first.id,
         );
         await openWorkspace(tester);
         await tester.ensureVisible(find.byTooltip('إغلاق وتسجيل الغياب'));
@@ -371,7 +437,6 @@ void main() {
         await commitAction(
           tester,
           find.widgetWithText(FilledButton, 'إغلاق وتسجيل الغياب'),
-          message: 'أُغلقت الحصة وسُجل الغياب.',
         );
         expect(store.attendances.single.status, AttendanceStatus.absent);
         expect(store.remainingFor(store.students.single.id, group.id), 3);
@@ -402,6 +467,13 @@ void main() {
             createdAt: DateTime.now(),
           ),
         );
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: store.students.single.id,
+            sessionId: store.sessions.single.id,
+            mode: EntryMode.single,
+          ),
+        );
         await store.saveAcademic(
           AcademicRecord(
             studentId: store.students.single.id,
@@ -410,18 +482,23 @@ void main() {
           ),
         );
         await openWorkspace(tester);
-        await tester.tap(find.widgetWithText(ListTile, 'الامتحانات والواجب'));
-        await tester.pumpAndSettle();
+        await navigateManagementPage(tester, 'رصد الامتحانات والواجبات');
+        await select(tester, 'الشهر المشترك', 'سجل الحصص السابق');
+        await select(
+          tester,
+          'المجموعة التي بدأت الحصة',
+          store.groupLabel(group.id),
+        );
         final sessionField = find.widgetWithText(
           DropdownButtonFormField<String>,
-          'اختر الحصة للرصد',
+          'الحصة القديمة للرصد',
         );
         await tester.tap(sessionField);
         await tester.pumpAndSettle();
         await tester.tap(find.textContaining('حصة 1 —').last);
         await tester.pumpAndSettle();
         expect(find.text('لم تُرصد'), findsOneWidget);
-        await tester.tap(find.widgetWithText(TextButton, 'رصد'));
+        await tester.tap(find.text('رصد'));
         await tester.pumpAndSettle();
         await tester.enterText(
           find.widgetWithText(TextFormField, 'درجة الطالب'),
@@ -435,17 +512,23 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('كامل').last);
         await tester.pumpAndSettle();
-        await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
+        await commitAction(
+          tester,
+          find.widgetWithText(FilledButton, 'حفظ الرصد'),
+        );
         expect(store.academics.single.score, 0);
         expect(store.academics.single.homework, HomeworkStatus.complete);
         expect(find.text('0 / 10'), findsOneWidget);
-        await tester.tap(find.widgetWithText(TextButton, 'رصد'));
+        await tester.tap(find.text('رصد'));
         await tester.pumpAndSettle();
         await tester.tap(
           find.widgetWithText(CheckboxListTile, 'غائب عن الامتحان'),
         );
         await tester.pumpAndSettle();
-        await commitAction(tester, find.widgetWithText(FilledButton, 'حفظ'));
+        await commitAction(
+          tester,
+          find.widgetWithText(FilledButton, 'حفظ الرصد'),
+        );
         expect(store.academics.single.score, isNull);
         expect(store.academics.single.homework, HomeworkStatus.complete);
         expect(find.text('غائب عن الامتحان'), findsOneWidget);

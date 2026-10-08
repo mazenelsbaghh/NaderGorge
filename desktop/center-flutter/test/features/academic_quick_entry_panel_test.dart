@@ -11,13 +11,14 @@ import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/academic_quick_entry.dart';
 import 'package:massar_center/shared/theme.dart';
 
-import '../helpers/notice_helpers.dart';
+import '../helpers/academic_fixture.dart';
 
 void main() {
   late Directory directory;
   late CenterStore store;
   late Student first, second;
   late LessonSession session;
+  late List<Map<String, dynamic>> originalAttendance;
   late AcademicActivity exam, homework;
   late ValueNotifier<Student> selected;
   final callerFocus = FocusNode();
@@ -77,10 +78,17 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
-      session = store.sessions.single;
+      session = await prepareAcademicFixture(
+        store,
+        store.sessions.single,
+        store.students,
+      );
+      originalAttendance = store.attendances
+          .map((row) => row.toJson())
+          .toList();
       exam = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.exam,
           name: 'امتحان الحركة',
           maxScore: 20,
@@ -89,7 +97,7 @@ void main() {
       );
       homework = await store.saveAcademicActivity(
         AcademicActivity(
-          sessionId: session.id,
+          preparedLessonId: session.preparedLessonId,
           kind: AcademicActivityKind.homework,
           name: 'واجب الحركة',
           createdAt: DateTime.now(),
@@ -228,7 +236,10 @@ void main() {
   void expectNoFinance() {
     expect(store.payments, isEmpty);
     expect(store.cardPayments, isEmpty);
-    expect(store.attendances, isEmpty);
+    expect(
+      store.attendances.map((row) => row.toJson()).toList(),
+      originalAttendance,
+    );
     expect(store.packages, isEmpty);
   }
 
@@ -443,6 +454,10 @@ void main() {
       expect(details, 0);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
       await tester.pump();
+      expect(details, 0);
+      expect(find.text('تعديلات لم تُحفظ'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'خروج بدون حفظ'));
+      await tester.pumpAndSettle();
       expect(details, 1);
       expect(saved, 0);
       expect(record(first.id, exam.id).score, 7);
@@ -458,24 +473,13 @@ void main() {
   );
 
   testWidgets(
-    'permission error keeps quick grade for retry without success notice or financial changes',
+    'logout disables saving and keeps the grade for reauthenticated retry without financial changes',
     (tester) async {
       await open(tester, exam);
       await enterScore(tester, '١٧');
-      await tester.runAsync(() async {
-        await store.saveStaff(
-          name: 'الاستقبال',
-          password: 'cashier-password',
-          role: StaffRole.cashier,
-        );
-        store.signOut();
-        await store.signIn('الاستقبال', 'cashier-password');
-        await tester.tap(save);
-        await acknowledgeNotice(
-          tester,
-          message: 'ليس لديك صلاحية لهذا الإجراء.',
-        );
-      });
+      store.signOut();
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(score).controller!.text, '١٧');
       expect(record(first.id, exam.id).score, 7);

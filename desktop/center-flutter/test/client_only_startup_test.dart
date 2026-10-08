@@ -16,6 +16,7 @@ import 'package:massar_center/lan/lan_host_process.dart';
 import 'package:massar_center/lan/lan_settings.dart';
 import 'package:massar_center/lan/lan_transport.dart';
 import 'package:massar_center/main.dart';
+import 'helpers/synthetic_installer_assets.dart';
 
 class _TestHostProcess extends LanHostProcess {
   _TestHostProcess(String executable) : super(executablePath: executable);
@@ -376,6 +377,7 @@ void main() {
   test(
     'principal startup still installs and authenticates its permanent administrator in SQLite',
     () async {
+      installSyntheticInstallerAssets(owner);
       final path = '${directory.path}/principal';
       final store = await openInstalledCenter(directory: path, admin: owner);
       stores.add(store);

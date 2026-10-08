@@ -674,7 +674,7 @@ void main() {
         h.host.databasePath,
       );
       await database.execute(
-        "CREATE TRIGGER deny_lan_write BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'test write failure'); END",
+        "CREATE TRIGGER deny_lan_write BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'test write failure'); END",
       );
       try {
         await expectLater(
@@ -885,13 +885,11 @@ void main() {
   );
 
   test(
-    'cashier authorization applies on host even when host admin is logged in',
+    'cashier can edit discounts but cannot inherit the host admin staff permission',
     () async {
       final auditCount = h.host.audit.length;
-      await expectLater(
-        h.remote.saveStudentDiscount(studentId: h.student.id, percent: 100),
-        throwsA(isA<CenterException>()),
-      );
+      await h.remote.saveStudentDiscount(studentId: h.student.id, percent: 100);
+      expect(h.host.audit.last.staffId, h.remote.currentUser!.id);
       await expectLater(
         h.remote.saveStaff(
           name: 'intruder',
@@ -900,8 +898,8 @@ void main() {
         ),
         throwsA(isA<CenterException>()),
       );
-      expect(h.host.students.single.discountPercent, 0);
-      expect(h.host.audit, hasLength(auditCount));
+      expect(h.host.students.single.discountPercent, 100);
+      expect(h.host.audit, hasLength(auditCount + 1));
       expect(h.host.staff, hasLength(3));
       expect(
         await File(
@@ -941,7 +939,7 @@ void main() {
   );
 
   test(
-    'named exam homework and card actions reach authority without attendance',
+    'card actions preserve attendance independence and named academics require actual attendance',
     () async {
       await h.host.saveCardSettings(
         const CenterCardSettings(
@@ -952,21 +950,53 @@ void main() {
       await h.remote.refreshRemote();
       await h.remote.collectStudentCard(studentId: h.student.id);
       await h.remote.receiveStudentCard(h.student.id);
+      expect(h.host.attendances, isEmpty);
+      final month = await h.host.saveStudyMonth(
+        StudyMonth(
+          name: 'شهر الرصد',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      final lesson = await h.host.startPreparedLesson(
+        groupId: h.group.id,
+        preparedLessonId: month.lessons.single.id,
+      );
       h.remote.signOut();
       await h.remote.signIn('assistant', 'test-assistant-123');
       final exam = await h.remote.saveAcademicActivity(
         AcademicActivity(
-          sessionId: h.lesson.id,
+          preparedLessonId: lesson.preparedLessonId,
           kind: AcademicActivityKind.exam,
           name: 'الحركة',
           maxScore: 20,
           createdAt: DateTime.now(),
         ),
       );
+      await expectLater(
+        h.remote.saveAcademic(
+          AcademicRecord(
+            studentId: h.student.id,
+            sessionId: lesson.id,
+            activityId: exam.id,
+            score: 0,
+            maxScore: 20,
+            updatedAt: DateTime.now(),
+          ),
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      await h.host.recordAttendance(
+        EntryRequest(
+          studentId: h.student.id,
+          sessionId: lesson.id,
+          mode: EntryMode.single,
+        ),
+      );
+      await h.remote.refreshRemote();
       await h.remote.saveAcademic(
         AcademicRecord(
           studentId: h.student.id,
-          sessionId: h.lesson.id,
+          sessionId: lesson.id,
           activityId: exam.id,
           score: 0,
           maxScore: 20,
@@ -975,7 +1005,7 @@ void main() {
       );
       final homework = await h.remote.saveAcademicActivity(
         AcademicActivity(
-          sessionId: h.lesson.id,
+          preparedLessonId: lesson.preparedLessonId,
           kind: AcademicActivityKind.homework,
           name: 'الواجب الأول',
           createdAt: DateTime.now(),
@@ -984,7 +1014,7 @@ void main() {
       await h.remote.saveAcademic(
         AcademicRecord(
           studentId: h.student.id,
-          sessionId: h.lesson.id,
+          sessionId: lesson.id,
           activityId: homework.id,
           homework: HomeworkStatus.incomplete,
           updatedAt: DateTime.now(),
@@ -996,7 +1026,8 @@ void main() {
         contains(HomeworkStatus.incomplete),
       );
       expect(h.host.cardReceipts, hasLength(1));
-      expect(h.host.attendances, isEmpty);
+      expect(h.host.attendances, hasLength(1));
+      expect(h.host.payments, isEmpty);
     },
   );
 
@@ -1185,6 +1216,7 @@ void main() {
       await h.remote.checkPayment(
         studentId: h.student.id,
         sessionId: h.lesson.id,
+        expectedAmount: 6000,
       );
       await h.remote.closeSession(h.lesson.id);
       await h.remote.savePaymentReview(

@@ -10,10 +10,13 @@ import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/attendance/attendance_workspace.dart';
 import 'package:massar_center/features/management/closings_page.dart';
+import 'package:massar_center/features/management/student_profile_page.dart';
 import 'package:massar_center/shared/theme.dart';
 import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/notice_dialog.dart';
 import '../helpers/notice_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 
 void main() {
   late Directory directory;
@@ -56,6 +59,7 @@ void main() {
           packagePrice: 40000,
         ),
       );
+      await seedAttendanceMonths(store);
       group = store.groups.single;
       await store.saveStudent(
         Student(
@@ -77,6 +81,7 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
+      await store.startSession(store.sessions.single.id);
     }),
   );
 
@@ -92,6 +97,10 @@ void main() {
     bool dark = false,
     double width = 1440,
   }) async {
+    final selected = store.sessions.firstWhere(
+      (session) => session.status == SessionStatus.open,
+    );
+    await tester.runAsync(() => store.startSession(selected.id));
     await tester.binding.setSurfaceSize(Size(width, 900));
     await tester.runAsync(() async {
       final fonts = FontLoader('Tajawal')
@@ -111,7 +120,11 @@ void main() {
           theme: dark ? MassarTheme.dark : MassarTheme.light,
           home: Directionality(
             textDirection: TextDirection.rtl,
-            child: AttendanceWorkspace(store: store, onExit: () {}),
+            child: AttendanceWorkspace(
+              store: store,
+              initialSessionId: selected.id,
+              onExit: () {},
+            ),
           ),
         ),
       ),
@@ -119,11 +132,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> scan(WidgetTester tester, String code) async {
-    await tester.enterText(find.byKey(const Key('student-search')), code);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-  }
+  Future<void> scan(WidgetTester tester, String code) =>
+      previewAttendanceStudent(tester, code);
 
   Future<void> mutateThroughUi(
     WidgetTester tester,
@@ -139,17 +149,15 @@ void main() {
       store.addListener(changed);
       try {
         await gesture();
-        await persisted.future.timeout(const Duration(seconds: 5));
-        await Future<void>(() {});
-        await tester.pump(const Duration(milliseconds: 200));
-        expect(
-          find.descendant(
-            of: find.byKey(const Key('massar-notice-dialog')),
-            matching: find.text('تم بنجاح'),
-          ),
-          findsOneWidget,
+        await waitForUiCondition(
+          tester,
+          () =>
+              persisted.isCompleted &&
+              find.byType(CircularProgressIndicator).evaluate().isEmpty &&
+              find.byType(LinearProgressIndicator).evaluate().isEmpty,
+          reason: 'Attendance mutation finishes before account assertions',
         );
-        await acknowledgeNotice(tester, message: noticeMessage);
+        expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
       } finally {
         store.removeListener(changed);
       }
@@ -161,7 +169,7 @@ void main() {
     WidgetTester tester,
     LogicalKeyboardKey key,
   ) async {
-    await tester.runAsync(() => tester.sendKeyEvent(key));
+    await tester.runAsync(() => requestAttendanceConfirmation(tester, key));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('entry-confirmation-dialog')), findsOneWidget);
     expect(
@@ -531,34 +539,33 @@ void main() {
     LogicalKeyboardKey.numpadEnter,
   ]) {
     testWidgets(
-      'two physical ${enterKey.keyLabel} presses show the student then collect once; held Enter only shows',
+      'physical ${enterKey.keyLabel} and held repeats record attendance once without collecting money',
       (tester) async {
         await openWorkspace(tester);
         await tester.enterText(
           find.byKey(const Key('student-search')),
           student.code,
         );
-        await tester.sendKeyDownEvent(enterKey);
-        await tester.sendKeyRepeatEvent(enterKey);
-        await tester.sendKeyRepeatEvent(enterKey);
-        await tester.sendKeyUpEvent(enterKey);
-        await tester.pumpAndSettle();
-        expect(find.text('سجل ${student.name}'), findsOneWidget);
-        expect(store.attendances, isEmpty);
-        expect(store.payments, isEmpty);
-        expectCodeFocus(tester);
-        expect(find.textContaining('دفع ٧٥'), findsOneWidget);
         await mutateThroughUi(tester, () async {
           await tester.sendKeyDownEvent(enterKey);
           await tester.sendKeyRepeatEvent(enterKey);
+          await tester.sendKeyRepeatEvent(enterKey);
           await tester.sendKeyUpEvent(enterKey);
         });
-        expect(store.attendances, hasLength(1));
-        expect(store.payments.single.netAmount, 7500);
-        await tester.sendKeyEvent(enterKey);
-        await tester.testTextInput.receiveAction(TextInputAction.done);
+        expect(store.attendances.single.studentId, student.id);
+        expect(store.attendances.single.paymentPending, isTrue);
+        expect(store.payments, isEmpty);
+        expectCodeFocus(tester);
+        await tester.runAsync(() => tester.sendKeyEvent(enterKey));
+        await tester.runAsync(() => acknowledgeNotice(tester));
         await tester.pumpAndSettle();
-        expect(store.payments, hasLength(1));
+        expect(store.attendances, hasLength(1));
+        expect(store.payments, isEmpty);
+        await mutateThroughUi(
+          tester,
+          () => tester.sendKeyEvent(LogicalKeyboardKey.keyL),
+        );
+        expect(store.payments.single.netAmount, 7500);
         expect(store.attendances, hasLength(1));
         expectCodeFocus(tester);
       },
@@ -567,7 +574,7 @@ void main() {
 
   for (final entryCase in ['prepaid', 'free', 'extra']) {
     testWidgets(
-      'second submitted Enter registers $entryCase using its actual existing account rules',
+      'Enter registers $entryCase using paid coverage and requires L for new money',
       (tester) async {
         await tester.runAsync(() async {
           if (entryCase == 'prepaid') {
@@ -599,14 +606,16 @@ void main() {
           () => tester.testTextInput.receiveAction(TextInputAction.done),
         );
         expect(store.attendances, hasLength(1));
-        expect(
-          store.payments,
-          hasLength(initialPayments + (entryCase == 'extra' ? 1 : 0)),
-        );
+        expect(store.payments, hasLength(initialPayments));
         if (entryCase == 'prepaid') {
           expect(store.remainingFor(student.id, group.id), 3);
           expect(store.attendances.single.packageId, isNotNull);
         } else if (entryCase == 'extra') {
+          expect(store.attendances.single.paymentPending, isTrue);
+          await mutateThroughUi(
+            tester,
+            () => tester.sendKeyEvent(LogicalKeyboardKey.keyL),
+          );
           expect(store.payments.single.netAmount, 6000);
           expect(store.attendances.single.packageId, isNull);
         } else {
@@ -615,6 +624,8 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
         expect(store.attendances, hasLength(1));
+        await tester.runAsync(() => acknowledgeNotice(tester));
+        await tester.pumpAndSettle();
         expectCodeFocus(tester);
       },
     );
@@ -636,10 +647,30 @@ void main() {
           studentId: student.id,
           notes: 'ملاحظة الطالب للبحث',
         );
+        final current = store.sessions.single;
+        await store.saveSession(current.copyWith(number: 2));
+        await store.saveSession(
+          LessonSession(
+            groupId: group.id,
+            number: 1,
+            startsAt: DateTime.now().subtract(const Duration(days: 1)),
+            kind: SessionKind.free,
+            createdAt: DateTime.now(),
+          ),
+        );
+        final previous = store.sessions.last;
+        await store.startSession(previous.id);
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: previous.id,
+            mode: EntryMode.single,
+          ),
+        );
         await store.saveAcademic(
           AcademicRecord(
             studentId: student.id,
-            sessionId: store.sessions.single.id,
+            sessionId: previous.id,
             homework: HomeworkStatus.complete,
             score: 7,
             maxScore: 10,
@@ -647,35 +678,40 @@ void main() {
             updatedAt: DateTime.now(),
           ),
         );
+        await store.closeSession(previous.id);
         await store.renewPackage(
           PackageRequest(
             studentId: student.id,
             groupId: group.id,
-            sessionId: store.sessions.single.id,
+            sessionId: current.id,
           ),
         );
       });
       final originalPayments = store.payments.length;
+      final originalAttendanceIds = store.attendances
+          .map((record) => record.id)
+          .toList();
       await openWorkspace(tester, dark: true);
       await tester.tap(find.text('بحث عن طالب'));
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
-      await scan(tester, 'أحمد');
-      expect(store.attendances, isEmpty);
+      await tester.enterText(find.byKey(const Key('student-search')), 'أحمد');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        store.attendances.map((record) => record.id).toList(),
+        originalAttendanceIds,
+      );
       expect(store.payments, hasLength(originalPayments));
-      await tester.runAsync(
-        () =>
-            acknowledgeNotice(tester, message: 'اختار الطالب من نتائج البحث.'),
-      );
+      expect(find.byKey(const Key('student-lookup-choice')), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-      expect(find.text('اختار الطالب من نتائج البحث.'), findsOneWidget);
-      expect(store.attendances, isEmpty);
-      await tester.runAsync(
-        () =>
-            acknowledgeNotice(tester, message: 'اختار الطالب من نتائج البحث.'),
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byKey(const Key('student-lookup-choice')), findsOneWidget);
+      expect(
+        store.attendances.map((record) => record.id).toList(),
+        originalAttendanceIds,
       );
-      await tester.tap(find.widgetWithText(ListTile, student.name));
+      await tester.tap(find.byKey(ValueKey('student-lookup-${student.id}')));
       await tester.pumpAndSettle();
       expect(find.text('ملاحظة الطالب للبحث'), findsOneWidget);
       expect(find.text('7 / 10'), findsWidgets);
@@ -683,7 +719,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(
         tester
@@ -699,20 +735,12 @@ void main() {
             .onPressed,
         isNull,
       );
-      expect(
-        tester
-            .widget<OutlinedButton>(
-              find.ancestor(
-                of: find.textContaining('تحصيل باقة ٤ حصص جديدة'),
-                matching: find.byType(OutlinedButton),
-              ),
-            )
-            .onPressed,
-        isNull,
-      );
       expect(store.payments, hasLength(originalPayments));
-      expect(store.attendances, isEmpty);
-      expect(store.sessions.single.status, SessionStatus.open);
+      expect(
+        store.attendances.map((record) => record.id).toList(),
+        originalAttendanceIds,
+      );
+      expect(store.sessions.first.status, SessionStatus.open);
       expect(store.remainingFor(student.id, group.id), 4);
       await capture(tester, 'focus-student-lookup-dark');
       await tester.tap(find.text('التحضير'));
@@ -722,7 +750,7 @@ void main() {
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
       );
-      expect(store.attendances, hasLength(1));
+      expect(store.attendances, hasLength(originalAttendanceIds.length + 1));
       expect(store.remainingFor(student.id, group.id), 3);
       expect(store.payments, hasLength(originalPayments));
     },
@@ -738,19 +766,19 @@ void main() {
         'unknown',
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(store.attendances, isEmpty);
       expect(store.payments, isEmpty);
       await tester.runAsync(
         () => acknowledgeNotice(
           tester,
-          message: 'لم نجد الطالب. راجع الكود أو أضفه من الاختصار.',
+          message: 'لم نجد الطالب. راجع الكود أو الباركود أو أضفه من الاختصار.',
         ),
       );
       await tester.enterText(find.byKey(const Key('student-search')), '');
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.attendances, isEmpty);
       expect(store.payments, isEmpty);
@@ -775,7 +803,13 @@ void main() {
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
       );
       expect(store.attendances, hasLength(1));
-      expect(store.payments, hasLength(1));
+      expect(store.payments, isEmpty);
+      expect(store.attendances.single.paymentPending, isTrue);
+      await mutateThroughUi(
+        tester,
+        () => tester.sendKeyEvent(LogicalKeyboardKey.keyL),
+      );
+      expect(store.payments.single.netAmount, 7500);
     },
   );
 
@@ -787,10 +821,12 @@ void main() {
       await scan(tester, student.code);
       expectCodeFocus(tester);
       await tester.runAsync(() async {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
         await tester.sendKeyDownEvent(LogicalKeyboardKey.keyL);
         await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyL);
         await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyL);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.keyL);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
       });
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
@@ -807,7 +843,7 @@ void main() {
       expect(store.attendances, hasLength(1));
       expectCodeFocus(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.payments, hasLength(1));
       expect(
@@ -817,6 +853,9 @@ void main() {
             .text,
         isEmpty,
       );
+      await tester.runAsync(() => acknowledgeNotice(tester));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('الحصص والحضور'));
       await tester.tap(find.text('الحصص والحضور'));
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
@@ -824,13 +863,13 @@ void main() {
   );
 
   testWidgets(
-    'M buys four sessions, attends once and is safe against repeated activation',
+    'N buys four sessions, attends once and is safe against repeated activation',
     (tester) async {
       await openWorkspace(tester);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       expect(store.payments, isEmpty);
       await scan(tester, student.code);
-      await confirmShortcut(tester, LogicalKeyboardKey.keyM);
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await mutateThroughUi(
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
@@ -839,7 +878,7 @@ void main() {
       expect(store.remainingFor(student.id, group.id), 3);
       expect(store.attendances, hasLength(1));
       expectCodeFocus(tester);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.payments, hasLength(1));
     },
@@ -852,7 +891,7 @@ void main() {
       await scan(tester, student.code);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
@@ -861,7 +900,8 @@ void main() {
         'another code',
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
+      await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
       expect(
@@ -880,9 +920,9 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.f4);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       expect(store.payments, isEmpty);
-      await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
+      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
       expect(store.payments, isEmpty);
@@ -893,25 +933,50 @@ void main() {
     tester,
   ) async {
     final first = store.sessions.single;
+    final lessons = store.studyMonths.first.lessons;
+    await tester.runAsync(
+      () =>
+          store.saveSession(first.copyWith(preparedLessonId: lessons.first.id)),
+    );
     await tester.runAsync(
       () => store.saveSession(
         LessonSession(
           groupId: group.id,
           number: 2,
+          preparedLessonId: lessons[1].id,
           startsAt: first.startsAt.add(const Duration(days: 7)),
           createdAt: DateTime.now(),
         ),
       ),
     );
+    await tester.runAsync(() => store.startSession(store.sessions.last.id));
     await openWorkspace(tester);
-    await tester.tap(find.byKey(ValueKey('session-${first.id}')));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownButtonFormField<String> &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'prepared-lesson-',
+            ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.runAsync(() => tester.sendKeyEvent(LogicalKeyboardKey.escape));
     await tester.pumpAndSettle();
     expectCodeFocus(tester);
-    await tester.tap(find.byKey(ValueKey('session-${first.id}')));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownButtonFormField<String> &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'prepared-lesson-',
+            ),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('حصة 2 ·').last);
+    await tester.tap(find.text('حصة 2').last);
     await tester.pumpAndSettle();
     expectCodeFocus(tester);
     await tester.tap(find.widgetWithText(OutlinedButton, 'إنهاء الحصة'));
@@ -944,6 +1009,7 @@ void main() {
           createdAt: DateTime.now(),
         ),
       );
+      await store.startSession(store.sessions.last.id);
       await store.closeSession(store.sessions.last.id);
     });
     await openWorkspace(tester);
@@ -965,9 +1031,10 @@ void main() {
         await Future<void>(() {});
         expect(store.sessions.first.status, SessionStatus.closed);
         expect(store.closings, isEmpty);
-        await acknowledgeNotice(
+        await waitForUiCondition(
           tester,
-          message: 'تم إنهاء الحصة وحفظ سجل الغياب.',
+          () => find.byType(ClosingsPage).evaluate().isNotEmpty,
+          reason: 'Closing destination opens for the ended session',
         );
       } finally {
         store.removeListener(changed);
@@ -981,7 +1048,7 @@ void main() {
         current.id,
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       expect(store.payments, hasLength(1));
       expect(store.closings, isEmpty);
       await tester.tap(find.byTooltip('العودة للتحضير'));
@@ -1000,20 +1067,36 @@ void main() {
     tester,
   ) async {
     final first = store.sessions.single;
+    final lessons = store.studyMonths.first.lessons;
+    await tester.runAsync(
+      () =>
+          store.saveSession(first.copyWith(preparedLessonId: lessons.first.id)),
+    );
     await tester.runAsync(
       () => store.saveSession(
         LessonSession(
           groupId: group.id,
           number: 2,
+          preparedLessonId: lessons[1].id,
           startsAt: first.startsAt.add(const Duration(days: 7)),
           createdAt: DateTime.now(),
         ),
       ),
     );
+    await tester.runAsync(() => store.startSession(store.sessions.last.id));
     await openWorkspace(tester);
-    await tester.tap(find.byKey(ValueKey('session-${first.id}')));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownButtonFormField<String> &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'prepared-lesson-',
+            ),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('حصة 2 ·').last);
+    await tester.tap(find.text('حصة 2').last);
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await tester.tap(find.widgetWithText(OutlinedButton, 'إنهاء الحصة'));
@@ -1060,6 +1143,7 @@ void main() {
             ),
           );
           final past = store.sessions.last;
+          await store.startSession(past.id);
           if (number != 2) {
             await store.collectAndAttend(
               EntryRequest(
@@ -1069,24 +1153,26 @@ void main() {
               ),
             );
           }
-          await store.saveAcademic(
-            AcademicRecord(
-              studentId: student.id,
-              sessionId: past.id,
-              score: number == 2
-                  ? null
-                  : number == 1
-                  ? 8
-                  : 6,
-              examAbsent: number == 2,
-              homework: number == 1
-                  ? HomeworkStatus.complete
-                  : number == 2
-                  ? HomeworkStatus.missing
-                  : HomeworkStatus.incomplete,
-              updatedAt: DateTime.now(),
-            ),
-          );
+          if (number != 2) {
+            await store.saveAcademic(
+              AcademicRecord(
+                studentId: student.id,
+                sessionId: past.id,
+                score: number == 2
+                    ? null
+                    : number == 1
+                    ? 8
+                    : 6,
+                examAbsent: number == 2,
+                homework: number == 1
+                    ? HomeworkStatus.complete
+                    : number == 2
+                    ? HomeworkStatus.missing
+                    : HomeworkStatus.incomplete,
+                updatedAt: DateTime.now(),
+              ),
+            );
+          }
           await store.closeSession(past.id);
         }
       });
@@ -1094,7 +1180,11 @@ void main() {
       expect(find.byType(NavigationRail), findsNothing);
       expect(find.text(student.name), findsNothing);
       await scan(tester, student.code);
+      await tester.tap(find.text('عرض السجل الكامل'));
+      await tester.pumpAndSettle();
       expect(find.text('2 من 3'), findsOneWidget);
+      await tester.tap(find.text('رجوع للتحضير'));
+      await tester.pumpAndSettle();
       expect(find.text('6 / 10'), findsWidgets);
       expect(find.text('ناقص'), findsWidgets);
       expect(find.byType(TabBar), findsNothing);
@@ -1102,7 +1192,7 @@ void main() {
       expect(find.text('الامتحانات السابقة'), findsOneWidget);
       expect(find.text('الواجبات السابقة'), findsOneWidget);
       expect(
-        find.text('لا يوجد رصيد حصص. حصّل الحصة أو اختار باقة قبل الدخول.'),
+        find.text('لا يوجد رصيد حصص. حصّل الحصة أو اختار شهرًا للتحصيل.'),
         findsOneWidget,
       );
       final action = find.byKey(const Key('collect-attend'));
@@ -1114,7 +1204,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('collect-package')),
-          matching: find.textContaining('دفع الشهر (٤ حصص)'),
+          matching: find.textContaining('دفع الشهر الكامل (4 حصص)'),
         ),
         findsOneWidget,
       );
@@ -1122,6 +1212,8 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1280, 800));
       await tester.pumpAndSettle();
       expect(tester.getRect(action).bottom, lessThanOrEqualTo(800));
+      await tester.ensureVisible(find.text('8 / 10'));
+      await tester.pumpAndSettle();
       expect(
         tester.getRect(find.text('8 / 10')).bottom,
         lessThanOrEqualTo(800),
@@ -1168,7 +1260,8 @@ void main() {
         '1 طالب',
       );
       await scan(tester, student.code);
-      expect(find.byKey(const Key('collect-attend')), findsNothing);
+      expect(find.byKey(const Key('collect-attend')), findsOneWidget);
+      expect(find.textContaining('الحصة مغطاة بالفعل'), findsWidgets);
       expect(store.payments, hasLength(2));
       expect(store.attendances, hasLength(4));
       await tester.sendKeyEvent(LogicalKeyboardKey.f6);
@@ -1203,6 +1296,8 @@ void main() {
       await tester.ensureVisible(makeupSwitch);
       await tester.pumpAndSettle();
       await tester.tap(makeupSwitch);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('تفاصيل التعويض'));
       await tester.pumpAndSettle();
       final chooser = find.widgetWithText(
         DropdownButtonFormField<String>,
@@ -1249,7 +1344,12 @@ void main() {
         find.descendant(of: action, matching: find.textContaining('٣٠٠')),
         findsOneWidget,
       );
-      await mutateThroughUi(tester, () => tester.tap(action));
+      await tester.runAsync(() => tester.tap(action));
+      await tester.pumpAndSettle();
+      await mutateThroughUi(
+        tester,
+        () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
+      );
       expect(store.payments, hasLength(2));
       expect(store.payments.last.netAmount, 30000);
       expect(store.remainingFor(student.id, group.id), 7);
@@ -1307,13 +1407,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.payments, hasLength(1));
       expect(store.attendances, isEmpty);
-      await tester.runAsync(
-        () => acknowledgeNotice(
-          tester,
-          message: 'الباقة تغطي الحصة. استخدم M ثم Enter للتسجيل من الرصيد.',
-        ),
+      expect(
+        find.text('الباقة تغطي الحصة. استخدم N للتسجيل من الرصيد.'),
+        findsWidgets,
       );
-      await confirmShortcut(tester, LogicalKeyboardKey.keyM);
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await mutateThroughUi(
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
@@ -1351,7 +1449,7 @@ void main() {
   );
 
   testWidgets(
-    'cashier opens corrections for the focused student then returns to code without collecting',
+    'cashier opens the focused student profile and returns to code without collecting',
     (tester) async {
       await tester.runAsync(() async {
         await store.saveStaff(
@@ -1364,21 +1462,20 @@ void main() {
       });
       await openWorkspace(tester);
       await scan(tester, student.code);
-      await tester.ensureVisible(
-        find.widgetWithText(TextButton, 'تصحيح واسترداد'),
-      );
-      await tester.tap(find.widgetWithText(TextButton, 'تصحيح واسترداد'));
+      await tester.ensureVisible(find.text('بروفايل الطالب'));
+      await tester.tap(find.text('بروفايل الطالب'));
       await tester.pumpAndSettle();
-      final field = tester.widget<TextField>(
-        find.byKey(const Key('correction-student-code')),
+      expect(
+        tester
+            .widget<StudentProfilePage>(find.byType(StudentProfilePage))
+            .studentId,
+        student.id,
       );
-      expect(field.controller!.text, student.code);
-      expect(find.text('تصحيح الحضور والدفع'), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
-      await tester.tap(find.byTooltip('العودة للتحضير'));
+      await tester.pageBack();
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
       expect(store.payments, isEmpty);
@@ -1421,7 +1518,7 @@ void main() {
         'LM ملاحظة معدلة',
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.sendKeyEvent(LogicalKeyboardKey.f6);
       await tester.pumpAndSettle();
       // Even a queued scanner submit cannot replace the editing student's identity.
@@ -1542,26 +1639,15 @@ void main() {
       }
     },
   );
-  Future<void> chooseQuantity(WidgetTester tester, int count) async {
-    final dropdown = find.descendant(
-      of: find.byKey(const Key('package-quantity')),
-      matching: find.byType(DropdownButtonFormField<int>),
-    );
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find
-          .text(
-            count == 2
-                ? 'حصتين'
-                : count == 3
-                ? '٣ حصص'
-                : '٤ حصص',
-          )
-          .last,
-    );
-    await tester.pumpAndSettle();
-  }
+  Future<void> chooseQuantity(WidgetTester tester, int count) =>
+      selectAttendanceMonth(
+        tester,
+        count == 2
+            ? 'شهر حصتين · 2 حصص'
+            : count == 3
+            ? 'شهر ثلاث حصص · 3 حصص'
+            : 'الشهر الكامل · 4 حصص',
+      );
 
   Future<void> quantityShortcut(
     WidgetTester tester,
@@ -1572,6 +1658,19 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pumpAndSettle();
   }
+
+  Finder selectedMonth(int count) => find.byKey(
+    ValueKey(
+      'month-plan-${store.studyMonths.firstWhere((month) => month.lessons.length == count).id}',
+    ),
+  );
+
+  Finder renewalMonthSelector() => find.byWidgetPredicate(
+    (widget) =>
+        widget is DropdownButtonFormField<int> &&
+        widget.key is ValueKey<String> &&
+        (widget.key! as ValueKey<String>).value.startsWith('renew-month-'),
+  );
 
   for (final count in [2, 3]) {
     testWidgets(
@@ -1599,22 +1698,32 @@ void main() {
         expect(store.packages, isEmpty);
         final price = count == 2 ? 13500 : 20250;
         expect(
-          find.textContaining(
-            'تحصيل باقة ${count == 2 ? 'حصتين' : '٣ حصص'} · ${money(price)}',
+          find.descendant(
+            of: find.byKey(const Key('collect-package')),
+            matching: find.textContaining(money(price)),
           ),
           findsOneWidget,
         );
         if (count == 2) {
+          await tester.runAsync(
+            () => tester.tap(find.byKey(const Key('collect-package'))),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const Key('entry-confirmation-dialog')),
+            findsOneWidget,
+          );
+          expect(store.payments, isEmpty);
           await mutateThroughUi(
             tester,
-            () => tester.tap(find.byKey(const Key('collect-package'))),
+            () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
           );
         } else {
           await tester.runAsync(() async {
-            await tester.sendKeyDownEvent(LogicalKeyboardKey.keyM);
-            await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyM);
-            await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyM);
-            await tester.sendKeyUpEvent(LogicalKeyboardKey.keyM);
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.keyN);
+            await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyN);
+            await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyN);
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.keyN);
           });
           await tester.pumpAndSettle();
           expect(store.payments, isEmpty);
@@ -1633,12 +1742,12 @@ void main() {
         expect(store.packages.single.remaining, count - 1);
         expect(store.attendances, hasLength(1));
         await tester.runAsync(() async {
-          await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         });
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('massar-notice-dialog')), findsOneWidget);
-        expect(find.text('الحضور مسجل بالفعل'), findsOneWidget);
+        expect(find.text('الدفع مسجل بالفعل'), findsOneWidget);
         expect(store.payments, hasLength(1));
         expect(store.attendances, hasLength(1));
         expect(store.packages.single.remaining, count - 1);
@@ -1649,22 +1758,25 @@ void main() {
         await tester.pumpAndSettle();
         await scan(tester, student.code);
         // Existing balance still dominates; quantity resets even for a repeated scan.
-        final renewal = find.widgetWithText(
-          OutlinedButton,
-          'تحصيل باقة ٤ حصص جديدة · ${money(30000)}',
-        );
+        final renewal = find.byKey(const Key('collect-package'));
         await tester.ensureVisible(renewal);
-        await tester.tap(renewal);
+        await tester.runAsync(() => tester.tap(renewal));
         await tester.pumpAndSettle();
         expect(
           tester
-              .widget<DropdownButtonFormField<int>>(
-                find.byKey(const Key('renew-package-quantity')),
-              )
+              .widget<DropdownButtonFormField<int>>(renewalMonthSelector())
               .initialValue,
-          4,
+          0,
         );
-        await tester.tap(find.text('رجوع'));
+        expect(
+          find.descendant(
+            of: renewalMonthSelector(),
+            matching: find.text('الشهر الكامل · 4 حصص'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining(money(30000)), findsWidgets);
+        await tester.tap(find.text('إلغاء · Esc'));
         await tester.pumpAndSettle();
         expectCodeFocus(tester);
         expect(tester.takeException(), isNull);
@@ -1673,13 +1785,10 @@ void main() {
   }
 
   testWidgets(
-    'quantity shortcuts only choose, numeric scanner codes stay intact and lookup or note editing cannot buy',
+    'month selection is explicit, numeric scanner codes stay intact and lookup or note editing cannot buy',
     (tester) async {
       late Student numeric;
       await tester.runAsync(() async {
-        await store.saveGroup(
-          group.copyWith(twoSessionPrice: 18000, threeSessionPrice: 27000),
-        );
         await store.saveStudent(
           Student(
             code: '234',
@@ -1691,43 +1800,53 @@ void main() {
         numeric = store.students.last;
       });
       await openWorkspace(tester);
-      await quantityShortcut(
-        tester,
-        LogicalKeyboardKey.digit2,
-      ); // no student yet
-      await scan(
-        tester,
-        student.code,
-      ); // selecting student safely restores four
-      expect(find.byKey(const ValueKey('package-quantity-4')), findsOneWidget);
-      await quantityShortcut(tester, LogicalKeyboardKey.digit3);
-      expect(find.byKey(const ValueKey('package-quantity-3')), findsOneWidget);
+      await quantityShortcut(tester, LogicalKeyboardKey.digit2);
+      expect(store.payments, isEmpty);
+      await scan(tester, student.code);
+      expect(selectedMonth(4), findsOneWidget);
+      await chooseQuantity(tester, 3);
+      expect(selectedMonth(3), findsOneWidget);
       expectCodeFocus(tester);
       expect(store.payments, isEmpty);
-      await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
-      await tester.sendKeyEvent(LogicalKeyboardKey.numpad4);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('package-quantity-3')), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('student-search')),
+        numeric.code,
+      );
+      await quantityShortcut(tester, LogicalKeyboardKey.digit2);
+      await quantityShortcut(tester, LogicalKeyboardKey.digit3);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('student-search')))
+            .controller!
+            .text,
+        numeric.code,
+      );
+      expect(store.payments, isEmpty);
       await scan(tester, numeric.code);
       expect(find.text('مينا الرقمي'), findsOneWidget);
-      expect(find.byKey(const ValueKey('package-quantity-4')), findsOneWidget);
-      await quantityShortcut(tester, LogicalKeyboardKey.numpad2);
-      expect(find.byKey(const ValueKey('package-quantity-2')), findsOneWidget);
+      expect(selectedMonth(4), findsOneWidget);
+      await chooseQuantity(tester, 2);
+      expect(selectedMonth(2), findsOneWidget);
       await tester.tap(find.text('بحث عن طالب'));
       await tester.pumpAndSettle();
-      await quantityShortcut(tester, LogicalKeyboardKey.digit4);
-      expect(find.byKey(const ValueKey('package-quantity-2')), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(selectedMonth(2))
+            .onChanged,
+        isNull,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
+      expect(store.attendances, isEmpty);
       await tester.tap(find.text('التحضير'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('edit-student-note')));
       await tester.pumpAndSettle();
       await quantityShortcut(tester, LogicalKeyboardKey.digit3);
-      expect(find.byKey(const ValueKey('package-quantity-2')), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      expect(selectedMonth(2), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
       await tester.tap(find.byKey(const Key('cancel-student-note')));
@@ -1737,6 +1856,7 @@ void main() {
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
       );
+      expect(store.payments.single.studentId, numeric.id);
       expect(store.payments.single.netAmount, 10000);
       expect(store.packages, isEmpty);
       expect(tester.takeException(), isNull);
@@ -1744,41 +1864,22 @@ void main() {
   );
 
   testWidgets(
-    'missing independent price blocks a new package but existing prepaid entry and configured renewal work',
+    'named month prices work independently of legacy prices and renewal adds balance without attendance',
     (tester) async {
+      expect(group.twoSessionPrice, isNull);
+      expect(group.threeSessionPrice, isNull);
       await openWorkspace(tester);
       await scan(tester, student.code);
       await chooseQuantity(tester, 2);
-      expect(
-        find.byKey(const Key('package-price-unconfigured')),
-        findsOneWidget,
-      );
-      expect(
-        tester.widget<Text>(find.byKey(const Key('amount-due'))).data,
-        'السعر غير محدد',
-      );
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('collect-package')))
-            .onPressed,
-        isNull,
-      );
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-      expect(store.payments, isEmpty);
-      expect(
-        find.byKey(const Key('entry-confirmation-dialog')),
-        findsOneWidget,
-      );
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       expect(
         find.descendant(
           of: find.byKey(const Key('entry-confirmation-dialog')),
-          matching: find.text('حدد سعر باقة حصتين في المجموعة أولًا.'),
+          matching: find.textContaining(money(13500)),
         ),
-        findsOneWidget,
+        findsWidgets,
       );
-      expect(store.packages, isEmpty);
+      expect(store.payments, isEmpty);
       expect(store.attendances, isEmpty);
       await tester.runAsync(
         () => tester.sendKeyEvent(LogicalKeyboardKey.escape),
@@ -1794,63 +1895,45 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('collect-package')))
-            .onPressed,
-        isNotNull,
-      );
-      await confirmShortcut(tester, LogicalKeyboardKey.keyM);
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await mutateThroughUi(
         tester,
         () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
       );
       expect(store.payments, hasLength(1));
+      expect(store.payments.single.netAmount, 30000);
       expect(store.packages.single.totalSessions, 4);
       expect(store.packages.single.remaining, 3);
-      final renew = find.widgetWithText(
-        OutlinedButton,
-        'اختيار وتحصيل باقة جديدة',
-      );
-      await tester.ensureVisible(renew);
-      await tester.tap(renew);
+      final renew = find.byKey(const Key('collect-package'));
+      await tester.runAsync(() => tester.tap(renew));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const Key('confirm-package-renewal')),
-            )
-            .onPressed,
-        isNull,
-      );
-      // Shortcuts beneath the dialog cannot change quantity or collect anything.
+      expect(renewalMonthSelector(), findsOneWidget);
       await quantityShortcut(tester, LogicalKeyboardKey.digit4);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       expect(store.payments, hasLength(1));
-      await tester.tap(find.text('رجوع'));
+      await tester.runAsync(() async {
+        await tester.tap(find.text('إلغاء · Esc'));
+        await waitForUiCondition(
+          tester,
+          () => tester
+              .widget<TextField>(find.byKey(const Key('student-search')))
+              .focusNode!
+              .hasFocus,
+          reason:
+              'Canceled renewal returns to the scanner before another renewal',
+        );
+      });
+      expect(store.payments, hasLength(1));
+      expect(store.attendances, hasLength(1));
+      await tester.runAsync(() => tester.tap(renew));
       await tester.pumpAndSettle();
-      await tester.runAsync(
-        () => store.saveGroup(
-          group.copyWith(twoSessionPrice: 18000, threeSessionPrice: 27000),
-        ),
-      );
+      await tester.tap(renewalMonthSelector());
       await tester.pumpAndSettle();
-      final pricedRenew = find.widgetWithText(
-        OutlinedButton,
-        'تحصيل باقة حصتين جديدة · ${money(13500)}',
-      );
-      await tester.ensureVisible(pricedRenew);
-      await tester.runAsync(() => tester.tap(pricedRenew));
+      await tester.tap(find.text('شهر ثلاث حصص · 3 حصص').last);
       await tester.pumpAndSettle();
-      final dialogQuantity = find.byKey(const Key('renew-package-quantity'));
-      await tester.tap(dialogQuantity);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('٣ حصص').last);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('تضاف ٣ حصص للرصيد الحالي'), findsOneWidget);
       await mutateThroughUi(
         tester,
-        () => tester.tap(find.byKey(const Key('confirm-package-renewal'))),
+        () => tester.tap(find.byKey(const Key('confirm-paid-amount'))),
       );
       expect(store.payments, hasLength(2));
       expect(store.payments.last.netAmount, 20250);
@@ -1862,14 +1945,15 @@ void main() {
     },
   );
   testWidgets(
-    'Ctrl+2 chooses a quoted package and held Enter buys its two sessions once',
+    'selected month and held Enter in its confirmation buy its two sessions once',
     (tester) async {
       await tester.runAsync(
         () => store.saveGroup(group.copyWith(twoSessionPrice: 18000)),
       );
       await openWorkspace(tester);
       await scan(tester, student.code);
-      await quantityShortcut(tester, LogicalKeyboardKey.digit2);
+      await chooseQuantity(tester, 2);
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       expect(store.payments, isEmpty);
       await mutateThroughUi(tester, () async {
         await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
@@ -1916,7 +2000,11 @@ void main() {
       final context = tester.element(find.byType(AttendanceWorkspace));
       const message = 'تنبيه عام لا يغيّر حساب الطالب.';
       await tester.runAsync(() async {
-        final acknowledged = showMassarNotice(context, message);
+        final acknowledged = showMassarNotice(
+          context,
+          message,
+          kind: NoticeKind.warning,
+        );
         expect(hasPendingMassarNotice(context), isTrue);
         // No frame has mounted the notice yet; the queue guard must act now.
         expect(find.byKey(const Key('massar-notice-dialog')), findsNothing);
@@ -1924,7 +2012,7 @@ void main() {
         await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
         await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
         await tester.sendKeyEvent(LogicalKeyboardKey.f4);
         await tester.sendKeyEvent(LogicalKeyboardKey.f6);
         field.onSubmitted!(other.code);
@@ -1935,7 +2023,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 200));
         expect(find.byKey(const Key('massar-notice-dialog')), findsOneWidget);
         await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
         await tester.sendKeyEvent(LogicalKeyboardKey.f4);
         await tester.sendKeyEvent(LogicalKeyboardKey.f6);
         field.onSubmitted!(other.code);

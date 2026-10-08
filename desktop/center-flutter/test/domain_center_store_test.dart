@@ -318,6 +318,7 @@ void main() {
     'counted sessions cannot skip earlier open session or backdate after processing',
     () async {
       final first = await session(1);
+      await store.startSession(first.id);
       final second = await session(2);
       await expectLater(enter(second), throwsA(isA<CenterException>()));
       await expectLater(
@@ -384,35 +385,35 @@ void main() {
       expect(store.attendances, isEmpty);
     },
   );
-  test('cashier can register but cannot assign or remove discounts', () async {
-    await store.saveStaff(
-      name: 'تحصيل',
-      password: 'cashier-123',
-      role: StaffRole.cashier,
-    );
-    store.signOut();
-    await store.signIn('تحصيل', 'cashier-123');
-    await expectLater(
-      store.saveStudent(store.students.single.copyWith(discountPercent: 0)),
-      throwsA(isA<CenterException>()),
-    );
-    await expectLater(
-      store.saveStudent(
+  test(
+    'cashier can register students and set or remove fixed discounts',
+    () async {
+      await store.saveStaff(
+        name: 'تحصيل',
+        password: 'cashier-123',
+        role: StaffRole.cashier,
+      );
+      store.signOut();
+      await store.signIn('تحصيل', 'cashier-123');
+      await store.saveStudent(
+        store.students.single.copyWith(discountPercent: 0),
+      );
+      await store.saveStudent(
         Student(
-          name: 'جديد',
+          name: 'جديد بخصم',
           discountPercent: 10,
           groupIds: [groupId],
           createdAt: DateTime.now(),
         ),
-      ),
-      throwsA(isA<CenterException>()),
-    );
-    await store.saveStudent(
-      Student(name: 'جديد', groupIds: [groupId], createdAt: DateTime.now()),
-    );
-    expect(store.students, hasLength(2));
-    expect(store.students.first.discountPercent, 25);
-  });
+      );
+      await store.saveStudent(
+        Student(name: 'جديد', groupIds: [groupId], createdAt: DateTime.now()),
+      );
+      expect(store.students, hasLength(3));
+      expect(store.students.first.discountPercent, 0);
+      expect(store.students[1].discountPercent, 10);
+    },
+  );
   test(
     'paid absence can be made up after package expires and across matching groups',
     () async {
@@ -496,6 +497,7 @@ void main() {
     () async {
       final date = DateTime.now().add(const Duration(hours: 1));
       final first = await session(1, date: date);
+      await store.startSession(first.id);
       final second = await session(2, date: date);
       await expectLater(enter(second), throwsA(isA<CenterException>()));
       expect(store.payments, isEmpty);

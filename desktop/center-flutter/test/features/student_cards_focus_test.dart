@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:async';
-import '../helpers/notice_helpers.dart';
+import '../helpers/attendance_ui_helpers.dart';
+import '../helpers/ui_wait_helpers.dart';
 import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 import 'dart:ui' as ui;
@@ -12,6 +13,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/attendance/attendance_workspace.dart';
+import 'package:massar_center/features/management/cards_page.dart';
 import 'package:massar_center/shared/theme.dart';
 import 'package:massar_center/shared/formatters.dart';
 
@@ -22,7 +24,6 @@ void main() {
   late Student student;
   final captureKey = GlobalKey();
   late InstallationAdmin owner;
-  _CardDialogObserver? observer;
 
   setUp(
     () => TestWidgetsFlutterBinding.ensureInitialized().runAsync(() async {
@@ -91,13 +92,16 @@ void main() {
         ),
       );
       student = store.students.single;
-      await store.saveSession(
-        LessonSession(
-          groupId: group.id,
-          number: 1,
-          startsAt: DateTime.now().add(const Duration(minutes: 1)),
-          createdAt: DateTime.now(),
+      final month = await store.saveStudyMonth(
+        StudyMonth(
+          name: 'شهر الكروت',
+          price: group.packagePrice,
+          lessons: [const PreparedLesson(number: 1)],
         ),
+      );
+      await store.startPreparedLesson(
+        groupId: group.id,
+        preparedLessonId: month.lessons.single.id,
       );
     }),
   );
@@ -125,17 +129,19 @@ void main() {
       )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
     });
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    observer = _CardDialogObserver();
     await tester.pumpWidget(
       RepaintBoundary(
         key: captureKey,
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          navigatorObservers: [observer!],
           theme: dark ? MassarTheme.dark : MassarTheme.light,
           home: Directionality(
             textDirection: TextDirection.rtl,
-            child: AttendanceWorkspace(store: store, onExit: () {}),
+            child: AttendanceWorkspace(
+              store: store,
+              onExit: () {},
+              initialSessionId: store.sessions.single.id,
+            ),
           ),
         ),
       ),
@@ -143,11 +149,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> scan(WidgetTester tester, String code) async {
-    await tester.enterText(find.byKey(const Key('student-search')), code);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-  }
+  Future<void> scan(WidgetTester tester, String code) =>
+      previewAttendanceStudent(tester, code);
 
   Future<void> mutateThroughUi(
     WidgetTester tester,
@@ -162,10 +165,18 @@ void main() {
       store.addListener(changed);
       try {
         await gesture();
-        await persisted.future.timeout(const Duration(seconds: 5));
-        // Await the result popup only after the store publishes durable state.
+        await waitForUiCondition(
+          tester,
+          () =>
+              persisted.isCompleted &&
+              find.byType(Dialog).evaluate().isEmpty &&
+              find.byType(LinearProgressIndicator).evaluate().isEmpty &&
+              find.byType(CircularProgressIndicator).evaluate().isEmpty,
+          reason: 'The card operation persists exactly once.',
+        );
+        // Rebuild after the store publishes the durable card operation.
         await Future<void>(() {});
-        await acknowledgeNotice(tester);
+        await tester.pumpAndSettle();
       } finally {
         store.removeListener(changed);
       }
@@ -217,8 +228,30 @@ void main() {
     await store.signIn('cashier', 'card-cashier-password');
   }
 
+  Future<void> openCards(WidgetTester tester, String code) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: MassarTheme.light,
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: AnimatedBuilder(
+              animation: store,
+              builder: (context, _) => CardsPage(store: store),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cards-student-search')), code);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
-    'cashier pays and hands over card once independently of lesson payment, retaining historical amount after reload',
+    'cashier card payment in attendance and confirmed handover in cards stay separate from lessons and preserve historical amount',
     (tester) async {
       await tester.runAsync(() async {
         await store.saveCardSettings(const CenterCardSettings(price: 5000));
@@ -226,12 +259,9 @@ void main() {
       });
       await openWorkspace(tester, dark: true, width: 1280);
       await scan(tester, student.code);
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('receive-student-card')))
-            .onPressed,
-        isNull,
-      );
+      await tester.ensureVisible(find.byKey(const Key('payment-details')));
+      await tester.tap(find.byKey(const Key('payment-details')));
+      await tester.pumpAndSettle();
       final lessonMethod = find.widgetWithText(
         DropdownButtonFormField<String>,
         'طريقة الدفع',
@@ -243,7 +273,7 @@ void main() {
       await tester.pumpAndSettle();
       final cardMethod = find.widgetWithText(
         DropdownButtonFormField<String>,
-        'طريقة دفع الكارت',
+        'الكارت',
       );
       expect(
         tester.widget<DropdownButtonFormField<String>>(cardMethod).initialValue,
@@ -252,19 +282,34 @@ void main() {
       await tester.ensureVisible(cardMethod);
       await tester.tap(cardMethod);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('بطاقة').last);
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const Key('pay-student-card')))
+            .onPressed,
+        isNull,
+        reason:
+            'Choosing a method must keep collection disabled behind the popup.',
+      );
+      await tester.tap(find.text('بطاقة').hitTestable().last);
       await tester.pumpAndSettle();
+      expect(
+        tester.widget<DropdownButtonFormField<String>>(cardMethod).initialValue,
+        'بطاقة',
+      );
       final pay = find.byKey(const Key('pay-student-card'));
       await tester.ensureVisible(pay);
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('student-card-actions')));
-      await tester.pumpAndSettle();
       await capture(tester, 'focus-card-unpaid-dark-1280');
-      await tester.ensureVisible(pay);
       final stalePay = tester.widget<OutlinedButton>(pay).onPressed!;
       await mutateThroughUi(tester, () async {
         await tester.tap(pay);
         stalePay();
+        await tester.pumpAndSettle();
+        expect(store.cardPayments, isEmpty);
+        final confirm = tester
+            .widget<FilledButton>(find.byKey(const Key('confirm-paid-amount')))
+            .onPressed!;
+        confirm();
+        confirm();
       });
       final payment = store.cardPayments.single;
       expect(payment.baseAmount, 5000);
@@ -279,34 +324,31 @@ void main() {
       expect(store.attendances, isEmpty);
       expect(store.cardReceipts, isEmpty);
       expectCodeFocus(tester);
-      final receive = find.byKey(const Key('receive-student-card'));
-      await tester.ensureVisible(receive);
-      final staleReceive = tester.widget<FilledButton>(receive).onPressed!;
+      expect(find.text('الكارت مدفوع · ${money(3750)}'), findsOneWidget);
+      expect(tester.widget<OutlinedButton>(pay).onPressed, isNull);
+
+      await openCards(tester, student.code);
+      await tester.tap(find.byKey(const Key('receive-student-card')));
+      await tester.pumpAndSettle();
+      expect(find.text('تأكيد تسليم الكارت'), findsOneWidget);
+      expect(store.cardReceipts, isEmpty);
       await mutateThroughUi(tester, () async {
-        await tester.tap(receive);
-        staleReceive();
+        final confirm = tester
+            .widget<FilledButton>(find.byKey(const Key('confirm-card-receipt')))
+            .onPressed!;
+        confirm();
+        confirm();
       });
       expect(store.cardReceipts, hasLength(1));
       expect(store.cardReceiptFor(student.id)!.paymentId, payment.id);
       expect(store.cardReceiptFor(student.id)!.paymentBypassed, isFalse);
-      expectCodeFocus(tester);
       await tester.runAsync(
         () => asOwner(() async {
           await store.saveCardSettings(const CenterCardSettings(price: 9000));
           await store.saveStudent(student.copyWith(discountPercent: 50));
         }),
       );
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<Text>(find.byKey(const Key('student-card-payment-status')))
-            .data,
-        contains(money(3750)),
-      );
-      expect(store.cardPayments.single.discountPercent, 25);
-      expect(store.cardPayments.single.netAmount, 3750);
-      expect(tester.widget<OutlinedButton>(pay).onPressed, isNull);
-      expect(tester.widget<FilledButton>(receive).onPressed, isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(() async {
         await store.close();
         store = await CenterStore.open(directory: directory.path);
@@ -315,10 +357,13 @@ void main() {
       });
       await openWorkspace(tester, dark: true, width: 1280);
       await scan(tester, student.code);
-      await tester.ensureVisible(find.byKey(const Key('student-card-actions')));
-      await tester.pumpAndSettle();
+      expect(find.text('الكارت مدفوع · ${money(3750)}'), findsOneWidget);
+      expect(tester.widget<OutlinedButton>(pay).onPressed, isNull);
       await capture(tester, 'focus-card-paid-received-dark-1280');
       expect(store.cardPayments, hasLength(1));
+      expect(store.cardPayments.single.discountPercent, 25);
+      expect(store.cardPayments.single.netAmount, 3750);
+      expect(store.cardPayments.single.method, 'بطاقة');
       expect(store.cardReceipts, hasLength(1));
       expect(store.payments, isEmpty);
       expect(store.attendances, isEmpty);
@@ -328,7 +373,7 @@ void main() {
   );
 
   testWidgets(
-    'card actions guard unresolved codes, lookup, notes and dialogs; bypass receipt stays explicit after policy changes',
+    'attendance card payment guards unresolved codes, lookup, notes and dialogs; prior bypass receipt prevents later collection',
     (tester) async {
       late Student other;
       await tester.runAsync(() async {
@@ -352,12 +397,10 @@ void main() {
       await openWorkspace(tester, width: 1280);
       await scan(tester, student.code);
       final pay = find.byKey(const Key('pay-student-card'));
-      final receive = find.byKey(const Key('receive-student-card'));
       final stalePay = tester.widget<OutlinedButton>(pay).onPressed!;
-      final staleReceive = tester.widget<FilledButton>(receive).onPressed!;
       await tester.enterText(find.byKey(const Key('student-search')), '999');
       stalePay();
-      staleReceive();
+      await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
       expect(store.cardPayments, isEmpty);
       expect(store.cardReceipts, isEmpty);
@@ -366,19 +409,15 @@ void main() {
       await tester.tap(find.text('بحث عن طالب'));
       await tester.pumpAndSettle();
       stalePay();
-      staleReceive();
       expect(tester.widget<OutlinedButton>(pay).onPressed, isNull);
-      expect(tester.widget<FilledButton>(receive).onPressed, isNull);
       await tester.tap(find.text('التحضير'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('edit-student-note')));
       await tester.tap(find.byKey(const Key('edit-student-note')));
       await tester.pumpAndSettle();
       stalePay();
-      staleReceive();
       await tester.pumpAndSettle();
       expect(store.cardPayments, isEmpty);
-      expect(store.cardReceipts, isEmpty);
       await tester.ensureVisible(find.byKey(const Key('cancel-student-note')));
       await tester.tap(find.byKey(const Key('cancel-student-note')));
       await tester.pumpAndSettle();
@@ -386,65 +425,46 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.f4);
       await tester.pumpAndSettle();
       stalePay();
-      staleReceive();
       expect(store.cardPayments, isEmpty);
       expect(store.cardReceipts, isEmpty);
-      await tester.tap(find.widgetWithText(TextButton, 'رجوع'));
+      await tester.ensureVisible(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.tap(find.widgetWithText(TextButton, 'إلغاء'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
       expectCodeFocus(tester);
-      final cardMethod = find.widgetWithText(
-        DropdownButtonFormField<String>,
-        'طريقة دفع الكارت',
+
+      await openCards(tester, student.code);
+      await tester.tap(find.byKey(const Key('receive-student-card')));
+      await tester.pumpAndSettle();
+      expect(store.cardReceipts, isEmpty);
+      await mutateThroughUi(
+        tester,
+        () => tester.tap(find.byKey(const Key('confirm-card-receipt'))),
       );
-      await tester.ensureVisible(cardMethod);
-      await tester.tap(cardMethod);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('إنستاباي').last);
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(receive);
-      await mutateThroughUi(tester, () => tester.tap(receive));
       final handed = store.cardReceiptFor(student.id)!;
       expect(handed.paymentBypassed, isTrue);
       expect(handed.paymentId, isNull);
-      expect(store.cardPayments, isEmpty);
-      expectCodeFocus(tester);
       await tester.runAsync(
         () => asOwner(
           () => store.saveCardSettings(const CenterCardSettings(price: 7500)),
         ),
       );
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<Text>(find.byKey(const Key('student-card-received-detail')))
-            .data,
-        contains('استلم بدون تحصيل مسجل'),
-      );
-      expect(
-        tester
-            .widget<Text>(find.byKey(const Key('student-card-payment-status')))
-            .data,
-        'لا يوجد تحصيل مسجل للكارت.',
-      );
+      await openWorkspace(tester, width: 1280);
+      await scan(tester, student.code);
       expect(tester.widget<OutlinedButton>(pay).onPressed, isNull);
-      stalePay();
-      staleReceive();
-      await tester.pumpAndSettle();
       expect(store.cardPayments, isEmpty);
       expect(store.cardReceipts, hasLength(1));
       await scan(tester, other.code);
       expect(
         tester
             .widget<DropdownButtonFormField<String>>(
-              find.widgetWithText(
-                DropdownButtonFormField<String>,
-                'طريقة دفع الكارت',
-              ),
+              find.widgetWithText(DropdownButtonFormField<String>, 'الكارت'),
             )
             .initialValue,
         'نقدي',
       );
-      expect(tester.widget<FilledButton>(receive).onPressed, isNull);
+      expect(tester.widget<OutlinedButton>(pay).onPressed, isNotNull);
       expect(store.payments, isEmpty);
       expect(store.attendances, isEmpty);
       expect(store.packages, isEmpty);
@@ -457,30 +477,25 @@ void main() {
     (tester) async {
       await openWorkspace(tester, dark: true);
       await scan(tester, student.code);
-      expect(
-        tester
-            .widget<Text>(find.byKey(const Key('student-card-payment-status')))
-            .data,
-        'رسوم الكارت غير محددة في إعدادات السنتر.',
-      );
+      expect(find.text('الكارت · السعر غير محدد'), findsOneWidget);
       expect(
         tester
             .widget<OutlinedButton>(find.byKey(const Key('pay-student-card')))
             .onPressed,
         isNull,
       );
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('receive-student-card')))
-            .onPressed,
-        isNull,
-      );
-      final print = find.widgetWithText(TextButton, 'كارت الطالب');
+      final print = find.widgetWithText(OutlinedButton, 'الكارت');
       await tester.ensureVisible(print);
       await tester.runAsync(() async {
         await tester.tap(print);
         await tester.pump();
-        await observer!.shown.future.timeout(const Duration(seconds: 5));
+        final deadline = DateTime.now().add(const Duration(seconds: 5));
+        while (find.text('الكارت أو الإيصال').evaluate().isEmpty &&
+            DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(find.text('الكارت أو الإيصال'), findsOneWidget);
       });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -500,13 +515,4 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-}
-
-class _CardDialogObserver extends NavigatorObserver {
-  final shown = Completer<void>();
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is DialogRoute && !shown.isCompleted) shown.complete();
-    super.didPush(route, previousRoute);
-  }
 }

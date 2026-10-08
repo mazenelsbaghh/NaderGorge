@@ -14,6 +14,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -46,6 +47,8 @@ type Gateway struct {
 	discovery *net.UDPConn
 	proxy     *httputil.ReverseProxy
 	transport *http.Transport
+	mobileMu  sync.Mutex
+	mobile    *http.Server
 }
 
 type pairedDeviceKey struct{}
@@ -76,6 +79,8 @@ func (g *Gateway) configureServer() {
 	mux.HandleFunc("POST /control/pairing", g.rotatePairing)
 	mux.HandleFunc("GET /control/devices", g.listDevices)
 	mux.HandleFunc("POST /control/devices/revoke", g.revokeDevice)
+	mux.HandleFunc("POST /control/mobile/start", g.startMobile)
+	mux.HandleFunc("POST /control/mobile/stop", g.stopMobile)
 	g.server = &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 60 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{g.identity.Certificate}}, ErrorLog: log.New(io.Discard, "", 0)}
 }
@@ -89,7 +94,7 @@ func (g *Gateway) configureProxy() {
 			request.Out.Host = upstream.Host
 			// Device identity stays authoritative; session and snapshot version are opaque hints.
 			for header := range request.Out.Header {
-				if strings.HasPrefix(strings.ToLower(header), "x-massar-") && !strings.EqualFold(header, "X-Massar-Session") && !strings.EqualFold(header, "X-Massar-State-Version") && !strings.EqualFold(header, "X-Massar-State-Patch") {
+				if strings.HasPrefix(strings.ToLower(header), "x-massar-") && !strings.EqualFold(header, "X-Massar-Session") && !strings.EqualFold(header, "X-Massar-State-Version") && !strings.EqualFold(header, "X-Massar-State-Patch") && !strings.EqualFold(header, "X-Massar-State-Wait") && !strings.EqualFold(header, "X-Massar-State-Chunks") {
 					request.Out.Header.Del(header)
 				}
 			}
@@ -131,6 +136,7 @@ func (g *Gateway) start() (Ready, error) {
 }
 
 func (g *Gateway) close() error {
+	g.closeMobile()
 	if g.discovery != nil {
 		g.discovery.Close()
 	}
@@ -225,7 +231,9 @@ func (g *Gateway) proxyAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Upgrade") != "" ||
 		!boundedHeader(r.Header, "X-Massar-Session", 4096) ||
 		!boundedHeader(r.Header, "X-Massar-State-Version", 128) ||
-		!boundedHeader(r.Header, "X-Massar-State-Patch", 16) {
+		!boundedHeader(r.Header, "X-Massar-State-Patch", 16) ||
+		!boundedHeader(r.Header, "X-Massar-State-Wait", 1) ||
+		!boundedHeader(r.Header, "X-Massar-State-Chunks", 1) {
 		writeError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}

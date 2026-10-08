@@ -128,7 +128,10 @@ class _ManagementWorkspaceState extends State<ManagementWorkspace> {
     'students' => StudentsPage(store: widget.store),
     'cards' => CardsPage(store: widget.store),
     'card-settings' => CardSettingsPage(store: widget.store),
-    'academics' => AcademicsPage(store: widget.store),
+    'academics' => AcademicsPage(
+      store: widget.store,
+      lanController: widget.lanController,
+    ),
     'reports' => ReportsPage(store: widget.store),
     'review' => ReviewPage(store: widget.store),
     'closings' => ClosingsPage(store: widget.store),

@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../lan/lan_controller.dart';
+import '../management/mobile_homework_dialog.dart';
 import 'package:massar_center/shared/student_lookup_dialog.dart';
 import 'package:massar_center/domain/student_lookup.dart'
     show normalizeStudentIdentifier, studentIdentifiers;
@@ -56,8 +58,10 @@ class AttendanceWorkspace extends StatefulWidget {
     required this.onExit,
     this.initialSessionId,
     this.workspaceContext,
+    this.lanController,
   });
   final CenterStore store;
+  final LanController? lanController;
   final VoidCallback onExit;
   final String? initialSessionId;
   final AttendanceWorkspaceContext? workspaceContext;
@@ -583,12 +587,13 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         current == null ||
         current.status != SessionStatus.open ||
         _search.text.trim().isNotEmpty ||
-        store.attendances.any(
-              (a) =>
-                  a.studentId == selected.id &&
-                  a.sessionId == current.id &&
-                  a.status != AttendanceStatus.absent,
-            ) &&
+        store
+                .attendancesForStudent(selected.id)
+                .any(
+                  (a) =>
+                      a.sessionId == current.id &&
+                      a.status != AttendanceStatus.absent,
+                ) &&
             !store.attendanceNeedsPayment(selected.id, current.id)) {
       return false;
     }
@@ -922,24 +927,25 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
   bool _hasPendingSourceMakeup(Student value, LessonSession? current) =>
       current != null &&
       store.attendanceNeedsPayment(value.id, current.id) &&
-      store.attendances.any(
-        (record) =>
-            record.studentId == value.id &&
-            record.sessionId == current.id &&
-            record.status == AttendanceStatus.makeup &&
-            record.makeupSourceGroupId != null,
-      );
+      store
+          .attendancesForStudent(value.id)
+          .any(
+            (record) =>
+                record.sessionId == current.id &&
+                record.status == AttendanceStatus.makeup &&
+                record.makeupSourceGroupId != null,
+          );
 
   bool _isCenterOnly(Student value, LessonSession? current) =>
       !value.centerFeeEnabled &&
       (value.centerOnly ||
           current != null &&
-              store.attendances.any(
-                (record) =>
-                    record.studentId == value.id &&
-                    record.sessionId == current.id &&
-                    record.centerFeeOnly,
-              ));
+              store
+                  .attendancesForStudent(value.id)
+                  .any(
+                    (record) =>
+                        record.sessionId == current.id && record.centerFeeOnly,
+                  ));
 
   int _centerFeeAmount(Student value, LessonSession? current) => current == null
       ? value.centerFeeAmount
@@ -1977,12 +1983,13 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           scannerBlocked: blocked,
           packageConfirmation: packageConfirmation,
           retainedSessionPayment: retainedSessionPayment,
-          attendanceRecorded: store.attendances.any(
-            (record) =>
-                record.studentId == selected.id &&
-                record.sessionId == current.id &&
-                record.status != AttendanceStatus.absent,
-          ),
+          attendanceRecorded: store
+              .attendancesForStudent(selected.id)
+              .any(
+                (record) =>
+                    record.sessionId == current.id &&
+                    record.status != AttendanceStatus.absent,
+              ),
           onPaidAmountConfirmed: (amount) => approvedPaidAmount = amount,
         ),
       );
@@ -2092,6 +2099,9 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
   );
 
   bool get _canChangeCard =>
+      _cardContextReady && ModalRoute.of(context)?.isCurrent == true;
+
+  bool get _cardContextReady =>
       _workspaceEnabled &&
       !hasPendingMassarNotice(context) &&
       !_attendanceWarning &&
@@ -2106,8 +2116,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
       _studentResolved &&
       student != null &&
       _search.text.trim().isEmpty &&
-      store.canCollect &&
-      ModalRoute.of(context)?.isCurrent == true;
+      store.canCollect;
 
   void _enableFreeSearch() {
     if (!_canUseToolbar) return;
@@ -2962,6 +2971,18 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           ),
         );
         final actions = [
+          if (store.canAssess)
+            TextButton.icon(
+              key: const Key('attendance-mobile-homework'),
+              onPressed: () => showMobileHomeworkDialog(
+                context,
+                store: store,
+                lan: widget.lanController,
+                session: session,
+              ),
+              icon: const Icon(Icons.phone_android, size: 18),
+              label: const Text('واجب الموبايل'),
+            ),
           Tooltip(
             message: store.isRemote
                 ? store.remoteConnected
@@ -3594,12 +3615,12 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     final quote = base == null
         ? null
         : _discounted(base, selected.discountPercent);
-    final mayPay =
-        _canChangeCard &&
+    final unpaid =
         !selected.isSuspended &&
         payment == null &&
         store.cardReceiptFor(selected.id) == null &&
         quote != null;
+    final mayPay = _canChangeCard && unpaid;
     return Row(
       children: [
         Expanded(
@@ -3638,9 +3659,16 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                     ),
                   )
                   .toList(),
-              onChanged: mayPay
+              // Opening this selector makes the page's route non-current.
+              // Keep its callback available, then recheck after it closes.
+              onChanged: _cardContextReady && unpaid
                   ? (value) {
-                      setState(() => _cardMethod = value!);
+                      if (!_canChangeCard ||
+                          student?.id != selected.id ||
+                          value == null) {
+                        return;
+                      }
+                      setState(() => _cardMethod = value);
                       _focusCode();
                     }
                   : null,
@@ -3655,6 +3683,14 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     final currentStudent = student!;
     final currentGroup = group;
     final currentSession = session;
+    final attendance = store.attendancesForStudent(currentStudent.id);
+    final recordedAttendance = attendance
+        .where(
+          (record) =>
+              record.sessionId == currentSession?.id &&
+              record.status != AttendanceStatus.absent,
+        )
+        .firstOrNull;
     final twin = store.twinFor(currentStudent.id);
     final sourceGroup = _manualMakeupSource;
     final totalRemaining = sourceGroup != null
@@ -3672,14 +3708,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         ? totalRemaining
         : store.eligibleRemainingFor(currentStudent.id, currentSession.id);
     final enrolled = currentStudent.groupIds.contains(_groupId);
-    final hasAttendance =
-        currentSession != null &&
-        store.attendances.any(
-          (item) =>
-              item.studentId == currentStudent.id &&
-              item.sessionId == currentSession.id &&
-              item.status != AttendanceStatus.absent,
-        );
+    final hasAttendance = recordedAttendance != null;
     final needsPayment =
         currentSession != null &&
         store.attendanceNeedsPayment(currentStudent.id, currentSession.id);
@@ -3690,11 +3719,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     final centerOnly = _isCenterOnly(currentStudent, currentSession);
     final hasCenterFee =
         currentSession != null &&
-        store.centerFees.any(
-          (fee) =>
-              fee.studentId == currentStudent.id &&
-              fee.sessionId == currentSession.id,
-        );
+        store.centerFeesFor(currentStudent.id, currentSession.id).isNotEmpty;
     final centerFeeDue = currentSession == null
         ? currentStudent.centerFeeAmount
         : store.centerFeeDueFor(currentStudent.id, currentSession.id);
@@ -3711,18 +3736,10 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     final effectiveMode = currentSession == null
         ? _mode
         : _effectiveMode(currentStudent, currentSession);
-    final recordedAttendance = store.attendances
-        .where(
-          (record) =>
-              record.studentId == currentStudent.id &&
-              record.sessionId == currentSession?.id &&
-              record.status != AttendanceStatus.absent,
-        )
-        .firstOrNull;
     final isMakeup =
         recordedAttendance?.status == AttendanceStatus.makeup ||
         effectiveMode == EntryMode.makeup;
-    final originalRecord = store.attendances
+    final originalRecord = attendance
         .where(
           (record) =>
               record.id ==
@@ -3730,11 +3747,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                   _originalAttendanceId),
         )
         .firstOrNull;
-    final originalSession = _byId(
-      store.sessions,
-      originalRecord?.sessionId,
-      (value) => value.id,
-    );
+    final originalSession = store.sessionById(originalRecord?.sessionId);
     final makeupGroupId =
         recordedAttendance?.makeupSourceGroupId ??
         sourceGroup?.id ??
@@ -3744,12 +3757,11 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         : store.groupLabel(makeupGroupId);
     final balanceGroupId = makeupGroupId ?? sourceGroup?.id ?? currentGroup?.id;
     final activePackages =
-        store.packages
+        store
+            .packagesForStudent(currentStudent.id, groupId: balanceGroupId)
             .where(
               (package) =>
-                  package.studentId == currentStudent.id &&
-                  package.groupId == balanceGroupId &&
-                  package.remaining > 0,
+                  package.groupId == balanceGroupId && package.remaining > 0,
             )
             .toList()
           ..sort(
@@ -3784,11 +3796,8 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         ? null
         : _discounted(base, currentStudent.discountPercent);
     final canEnter = _canEnter && !_submittingStudent && !_startingSession;
-    final payments =
-        store.payments
-            .where((item) => item.studentId == currentStudent.id)
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final payments = store.paymentsForStudent(currentStudent.id).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final panel = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

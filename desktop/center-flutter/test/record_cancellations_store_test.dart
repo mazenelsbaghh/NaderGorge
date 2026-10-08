@@ -676,7 +676,7 @@ void main() {
       );
       try {
         await db.execute(
-          "CREATE TRIGGER reject_cancel BEFORE UPDATE ON state BEGIN SELECT RAISE(ABORT, 'temporary test failure'); END",
+          "CREATE TRIGGER reject_cancel BEFORE INSERT ON state_records BEGIN SELECT RAISE(ABORT, 'temporary test failure'); END",
         );
         await expectLater(
           store.cancelPayment(

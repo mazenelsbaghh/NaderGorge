@@ -116,9 +116,12 @@ void main() {
         expect(await File(destination!).readAsString(), 'protected bytes');
         destination = '${directory.path}/saved.json';
         await tester.tap(find.text('حفظ نسخة على الجهاز أو فلاشة'));
-        await acknowledgeNotice(
+        await waitFor(
           tester,
-          message: 'حُفظت النسخة الاحتياطية بنجاح.',
+          () => find
+              .text('آخر نسخة يدوية: ${destination!}')
+              .evaluate()
+              .isNotEmpty,
         );
         final envelope =
             jsonDecode(await File(destination!).readAsString()) as Map;

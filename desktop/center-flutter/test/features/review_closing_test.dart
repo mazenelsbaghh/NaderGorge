@@ -95,6 +95,7 @@ void main() {
     await (FontLoader(
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
       RepaintBoundary(
         key: captureKey,
@@ -148,7 +149,7 @@ void main() {
       store.removeListener(listener);
     }
     await tester.pump(const Duration(milliseconds: 200));
-    await acknowledgeNotice(tester);
+    await tester.pumpAndSettle();
   }
 
   Future<void> lookup(WidgetTester tester, String code) async {
@@ -210,7 +211,7 @@ void main() {
   );
 
   testWidgets(
-    'student code checks show each payment status and persist without paper matching',
+    'receipt review requires an actual matching receipt and never creates revenue',
     (tester) async {
       await tester.runAsync(() async {
         await store.collectAndAttend(
@@ -220,15 +221,20 @@ void main() {
             mode: EntryMode.single,
           ),
         );
-        await store.saveStudent(
-          Student(
-            code: '124',
-            name: 'مينا عادل',
-            groupIds: [group.id],
-            createdAt: DateTime.now(),
-          ),
-        );
-        final packaged = store.students.last;
+        for (final (code, name) in [
+          ('124', 'مينا عادل'),
+          ('125', 'يوسف سامح'),
+        ]) {
+          await store.saveStudent(
+            Student(
+              code: code,
+              name: name,
+              groupIds: [group.id],
+              createdAt: DateTime.now(),
+            ),
+          );
+        }
+        final packaged = store.students[1], unpaid = store.students[2];
         await store.renewPackage(
           PackageRequest(
             studentId: packaged.id,
@@ -236,57 +242,52 @@ void main() {
             sessionId: session.id,
           ),
         );
-        await store.saveStudent(
-          Student(
-            code: '125',
-            name: 'يوسف سامح',
-            groupIds: [group.id],
-            createdAt: DateTime.now(),
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: packaged.id,
+            sessionId: session.id,
+            mode: EntryMode.package,
           ),
         );
-        final unpaid = store.students.last;
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: unpaid.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
         await open(
           tester,
           ManagementWorkspace(store: store, onOpenAttendance: () {}),
         );
-        await tester.binding.setSurfaceSize(const Size(1440, 900));
         await tester.tap(find.text('مراجعة'));
         await tester.pumpAndSettle();
         final input = find.byKey(const Key('payment-check-code'));
+        final amount = find.byKey(const Key('payment-review-custom-amount'));
         expect(find.byKey(const Key('review-paper-amount')), findsNothing);
         expect(find.byKey(const Key('save-payment-review')), findsNothing);
         expect(find.byType(RadioListTile<String>), findsNothing);
-        await tester.enterText(input, student.name);
+        await tester.enterText(input, 'unknown-code');
         await tester.testTextInput.receiveAction(TextInputAction.search);
-        await tester.pumpAndSettle();
-        expect(find.textContaining('لم نجد هذا الكود'), findsOneWidget);
-        await acknowledgeNotice(tester);
-        expect(store.paymentChecks, isEmpty);
-        expect(find.textContaining('لم نجد هذا الكود'), findsNothing);
-        expect(tester.widget<TextField>(input).focusNode!.hasFocus, isTrue);
-        await tester.tap(find.text('مراجعة الدفع بالأكواد'));
-        await tester.pumpAndSettle();
-        expect(tester.widget<TextField>(input).focusNode!.hasFocus, isTrue);
-        await tester.tap(
-          find.byKey(ValueKey('code-check-session-${session.id}')),
+        await acknowledgeNotice(
+          tester,
+          message: 'لم نجد طالبًا بهذا الكود أو الاسم أو الهاتف.',
         );
-        await tester.pumpAndSettle();
-        await tester.tap(find.textContaining('حصة 1 ·').last);
-        await tester.pumpAndSettle();
+        expect(store.paymentChecks, isEmpty);
         expect(tester.widget<TextField>(input).focusNode!.hasFocus, isTrue);
 
-        Future<void> check(String code, String expected) async {
+        Future<void> check(
+          String code,
+          String receipt,
+          StudentPaymentStatus status,
+        ) async {
+          await tester.enterText(amount, receipt);
           await tester.enterText(input, code);
           await mutate(
             tester,
             () => tester.testTextInput.receiveAction(TextInputAction.search),
           );
-          expect(
-            tester
-                .widget<Text>(find.byKey(const Key('payment-check-result')))
-                .data,
-            expected,
-          );
+          expect(store.paymentChecks.last.status, status);
           final field = tester.widget<TextField>(input);
           expect(field.focusNode!.hasFocus, isTrue);
           expect(
@@ -295,31 +296,36 @@ void main() {
           );
         }
 
-        await check(student.code, 'دافع الحصة');
-        await check(packaged.code, 'الحصة مغطاة بالباقة');
-        await check(unpaid.code, 'غير دافع');
-        expect(store.paymentChecks, hasLength(3));
-        expect(find.text('تمت مراجعة 3 كود'), findsOneWidget);
-        expect(find.text('دفع أو تغطية: 2'), findsOneWidget);
-        await check(unpaid.code, 'غير دافع');
-        expect(store.paymentChecks, hasLength(3));
+        await check(student.code, '75', StudentPaymentStatus.paidSingle);
+        await check(packaged.code, '400', StudentPaymentStatus.paidPackage);
+        expect(store.paymentChecks, hasLength(2));
+        expect(find.textContaining('تمت مراجعة 2 من 3 حاضر'), findsOneWidget);
+        for (final code in [unpaid.code, student.code]) {
+          await tester.enterText(amount, '75');
+          await tester.enterText(input, code);
+          await tester.testTextInput.receiveAction(TextInputAction.search);
+          await acknowledgeNotice(tester);
+          expect(store.paymentChecks, hasLength(2));
+        }
+        expect(
+          store.paymentChecks.any((row) => row.studentId == unpaid.id),
+          isFalse,
+        );
         expect(store.reviews, isEmpty);
         expect(store.payments, hasLength(2));
-        expect(store.attendances, hasLength(1));
+        expect(store.attendances, hasLength(3));
         await capture(tester, 'payment-code-check-shell-1440');
         await tester.binding.setSurfaceSize(const Size(1280, 900));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         await capture(tester, 'payment-code-check-shell-1280');
+        await tester.pumpWidget(const SizedBox());
         await store.close();
         store = await CenterStore.open(directory: directory.path);
-        expect(store.paymentChecks, hasLength(3));
+        expect(store.paymentChecks, hasLength(2));
         expect(
-          store.paymentChecks
-              .where((c) => c.status == StudentPaymentStatus.notPaid)
-              .single
-              .studentId,
-          unpaid.id,
+          store.paymentChecks.any((row) => row.studentId == unpaid.id),
+          isFalse,
         );
         expect(store.reviews, isEmpty);
         expect(store.payments, hasLength(2));
@@ -328,7 +334,7 @@ void main() {
   );
 
   testWidgets(
-    'paper review uses exact code and selected operation without creating revenue',
+    'paper review finds name or code and reviews a selected operation without creating revenue',
     (tester) async {
       await tester.runAsync(() async {
         await store.collectAndAttend(
@@ -355,7 +361,7 @@ void main() {
           ),
           findsNothing,
         );
-        expect(find.byType(RadioListTile<String>), findsNothing);
+        expect(find.byType(RadioListTile<String>), findsNWidgets(3));
         await lookup(tester, student.code);
         final codeField = tester.widget<TextField>(
           find.byKey(const Key('review-student-code')),
@@ -527,13 +533,19 @@ void main() {
             paperAmount: 7000,
           ),
         );
-        for (final value in store.students) {
-          await store.checkPayment(studentId: value.id, sessionId: session.id);
+        for (final value in [student, other]) {
+          await store.checkPayment(
+            studentId: value.id,
+            sessionId: session.id,
+            expectedAmount: store.paymentReviewAmountFor(value.id, session.id),
+          );
         }
         await open(tester, ClosingsPage(store: store));
         expect(
-          find.text('الأكواد: 3 مُراجع · 2 دافع أو مغطى · 1 غير دافع'),
-          findsOneWidget,
+          find.text(
+            'مراجعة الحضور الحالي: 2 من 2 مُراجع · 0 إعفاء من رسوم المدرس · 0 عليه مبلغ متبقٍ أو بلا دفع',
+          ),
+          findsNWidgets(2),
         );
         await tester.enterText(
           find.byKey(const Key('closing-actual-cash')),
@@ -576,7 +588,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.textContaining('3 مُراجع · 2 دافع أو مغطى · 1 غير دافع').last,
+          find.textContaining('مراجعة الحضور الحالي: 2 من 2 مُراجع').last,
           findsOneWidget,
         );
         expect(store.closings, isEmpty);
@@ -598,10 +610,8 @@ void main() {
         expect(saved.difference, -450);
         expect(store.payments, hasLength(2));
         expect(find.byKey(const Key('finalize-session-finance')), findsNothing);
-        final field = tester.widget<TextFormField>(
-          find.byKey(const Key('closing-actual-cash')),
-        );
-        expect(field.enabled, isFalse);
+        expect(find.byKey(const Key('closing-actual-cash')), findsNothing);
+        expect(find.text('النقدية المحفوظة في التقفيلة'), findsOneWidget);
         await capture(tester, 'session-closing-saved');
         await openPaper(tester);
         await lookup(tester, student.code);
@@ -642,7 +652,11 @@ void main() {
           ),
         );
         await store.closeSession(session.id);
-        await store.checkPayment(studentId: student.id, sessionId: session.id);
+        await store.checkPayment(
+          studentId: student.id,
+          sessionId: session.id,
+          expectedAmount: 7500,
+        );
         for (final width in [1440.0, 1280.0]) {
           await open(
             tester,
