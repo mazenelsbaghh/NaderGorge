@@ -74,4 +74,5 @@ export function preparedSourceMatches(document: MimDocument, source: MimSource):
   return document.scenes.every(scene => scene.sourceChapterIds.every(id => chapters.has(id)));
 }
 
-export interface MimVideo { version: string; state: string; quote: string; expiresAt: string; jobId: string | null; urls: string[] }
+export interface MimVideoModel { id: string; name: string }
+export interface MimVideo { model: string; version: string; state: string; quote: string; expiresAt: string; jobId: string | null; urls: string[] }

@@ -5,8 +5,8 @@ import { Film, RefreshCw } from 'lucide-react';
 import type { MimVideo } from './contract';
 import { mimStudioService, studioError } from './service';
 
-export function MimSceneVideoPanel({ lessonId, scene, scriptVersion, connected, disabled }: {
-  lessonId: string; scene: number; scriptVersion: string | null; connected: boolean; disabled: boolean;
+export function MimSceneVideoPanel({ lessonId, scene, scriptVersion, connected, disabled, model }: {
+  model: string; lessonId: string; scene: number; scriptVersion: string | null; connected: boolean; disabled: boolean;
 }) {
   const [video, setVideo] = useState<MimVideo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export function MimSceneVideoPanel({ lessonId, scene, scriptVersion, connected, 
     if (busy) return;
     setBusy(true); setError('');
     try {
-      const next = action === 'quote' ? await mimStudioService.quoteVideo(lessonId, scene) :
+      const next = action === 'quote' ? await mimStudioService.quoteVideo(lessonId, scene, model) :
         action === 'submit' && video ? await mimStudioService.submitVideo(lessonId, scene, video.version) : await mimStudioService.video(lessonId, scene);
       setVideo(next);
       if (action === 'quote') setQuotedVersion(scriptVersion);
@@ -42,7 +42,7 @@ export function MimSceneVideoPanel({ lessonId, scene, scriptVersion, connected, 
   const unknown = video?.state === 'unknown';
   return <section aria-label="توليد فيديو المشهد" className="mt-7 space-y-4 border-t border-[var(--admin-border)] pt-6">
     <h3 className="flex items-center gap-2 text-lg font-black text-[var(--admin-text)]"><Film className="h-5 w-5" />فيديو المشهد {scene + 1}</h3>
-    <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">٣٠ ثانية · أفقي 16:9 · Seedance 2.5 · شيت ميم وشيت نادر مرفقان بالتوليد. راجع الاسكربت قبل عرض التكلفة.</p>
+    <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">٣٠ ثانية · أفقي 16:9 · شيت ميم وشيت نادر مرفقان بالتوليد. راجع الاسكربت قبل عرض التكلفة.</p>
     {!connected && <p className="text-sm text-[var(--admin-muted)]">اربط حساب Higgsfield من قسم الربط أولاً.</p>}
     {disabled && <p className="text-sm text-[var(--admin-muted)]">احفظ الاسكربت وتأكد من مصدره قبل توليد الفيديو.</p>}
     {error && <p role="alert" className="text-sm leading-7 text-red-700 dark:text-red-300">{error}</p>}
@@ -50,14 +50,16 @@ export function MimSceneVideoPanel({ lessonId, scene, scriptVersion, connected, 
       {canQuote && <button type="button" className="admin-btn-ghost min-h-11" disabled={busy || disabled || !connected || !scriptVersion} onClick={() => void act('quote')}>
         {busy ? 'جاري تجهيز الطلب…' : quoted ? 'تحديث تكلفة هذا المشهد' : 'عرض تكلفة هذا المشهد'}
       </button>}
-      {quoted && <>
+      {quoted && video.model === model && <>
         <p className="font-bold text-[var(--admin-text)]">{video.quote}</p>
         <button type="button" className="admin-btn-primary min-h-11 disabled:opacity-50"
-          disabled={busy || disabled || !connected || quotedVersion !== scriptVersion || Date.parse(video.expiresAt) <= new Date().getTime()}
+          disabled={busy || disabled || !connected || quotedVersion !== scriptVersion || video.model !== model || Date.parse(video.expiresAt) <= new Date().getTime()}
           onClick={() => void act('submit')}>توليد هذا المشهد وخصم التكلفة المعروضة</button>
       </>}
       {video && !quoted && <button type="button" className="admin-btn-ghost min-h-11" disabled={busy} onClick={() => void act('refresh')}><RefreshCw className="h-4 w-4" />تحديث حالة الفيديو</button>}
     </div>
+    {quoted && video.model !== model && <p role="status" className="text-sm leading-7 text-[var(--admin-muted)]">الموديل اتغيّر. اعرض التكلفة من جديد قبل التوليد.</p>}
+    {video && !quoted && <p className="text-sm text-[var(--admin-muted)]">موديل الطلب المحفوظ: {video.model === 'wan3_0_prime' ? 'Wan 3.0 Prime' : 'Seedance 2.5'}</p>}
     {pending && <p role="status" className="text-sm leading-7 text-[var(--admin-muted)]">المشهد قيد التوليد على Higgsfield. حدّث الحالة بعد قليل؛ الانتقال لمشهد آخر لا يرسل طلب توليد جديد.</p>}
     {unknown && <p role="alert" className="text-sm leading-7 text-amber-800 dark:text-amber-200">نتيجة الإرسال غير مؤكدة. لن نعيد إرسال الطلب حتى لا يتكرر الخصم. راجع سجل التوليد في حساب Higgsfield لتحديد نتيجته.</p>}
     {video?.state === 'failed' && <p role="alert" className="text-sm leading-7 text-red-700 dark:text-red-300">Higgsfield أعلن فشل التوليد. الاسكربت محفوظ؛ راجع تفاصيل الطلب في حسابك.</p>}

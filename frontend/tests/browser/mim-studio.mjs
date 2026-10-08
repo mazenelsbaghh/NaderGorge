@@ -10,7 +10,7 @@ const videoId = '00000000-0000-4000-8000-000000000002';
 const source = { id: videoId, title: 'شرح التحولات الكبرى', sourceRevision: 1,
   chapters: episode.scenes.flatMap(scene => scene.sourceChapterIds).map(id => ({ id, title: 'فصل من الشرح', summary: 'ملخص الفصل', startTime: 0, endTime: 300 })) };
 
-async function openStudio(page, matches = true) {
+async function openStudio(page, matches = true, availableVideos = null) {
   const user = { id: '00000000-0000-4000-8000-000000000003', fullName: 'أدمن الاختبار', roles: ['Admin'], permissions: ['content.manage'],
     allowedDomains: ['admin'], allowedNavbarItems: [], profileComplete: true, authorizationVersion: 1 };
   await page.addInitScript(user => {
@@ -25,7 +25,7 @@ async function openStudio(page, matches = true) {
     if (path === '/auth/session') response = { user, authorizationVersion: 1 };
     if (path.includes('/cockpit')) response = { lessonId, title: 'المحاضرة السادسة: التحولات الكبرى في مصر خلال العصر الوسيط', summary: '', internalCode: 'L-6',
       order: 1, price: 0, archiveMode: 'None', videos: [], resources: [], homework: [], commentsSummary: { pending: 0, total: 0 } };
-    if (path === `/admin/mim-studio/lessons/${lessonId}/sources`) response = [{ ...source, chapters: matches ? source.chapters : [] }];
+    if (path === `/admin/mim-studio/lessons/${lessonId}/sources`) response = availableVideos ?? [{ ...source, chapters: matches ? source.chapters : [] }];
     if (path.endsWith('/scenes/next')) {
       const request = route.request().postDataJSON();
       const scenes = [...(snapshot?.document.scenes ?? []), { ...structuredClone(episode.scenes[request.expectedSceneCount]), sourceChapterIds: [] }];
@@ -34,13 +34,14 @@ async function openStudio(page, matches = true) {
       response = snapshot;
     }
     if (path.endsWith('/video/quote')) {
-      video = { version: 'quote-1', state: 'quoted', quote: '١٠ كريديت', expiresAt: new Date(Date.now()+300000).toISOString(), urls: [], jobId: null };
+      video = { model:route.request().postDataJSON().model, version: 'quote-1', state: 'quoted', quote: '١٠ كريديت', expiresAt: new Date(Date.now()+300000).toISOString(), urls: [], jobId: null };
       response = video;
     }
     if (path.endsWith('/video')) {
       if (route.request().method() === 'POST') { saves.push({ videoSubmission: true }); video = { ...video, state: 'running', jobId: '00000000-0000-4000-8000-000000000008' }; }
       response = video;
     }
+    if (path === '/admin/mim-studio/video-models') response = [{ id:'wan3_0_prime', name:'Wan 3.0 Prime' }, { id:'seedance_2_5', name:'Seedance 2.5' }];
     if (path === '/admin/mim-studio/connection') response = { connected: !matches, configured: true, endpoint: 'https://mcp.higgsfield.ai/mcp' };
     if (path === `/admin/mim-studio/lessons/${lessonId}`) {
       if (route.request().method() === 'PUT') {
@@ -108,6 +109,7 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
     const submissions = await openStudio(page, false);
     const first = page.getByRole('button', { name: 'كتابة المشهد الأول', exact: true });
     await expect(first).toBeDisabled();
+    await page.getByRole('radio', { name:'إدخال نص يدويًا' }).check();
     await page.getByLabel('نص شرح الحصة', { exact: true }).fill('شرح تفصيلي للحصة ومفاهيمها وأمثلتها، يستند إليه الكاتب في إعداد المشاهد دون اختلاق معلومات جديدة. '.repeat(4));
     await first.click();
     await expect(page.getByRole('button', { name: 'كتابة المشهد التالي (2 من ٤)', exact: true })).toBeVisible();
@@ -117,6 +119,10 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
     const approve = page.getByRole('button', { name: 'توليد هذا المشهد وخصم التكلفة المعروضة', exact:true });
     await expect(approve).toBeEnabled();
     assert.equal(submissions.length, 0);
+    await page.getByLabel('موديل توليد الفيديو', { exact:true }).selectOption('seedance_2_5');
+    await expect(approve).toHaveCount(0);
+    await page.getByRole('button', { name:'تحديث تكلفة هذا المشهد', exact:true }).click();
+    await expect(approve).toBeEnabled();
     await approve.click();
     await expect(page.getByText('المشهد قيد التوليد على Higgsfield.', { exact:false })).toBeVisible();
     assert.equal(submissions.length, 1);
@@ -126,5 +132,27 @@ test('empty lesson writes one scene per click and video waits for explicit cost 
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await page.getByRole('heading', { name: 'استوديو ميم', exact:true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: '../artifacts/mim-studio/scene-generation/mobile.png', fullPage:true });
+  } finally { await browser.close(); }
+});
+
+
+test('admin selects a video and Gemini receives that video identity, not another source (synthetic API)', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ channel: 'chrome' });
+  try {
+    const page = await browser.newPage();
+    const chosen = { ...source, title:'فيديو الشرح المختار', chapters:[{ id:'00000000-0000-4000-8000-000000000099', title:'مراحل دورة الماء', summary:'تتبخر المياه ثم تتكثف وتسقط الأمطار.', startTime:0, endTime:120 }] };
+    await openStudio(page, false, [{ ...chosen, id:'00000000-0000-4000-8000-000000000098', title:'فيديو بلا تحليل', chapters:[] }, chosen]);
+    const first = page.getByRole('button', { name:'كتابة المشهد الأول', exact:true });
+    await expect(first).toBeDisabled();
+    await expect(page.getByLabel('موديل توليد الفيديو', { exact:true })).toHaveValue('wan3_0_prime');
+    await page.getByLabel('فيديو الشرح', { exact:true }).selectOption(videoId);
+    await page.getByText('عرض الملخصات اللي جيمناي هيستخدمها (1)', { exact:true }).click();
+    await expect(page.getByText('تتبخر المياه ثم تتكثف وتسقط الأمطار.', { exact:true })).toBeVisible();
+    const sent = page.waitForRequest(request => request.url().endsWith('/scenes/next'));
+    await first.click();
+    const request = (await sent).postDataJSON();
+    assert.equal(request.sourceVideoId, videoId);
+    assert.equal(request.sourceText, null);
+    await expect(page.getByRole('button', { name:'كتابة المشهد التالي (2 من ٤)', exact:true })).toBeVisible();
   } finally { await browser.close(); }
 });

@@ -1,5 +1,5 @@
 import api from '@/services/api-client';
-import type { McpConnection, McpTool, MimDocument, MimSnapshot, MimSource, MimVideo } from './contract';
+import type { McpConnection, McpTool, MimDocument, MimSnapshot, MimSource, MimVideo, MimVideoModel } from './contract';
 
 const root = '/admin/mim-studio';
 const unwrap = <T>(response: { data: { data: T } }) => response.data.data;
@@ -13,7 +13,8 @@ export const mimStudioService = {
       version, sourceVideoId: source?.id ?? null, sourceRevision: source?.sourceRevision ?? 0, sourceText, expectedSceneCount,
     }, { timeout: 90000 }).then(unwrap),
   video: (lessonId: string, scene: number, signal?: AbortSignal) => api.get<{ data: MimVideo | null }>(`${root}/lessons/${lessonId}/scenes/${scene}/video`, { signal, timeout: 60000 }).then(unwrap),
-  quoteVideo: (lessonId: string, scene: number) => api.post<{ data: MimVideo }>(`${root}/lessons/${lessonId}/scenes/${scene}/video/quote`, {}, { timeout: 180000 }).then(unwrap),
+  models: (signal?: AbortSignal) => api.get<{ data: MimVideoModel[] }>(`${root}/video-models`, { signal }).then(unwrap),
+  quoteVideo: (lessonId: string, scene: number, model: string) => api.post<{ data: MimVideo }>(`${root}/lessons/${lessonId}/scenes/${scene}/video/quote`, { model }, { timeout: 180000 }).then(unwrap),
   submitVideo: (lessonId: string, scene: number, version: string) => api.post<{ data: MimVideo }>(`${root}/lessons/${lessonId}/scenes/${scene}/video`, { version }, { timeout: 60000 }).then(unwrap),
   connection: (signal?: AbortSignal) => api.get<{ data: McpConnection }>(`${root}/connection`, { signal }).then(unwrap),
   connect: () => api.post<{ data: { authorizationUrl: string } }>(`${root}/connection/start`, {}, { timeout: 50000 }).then(unwrap),

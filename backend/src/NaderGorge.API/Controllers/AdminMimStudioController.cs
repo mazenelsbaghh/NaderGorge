@@ -30,7 +30,11 @@ public sealed class AdminMimStudioController(LessonMimStudioService studio, Higg
     public Task<IActionResult> Video(Guid lessonId, int scene, CancellationToken ct) => Run(() => videos.ReadAsync(User.RequireUserId(), lessonId, scene, ct));
 
     [HttpPost("lessons/{lessonId:guid}/scenes/{scene:int}/video/quote")]
-    public Task<IActionResult> Quote(Guid lessonId, int scene, CancellationToken ct) => Run(() => videos.QuoteAsync(User.RequireUserId(), lessonId, scene, ct));
+    public Task<IActionResult> Quote(Guid lessonId, int scene, MimVideoQuoteRequest request, CancellationToken ct) =>
+        Run(() => videos.QuoteAsync(User.RequireUserId(), new(lessonId, scene, request.Model), ct));
+
+    [HttpGet("video-models")]
+    public IActionResult Models() => Ok(ApiResponse<MimVideoModel[]>.Ok(MimVideoModels.Choices));
 
     [HttpPost("lessons/{lessonId:guid}/scenes/{scene:int}/video")]
     public Task<IActionResult> Submit(Guid lessonId, int scene, MimVideoApproval request, CancellationToken ct) =>

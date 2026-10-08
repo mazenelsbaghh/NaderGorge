@@ -40,6 +40,30 @@ public sealed class MimSceneGenerationTests
     }
 
     [Fact]
+    public async Task SelectedVideoSuppliesOnlyItsSummariesAndCannotChangeMidStory()
+    {
+        await using var sqlite = new SqliteConnection("Data Source=:memory:");
+        await sqlite.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(sqlite).Options);
+        await db.Database.EnsureCreatedAsync();
+        var (lesson, actor) = await SeedAsync(db);
+        var type = new VideoType { Name="شرح", NormalizedName="شرح" };
+        var selected = new LessonVideo { Title="دورة الماء", LessonId=lesson, VideoType=type,
+            VideoChapters=[new VideoChapter { Title="التبخر", SummaryText="تتحول المياه إلى بخار بفعل الحرارة." }] };
+        var other = new LessonVideo { Title="درس آخر", LessonId=lesson, VideoType=type,
+            VideoChapters=[new VideoChapter { Title="معلومة أخرى", SummaryText="UNSELECTED_EXPLANATION" }] };
+        db.AddRange(selected, other); await db.SaveChangesAsync();
+        var handler = new WriterHandler();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["WORKER_URL"]="http://worker.test", ["WORKER_ADMIN_TOKEN"]="test-only" }).Build();
+        var service = new LessonMimStudioService(db,new MimSceneWriter(new HttpClient(handler),config));
+        var saved = await service.GenerateAsync(actor,lesson,new(null,selected.Id,0,null,0),default);
+        Assert.Equal(selected.Id, saved.SourceVideoId);
+        Assert.Contains("تتحول المياه", handler.Contexts.Single().GetProperty("source").GetProperty("chapters")[0].GetProperty("summary").GetString());
+        Assert.DoesNotContain("UNSELECTED_EXPLANATION", handler.Contexts.Single().GetRawText());
+        await Assert.ThrowsAsync<MimStudioConflictException>(() => service.GenerateAsync(actor,lesson,new(saved.Version,other.Id,0,null,1),default));
+    }
+
+    [Fact]
     public async Task FailedWriterReleasesClaimWithoutLosingExistingScene()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -61,9 +85,10 @@ public sealed class MimSceneGenerationTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task VideoRequiresCostApprovalAndNeverResubmitsAcceptedOrUncertainRequest(bool loseReply)
+    [InlineData(false, "seedance_2_5")]
+    [InlineData(true, "seedance_2_5")]
+    [InlineData(false, "wan3_0_prime")]
+    public async Task VideoRequiresCostApprovalAndNeverResubmitsAcceptedOrUncertainRequest(bool loseReply, string model)
     {
         await using var sqlite = new SqliteConnection("Data Source=:memory:");
         await sqlite.OpenAsync();
@@ -80,7 +105,7 @@ public sealed class MimSceneGenerationTests
         var provider = new VideoHandler(loseReply);
         var mcp = new HiggsfieldMcpConnectionService(db,new ClientFactory(provider),protection,config);
         var videos = new MimSceneVideoService(db,script,mcp);
-        var quote = await videos.QuoteAsync(actor,lesson,0,default);
+        var quote = await videos.QuoteAsync(actor,new(lesson,0,model),default);
         Assert.Equal("quoted", quote.State);
         Assert.Empty(provider.PaidRequests);
         if (loseReply) await Assert.ThrowsAsync<HiggsfieldMcpException>(() => videos.SubmitAsync(actor,lesson,0,new(quote.Version),default));
@@ -91,7 +116,10 @@ public sealed class MimSceneGenerationTests
         var paid = Assert.Single(provider.PaidRequests);
         Assert.Equal(2, paid.GetProperty("medias").GetArrayLength());
         Assert.All(paid.GetProperty("medias").EnumerateArray(), media => Assert.Equal("image_references", media.GetProperty("role").GetString()));
-        Assert.Equal("omni_reference", paid.GetProperty("mode").GetString());
+        Assert.Equal(model, paid.GetProperty("model").GetString());
+        Assert.Equal(model, quote.Model);
+        if (model == "seedance_2_5") Assert.Equal("omni_reference", paid.GetProperty("mode").GetString());
+        else Assert.False(paid.TryGetProperty("mode", out _));
         Assert.Equal("24bae836-2c4a-48e0-89b6-49fcc0b21612", paid.GetProperty("declined_preset_id").GetString());
         Assert.Equal(30, paid.GetProperty("duration").GetInt32());
         Assert.Equal(1, paid.GetProperty("count").GetInt32());
@@ -116,7 +144,8 @@ public sealed class MimSceneGenerationTests
             {
                 var args=root.GetProperty("params");
                 var name=args.GetProperty("name").GetString();
-                object payload = new { model_id="seedance_2_5" };
+                object payload = new { id=args.GetProperty("arguments").TryGetProperty("model_id", out var requestedModel) ? requestedModel.GetString() : "seedance_2_5",
+                    aspect_ratios=new[]{"16:9"}, parameters=new[]{new { name="duration", max=30 }}, medias=new[]{new { roles=new[]{"image_references"} }} };
                 if (name == "media_import_url") payload = new { media_id=Guid.NewGuid() };
                 if (name == "generate_video")
                 {
@@ -157,7 +186,8 @@ public sealed class MimSceneGenerationTests
         {
             Contexts.Add(JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct)).RootElement.Clone());
             if (Fail) return new(HttpStatusCode.ServiceUnavailable);
-            var scene = new MimScene("رحلة الماء", "التبخر", [], Enumerable.Range(0,6).Select(i=>new MimShot(i*5,(i+1)*5,"القطرة","تتبخر القطرة","لقطة قريبة","","")).ToArray(), "Character references.\nSCENE 1:\nOLD_STORYBOARD");
+            var chapters = Contexts.Last().GetProperty("source").GetProperty("chapters").EnumerateArray().Select(x => x.GetProperty("id").GetGuid()).ToArray();
+            var scene = new MimScene("رحلة الماء", "التبخر", chapters, Enumerable.Range(0,6).Select(i=>new MimShot(i*5,(i+1)*5,"القطرة","تتبخر القطرة","لقطة قريبة","","")).ToArray(), "Character references.\nSCENE 1:\nOLD_STORYBOARD");
             return new(HttpStatusCode.OK) { Content=JsonContent.Create(new MimStudioDocument(1,"دورة الماء","رحلة ميم","3D","نفس الشخصيات",[scene])) };
         }
     }

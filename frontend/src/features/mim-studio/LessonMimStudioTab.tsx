@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Clapperboard, Copy, Download, Save, Sparkles, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import preparedEpisode from './prepared-episode.json';
-import { characterReferences, lessonOpeningDirection, mcpBrief, preparedSourceMatches, type McpConnection, type MimDocument, type MimSnapshot, type MimSource } from './contract';
+import { characterReferences, lessonOpeningDirection, mcpBrief, preparedSourceMatches, type McpConnection, type MimDocument, type MimSnapshot, type MimSource, type MimVideoModel } from './contract';
 import { createEpisodeArchive } from './archive';
 import { mimStudioService, studioError } from './service';
 import { copyStudioText, MimScriptView } from './MimScriptView';
@@ -19,6 +19,9 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   const [document, setDocument] = useState<MimDocument | null>(null);
   const [sources, setSources] = useState<MimSource[]>([]);
   const [sourceId, setSourceId] = useState('');
+  const [sourceMode, setSourceMode] = useState<'video' | 'text'>('video');
+  const [models, setModels] = useState<MimVideoModel[]>([]);
+  const [model, setModel] = useState('wan3_0_prime');
   const [sourceText, setSourceText] = useState('');
   const [generating, setGenerating] = useState(false);
   const [connection, setConnection] = useState<McpConnection | null>(null);
@@ -34,12 +37,13 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError('');
-    void Promise.all([mimStudioService.read(lessonId, controller.signal), mimStudioService.sources(lessonId, controller.signal), mimStudioService.connection(controller.signal)])
-      .then(([saved, options, linked]) => {
+    void Promise.all([mimStudioService.read(lessonId, controller.signal), mimStudioService.sources(lessonId, controller.signal), mimStudioService.connection(controller.signal), mimStudioService.models(controller.signal)])
+      .then(([saved, options, linked, videoModels]) => {
         if (controller.signal.aborted) return;
-        setSnapshot(saved); setSources(options); setConnection(linked);
+        setSnapshot(saved); setSources(options); setConnection(linked); setModels(videoModels);
         const matching = options.find(item => preparedSourceMatches(prepared, item));
         setSourceId(saved ? saved.sourceVideoId ?? '' : matching?.id ?? '');
+        setSourceMode(saved && !saved.sourceVideoId ? 'text' : 'video');
         setSourceText(saved?.document.sourceText ?? '');
         setDocument(saved?.document ?? (matching ? structuredClone(prepared) : null));
         setDirty(!saved && Boolean(matching)); setSelected(0);
@@ -113,16 +117,36 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
     </header>
     {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-4 text-sm leading-7 text-red-800">{error}</p>}
     {snapshot?.stale && <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-4 text-sm leading-7 text-amber-900">شرح الفيديو اتغيّر بعد حفظ الاسكربت. راجع الفصول والحوار قبل إعادة الحفظ أو استخدامه للتوليد.</p>}
+    <div className="space-y-2 border-b border-[var(--admin-border)] py-5">
+      <label htmlFor="mim-video-model" className="block text-sm font-bold text-[var(--admin-text)]">موديل توليد الفيديو</label>
+      <select id="mim-video-model" value={model} onChange={event => setModel(event.target.value)} className="admin-input min-h-11 w-full max-w-xl">
+        {models.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      </select>
+      <p className="text-sm leading-7 text-[var(--admin-muted)]">جيمناي يكتب الاسكربت من ملخصات الفيديو اللي تختاره. الموديل هنا يحوّل المشهد لفيديو بالصوت ومراجع ميم ونادر؛ التكلفة بتظهر قبل التوليد.</p>
+    </div>
     <section aria-label="كتابة المشاهد" className="space-y-4 border-b border-[var(--admin-border)] py-6">
       {!document?.scenes.length && <>
         <h3 className="text-lg font-black text-[var(--admin-text)]">ابدأ بمصدر شرح الحصة</h3>
-        <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">اختار فيديو له فصول محللة، أو أدخل نص الشرح. هنكتب مشهد واحد مدته ٣٠ ثانية، وبعد مراجعته تقدر تبدأ التالي.</p>
-        <label htmlFor="mim-source" className="block text-sm font-bold text-[var(--admin-text)]">مصدر الشرح</label>
-        <select id="mim-source" disabled={generating || snapshot?.generating} value={sourceId} onChange={event => setSourceId(event.target.value)} className="admin-input min-h-11 w-full max-w-xl">
-          <option value="">إدخال نص الشرح</option>
-          {sources.map(item => <option key={item.id} value={item.id} disabled={!item.chapters.length}>{item.title}{!item.chapters.length ? ' (يحتاج تحليل AI أولاً)' : ''}</option>)}
-        </select>
-        {!sourceId && <div className="max-w-3xl space-y-2">
+        <p className="max-w-prose text-sm leading-7 text-[var(--admin-muted)]">اختار فيديو الشرح من الحصة. جيمناي هيحلل ملخصات فصوله ويكتب مشهد واحد مدته ٣٠ ثانية، وبعد مراجعته تقدر تبدأ التالي.</p>
+        <fieldset className="flex flex-wrap gap-5 text-sm text-[var(--admin-text)]" disabled={generating || snapshot?.generating}>
+          <legend className="mb-3 font-bold">مصدر الشرح</legend>
+          <label className="flex min-h-11 items-center gap-2"><input type="radio" name="mim-source-mode" checked={sourceMode === 'video'} onChange={() => setSourceMode('video')} />اختيار فيديو من الحصة</label>
+          <label className="flex min-h-11 items-center gap-2"><input type="radio" name="mim-source-mode" checked={sourceMode === 'text'} onChange={() => { setSourceMode('text'); setSourceId(''); }} />إدخال نص يدويًا</label>
+        </fieldset>
+        {sourceMode === 'video' && <div className="max-w-3xl space-y-3">
+          <label htmlFor="mim-source" className="block text-sm font-bold text-[var(--admin-text)]">فيديو الشرح</label>
+          <select id="mim-source" disabled={generating || snapshot?.generating || !sources.length} value={sourceId} onChange={event => setSourceId(event.target.value)} className="admin-input min-h-11 w-full">
+            <option value="">{sources.length ? 'اختار الفيديو اللي عايز تكتب منه المشاهد' : 'الحصة دي مفيهاش فيديوهات مفعّلة'}</option>
+            {sources.map(item => <option key={item.id} value={item.id} disabled={!item.chapters.some(chapter => chapter.summary?.trim())}>{item.title}{!item.chapters.some(chapter => chapter.summary?.trim()) ? ' — يحتاج تحليل AI' : ''}</option>)}
+          </select>
+          {!sources.length && <p className="text-sm leading-7 text-[var(--admin-muted)]">أضف فيديو للحصة من تبويب الفيديوهات، وبعد تحليل AI ارجع هنا لاختياره.</p>}
+          {sources.length > 0 && !sources.some(item => item.chapters.some(chapter => chapter.summary?.trim())) && <p className="text-sm leading-7 text-[var(--admin-muted)]">الفيديوهات لسه ملهاش ملخصات. افتح تبويب «تحليل AI» وحلّل فيديو الشرح أولًا، وبعدها حدّث القائمة.</p>}
+          <button type="button" className="admin-btn-ghost min-h-11" disabled={generating || snapshot?.generating} onClick={() => setRetry(value => value + 1)}><RefreshCw className="h-4 w-4" />تحديث قائمة الفيديوهات</button>
+          {source && <details className="text-sm leading-7 text-[var(--admin-muted)]"><summary className="min-h-11 cursor-pointer font-bold text-[var(--admin-text)]">عرض الملخصات اللي جيمناي هيستخدمها ({source.chapters.length})</summary>
+            {source.chapters.map(chapter => <div key={chapter.id} className="my-3"><h4 className="font-bold">{chapter.title}</h4><p className="whitespace-pre-wrap">{chapter.summary}</p></div>)}
+          </details>}
+        </div>}
+        {sourceMode === 'text' && <div className="max-w-3xl space-y-2">
           <label htmlFor="mim-source-text" className="block text-sm font-bold text-[var(--admin-text)]">نص شرح الحصة</label>
           <textarea id="mim-source-text" value={sourceText} disabled={generating || snapshot?.generating} onChange={event => setSourceText(event.target.value)} rows={7} maxLength={24000}
             className="admin-input w-full leading-8" placeholder="الصق شرح الحصة أو ملخصها التفصيلي هنا…" />
@@ -131,7 +155,7 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
       </>}
       <div className="flex flex-wrap items-center gap-3">
         {(document?.scenes.length ?? 0) < 4 && <button type="button" onClick={() => void generateNext()}
-          disabled={generating || saving || dirty || snapshot?.generating || snapshot?.stale || (!source && sourceText.trim().length < 100)}
+          disabled={generating || saving || dirty || snapshot?.generating || snapshot?.stale || (sourceMode === 'video' ? !source || !source.chapters.some(chapter => chapter.summary?.trim()) : sourceText.trim().length < 100)}
           className="admin-btn-primary min-h-11 disabled:opacity-50"><Sparkles className="h-4 w-4" />
           {generating || snapshot?.generating ? 'جاري كتابة المشهد…' : document?.scenes.length ? `كتابة المشهد التالي (${document.scenes.length + 1} من ٤)` : 'كتابة المشهد الأول'}
         </button>}
@@ -175,7 +199,7 @@ export function LessonMimStudioTab({ lessonId }: { lessonId: string }) {
           </details>
           <MimScriptView key={selected} document={document} selected={selected} disabled={saving || generating || snapshot?.generating} onChange={next => { setDocument(next); setDirty(true); }} />
           <MimSceneVideoPanel key={`video-${selected}`} lessonId={lessonId} scene={selected} scriptVersion={snapshot?.version ?? null}
-            connected={connection.connected} disabled={dirty || saving || generating || !!snapshot?.generating || !!snapshot?.stale} />
+            model={model} connected={connection.connected} disabled={dirty || saving || generating || !!snapshot?.generating || !!snapshot?.stale} />
           <footer className="mt-7 flex flex-wrap gap-3 border-t border-[var(--admin-border)] pt-5">
             <button type="button" className="admin-btn-ghost min-h-11 disabled:opacity-50" disabled={exporting} onClick={() => void downloadPackage()}><Download className="h-4 w-4" />{exporting ? 'جاري تجهيز الشيتين والاسكربت…' : 'تنزيل الاسكربت والشيتين'}</button>
             <button type="button" className="admin-btn-ghost min-h-11" onClick={() => void copyStudioText(mcpBrief(document))}><Copy className="h-4 w-4" />نسخ طلب Higgsfield MCP</button>

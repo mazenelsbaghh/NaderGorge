@@ -7,7 +7,7 @@ using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Infrastructure.Services.MimStudio;
 
-public sealed record MimVideoView(Guid Version, string State, string Quote, DateTime ExpiresAt, Guid? JobId, string[] Urls);
+public sealed record MimVideoView(Guid Version, string State, string Quote, DateTime ExpiresAt, Guid? JobId, string[] Urls, string Model);
 public sealed record MimVideoApproval(Guid Version);
 
 public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService studio, HiggsfieldMcpConnectionService connection)
@@ -35,26 +35,25 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         return row is null ? null : View(row);
     }
 
-    public async Task<MimVideoView> QuoteAsync(Guid actor, Guid lesson, int scene, CancellationToken ct)
+    public async Task<MimVideoView> QuoteAsync(Guid actor, MimVideoQuoteTarget target, CancellationToken ct)
     {
+        var (lesson, scene, model) = target;
+        MimVideoModels.Require(model);
         var script = await CurrentScriptAsync(lesson, scene, ct);
         var row = await FindAsync(actor, lesson, scene, ct);
         if (row is not null && row.State is not ("quoted" or "failed")) return View(row);
         if (scene > 0 && !await db.Set<MimSceneVideo>().AnyAsync(x => x.LessonId == lesson && x.SceneIndex == scene - 1 && x.State == "completed", ct))
             throw new ArgumentException("ولّد فيديو المشهد السابق وراجعه أولاً، ثم ابدأ هذا المشهد.");
-        await connection.CallStudioToolAsync(actor, "models_explore", new { action = "get", model_id = "seedance_2_5" }, ct);
-        var media = new List<object>();
+        var discovered = await connection.CallStudioToolAsync(actor, "models_explore", new { action = "get", model_id = model }, ct);
+        MimVideoModels.ValidateCapabilities(HiggsfieldStudioReply.Payload(discovered), model);
+        var media = new JsonArray();
         foreach (var url in ReferenceUrls)
         {
             var imported = await connection.CallStudioToolAsync(actor, "media_import_url", new { url, type = "image" }, ct);
             var mediaId = HiggsfieldStudioReply.RequiredId(HiggsfieldStudioReply.Payload(imported), "media_id", "id");
-            media.Add(new { value = mediaId.ToString(), role = "image_references" });
+            media.Add(new JsonObject { ["value"] = mediaId.ToString(), ["role"] = "image_references" });
         }
-        var parameters = new { model = "seedance_2_5", prompt = Prompt(script.Document, scene), count = 1,
-            duration = 30, aspect_ratio = "16:9", resolution = "720p", mode = "omni_reference",
-            bitrate_mode = "standard", draft = false, generate_audio = true, use_unlim = false, medias = media };
-        var serialized = JsonSerializer.Serialize(parameters, JsonOptions);
-        var costParams = JsonNode.Parse(serialized)!.AsObject();
+        var costParams = MimVideoModels.Parameters(model, Prompt(script.Document, scene), media);
         costParams["get_cost"] = true;
         var cost = await connection.CallStudioToolAsync(actor, "generate_video", new { @params = costParams }, ct);
         var payload = HiggsfieldStudioReply.Payload(cost);
@@ -132,7 +131,8 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         return row;
     }
     private static MimVideoView View(MimSceneVideo row) => new(row.Version, row.State, row.QuoteText, row.QuoteExpiresAt, row.JobId,
-        row.ResultJson.StartsWith('[') ? JsonSerializer.Deserialize<string[]>(row.ResultJson)! : []);
+        row.ResultJson.StartsWith('[') ? JsonSerializer.Deserialize<string[]>(row.ResultJson)! : [],
+        JsonNode.Parse(row.ParametersJson)?["model"]?.GetValue<string>() ?? "seedance_2_5");
     private static string Prompt(MimStudioDocument doc, int index) => string.Join("\n\n", new[] {
         "Create one 30-second cinematic 3D animation with Egyptian Arabic speech. Use attached reference 1 for Meem and reference 2 for Papa Nader. Preserve their exact appearance and clothes. Sheets are identity references only; never show the sheets or their collages in the video. No titles or subtitles.",
         doc.Style, doc.Continuity, System.Text.RegularExpressions.Regex.Split(doc.Scenes[index].Prompt, @"\nSCENE \d+:")[0],
