@@ -57,13 +57,23 @@ public sealed class MimSceneVideoService(AppDbContext db, LessonMimStudioService
         var costParams = JsonNode.Parse(serialized)!.AsObject();
         costParams["get_cost"] = true;
         var cost = await connection.CallStudioToolAsync(actor, "generate_video", new { @params = costParams }, ct);
-        var quote = HiggsfieldStudioReply.Quote(HiggsfieldStudioReply.Payload(cost));
+        var payload = HiggsfieldStudioReply.Payload(cost);
+        if (HiggsfieldStudioReply.LiteralPresetToDecline(payload) is Guid preset)
+        {
+            // The approved storyboard must be generated literally. Decline only this named preset;
+            // keep get_cost=true and never follow arbitrary recovery tools or repeat paid requests.
+            costParams["declined_preset_id"] = preset.ToString();
+            cost = await connection.CallStudioToolAsync(actor, "generate_video", new { @params = costParams }, ct);
+            payload = HiggsfieldStudioReply.Payload(cost);
+        }
+        var quote = HiggsfieldStudioReply.Quote(payload);
+        costParams.Remove("get_cost");
         if (row is null) { row = new MimSceneVideo { LessonId = lesson, SceneIndex = scene, AdminUserId = actor }; db.Add(row); }
         row.State = "quoted";
         row.JobId = null;
         row.ResultJson = "[]";
         row.ScriptVersion = script.Version;
-        row.ParametersJson = serialized;
+        row.ParametersJson = costParams.ToJsonString(JsonOptions);
         row.QuoteText = quote;
         row.QuoteExpiresAt = DateTime.UtcNow.AddMinutes(5);
         row.Version = Guid.NewGuid();

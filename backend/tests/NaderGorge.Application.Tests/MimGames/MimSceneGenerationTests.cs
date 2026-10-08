@@ -92,6 +92,7 @@ public sealed class MimSceneGenerationTests
         Assert.Equal(2, paid.GetProperty("medias").GetArrayLength());
         Assert.All(paid.GetProperty("medias").EnumerateArray(), media => Assert.Equal("image_references", media.GetProperty("role").GetString()));
         Assert.Equal("omni_reference", paid.GetProperty("mode").GetString());
+        Assert.Equal("24bae836-2c4a-48e0-89b6-49fcc0b21612", paid.GetProperty("declined_preset_id").GetString());
         Assert.Equal(30, paid.GetProperty("duration").GetInt32());
         Assert.Equal(1, paid.GetProperty("count").GetInt32());
         Assert.DoesNotContain("OLD_STORYBOARD", paid.GetProperty("prompt").GetString());
@@ -120,7 +121,10 @@ public sealed class MimSceneGenerationTests
                 if (name == "generate_video")
                 {
                     var parameters=args.GetProperty("arguments").GetProperty("params");
-                    if (parameters.TryGetProperty("get_cost",out var cost) && cost.GetBoolean()) payload=new { cost = new { credits=210, credits_exact=210 }, adjustments = new { } };
+                    if (parameters.TryGetProperty("get_cost",out var cost) && cost.GetBoolean())
+                        payload = parameters.TryGetProperty("declined_preset_id", out _)
+                            ? new { cost = new { credits=210, credits_exact=210 }, adjustments = new { } }
+                            : new { notice = new { type = "preset_recommendation", data = new { retry_literal_with = new { declined_preset_id = "24bae836-2c4a-48e0-89b6-49fcc0b21612" } } } };
                     else
                     {
                         PaidRequests.Add(parameters.Clone());

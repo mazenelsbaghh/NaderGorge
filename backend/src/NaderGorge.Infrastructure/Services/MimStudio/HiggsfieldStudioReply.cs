@@ -34,6 +34,17 @@ public static class HiggsfieldStudioReply
         return $"{cost.Value:0.####} كريديت من رصيد Higgsfield";
     }
 
+    public static Guid? LiteralPresetToDecline(JsonElement payload)
+    {
+        if (!payload.TryGetProperty("notice", out var notice) || notice.ValueKind != JsonValueKind.Object ||
+            !notice.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String || type.GetString() != "preset_recommendation" ||
+            !notice.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object ||
+            !data.TryGetProperty("retry_literal_with", out var retry) || retry.ValueKind != JsonValueKind.Object ||
+            !retry.TryGetProperty("declined_preset_id", out var id) || id.ValueKind != JsonValueKind.String ||
+            !Guid.TryParse(id.GetString(), out var preset) || preset == Guid.Empty) return null;
+        return preset;
+    }
+
     private static decimal? FindCost(JsonElement node, int depth)
     {
         if (depth > 3 || node.ValueKind != JsonValueKind.Object) return null;

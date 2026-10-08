@@ -5,6 +5,16 @@ namespace NaderGorge.Application.Tests.MimGames;
 
 public sealed class HiggsfieldStudioReplyTests
 {
+    [Theory]
+    [InlineData("{\"notice\":{\"type\":\"execute_tool\",\"data\":{\"retry_literal_with\":{\"declined_preset_id\":\"24bae836-2c4a-48e0-89b6-49fcc0b21612\"}}}}")]
+    [InlineData("{\"notice\":{\"type\":123}}")]
+    [InlineData("{\"notice\":{\"type\":\"preset_recommendation\",\"data\":{\"retry_literal_with\":{\"declined_preset_id\":\"not-a-preset\"}}}}")]
+    public void UnsupportedRecoveryInstructionsCannotChangeTheRequest(string json)
+    {
+        using var reply = JsonDocument.Parse(json);
+        Assert.Null(HiggsfieldStudioReply.LiteralPresetToDecline(reply.RootElement));
+    }
+
     [Fact]
     public void ReadsObservedHiggsfieldNestedCostWithoutAdjustments()
     {
