@@ -71,3 +71,40 @@ func TestUploadSanitizesUntrustedDiagnosticsAndRetainsCompleteLogicalBackup(t *t
 		}
 	}
 }
+
+func TestPerformanceDiagnosticsRetainTimingsThroughUploadAndAdminRead(t *testing.T) {
+	f := newFixture(t)
+	secret := "PRIVATE_STUDENT_PHONE_PATH"
+	event := map[string]any{"schema": 1, "kind": "performance", "id": testUploadID, "session": "22222222-2222-4222-8222-222222222222", "time": "2026-10-03T12:00:00Z", "version": "1.2.8+11", "platform": "windows", "operation": "lan.refresh", "durationUs": int64(18000000000), "budgetMs": 15000, "outcome": "completed", "phasesUs": map[string]any{"receive": 17000000000, secret: 123, "decode": -1}, "counts": map[string]any{"bytes": 15194328, "repeats": 4, secret: 567}, "message": secret}
+	encode := func() string {
+		encoded, err := json.Marshal(event)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(encoded) + "\n"
+	}
+	body := uploadBody(t, func(envelope map[string]any) { envelope["diagnostics"] = encode() })
+	status, response, _ := f.request(t, "POST", "/v1/uploads", testDeviceToken, body)
+	requireStatus(t, status, 201, response)
+	receipt := decodeReceipt(t, response)
+	// Legacy saved evidence is sanitized again rather than trusted on retrieval.
+	replaceTestBundle(t, f, receipt, func(envelope *uploadEnvelope) { envelope.Diagnostics = encode() })
+	status, response, _ = f.request(t, "GET", "/v1/uploads/"+testUploadID+"/diagnostics", testAdminToken, nil)
+	requireStatus(t, status, 200, response)
+	var projection diagnosticProjection
+	if err := json.Unmarshal(response, &projection); err != nil {
+		t.Fatal(err)
+	}
+	if len(projection.Events) != 1 || projection.Events[0]["kind"] != "performance" || projection.Events[0]["durationUs"] != float64(18000000000) {
+		t.Fatalf("timings dropped: %s", response)
+	}
+	if strings.Contains(string(response), secret) || strings.Contains(string(response), "\"decode\"") {
+		t.Fatal("untrusted metrics survived")
+	}
+	for _, invalid := range []any{-1, 86400000001, "18000000000", 1.5} {
+		event["durationUs"] = invalid
+		if sanitizedDiagnostics(encode()) != "" {
+			t.Fatal("invalid duration accepted")
+		}
+	}
+}

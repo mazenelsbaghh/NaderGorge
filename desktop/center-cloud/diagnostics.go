@@ -10,21 +10,32 @@ import (
 // These explicit sets mirror the desktop ProblemLog contract. Unknown identifiers
 // are never copied through; extending app diagnostics requires a reviewed entry.
 var diagnosticOperations = map[string]bool{
-	"startup":                    true,
-	"flutter_error":              true,
-	"platform_error":             true,
-	"zone_error":                 true,
-	"store_command":              true,
-	"store_load":                 true,
-	"store_save":                 true,
-	"store_import":               true,
-	"store_export":               true,
-	"auth":                       true,
-	"appearance":                 true,
-	"documents":                  true,
-	"printing":                   true,
-	"ui_operation":               true,
-	"unknown_operation":          true,
+	"startup":               true,
+	"flutter_error":         true,
+	"platform_error":        true,
+	"zone_error":            true,
+	"store_command":         true,
+	"store_load":            true,
+	"store_save":            true,
+	"store_import":          true,
+	"store_export":          true,
+	"auth":                  true,
+	"appearance":            true,
+	"documents":             true,
+	"printing":              true,
+	"ui_operation":          true,
+	"unknown_operation":     true,
+	"ui.frame":              true,
+	"ui.event_loop":         true,
+	"reports.build":         true,
+	"reports.search":        true,
+	"academic.import.read":  true,
+	"academic.import.match": true,
+	"academic.import.scope": true,
+	"database.migrate":      true,
+	"lan.decode":            true,
+	"cloud.revision":        true,
+
 	"flutter.framework":          true,
 	"flutter.platform":           true,
 	"flutter.zone":               true,
@@ -307,7 +318,7 @@ func sanitizedDiagnostics(text string) string {
 func sanitizedDiagnosticEvent(input map[string]any) map[string]any {
 	schema, ok := diagnosticInteger(input["schema"])
 	kind := diagnosticString(input, "kind")
-	if !ok || schema != 1 || (kind != "error" && kind != "session") {
+	if !ok || schema != 1 || (kind != "error" && kind != "session" && kind != "performance") {
 		return nil
 	}
 	id, session := diagnosticString(input, "id"), diagnosticString(input, "session")
@@ -329,6 +340,17 @@ func sanitizedDiagnosticEvent(input map[string]any) map[string]any {
 	role := diagnosticString(input, "role")
 	if role == "host" || role == "client" {
 		clean["role"] = role
+	}
+	if kind == "performance" {
+		duration, durationOK := diagnosticBoundedInteger(input["durationUs"], 86400000000)
+		budget, budgetOK := diagnosticBoundedInteger(input["budgetMs"], 86400000)
+		outcome := diagnosticString(input, "outcome")
+		if !durationOK || !budgetOK || budget == 0 || (outcome != "completed" && outcome != "failed") {
+			return nil
+		}
+		clean["durationUs"], clean["budgetMs"], clean["outcome"] = duration, budget, outcome
+		clean["phasesUs"] = diagnosticMetrics(input["phasesUs"], diagnosticPhases)
+		clean["counts"] = diagnosticMetrics(input["counts"], diagnosticCounts)
 	}
 	if kind == "error" {
 		chain, ok := input["errors"].([]any)
@@ -377,6 +399,63 @@ func sanitizedDiagnosticEvent(input map[string]any) map[string]any {
 			}
 		}
 		clean["frames"] = frames
+	}
+	return clean
+}
+
+// Only fixed labels and bounded integers survive either upload or retrieval.
+var diagnosticPhases = map[string]bool{
+	"queue":    true,
+	"copy":     true,
+	"work":     true,
+	"validate": true,
+	"encode":   true,
+	"sqlite":   true,
+	"notify":   true,
+	"capture":  true,
+	"write":    true,
+	"prune":    true,
+	"connect":  true,
+	"response": true,
+	"receive":  true,
+	"decode":   true,
+	"apply":    true,
+	"build":    true,
+	"raster":   true,
+	"match":    true,
+	"scope":    true,
+	"export":   true,
+	"hash":     true,
+}
+var diagnosticCounts = map[string]bool{
+	"students":    true,
+	"attendances": true,
+	"payments":    true,
+	"closings":    true,
+	"rows":        true,
+	"bytes":       true,
+	"sections":    true,
+	"records":     true,
+	"full":        true,
+	"delta":       true,
+	"repeats":     true,
+}
+
+func diagnosticBoundedInteger(value any, maximum int64) (int64, bool) {
+	number, ok := value.(json.Number)
+	if !ok {
+		return 0, false
+	}
+	integer, err := strconv.ParseInt(string(number), 10, 64)
+	return integer, err == nil && integer >= 0 && integer <= maximum
+}
+func diagnosticMetrics(value any, allowed map[string]bool) map[string]int64 {
+	input, _ := value.(map[string]any)
+	clean := map[string]int64{}
+	for key := range allowed {
+		if integer, ok := diagnosticBoundedInteger(input[key], 86400000000); ok {
+			clean[key] = integer
+		}
 	}
 	return clean
 }
