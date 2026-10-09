@@ -2,6 +2,39 @@ import { expect, test, type Route } from '@playwright/test';
 import { embedSelector, json, lessonApi, openLesson } from '../fixtures/lesson-playback';
 
 test.describe('lesson playback continuity (synthetic HTTP and SignalR)', () => {
+  for (const code of [410, 409]) {
+    test(`2026-10-09 paused cleanup before HLS authorization ${code} preserves the correct recovery decision`, async ({ page }) => {
+      const playback = await openLesson(page, async () => {
+        await page.route('**/api/video/embed?*', route => route.fulfill({
+          contentType: 'text/html',
+          body: `<body>Playing test video<script>
+            window.playerCommands=[];
+            window.addEventListener('message',event=>window.playerCommands.push(event.data));
+            parent.postMessage({source:'video-embed',type:'ready',data:{duration:600,provider:'bunny-hls'}},location.origin);
+            parent.postMessage({source:'video-embed',type:'stateChange',data:{isPlaying:true}},location.origin);
+          </script></body>`,
+        }));
+      });
+      const frame = page.frameLocator(embedSelector);
+      await frame.locator('body').evaluate((_, status) => {
+        const post = (type: string, data: object) => parent.postMessage({ source: 'video-embed', type, data }, location.origin);
+        post('timeUpdate', { currentTime: 87, duration: 600, playbackRate: 1.5 });
+        post('stateChange', { isPlaying: false, state: 2 });
+        post('error', { provider: 'bunny-hls', code: status, phase: 'source_authorization', wasPlaying: true, message: 'Session replaced' });
+      }, code);
+      if (code === 409) {
+        await expect(page.getByText('Session replaced', { exact: true })).toBeVisible();
+        expect(playback.sessions.length).toBe(playback.originalSessionCount);
+        return;
+      }
+      await expect.poll(() => playback.sessions.length).toBe(playback.originalSessionCount + 1);
+      await expect.poll(() => frame.locator('body').evaluate(() =>
+        (window as unknown as { playerCommands: Array<{ type: string; time?: number; rate?: number }> }).playerCommands
+          .filter(command => ['seekTo', 'setPlaybackRate', 'play'].includes(command.type))
+      )).toEqual([{ type: 'seekTo', time: 87 }, { type: 'setPlaybackRate', rate: 1.5 }, { type: 'play' }]);
+    });
+  }
+
   test('comment events refresh comments without refetching the lesson or restarting playback', async ({ page }) => {
     const playback = await openLesson(page);
     let detailReads = 0;

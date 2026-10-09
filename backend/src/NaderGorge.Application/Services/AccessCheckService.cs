@@ -90,23 +90,25 @@ public class AccessCheckService : IAccessCheckService
         if (lesson.TeacherVisible == false)
             return false;
 
-        // Check cascading access: Lesson → Section → Term → Package
-        // Each level must match its GrantType to prevent cross-level leaks
-        var hasAccess = await _db.StudentAccessGrants
-            .AnyAsync(g => g.UserId == userId &&
-                           g.IsActive &&
-                           (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow) &&
-                           (
-                               (g.GrantType == CodeType.Lesson && g.LessonId == lessonId) ||
-                               (g.GrantType == CodeType.Month && g.ContentSectionId == sectionId) ||
-                               (termId != null && g.GrantType == CodeType.Term && g.TermId == termId) ||
-                               (packageId != null && g.GrantType == CodeType.Package && g.PackageId == packageId)
-                           ),
-                       ct);
-
-        return hasAccess &&
-            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Lesson, lessonId, userId, ct);
+        return await HasLessonGrantAsync(userId,
+            new LessonGrantScope(lessonId, sectionId, termId, packageId), ct);
     }
+
+    private async Task<bool> HasLessonGrantAsync(Guid userId, LessonGrantScope scope, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var hasAccess = await _db.StudentAccessGrants.AnyAsync(grant =>
+            grant.UserId == userId && grant.IsActive &&
+            (grant.ExpiresAt == null || grant.ExpiresAt > now) &&
+            ((grant.GrantType == CodeType.Lesson && grant.LessonId == scope.LessonId) ||
+             (grant.GrantType == CodeType.Month && grant.ContentSectionId == scope.ContentSectionId) ||
+             (scope.TermId != null && grant.GrantType == CodeType.Term && grant.TermId == scope.TermId) ||
+             (scope.PackageId != null && grant.GrantType == CodeType.Package && grant.PackageId == scope.PackageId)), ct);
+        return hasAccess &&
+            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Lesson, scope.LessonId, userId, ct);
+    }
+
+    private sealed record LessonGrantScope(Guid LessonId, Guid ContentSectionId, Guid? TermId, Guid? PackageId);
 
     public async Task<IReadOnlySet<Guid>> GetAccessibleLessonIdsAsync(
         Guid userId,
@@ -190,7 +192,14 @@ public class AccessCheckService : IAccessCheckService
         if (video.TeacherVisible == false)
             return false;
 
-        if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
+        if (await _db.UserRoles.AnyAsync(role => role.UserId == userId &&
+                (role.Role.Name == "Admin" || role.Role.Name == "Teacher"), ct))
+            return true;
+
+        // The video archive check already includes every ancestor, and its scope is loaded above.
+        // Re-reading the lesson hierarchy for each HLS segment duplicates the same access checks.
+        if (await HasLessonGrantAsync(userId,
+                new LessonGrantScope(video.LessonId, video.ContentSectionId, video.TermId, video.PackageId), ct))
             return true;
 
         var now = DateTime.UtcNow;

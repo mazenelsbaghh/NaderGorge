@@ -102,6 +102,8 @@ public sealed partial class VideoSessionControllerTests
     [InlineData("revoked-grant", 403)]
     [InlineData("inactive-account", 403)]
     [InlineData("expired", 410)]
+    [InlineData("hidden-ancestor", 403)]
+    [InlineData("expired-package-grant", 403)]
     public async Task GetEmbedMaterial_DeniesUnauthorizedSessionBeforeIssuingMaterial(string denial, int expectedStatus)
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -111,6 +113,15 @@ public sealed partial class VideoSessionControllerTests
         if (denial == "revoked-grant") grant.IsActive = false;
         if (denial == "inactive-account") user.IsActive = false;
         if (denial == "expired") session.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        if (denial is "hidden-ancestor" or "expired-package-grant")
+        {
+            var package = db.Packages.Single();
+            grant.GrantType = Domain.Enums.CodeType.Package;
+            grant.PackageId = package.Id;
+            grant.LessonVideoId = null;
+            if (denial == "hidden-ancestor") package.ArchiveMode = Domain.Enums.ContentArchiveMode.HiddenFromEveryone;
+            else grant.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        }
         await db.SaveChangesAsync();
         var controller = StudentController(denial == "different-user" ? Guid.NewGuid() : session.UserId,
             db, NullLogger<VideoSessionController>.Instance);

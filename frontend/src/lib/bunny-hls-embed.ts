@@ -80,7 +80,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   var vcdnTransport=vcdnPlatformSession&&window.MassarVcdnTransport?window.MassarVcdnTransport.create():null;
   var serverClock=${serverNowMs}; var serverClockStarted=performance.now();
   function authorizationNow(){return serverClock+Math.max(0,performance.now()-serverClockStarted);}
-  var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var relayResume=null;
+  var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var playbackResume=null;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
   var nativeGrantReady=provider==='vcdn'; var lastRenewedAt=authorizationNow(); var sessionExpiresAtMs=0; var renewalTimer=null; var renewalPending=false; var renewalAttempts=0; var renewalRestart=false; var relayAuthRecoveries=0; var directAuthRecoveries=0; var waitingLoaders=new Set();
   var signedScope=sourceScope(source); var originalScope=signedScope;
@@ -198,10 +198,17 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   // Receiving an incomplete segment advances its byte counter before the media clock can move.
   function downloadAdvanced(){var loaded=Number(activeDownload&&activeDownload.stats.loaded)||0;var advanced=loaded>observedDownloadBytes;observedDownloadBytes=loaded;if(advanced)downloadProgressObserved=true;return advanced;}
   function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}playbackWaitStartedAt=null;}
-  function failHls(status,message,phase){if(terminalErrorSent)return;terminalErrorSent=true;var elapsedMs=Math.max(0,Math.min(120000,Date.now()-loadStartedAt));var online=typeof navigator==='undefined'||navigator.onLine!==false;var visibility=document.hidden?'hidden':'visible';if(vcdnPlatformSession)console.warn('VCDN playback stopped '+JSON.stringify({code:Number(status)||0,phase:String(phase||'unknown').slice(0,80),mediaCode:video.error?video.error.code:0}));clearRenewalTimer();if(grantExpiryTimer)clearTimeout(grantExpiryTimer);waitingLoaders.clear();if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();if(nativePlayback){video.removeAttribute('src');video.load();}post('error',{provider:provider,code:Number(status)||0,phase:((relayAttempted?'relay_':'')+String(phase||'unknown')).slice(0,80),elapsedMs:elapsedMs,online:online,visibility:visibility,message:message||hlsErrorMessage(Number(status)||0)});}
+  function failHls(status,message,phase){if(terminalErrorSent)return;var wasPlaying=playbackResume?!playbackResume.paused:!video.paused&&!video.ended;terminalErrorSent=true;var elapsedMs=Math.max(0,Math.min(120000,Date.now()-loadStartedAt));var online=typeof navigator==='undefined'||navigator.onLine!==false;var visibility=document.hidden?'hidden':'visible';if(vcdnPlatformSession)console.warn('VCDN playback stopped '+JSON.stringify({code:Number(status)||0,phase:String(phase||'unknown').slice(0,80),mediaCode:video.error?video.error.code:0}));clearRenewalTimer();if(grantExpiryTimer)clearTimeout(grantExpiryTimer);waitingLoaders.clear();if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();if(nativePlayback){video.removeAttribute('src');video.load();}post('error',{provider:provider,code:Number(status)||0,phase:((relayAttempted?'relay_':'')+String(phase||'unknown')).slice(0,80),elapsedMs:elapsedMs,online:online,visibility:visibility,wasPlaying:wasPlaying,message:message||hlsErrorMessage(Number(status)||0)});}
+  function recoverHlsMedia(){
+    if(!hls||terminalErrorSent||mediaRecoveries>=1)return false;
+    playbackResume={time:Number(video.currentTime)||0,paused:video.paused,rate:video.playbackRate,volume:video.volume,muted:video.muted};
+    sourceReady=false;loadStartedAt=Date.now();loadMilestones={};
+    mediaRecoveries++;hls.recoverMediaError();armLoadDeadline();
+    return true;
+  }
   function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:provider,signedSourceExpiresAtMs:signedSourceExpiresAtMs,sourceRenewal:nativePlayback?'native':'in-place'};}
   function ready(){sourceReady=true;if(loadDeadline)clearTimeout(loadDeadline);if(readySent)return;readySent=true;post('ready',state());}
-  function restoreRelayPlayback(){if(!relayResume||terminalErrorSent)return;var resume=relayResume;relayResume=null;video.playbackRate=resume.rate;video.volume=resume.volume;video.muted=resume.muted;if(resume.time>0)video.currentTime=Math.min(resume.time,Math.max(0,(video.duration||resume.time)-.1));lastMediaTime=Number(video.currentTime)||0;if(!resume.paused)video.play().catch(function(){post('autoplayBlocked',{provider:provider})});}
+  function restorePlayback(){if(!playbackResume||terminalErrorSent)return;var resume=playbackResume;playbackResume=null;video.playbackRate=resume.rate;video.volume=resume.volume;video.muted=resume.muted;if(resume.time>0)video.currentTime=Math.min(resume.time,Math.max(0,(video.duration||resume.time)-.1));lastMediaTime=Number(video.currentTime)||0;if(!resume.paused)video.play().catch(function(){post('autoplayBlocked',{provider:provider})});}
   function recoverRelayNetwork(status){
     if(!hls||!relayAttempted||terminalErrorSent||relayStallRecoveries>=1
       ||!(status===0||status===408||(status>=500&&status<=599)))return false;
@@ -231,10 +238,10 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=qualityResolution(l.width,l.height);var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
   function emitQuality(){var levels=hls?hlsLevels():nativeLevels;var current='auto';if(hls&&hls.autoLevelEnabled===false&&hls.currentLevel>=0)current=String(hls.currentLevel);else if(!hls)current=nativeCurrent;post('qualityLevels',{levels:levels,currentQuality:current,auto:true});}
   function attachEvents(){
-    video.addEventListener('loadedmetadata',function(){lastLoadPhase='metadata';restoreRelayPlayback();ready();post('durationChange',state());});
+    video.addEventListener('loadedmetadata',function(){lastLoadPhase='metadata';restorePlayback();ready();post('durationChange',state());});
     video.addEventListener('canplay',function(){lastLoadPhase='canplay';ready();clearPlaybackDeadline();});
     video.addEventListener('seeking',function(){lastMediaTime=Number(video.currentTime)||0;});
-    video.addEventListener('timeupdate',function(){if(relayResume)return;var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01){clearPlaybackDeadline();if(current-relayRecoveryMediaTime>=20)relayStallRecoveries=0;}lastMediaTime=current;post('timeUpdate',state());});
+    video.addEventListener('timeupdate',function(){if(playbackResume)return;var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01){clearPlaybackDeadline();if(current-relayRecoveryMediaTime>=20)relayStallRecoveries=0;}lastMediaTime=current;post('timeUpdate',state());});
     video.addEventListener('play',function(){checkRenewal();armPlaybackDeadline('play');post('stateChange',state());});
     video.addEventListener('pause',function(){clearPlaybackDeadline();post('stateChange',state());});
     video.addEventListener('ended',function(){clearPlaybackDeadline();post('stateChange',state());});
@@ -242,7 +249,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
     video.addEventListener('stalled',function(){if(!video.paused)armPlaybackDeadline('stalled');if(video.readyState<3)post('stateChange',{state:3,isPlaying:false,provider:provider});});
     video.addEventListener('playing',function(){clearPlaybackDeadline();post('stateChange',state());});
     video.addEventListener('ratechange',function(){post('playbackRateChange',{playbackRate:video.playbackRate,provider:provider});});
-    video.addEventListener('error',function(){var message=vcdnPlatformSession&&video.error&&video.error.code===3?'المتصفح لم يتمكن من فك ترميز فيديو VCDN. جرّب نسخة أخرى من الفيديو، أو أعد رفعه بصيغة MP4 بترميز H.264.':(nativePlayback?nativePlaybackError():undefined);if(!terminalErrorSent)failHls(0,message,nativePlayback?'native_media_error':'media_error');});
+    video.addEventListener('error',function(){if(terminalErrorSent)return;if(provider==='bunny-hls'&&video.error&&(video.error.code===2||video.error.code===3)&&recoverHlsMedia())return;var message=vcdnPlatformSession&&video.error&&video.error.code===3?'المتصفح لم يتمكن من فك ترميز فيديو VCDN. جرّب نسخة أخرى من الفيديو، أو أعد رفعه بصيغة MP4 بترميز H.264.':(nativePlayback?nativePlaybackError():undefined);failHls(0,message,nativePlayback?'native_media_error':'media_error');});
   }
   function parseNativeMaster(text){var lines=text.split(/\r?\n/),result=[];for(var i=0;i<lines.length;i++){if(lines[i].indexOf('#EXT-X-STREAM-INF:')!==0)continue;var m=lines[i].match(/RESOLUTION=(\d+)x(\d+)/),next=(lines[i+1]||'').trim();if(!next||next.charAt(0)==='#')continue;var height=m?qualityResolution(m[1],m[2]):0;result.push({id:String(result.length),label:height?height+'p':'جودة '+(result.length+1),height:height,bitrate:0,url:provider==='vcdn'?renewedResource(new URL(next,source).toString()):new URL(next,source).toString()});}nativeLevels=result;emitQuality();}
   function loadNative(url,quality){var time=video.currentTime||0,paused=video.paused,rate=video.playbackRate,vol=video.volume,muted=video.muted;nativeCurrent=quality;video.src=url;video.load();video.addEventListener('loadedmetadata',function restore(){video.removeEventListener('loadedmetadata',restore);if(time>0)video.currentTime=Math.min(time,Math.max(0,(video.duration||time)-.1));video.playbackRate=rate;video.volume=vol;video.muted=muted;if(!paused)video.play().catch(function(){});emitQuality();});}
@@ -263,7 +270,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   function loadProgress(phase,budget){if(sourceReady||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
   function tryRelay(status){
     if(status!==0||relayAttempted||!relaySource||terminalErrorSent)return false;
-    relayResume={time:Number(video.currentTime)||0,paused:video.paused,rate:video.playbackRate,volume:video.volume,muted:video.muted};sourceReady=false;
+    playbackResume={time:Number(video.currentTime)||0,paused:video.paused,rate:video.playbackRate,volume:video.volume,muted:video.muted};sourceReady=false;
     relayAttempted=true;clearRenewalTimer();waitingLoaders.clear();if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls){var previousHls=hls;hls=null;previousHls.destroy();}
     source=new URL(relaySource,location.origin).toString();masterSource=source;lastLoadPhase='relay_manifest';loadStartedAt=Date.now();loadMilestones={};
     activeDownload=null;observedDownloadBytes=0;downloadProgressObserved=false;
@@ -273,7 +280,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   if(window.Hls&&window.Hls.isSupported()){
     try{
       var playlistPolicy=loadPolicy(relayAttempted?relayRequestTimeoutMs:20000);
-      hls=new window.Hls({loader:renewableLoader(),enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:relayResume?relayResume.time:-1,manifestLoadPolicy:playlistPolicy,playlistLoadPolicy:playlistPolicy,keyLoadPolicy:playlistPolicy,fragLoadPolicy:loadPolicy(maxFragmentLoadMs)});hls.loadSource(source);hls.attachMedia(video);scheduleRenewal();
+      hls=new window.Hls({loader:renewableLoader(),enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:playbackResume?playbackResume.time:-1,manifestLoadPolicy:playlistPolicy,playlistLoadPolicy:playlistPolicy,keyLoadPolicy:playlistPolicy,fragLoadPolicy:loadPolicy(maxFragmentLoadMs)});hls.loadSource(source);hls.attachMedia(video);scheduleRenewal();
       var loadingInstance=hls;
       hls.on(window.Hls.Events.FRAG_LOADING,function(_,download){if(hls!==loadingInstance)return;activeDownload=download.part||download.frag;observedDownloadBytes=0;});
       hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});
@@ -281,7 +288,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
       if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance){relayAuthRecoveries=0;directAuthRecoveries=0;loadProgress('fragment_loaded',20000);}});
       hls.on(window.Hls.Events.LEVEL_SWITCHED,function(){emitQuality();});
       var instance=hls;
-      hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&mediaRecoveries<1){mediaRecoveries++;hls.recoverMediaError();return;}var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&canRecoverAuthorization(status)){renewalRestart=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();requestSourceRenewal();return;}if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&(tryRelay(status)||recoverRelayNetwork(status)))return;failHls(status,hlsErrorMessage(status)+' ['+phase+']',phase);});
+      hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&recoverHlsMedia())return;var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&canRecoverAuthorization(status)){renewalRestart=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();requestSourceRenewal();return;}if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&(tryRelay(status)||recoverRelayNetwork(status)))return;failHls(status,hlsErrorMessage(status)+' ['+phase+']',phase);});
     }catch(e){failHls(0,'تعذر بدء مشغل HLS على هذا الجهاز. حدّث المتصفح وAndroid System WebView ثم أعد المحاولة.','hlsjs_bootstrap');}
   }else if(vcdnPlatformSession){
     failHls(0,'بث VCDN يحتاج متصفحًا يدعم مشغل HLS. حدّث Safari أو Chrome ثم أعد المحاولة.','vcdn_transport_unsupported');
@@ -300,14 +307,14 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
     switch(msg.type){
       case'renewSource':renewSource(msg);break;
       case'sourceRenewalFailed':sourceRenewalFailed(Number(msg.status)||0);break;
-      case'play':checkRenewal();if(relayResume)relayResume.paused=false;else video.play().catch(function(){post('autoplayBlocked',{provider:provider})});break;
-      case'pause':if(relayResume)relayResume.paused=true;video.pause();break;
-      case'togglePlay':if(relayResume)relayResume.paused=!relayResume.paused;else video.paused?video.play().catch(function(){}):video.pause();break;
-      case'seekTo':if(isFinite(Number(msg.time))){var seekTime=Math.max(0,Math.min(Number(msg.time),video.duration||Number(msg.time)));if(relayResume)relayResume.time=seekTime;else video.currentTime=seekTime;}break;
-      case'setVolume':video.volume=Math.max(0,Math.min(1,Number(msg.volume)/100));if(relayResume)relayResume.volume=video.volume;break;
-      case'mute':video.muted=true;if(relayResume)relayResume.muted=true;break;
-      case'unmute':video.muted=false;if(relayResume)relayResume.muted=false;break;
-      case'setPlaybackRate':var rate=Number(msg.rate);if([.5,.75,1,1.25,1.5,1.75,2].indexOf(rate)>=0){video.playbackRate=rate;if(relayResume)relayResume.rate=rate;}break;
+      case'play':checkRenewal();if(playbackResume)playbackResume.paused=false;else video.play().catch(function(){post('autoplayBlocked',{provider:provider})});break;
+      case'pause':if(playbackResume)playbackResume.paused=true;video.pause();break;
+      case'togglePlay':if(playbackResume)playbackResume.paused=!playbackResume.paused;else video.paused?video.play().catch(function(){}):video.pause();break;
+      case'seekTo':if(isFinite(Number(msg.time))){var seekTime=Math.max(0,Math.min(Number(msg.time),video.duration||Number(msg.time)));if(playbackResume)playbackResume.time=seekTime;else video.currentTime=seekTime;}break;
+      case'setVolume':video.volume=Math.max(0,Math.min(1,Number(msg.volume)/100));if(playbackResume)playbackResume.volume=video.volume;break;
+      case'mute':video.muted=true;if(playbackResume)playbackResume.muted=true;break;
+      case'unmute':video.muted=false;if(playbackResume)playbackResume.muted=false;break;
+      case'setPlaybackRate':var rate=Number(msg.rate);if([.5,.75,1,1.25,1.5,1.75,2].indexOf(rate)>=0){video.playbackRate=rate;if(playbackResume)playbackResume.rate=rate;}break;
       case'setQuality':setQuality(String(msg.quality||'auto'));break;
       case'getQualityLevels':emitQuality();break;
     }

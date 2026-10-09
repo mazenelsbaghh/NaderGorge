@@ -10,7 +10,7 @@ import { generateBunnyHlsEmbedHtml, generateDirectHlsEmbedHtml } from './bunny-h
 type PlayerMessage = {
   source?: string;
   type?: string;
-  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number; currentTime?: number; duration?: number; native?: boolean; sourceRenewal?: string; levels?: Array<{ id: string; label: string }>; currentQuality?: string };
+  data?: { code?: number; message?: string; phase?: string; provider?: string; wasPlaying?: boolean; signedSourceExpiresAtMs?: number; currentTime?: number; duration?: number; native?: boolean; sourceRenewal?: string; levels?: Array<{ id: string; label: string }>; currentQuality?: string };
 };
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
@@ -58,7 +58,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     removeEventListener(eventName: string, callback: () => void) { if (videoListeners.get(eventName) === callback) videoListeners.delete(eventName); },
     canPlayType() { return runtime === 'native-apple' ? 'probably' : ''; },
     load() { this.loadCalls += 1; this.currentTime = 0; this.paused = true; },
-    pause() { this.paused = true; },
+    pause() { this.paused = true; videoListeners.get('pause')?.(); },
     play() { this.paused = false; return Promise.resolve(); },
   };
 
@@ -81,12 +81,13 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     nextLevel = -1;
     startLoadCalls = 0;
     destroyCalls = 0;
+    mediaRecoveryCalls = 0;
     config: Record<string, unknown>;
     source = '';
     constructor(config: Record<string, unknown>) { this.config = config; }
     loadSource(source: string) { this.source = source; }
     attachMedia() {}
-    recoverMediaError() {}
+    recoverMediaError() { this.mediaRecoveryCalls += 1; video.currentTime = 0; video.pause(); }
     startLoad() { this.startLoadCalls += 1; }
     destroy() { this.destroyCalls += 1; }
     on(eventName: string, callback: (event: unknown, payload: unknown) => void) {
@@ -170,6 +171,9 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     },
     emitManifestParsed() {
       hlsListeners.get('manifestParsed')?.(null, {});
+    },
+    emitFatalMediaError() {
+      hlsListeners.get('error')?.(null, { fatal: true, type: 'mediaError', details: 'bufferAppendError' });
     },
     emitLevelLoaded() { hlsListeners.get('levelLoaded')?.(null, {}); },
     emitFragmentLoaded() { hlsListeners.get('fragmentLoaded')?.(null, {}); },
@@ -1063,4 +1067,55 @@ test('VCDN native HLS renews directly and preserves playhead, rate and playing s
   assert.equal(player.video.currentTime, 30);
   assert.equal(player.video.playbackRate, 1.5);
   assert.equal(player.video.paused, false);
+});
+
+for (const mediaCode of [2, 3]) {
+  test(`2026-10-09 browser media error ${mediaCode} recovers in place before stopping playback`, async () => {
+    const player = await runHlsPlayer();
+    player.video.duration = 600;
+    player.triggerVideoEvent('loadedmetadata');
+    player.video.currentTime = 87;
+    player.video.playbackRate = 1.5;
+    player.triggerVideoEvent('play');
+    player.video.error = { code: mediaCode };
+    player.triggerVideoEvent('error');
+    player.triggerVideoEvent('loadedmetadata');
+    assert.equal(player.hls()?.mediaRecoveryCalls, 1);
+    assert.equal(player.hls()?.destroyCalls, 0);
+    assert.equal(player.video.currentTime, 87);
+    assert.equal(player.video.playbackRate, 1.5);
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+    // DOM and Hls.js failures share one budget; a broken source cannot retry forever.
+    player.emitFatalMediaError();
+    assert.equal(player.hls()?.mediaRecoveryCalls, 1);
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+    assert.equal(player.messages.find(message => message.type === 'error')?.data?.wasPlaying, true);
+  });
+}
+
+for (const playing of [true, false]) {
+  test(`2026-10-09 expiry reports pre-cleanup playback intent when playing=${playing}`, async () => {
+    const player = await runHlsPlayer('hlsjs', 200, '', signedPlaylist(300));
+    player.triggerVideoEvent('loadedmetadata');
+    if (playing) player.triggerVideoEvent('play');
+    player.advanceTime(180000);
+    player.command('sourceRenewalFailed', { status: 410 });
+    assert.equal(player.video.paused, true);
+    assert.equal(player.messages.find(message => message.type === 'error')?.data?.wasPlaying, playing);
+  });
+}
+
+test('2026-10-09 media recovery without playable metadata stops on its deadline and retains resume intent', async () => {
+  const player = await runHlsPlayer();
+  player.video.duration = 600;
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 87;
+  player.triggerVideoEvent('play');
+  player.video.error = { code: 3 };
+  player.triggerVideoEvent('error');
+  player.advanceTime(20000);
+  const failure = player.messages.find(message => message.type === 'error');
+  assert.equal(failure?.data?.wasPlaying, true);
+  assert.equal(player.hls()?.mediaRecoveryCalls, 1);
+  assert.equal(player.hls()?.destroyCalls, 1);
 });

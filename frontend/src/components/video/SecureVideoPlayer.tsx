@@ -1092,7 +1092,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
             recoveryPlaybackRateRef.current = playbackRateRef.current;
             // Only renew an expired owned session. Replaced/revoked sessions must never fight newer playback.
-            if (isPlayingRef.current && embedSessionRefreshCountRef.current < 1) {
+            if ((msg.data?.wasPlaying === true || isPlayingRef.current) && embedSessionRefreshCountRef.current < 1) {
               embedSessionRefreshCountRef.current += 1;
               reloadSessionRef.current?.();
               break;
