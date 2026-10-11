@@ -72,11 +72,15 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/cairo_codes_20261004.json',
     'assets/gec_codes_20261004.json',
     'assets/gec_duplicate_codes_20261004.json',
+    'assets/attendance_payment_repair_20261011.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,
     'centerOnly': false,
+    'centerFeeEnabled': false,
     'centerFeeOnly': false,
+    'packageMember': false,
+    'importSource': '',
     'monthNumber': 1,
     'paymentPending': false,
     'recordedAtKnown': true,
@@ -150,6 +154,7 @@ extension _BundledCenterDataRepair on CenterStore {
             }
           }
         }
+        _verifyScopedRepairHistory(document, patch);
 
         final updatedRows = <String>{};
         for (final raw in patch['updates'] as List) {
@@ -176,6 +181,8 @@ extension _BundledCenterDataRepair on CenterStore {
           }
           row.addAll(after);
         }
+        _deleteRepairRows(document, patch);
+        _appendRepairNotes(document, patch);
         for (final raw in patch['inserts'] as List) {
           final insert = Map<String, dynamic>.from(raw as Map);
           final collection = insert['collection'] as String;
@@ -202,7 +209,14 @@ extension _BundledCenterDataRepair on CenterStore {
         candidate.appliedDataRepairs.add(repairId!);
         validateState(candidate);
         if (_state.staff.isNotEmpty) {
-          await _saveAutomaticBackup(_state.copyForBackup());
+          await _writeBackup(
+            p.join(
+              p.dirname(databasePath),
+              'backups',
+              'before-data-repair-${DateTime.now().microsecondsSinceEpoch}.json',
+            ),
+            _state.copyForBackup(),
+          );
         }
         await _database!.transaction((transaction) async {
           final updated = await replaceRecordState(
@@ -224,6 +238,85 @@ extension _BundledCenterDataRepair on CenterStore {
     }
   }
 
+  void _verifyScopedRepairHistory(
+    Map<String, dynamic> document,
+    Map<String, dynamic> patch,
+  ) {
+    for (final raw in patch['historyGuards'] as List? ?? const []) {
+      final guard = Map<String, dynamic>.from(raw as Map);
+      final collection = guard['collection'] as String;
+      final sessionIds = (guard['sessionIds'] as List? ?? const [])
+          .cast<String>()
+          .toSet();
+      final recordIds = (guard['recordIds'] as List? ?? const [])
+          .cast<String>()
+          .toSet();
+      if (sessionIds.isEmpty && recordIds.isEmpty) {
+        throw const FormatException('Repair history scope');
+      }
+      final current = {
+        for (final row in _repairRows(document, collection))
+          if (recordIds.contains(row['id']) ||
+              sessionIds.contains(row['sessionId']) ||
+              collection == 'sessions' && sessionIds.contains(row['id']))
+            row['id'] as String: row,
+      };
+      if (!_repairValuesMatch(current, guard['before']) &&
+          !_repairValuesMatch(current, guard['after'])) {
+        throw _DataRepairConflict(current.keys.toList());
+      }
+    }
+  }
+
+  void _deleteRepairRows(
+    Map<String, dynamic> document,
+    Map<String, dynamic> patch,
+  ) {
+    final deletedRows = <String>{};
+    for (final raw in patch['deletes'] as List? ?? const []) {
+      final deletion = Map<String, dynamic>.from(raw as Map);
+      final collection = deletion['collection'] as String;
+      final before = Map<String, dynamic>.from(deletion['before'] as Map);
+      final id = before['id'] as String;
+      if (id.trim().isEmpty || !deletedRows.add('$collection:$id')) {
+        throw _DataRepairConflict([id]);
+      }
+      final rows = _repairRows(document, collection);
+      final row = rows.where((e) => e['id'] == id).singleOrNull;
+      if (row != null) {
+        if (!_repairValuesMatch(row, before)) {
+          throw _DataRepairConflict([id]);
+        }
+        rows.remove(row);
+      }
+    }
+  }
+
+  void _appendRepairNotes(
+    Map<String, dynamic> document,
+    Map<String, dynamic> patch,
+  ) {
+    for (final raw in patch['noteAppends'] as List? ?? const []) {
+      final append = Map<String, dynamic>.from(raw as Map);
+      final id = append['studentId'] as String;
+      final row = _repairRows(
+        document,
+        'students',
+      ).where((e) => e['id'] == id).singleOrNull;
+      if (row == null) throw _DataRepairConflict([id]);
+      var notes = row['notes'] as String? ?? '';
+      for (final line in (append['lines'] as List).cast<String>()) {
+        if (line.trim().isEmpty || line.contains('\n') || line.contains('\r')) {
+          throw const FormatException('Repair note line');
+        }
+        if (!notes.split('\n').contains(line)) {
+          notes = notes.isEmpty ? line : '$notes\n$line';
+        }
+      }
+      row['notes'] = notes;
+    }
+  }
+
   List<Map<String, dynamic>> _repairRows(
     Map<String, dynamic> document,
     String collection, {
@@ -234,6 +327,7 @@ extension _BundledCenterDataRepair on CenterStore {
       throw const FormatException('Repair collection');
     }
     final value = document[collection];
+    if (value is List<Map<String, dynamic>>) return value;
     if (value == null) document[collection] = <Map<String, dynamic>>[];
     final rows = (document[collection] as List)
         .map((e) => Map<String, dynamic>.from(e as Map))
@@ -256,6 +350,29 @@ extension _BundledCenterDataRepair on CenterStore {
     Map<String, dynamic> document,
     Map<String, dynamic> patch,
   ) {
+    for (final raw in patch['deletes'] as List? ?? const []) {
+      final deletion = Map<String, dynamic>.from(raw as Map);
+      final id = (deletion['before'] as Map)['id'] as String;
+      if (_repairRows(
+        document,
+        deletion['collection'] as String,
+      ).any((row) => row['id'] == id)) {
+        throw _DataRepairConflict([id]);
+      }
+    }
+    for (final raw in patch['noteAppends'] as List? ?? const []) {
+      final append = Map<String, dynamic>.from(raw as Map);
+      final id = append['studentId'] as String;
+      final row = _repairRows(
+        document,
+        'students',
+      ).where((e) => e['id'] == id).singleOrNull;
+      final lines = (row?['notes'] as String? ?? '').split('\n').toSet();
+      if (row == null ||
+          !(append['lines'] as List).cast<String>().every(lines.contains)) {
+        throw _DataRepairConflict([id]);
+      }
+    }
     for (final raw in patch['updates'] as List) {
       final update = Map<String, dynamic>.from(raw as Map);
       final id = update['id'] as String;

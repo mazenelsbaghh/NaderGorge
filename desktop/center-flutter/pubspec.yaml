@@ -1,7 +1,7 @@
 name: massar_center
 description: تطبيق نادر جورج لإدارة السناتر أوفلاين
 publish_to: none
-version: 1.2.9+12
+version: 1.2.11+14
 environment:
   sdk: ^3.11.0
 dependencies:
@@ -44,6 +44,7 @@ flutter:
     - assets/cairo_codes_20261004.json
     - assets/gec_codes_20261004.json
     - assets/gec_duplicate_codes_20261004.json
+    - assets/attendance_payment_repair_20261011.json
   fonts:
     - family: Tajawal
       fonts:

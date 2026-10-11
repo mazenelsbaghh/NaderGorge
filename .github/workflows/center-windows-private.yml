@@ -5,6 +5,15 @@ on:
     branches: [main]
     paths: ['desktop/center-flutter/**', 'desktop/center-lan/**', '.github/workflows/center-windows-private.yml']
   workflow_dispatch:
+    inputs:
+      private_assets_id:
+        description: 'Reviewed private packaging release asset ID (host only)'
+        required: true
+        type: string
+      private_assets_sha256:
+        description: 'SHA256 of the reviewed private packaging asset'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +33,37 @@ jobs:
         with:
           go-version: '1.25.x'
           cache: false
+      - name: Load reviewed private host packaging assets
+        if: matrix.role == 'host'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRIVATE_ASSETS_ID: ${{ inputs.private_assets_id }}
+          PRIVATE_ASSETS_SHA256: ${{ inputs.private_assets_sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:PRIVATE_ASSETS_ID -notmatch '^[0-9]+$' -or $env:PRIVATE_ASSETS_SHA256 -notmatch '^[a-f0-9]{64}$') {
+            throw 'Dispatch this build with reviewed private packaging inputs.'
+          }
+          $Zip = Join-Path $env:RUNNER_TEMP 'massar-private-assets.zip'
+          $Headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/octet-stream' }
+          Invoke-WebRequest "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/assets/$env:PRIVATE_ASSETS_ID" -Headers $Headers -OutFile $Zip
+          if ((Get-FileHash $Zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:PRIVATE_ASSETS_SHA256) {
+            throw 'Private packaging asset digest mismatch.'
+          }
+          $env:MASSAR_PRIVATE_ASSET_ZIP = $Zip
+          @'
+          import os, pathlib, zipfile
+          root = pathlib.Path('desktop/center-flutter/assets')
+          expected = {'admin_account.json', 'installation_seed.json', 'data_repair_20261002.json', 'data_repair_20261004.json', 'academic_import_20261004.json', 'cairo_academic_import_20261004.json', 'cairo_codes_20261004.json', 'gec_codes_20261004.json', 'gec_duplicate_codes_20261004.json', 'attendance_payment_repair_20261011.json'}
+          with zipfile.ZipFile(os.environ['MASSAR_PRIVATE_ASSET_ZIP']) as archive:
+              names = archive.namelist()
+              if len(names) != len(expected) or set(names) != expected or archive.testzip() is not None:
+                  raise RuntimeError('Unexpected private packaging archive contents')
+              for name in names:
+                  (root / name).write_bytes(archive.read(name))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Private asset loading failed.' }
       - name: Install official Flutter 3.41.0
         shell: pwsh
         run: |

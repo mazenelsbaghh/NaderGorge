@@ -16,6 +16,7 @@ final syntheticRepairAssets = <String, Object>{
     'gec_duplicate_codes_20261004',
     'academic_import_20261004',
     'cairo_academic_import_20261004',
+    'attendance_payment_repair_20261011',
   ])
     'assets/$name.json': {
       'id': 'synthetic-$name',
