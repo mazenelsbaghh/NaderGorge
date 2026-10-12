@@ -234,7 +234,10 @@ abstract final class CenterReports {
   }) async {
     final report = build(store, kind, filter);
     final exportingUser = store.currentUser!;
-    final file = File(p.normalize(p.absolute(destination)));
+    final selectedPath = p.normalize(p.absolute(destination));
+    final file = File(
+      p.extension(selectedPath).isEmpty ? '$selectedPath.csv' : selectedPath,
+    );
     _validateDestination(store, file);
     await file.parent.create(recursive: true);
     await file.create(exclusive: true);
@@ -273,12 +276,16 @@ abstract final class CenterReports {
     final target = file.path.toLowerCase();
     final database = p.normalize(p.absolute(store.databasePath)).toLowerCase();
     final backups = p.join(p.dirname(database), 'backups');
-    if (p.extension(target) != '.csv' ||
-        target == database ||
+    if (target == database ||
         target.startsWith('$database-') ||
         p.isWithin(backups, target)) {
       throw const CenterException(
-        'اختر ملف CSV جديدًا خارج ملفات البيانات والنسخ الاحتياطية.',
+        'احفظ التقرير في سطح المكتب أو المستندات، خارج مجلد البيانات والنسخ الاحتياطية.',
+      );
+    }
+    if (p.extension(target) != '.csv') {
+      throw const CenterException(
+        'التقرير بصيغة CSV ويمكن فتحه في Excel. اكتب الاسم بدون امتداد أو بامتداد .csv.',
       );
     }
     if (FileSystemEntity.typeSync(file.path) != FileSystemEntityType.notFound) {

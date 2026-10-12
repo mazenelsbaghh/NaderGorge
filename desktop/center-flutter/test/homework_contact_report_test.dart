@@ -203,7 +203,7 @@ void main() {
           );
         }
       });
-      destination = '${directory.path}/homework-selected.csv';
+      destination = '${directory.path}/واجب الحصة الثانية';
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(chooser, (
         call,
       ) async {
@@ -284,7 +284,7 @@ void main() {
       expect(find.text('طالب 1'), findsOneWidget);
       expect(find.text('طالب 2'), findsNothing);
       final beforeExport = _sourceRecords(store);
-      final csv = await _download(tester, destination);
+      final csv = await _download(tester, '$destination.csv');
       expect(chooserCalls, 1);
       final lines = csv.split('\r\n').where((line) => line.isNotEmpty).toList();
       expect(lines, hasLength(3));

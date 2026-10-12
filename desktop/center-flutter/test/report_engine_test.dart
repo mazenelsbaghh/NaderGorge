@@ -490,7 +490,7 @@ void main() {
         store: store,
         kind: CenterReportKind.payments,
         filter: filter,
-        destination: file.path,
+        destination: '${directory.path}/filtered',
       );
       final bytes = await file.readAsBytes();
       expect(bytes.take(3).toList(), [0xef, 0xbb, 0xbf]);
@@ -531,7 +531,7 @@ void main() {
           store: store,
           kind: CenterReportKind.payments,
           filter: filter,
-          destination: file.path,
+          destination: '${directory.path}/filtered',
         ),
         throwsA(isA<CenterException>()),
       );
@@ -550,7 +550,7 @@ void main() {
           store: store,
           kind: CenterReportKind.students,
           filter: const CenterReportFilter(),
-          destination: '${directory.path}/backups/report.csv',
+          destination: '${directory.path}/backups/report',
         ),
         throwsA(isA<CenterException>()),
       );

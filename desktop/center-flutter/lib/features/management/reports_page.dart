@@ -4,6 +4,7 @@ import 'package:massar_center/domain/student_lookup.dart';
 import 'package:massar_center/shared/problem_reporting.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import '../../application/center_reports.dart';
 import '../../application/center_store.dart';
@@ -184,7 +185,7 @@ class _ReportsPageState extends State<ReportsPage> {
         ],
       );
       if (location == null) return;
-      await CenterReports.exportCsv(
+      final savedPath = await CenterReports.exportCsv(
         store: widget.store,
         kind: kind,
         filter: filter,
@@ -193,7 +194,7 @@ class _ReportsPageState extends State<ReportsPage> {
       if (mounted) {
         await showManagementMessage(
           context,
-          'حُفظ التقرير بالفلاتر المختارة. يمكنك فتحه في Excel.',
+          'حُفظ التقرير باسم ${p.basename(savedPath)} بالفلاتر المختارة. يمكنك فتحه في Excel.',
         );
       }
     } catch (error, stackTrace) {
