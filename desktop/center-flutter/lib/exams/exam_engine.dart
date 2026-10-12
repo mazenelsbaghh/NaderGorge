@@ -45,6 +45,7 @@ class WindowsExamEngine implements ExamEngine, ExamDownloadSource {
   Future<void> _protectCredentials() async {
     if (!Platform.isWindows) return;
     const script = r'''
+$env:PSModulePath = [IO.Path]::Combine($PSHOME, 'Modules')
 $ErrorActionPreference = 'Stop'
 $stage = 'decode_input'
 try {
@@ -118,16 +119,24 @@ foreach ($name in @('engine-connection.json', 'engine-connection.json.tmp')) {
     for (final unit in script.codeUnits) {
       utf16.addAll([unit & 255, unit >> 8]);
     }
+    final powershell = p.join(
+      Platform.environment['SystemRoot'] ?? r'C:\Windows',
+      'System32',
+      'WindowsPowerShell',
+      'v1.0',
+      'powershell.exe',
+    );
     final process = await Process.start(
-      p.join(
-        Platform.environment['SystemRoot'] ?? r'C:\Windows',
-        'System32',
-        'WindowsPowerShell',
-        'v1.0',
-        'powershell.exe',
-      ),
+      powershell,
       ['-NoProfile', '-NonInteractive', '-EncodedCommand', base64Encode(utf16)],
       runInShell: false,
+      // A pwsh 7 parent can otherwise make PS5.1 load incompatible core modules.
+      environment: {
+        for (final entry in Platform.environment.entries)
+          if (entry.key.toLowerCase() != 'psmodulepath') entry.key: entry.value,
+        'PSModulePath': p.join(p.dirname(powershell), 'Modules'),
+      },
+      includeParentEnvironment: false,
     );
     unawaited(process.stdout.drain<void>());
     _credentialProtectionDiagnostic = null;

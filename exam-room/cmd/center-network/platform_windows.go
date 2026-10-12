@@ -42,16 +42,33 @@ func replaceFile(source, destination string) error {
 	return windows.MoveFileEx(from, to, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
 }
 func psLiteral(value string) string { return "'" + strings.ReplaceAll(value, "'", "''") + "'" }
+func powershellEnvironment(inherited []string, executable string) []string {
+	environment := make([]string, 0, len(inherited)+1)
+	for _, entry := range inherited {
+		name, _, _ := strings.Cut(entry, "=")
+		if !strings.EqualFold(name, "PSModulePath") {
+			environment = append(environment, entry)
+		}
+	}
+	// A parent pwsh 7 process can otherwise force PS5.1 to load incompatible modules.
+	return append(environment, "PSModulePath="+filepath.Join(filepath.Dir(executable), "Modules"))
+}
 func powershell(script string) ([]byte, error) {
+	systemDirectory, err := windows.GetSystemDirectory()
+	if err != nil {
+		return nil, err
+	}
+	executable := filepath.Join(systemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe")
 	// The complete setup exceeds CreateProcess's command-line limit once encoded.
 	// Keep only the small loader in argv, with UTF-8 script bytes sent as ASCII stdin.
-	const loader = "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $bytes=[Convert]::FromBase64String([Console]::In.ReadToEnd()); & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString($bytes)))"
+	const loader = "$env:PSModulePath=[IO.Path]::Combine($PSHOME,'Modules'); $ErrorActionPreference='Stop'; [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $bytes=[Convert]::FromBase64String([Console]::In.ReadToEnd()); & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString($bytes)))"
 	words := utf16.Encode([]rune(loader))
 	payload := make([]byte, len(words)*2)
 	for i, word := range words {
 		binary.LittleEndian.PutUint16(payload[i*2:], word)
 	}
-	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", base64.StdEncoding.EncodeToString(payload))
+	command := exec.Command(executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", base64.StdEncoding.EncodeToString(payload))
+	command.Env = powershellEnvironment(os.Environ(), executable)
 	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	command.Stdin = strings.NewReader(base64.StdEncoding.EncodeToString([]byte(script)))
 	return command.Output()

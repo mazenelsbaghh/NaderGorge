@@ -182,34 +182,69 @@ void main() {
 
 Future<void> expectPrivateAcl(String path) async {
   const script = r'''
+$env:PSModulePath = [IO.Path]::Combine($PSHOME, 'Modules')
 $ErrorActionPreference = 'Stop'
+$stage = 'decode_readback_path'
+try {
 $path = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd()))
+$stage = 'get_acl'
 $acl = Get-Acl -LiteralPath $path
+$stage = 'read_acl_rules'
 $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) | ForEach-Object {
   @{ sid=$_.IdentityReference.Value; inherited=$_.IsInherited; access=$_.AccessControlType.ToString(); full=(($_.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -eq [Security.AccessControl.FileSystemRights]::FullControl) }
 })
 @{ user=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value; owner=$acl.GetOwner([Security.Principal.SecurityIdentifier]).Value; protected=$acl.AreAccessRulesProtected; rules=$rules } | ConvertTo-Json -Depth 4 -Compress
+} catch {
+  $cause=$_.Exception.GetBaseException()
+  $type=$cause.GetType().Name
+  $id=$_.FullyQualifiedErrorId
+  if($type -notmatch '^[A-Za-z0-9_]{1,80}$') { $type='UnknownException' }
+  if($id -notmatch '^[A-Za-z0-9_.,:]{1,160}$') { $id='unclassified' }
+  [Console]::Error.WriteLine((@{stage=$stage;type=$type;id=$id;hresult=$cause.HResult} | ConvertTo-Json -Compress))
+  exit 1
+}
 ''';
   final utf16 = <int>[];
   for (final unit in script.codeUnits) {
     utf16.addAll([unit & 255, unit >> 8]);
   }
+  final powershell = p.join(
+    Platform.environment['SystemRoot'] ?? r'C:\Windows',
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe',
+  );
   final process = await Process.start(
-    p.join(
-      Platform.environment['SystemRoot'] ?? r'C:\Windows',
-      'System32',
-      'WindowsPowerShell',
-      'v1.0',
-      'powershell.exe',
-    ),
+    powershell,
     ['-NoProfile', '-NonInteractive', '-EncodedCommand', base64Encode(utf16)],
     runInShell: false,
+    environment: {
+      for (final entry in Platform.environment.entries)
+        if (entry.key.toLowerCase() != 'psmodulepath') entry.key: entry.value,
+      'PSModulePath': p.join(p.dirname(powershell), 'Modules'),
+    },
+    includeParentEnvironment: false,
   );
   final output = process.stdout.transform(utf8.decoder).join();
-  unawaited(process.stderr.drain<void>());
+  final diagnostic = readAclFailure(process.stderr);
   process.stdin.write(base64Encode(utf8.encode(path)));
   await process.stdin.close();
-  expect(await process.exitCode.timeout(const Duration(seconds: 15)), 0);
+  final exitCode = await process.exitCode.timeout(
+    const Duration(seconds: 15),
+    onTimeout: () {
+      process.kill();
+      return -1;
+    },
+  );
+  expect(
+    exitCode,
+    0,
+    reason: await diagnostic.timeout(
+      const Duration(seconds: 3),
+      onTimeout: () => 'readback_timeout',
+    ),
+  );
   final acl = jsonDecode((await output).trim()) as Map;
   expect(acl['owner'], acl['user']);
   expect(acl['protected'], isTrue);
@@ -221,4 +256,28 @@ $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentif
     expect(rule['access'], 'Allow');
     expect(rule['full'], isTrue);
   }
+}
+
+Future<String> readAclFailure(Stream<List<int>> stream) async {
+  final bytes = <int>[];
+  await for (final chunk in stream) {
+    if (bytes.length < 4096) bytes.addAll(chunk.take(4096 - bytes.length));
+  }
+  try {
+    final value = jsonDecode(utf8.decode(bytes));
+    if (value is Map &&
+        value['stage'] is String &&
+        value['type'] is String &&
+        value['id'] is String &&
+        value['hresult'] is int) {
+      final safe =
+          '${value['stage']}/${value['type']}/${value['id']}/${value['hresult']}';
+      if (safe.length < 300 && RegExp(r'^[A-Za-z0-9_.,:/-]+$').hasMatch(safe)) {
+        return safe;
+      }
+    }
+  } on FormatException {
+    /* No raw stderr or local profile paths enter test logs. */
+  }
+  return 'readback_helper_failed';
 }
