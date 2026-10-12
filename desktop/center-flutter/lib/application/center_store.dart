@@ -2231,11 +2231,9 @@ class CenterStore extends ChangeNotifier {
                   sourceId != null ||
                   session.kind != SessionKind.free),
         );
-        final exemption = _automaticAttendanceExemption(
-          student,
-          session,
-          entry,
-        );
+        final exemption = request.mode == EntryMode.package
+            ? null
+            : _automaticAttendanceExemption(student, session, entry);
         if (exemption != null) {
           _state.payments.add(exemption);
           entry = entry.copyWith(paymentPending: false);
@@ -2265,7 +2263,7 @@ class CenterStore extends ChangeNotifier {
     );
   }
 
-  PaymentRecord? _automaticAttendanceExemption(
+  int? _automaticExemptionAmount(
     Student student,
     LessonSession session,
     AttendanceRecord entry,
@@ -2280,13 +2278,28 @@ class CenterStore extends ChangeNotifier {
         : group.priceConfigured
         ? group.sessionPrice
         : null;
-    if (baseAmount == null || _studentDiscounted(student, baseAmount) != 0) {
+    return baseAmount != null && _studentDiscounted(student, baseAmount) == 0
+        ? baseAmount
+        : null;
+  }
+
+  PaymentRecord? _automaticAttendanceExemption(
+    Student student,
+    LessonSession session,
+    AttendanceRecord entry,
+  ) {
+    final baseAmount = _automaticExemptionAmount(student, session, entry);
+    if (baseAmount == null) return null;
+    final groupId = entry.makeupSourceGroupId ?? session.groupId;
+    if ((session.kind == SessionKind.counted ||
+            entry.makeupSourceGroupId != null) &&
+        _available(student.id, groupId, forClosure: session).isNotEmpty) {
       return null;
     }
     return PaymentRecord(
       id: _uuid.v4(),
       studentId: student.id,
-      groupId: group.id,
+      groupId: groupId,
       sessionId: session.id,
       description: 'إعفاء الحصة تلقائيًا — دون تحصيل',
       baseAmount: baseAmount,

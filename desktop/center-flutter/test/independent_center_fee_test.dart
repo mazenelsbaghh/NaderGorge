@@ -74,7 +74,13 @@ void main() {
           sessionId: session.id,
         );
         expect(store.centerFeeCollectedFor(student.id, session.id), 1500);
-        expect(store.payments, isEmpty);
+        if (discount == 100) {
+          expect(store.payments, hasLength(1));
+          expect(store.payments.single.netAmount, 0);
+          expect(store.payments.single.paidAmount, 0);
+        } else {
+          expect(store.payments, isEmpty);
+        }
         expect(store.attendances, hasLength(1));
         await expectLater(
           store.collectStudentCenterFee(

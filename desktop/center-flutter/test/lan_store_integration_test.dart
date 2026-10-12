@@ -312,6 +312,38 @@ void main() {
   tearDown(() async => h.close());
 
   test(
+    'secondary free attendance commits its zero receipt in one host command',
+    () async {
+      await h.host.saveStudent(h.student.copyWith(discountPercent: 100));
+      await h.remote.refreshRemote();
+      final commands = h.commandRequests;
+      final request = EntryRequest(
+        studentId: h.student.id,
+        sessionId: h.lesson.id,
+        mode: EntryMode.single,
+      );
+      await h.remote.recordAttendance(request);
+      expect(h.commandRequests, commands + 1);
+      expect(h.host.attendances, hasLength(1));
+      expect(h.host.payments.single.netAmount, 0);
+      expect(h.host.payments.single.paidAmount, 0);
+      expect(
+        h.remote.attendanceNeedsPayment(h.student.id, h.lesson.id),
+        isFalse,
+      );
+      expect(h.remote.payments.single.netAmount, 0);
+      await h.remote.recordAttendance(request);
+      expect(h.host.attendances, hasLength(1));
+      expect(h.host.payments, hasLength(1));
+      await h.expectMatchingPublicState();
+      expect(
+        await File('${h.clientDirectory.path}/center.sqlite').exists(),
+        isFalse,
+      );
+    },
+  );
+
+  test(
     'unchanged LAN polls skip records but refresh support and changed host data',
     () async {
       await h.remote.refreshRemote();

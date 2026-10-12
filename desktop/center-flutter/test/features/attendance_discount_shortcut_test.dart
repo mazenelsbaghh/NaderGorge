@@ -195,6 +195,42 @@ void main() {
   }
 
   testWidgets(
+    'Enter prepares the exempt student and shows zero paid in the same attendance table without a payment dialog',
+    (tester) async {
+      await tester.runAsync(
+        () => store.saveStudent(student.copyWith(discountPercent: 100)),
+      );
+      await open(tester);
+      await scan(tester, student.code);
+      await tester.runAsync(() async {
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await waitForUiCondition(
+          tester,
+          () =>
+              store.attendances.length == 1 &&
+              !store.attendanceNeedsPayment(student.id, session.id) &&
+              find
+                  .byKey(const Key('attendance-operation-status'))
+                  .evaluate()
+                  .isNotEmpty &&
+              find.byType(CircularProgressIndicator).evaluate().isEmpty &&
+              find.byType(LinearProgressIndicator).evaluate().isEmpty,
+          reason: 'Enter commits the automatic exemption',
+        );
+      });
+      await tester.pumpAndSettle();
+      expect(paymentDialog, findsNothing);
+      expect(store.payments.single.netAmount, 0);
+      expect(store.payments.single.paidAmount, 0);
+      expect(find.text('المطلوب'), findsOneWidget);
+      expect(find.text('السداد'), findsOneWidget);
+      expect(find.text('مجاني'), findsOneWidget);
+      expectCodeFocus(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'S needs a resolved student and never replaces an unfinished search',
     (tester) async {
       await open(tester);

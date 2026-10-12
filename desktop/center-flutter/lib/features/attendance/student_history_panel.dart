@@ -136,25 +136,55 @@ class StudentHistoryPanel extends StatelessWidget {
     _HistoryLinks links,
   ) {
     final payment = _attendancePayment(record, links);
-    final (centerDue, centerPaid) = _attendanceCenterFee(record, links);
-    if (payment != null || record.centerFeeOnly) {
-      return _AttendancePaymentView(
-        due: (payment?.netAmount ?? 0) + centerDue,
-        collected:
-            (payment == null ? 0 : store.paymentCollectedFor(payment.id)) +
-            centerPaid,
-        account: _accountLabel(record, links),
-        receiptNote:
-            record.packageId != null || record.originalAttendanceId != null
-            ? 'المبلغ هو إجمالي إيصال الشهر، وليس تحصيلًا جديدًا لهذه الحصة.'
-            : null,
-      );
+    final center = _attendanceCenterFee(record, links);
+    return payment != null || record.centerFeeOnly
+        ? _linkedAttendancePayment(record, links, payment, center)
+        : _uncollectedAttendancePayment(record, links, center);
+  }
+
+  _AttendancePaymentView _linkedAttendancePayment(
+    AttendanceRecord record,
+    _HistoryLinks links,
+    PaymentRecord? payment,
+    (int, int) center,
+  ) {
+    final (centerDue, centerPaid) = center;
+    final receiptsById = {
+      for (final receipt
+          in links.paymentsBySession[record.sessionId] ??
+              const <PaymentRecord>[])
+        receipt.id: receipt,
+    };
+    if (payment != null) {
+      receiptsById[payment.id] = payment;
     }
+    final receipts = receiptsById.values;
+    return _AttendancePaymentView(
+      due: receipts.fold<int>(
+        centerDue,
+        (sum, receipt) => sum + receipt.netAmount,
+      ),
+      collected: receipts.fold<int>(
+        centerPaid,
+        (sum, receipt) => sum + store.paymentCollectedFor(receipt.id),
+      ),
+      account: _accountLabel(record, links),
+      receiptNote: receipts.any((receipt) => receipt.packageId != null)
+          ? 'المبلغ يشمل إيصال الشهر المرتبط بالحضور أو المشترى في الحصة؛ العرض لا يسجل تحصيلًا جديدًا.'
+          : null,
+    );
+  }
+
+  _AttendancePaymentView _uncollectedAttendancePayment(
+    AttendanceRecord record,
+    _HistoryLinks links,
+    (int, int) center,
+  ) {
+    final (centerDue, centerPaid) = center;
     if (!record.paymentPending &&
         record.status != AttendanceStatus.absent &&
-        (record.packageMember ||
-            _session(record.sessionId)?.kind == SessionKind.free &&
-                record.makeupSourceGroupId == null)) {
+        store.paymentStatusFor(student.id, record.sessionId).status ==
+            StudentPaymentStatus.free) {
       return _AttendancePaymentView(
         due: centerDue,
         collected: centerPaid,
@@ -175,7 +205,10 @@ class StudentHistoryPanel extends StatelessWidget {
     final hasCenterFee =
         record.centerFeeOnly ||
         links.centerFeeSessionIds.contains(record.sessionId) ||
-        record.sessionId == currentSessionId && student.centerFeeEnabled;
+        record.sessionId == currentSessionId &&
+            record.status != AttendanceStatus.absent &&
+            !record.packageMember &&
+            student.centerFeeEnabled;
     final centerDue = hasCenterFee
         ? store.centerFeeDueFor(student.id, record.sessionId)
         : 0;
@@ -587,6 +620,7 @@ class StudentHistoryPanel extends StatelessWidget {
               store: store,
               student: student,
               expanded: true,
+              currentSessionId: currentSessionId,
               actionsEnabled: actionsEnabled,
               collectionSessionId: collectionSessionId,
               onOpenModal: (work) async {
@@ -1235,8 +1269,6 @@ class StudentHistoryPanel extends StatelessWidget {
   }
 }
 
-// Built from the current snapshot on every refresh; canceled history and active
-// coverage stay separate so a refund cannot become a valid attendance payment.
 class _AttendancePaymentView {
   const _AttendancePaymentView({
     this.due,
@@ -1273,6 +1305,7 @@ class _AttendancePaymentView {
   ].join('\n');
 }
 
+// Canceled history stays separate so refunds cannot become active coverage.
 class _HistoryLinks {
   _HistoryLinks(StudentHistoryRecords history, this.store)
     : activeAttendanceById = {
@@ -1298,6 +1331,11 @@ class _HistoryLinks {
       } {
     // The original first matching payment wins when historical records overlap.
     for (final payment in activePaymentsById.values) {
+      if (payment.sessionId != null) {
+        paymentsBySession
+            .putIfAbsent(payment.sessionId!, () => <PaymentRecord>[])
+            .add(payment);
+      }
       if (payment.packageId == null && payment.sessionId != null) {
         singlePaymentsBySession.putIfAbsent(payment.sessionId!, () => payment);
       }
@@ -1313,4 +1351,5 @@ class _HistoryLinks {
     for (final package in store.allPackages) package.id: package.paymentId,
   };
   final singlePaymentsBySession = <String, PaymentRecord>{};
+  final paymentsBySession = <String, List<PaymentRecord>>{};
 }
