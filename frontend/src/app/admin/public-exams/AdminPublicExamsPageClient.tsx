@@ -11,6 +11,7 @@ import { cairoDateTimeLocalToIso } from '@/components/admin/admin-utils';
 import { adminSalesService, type PublicExamProductDto } from '@/services/admin-sales-service';
 import { teacherService, type SubjectDto, type TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { ExamEssayGradingSettings, type ExamEssayGradingMode } from '@/components/admin/ExamEssayGradingSettings';
 
 export default function AdminPublicExamsPageClient() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function AdminPublicExamsPageClient() {
     passingScore: '1',
     totalScore: '1',
     durationMinutes: '',
+    essayGradingMode: 'Automatic' as ExamEssayGradingMode,
     isRandomized: false,
     availableFrom: '',
     availableUntil: '',
@@ -86,6 +88,7 @@ export default function AdminPublicExamsPageClient() {
         totalScore: Number(form.totalScore || 0),
         durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
         isRandomized: form.isRandomized,
+        essayGradingMode: form.essayGradingMode,
         availableFrom: form.availableFrom ? cairoDateTimeLocalToIso(form.availableFrom) : null,
         availableUntil: form.availableUntil ? cairoDateTimeLocalToIso(form.availableUntil) : null,
         academicScopes,
@@ -196,6 +199,8 @@ export default function AdminPublicExamsPageClient() {
             <AcademicScopeSelector value={academicScopes} onChange={setAcademicScopes} subjects={subjects} />
           </div>
 
+          <div className="mt-5"><ExamEssayGradingSettings mode={form.essayGradingMode}
+            onChange={essayGradingMode => setForm({ ...form, essayGradingMode })} disabled={loading} /></div>
           <div className="mt-5 grid gap-3 border-t border-[var(--admin-border)] pt-5 sm:grid-cols-2 lg:grid-cols-5">
             <Toggle label="منشور" checked={form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
             <Toggle label="مدفوع" checked={form.isPaid} onChange={(v) => setForm({ ...form, isPaid: v })} />

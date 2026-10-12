@@ -1,6 +1,8 @@
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
 
+export type ExamEssayGradingMode = 'Automatic' | 'Manual' | 'ModelAnswerOnly';
+
 export interface QuestionOptionDto {
   id: string;
   text: string;
@@ -70,6 +72,7 @@ export interface ExamQuestionReviewDto {
   isCorrect: boolean;
   pointsAwarded: number;
   maximumPoints?: number;
+  isExcludedFromScore?: boolean;
   gradingFeedback?: string;
   correctOptionText?: string;
   audioUrl?: string;

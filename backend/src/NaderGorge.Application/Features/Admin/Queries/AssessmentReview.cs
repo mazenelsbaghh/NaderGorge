@@ -10,7 +10,7 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 public enum AssessmentKind { Homework, Exam }
 public record AssessmentTarget(AssessmentKind Kind, Guid AssessmentId, Guid AttemptId, Guid ActorId);
 public record AssessmentAnswerReview(Guid QuestionId, int Order, string Text, string? ImageUrl,
-    string? Answer, string? AudioUrl, string? Correction, decimal Maximum, decimal? Score, string? AiFeedback = null, decimal? AiScore = null);
+    string? Answer, string? AudioUrl, string? Correction, decimal Maximum, decimal? Score, string? AiFeedback = null, decimal? AiScore = null, bool IsExcludedFromScore = false);
 public record AssessmentReviewDto(Guid AttemptId, string StudentName, string Title, decimal Score,
     decimal Total, string Status, bool CanGrade, string? Feedback, List<AssessmentAnswerReview> Questions);
 public record GetAssessmentReviewQuery(AssessmentTarget Target) : IRequest<ApiResponse<AssessmentReviewDto>>;
@@ -107,10 +107,12 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
                     ?? answer?.SubmittedText ?? answer?.SelectedOption?.Text, essay?.AudioUrl,
                 q.Question.WrittenCorrection ?? q.Question.Options.FirstOrDefault(o => o.IsCorrect)?.Text,
                 q.Points, essay != null ? essay.TeacherFinalScore : answer?.PointsAwarded,
-                essay?.AiFeedback, essay?.AiInitialScore is { } aiScore ? aiScore * q.Points : null);
+                essay?.AiFeedback, essay?.AiInitialScore is { } aiScore ? aiScore * q.Points : null,
+                definition.EssayGradingMode == NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly
+                    && q.Question.Type == NaderGorge.Domain.Entities.QuestionType.Essay);
         }).ToList();
         var pending = essays.Any(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded);
         return new(attempt.Id, attempt.User.FullName, definition.Title, scale.ScoreAchieved, definition.TotalScore,
-            pending ? "PendingReview" : attempt.Evaluation ?? "InProgress", attempt.Evaluation != null || essays.Count > 0, null, questions);
+            pending ? "PendingReview" : attempt.Evaluation ?? "InProgress", (attempt.Evaluation != null || essays.Count > 0) && questions.Any(q => !q.IsExcludedFromScore), null, questions);
     }
 }

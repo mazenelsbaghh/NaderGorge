@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
@@ -38,7 +39,11 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
     }
 
-    public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
+    public Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
+        => HandleOnce(request, ct, progressConflictRetries: 0);
+
+    private async Task<ApiResponse<ExamResultDto>> HandleOnce(
+        SubmitExamCommand request, CancellationToken ct, int progressConflictRetries)
     {
         if (request.Answers?.Any(answer => !string.IsNullOrWhiteSpace(answer.AudioUrl)) == true)
             return ApiResponse<ExamResultDto>.Fail("الإجابات الصوتية غير مسموح بها في الامتحان. اكتب إجابتك ثم أرسلها.");
@@ -92,6 +97,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         if (alreadySubmitted)
         {
+            if (progressConflictRetries > 0)
+                return await new Queries.GetExamAttemptResultQueryHandler(_db)
+                    .Handle(new(request.AttemptId, request.UserId), ct);
+
             return ApiResponse<ExamResultDto>.Fail("This attempt has already been submitted.");
         }
 
@@ -121,7 +130,8 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         var submittedAnswers = request.Answers ?? new List<AnswerSubmissionDto>();
         var questionSnapshotsByQuestion = new Dictionary<Guid, QuestionReviewSnapshot>();
-        var hasEssayQuestions = false;
+        var hasEssayQuestions = exam.EssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly
+            && exam.ExamQuestions.Any(q => q.Question.Type == QuestionType.Essay);
 
         foreach (var submission in submittedAnswers)
         {
@@ -136,8 +146,12 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             switch (examQuestion.Question.Type)
             {
                 case QuestionType.Essay:
-                    hasEssayQuestions = true;
-                    HandleEssaySubmission(questionSnapshotsByQuestion, request, examQuestion, submission, answer);
+                    answer.IsExcludedFromScore = exam.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly;
+                    SaveEssayAnswer(questionSnapshotsByQuestion, submission, answer);
+                    if (exam.EssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly)
+                    {
+                        AddEssaySubmission(request, examQuestion, answer, exam.EssayGradingMode);
+                    }
                     break;
 
                 case QuestionType.FindTheMistake:
@@ -158,6 +172,16 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                         0m); // User explicitly requested 0 penalty for any lifelines
                     break;
             }
+        }
+
+        foreach (var missingEssay in exam.ExamQuestions.Where(q => q.Question.Type == QuestionType.Essay
+            && !questionSnapshotsByQuestion.ContainsKey(q.Id)))
+        {
+            var answer = GetOrCreateAnswer(existingAnswers, attempt, missingEssay.Id);
+            answer.IsExcludedFromScore = exam.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly;
+            SaveEssayAnswer(questionSnapshotsByQuestion, new(missingEssay.Id, null, null), answer);
+            if (exam.EssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly)
+                AddEssaySubmission(request, missingEssay, answer, exam.EssayGradingMode);
         }
 
         var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
@@ -306,7 +330,19 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 }
             }
 
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException error) when (
+                progressConflictRetries < 2 && IsLessonProgressInsertConflict(error))
+            {
+                // SaveChanges rolled back the entire submission. Reload the winner's
+                // progress/attempt before rebuilding events; no external job was sent yet.
+                _db.ClearTrackedChanges();
+                await Task.Delay(25 * (progressConflictRetries + 1), ct);
+                return await HandleOnce(request, ct, progressConflictRetries + 1);
+            }
 
             // Enqueue notification payload for parent push notifications
             await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
@@ -394,35 +430,36 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
     }
 
-    private void HandleEssaySubmission(
-        IDictionary<Guid, QuestionReviewSnapshot> questionSnapshotsByQuestion,
-        SubmitExamCommand request,
-        ExamQuestion examQuestion,
-        AnswerSubmissionDto submission,
-        StudentAnswer answer)
+    private static bool IsLessonProgressInsertConflict(DbUpdateException error)
     {
-        var answerText = submission.AnswerText?.Trim();
-        answer.SubmittedText = answerText;
+        var databaseError = error.InnerException;
+        return databaseError?.GetType().GetProperty("SqlState")?.GetValue(databaseError)?.ToString() == "23505"
+            && databaseError.GetType().GetProperty("ConstraintName")?.GetValue(databaseError)?.ToString()
+                == "IX_lesson_progress_UserId_LessonId";
+    }
+
+    private static void SaveEssayAnswer(IDictionary<Guid, QuestionReviewSnapshot> snapshots,
+        AnswerSubmissionDto submission, StudentAnswer answer)
+    {
+        answer.SubmittedText = submission.AnswerText?.Trim();
         answer.SelectedOptionId = null;
         answer.IsCorrect = false;
         answer.PointsAwarded = 0;
+        snapshots[answer.ExamQuestionId] = new(answer.SubmittedText,
+            !string.IsNullOrWhiteSpace(answer.SubmittedText), false, 0);
+    }
 
-        var essaySubmission = new EssaySubmission
+    private void AddEssaySubmission(SubmitExamCommand request, ExamQuestion question,
+        StudentAnswer answer, ExamEssayGradingMode mode)
+    {
+        _db.EssaySubmissions.Add(new EssaySubmission
         {
-            StudentId = request.UserId,
-            QuestionId = examQuestion.Question.Id,
+            StudentId = request.UserId, QuestionId = question.Question.Id,
             StudentExamAttemptId = answer.StudentExamAttemptId,
-            AnswerText = answerText ?? string.Empty,
-            Status = EssaySubmissionStatus.WaitAI
-        };
-
-        _db.EssaySubmissions.Add(essaySubmission);
-
-        questionSnapshotsByQuestion[examQuestion.Id] = new QuestionReviewSnapshot(
-            answerText,
-            !string.IsNullOrWhiteSpace(answerText),
-            false,
-            0);
+            AnswerText = answer.SubmittedText ?? string.Empty,
+            Status = mode == ExamEssayGradingMode.Manual
+                ? EssaySubmissionStatus.WaitTeacher : EssaySubmissionStatus.WaitAI
+        });
     }
 
     private static decimal HandleFindTheMistakeSubmission(

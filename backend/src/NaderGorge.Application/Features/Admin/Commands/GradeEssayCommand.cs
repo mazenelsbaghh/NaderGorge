@@ -53,6 +53,8 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         await _db.Entry(attempt).Collection(a => a.Answers).LoadAsync(ct);
         AssessmentAttemptScaleNormalizer.Normalize(attempt);
         var exam = AssessmentDefinitionSnapshot.ResolveExam(currentExam, attempt.DefinitionSnapshotJson);
+        if (exam.EssayGradingMode == NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly)
+            return ApiResponse<bool>.Fail("المقالي مستبعد من التصحيح في هذه المحاولة.");
         var question = exam.ExamQuestions.FirstOrDefault(q => q.QuestionBankItemId == submission.QuestionId);
         if (question == null || request.TeacherScore < 0 || request.TeacherScore > question.Points)
             return ApiResponse<bool>.Fail("الدرجة يجب أن تكون بين صفر ودرجة السؤال.");

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Assessments;
@@ -20,9 +21,17 @@ public static class TeacherEssayGradingPolicy
         where ManualTeacherIds(db).Contains(lesson.ContentSection.Term.Package.TeacherId)
         select homework.Id;
 
-    public static Task<bool> IsManualEssayAsync(IAppDbContext db, Guid essayId, CancellationToken ct) =>
-        db.EssaySubmissions.AnyAsync(e => e.Id == essayId
-            && ManualTeacherIds(db).Contains(e.Attempt.Exam.CreatedByTeacherId), ct);
+    public static async Task<bool> IsManualEssayAsync(IAppDbContext db, Guid essayId, CancellationToken ct)
+    {
+        var submission = await db.EssaySubmissions.Where(e => e.Id == essayId)
+            .Select(e => new { e.Attempt.DefinitionSnapshotJson, e.Attempt.ExamId,
+                e.Attempt.Exam.EssayGradingMode, e.Attempt.Exam.CreatedByTeacherId }).SingleOrDefaultAsync(ct);
+        if (submission is null) return false;
+        var mode = submission.DefinitionSnapshotJson is null ? submission.EssayGradingMode
+            : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "exam", submission.ExamId).EssayGradingMode;
+        return mode != ExamEssayGradingMode.Automatic
+            || await ManualTeacherIds(db).ContainsAsync(submission.CreatedByTeacherId, ct);
+    }
 
     public static Task<bool> IsManualHomeworkAsync(IAppDbContext db, Guid submissionId, CancellationToken ct) =>
         db.HomeworkSubmissions.AnyAsync(s => s.Id == submissionId && ManualHomeworkIds(db).Contains(s.HomeworkId), ct);

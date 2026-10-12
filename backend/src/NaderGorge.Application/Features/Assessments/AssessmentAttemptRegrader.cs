@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Assessments;
 
@@ -20,6 +21,8 @@ public static class AssessmentAttemptRegrader
             || change.Published.Kind != previous.Kind || change.Published.AssessmentId != previous.AssessmentId)
             throw new ArgumentException("تعريف التعديل لا يخص هذه المحاولة.");
         var answers = recorded.ToDictionary(a => a.QuestionId);
+        if (change.Policy.PreviousAttempts == PreviousAttemptsPolicy.Regrade)
+            change = change with { Proposed = change.Proposed.WithEssayGradingScale() };
         var oldGrades = PreviousGrades(previous, answers);
         var assignedIds = previous.Questions.Select(q => q.Id).ToHashSet();
         var publishedIds = change.Published.Questions.Select(q => q.Id).ToHashSet();
@@ -31,6 +34,12 @@ public static class AssessmentAttemptRegrader
         var grades = AssessmentRevisionPlanner.Plan(oldGrades, revised.Select(q => new RevisionQuestion(q.Id, q.Points)).ToArray(),
             recalculated, change.Policy);
         if (change.Policy.PreviousAttempts == PreviousAttemptsPolicy.Preserve) return new(previous, grades);
+        if (change.Proposed.Kind == "exam" && change.Proposed.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly)
+        {
+            var essayIds = change.Proposed.Questions.Where(q => q.Type == (int)QuestionType.Essay).Select(q => q.Id).ToHashSet();
+            grades = grades with { Answers = grades.Answers.Select(a => essayIds.Contains(a.QuestionId)
+                ? a with { Excluded = true, AwardedPoints = 0, ManuallyGraded = false } : a).ToArray() };
+        }
         if (change.Policy.ScoreDecrease == ScoreDecreasePolicy.Prevent)
         {
             var previousScore = change.PreviousScore ?? (previous.Revision ?? new AttemptRevisionPlan(oldGrades)).ScaledScore(previous.TotalScore);

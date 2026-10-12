@@ -92,6 +92,10 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
     private sealed record ExamAnswerRevisionContext(AssessmentDefinitionSnapshot Original, AssessmentDefinitionSnapshot Bound,
         IReadOnlyList<EssaySubmission> Essays, IReadOnlyDictionary<Guid, Guid> OptionIds);
 
+    private static bool IsSubmittedAttempt(StudentExamAttempt attempt, ExamAnswerRevisionContext context) =>
+        attempt.Evaluation is not null || context.Original.Revision is not null || context.Essays.Count > 0
+        || attempt.Answers.Any(a => a.SelectedOptionId.HasValue || !string.IsNullOrWhiteSpace(a.SubmittedText));
+
     private void ApplyExamAnswer(StudentExamAttempt attempt, RevisionAnswer grade, ExamAnswerRevisionContext context)
     {
         var answer = attempt.Answers.SingleOrDefault(a => a.ExamQuestionId == grade.QuestionId);
@@ -108,9 +112,18 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
             answer.SubmittedText ??= original.Options.SingleOrDefault(o => o.Id == selectedId)?.Text;
             if (context.OptionIds.TryGetValue(selectedId, out var replacementId)) answer.SelectedOptionId = replacementId;
         }
+        answer.IsExcludedFromScore = grade.Excluded;
         answer.PointsAwarded = grade.Excluded ? 0 : grade.AwardedPoints ?? 0;
         answer.IsCorrect = !grade.Excluded && grade.AwardedPoints.HasValue && grade.AwardedPoints >= grade.MaximumPoints;
         if (original is null || original.Type != (int)QuestionType.Essay) return;
+        if (IsSubmittedAttempt(attempt, context)
+            && !grade.Excluded && grade.AwardedPoints is null && !grade.RequiresCompletion
+            && !context.Essays.Any(e => e.QuestionId == original.BankQuestionId))
+            db.EssaySubmissions.Add(new EssaySubmission
+            {
+                StudentExamAttemptId = attempt.Id, StudentId = attempt.UserId, QuestionId = revised.BankQuestionId,
+                AnswerText = answer.SubmittedText ?? string.Empty, Status = EssaySubmissionStatus.WaitTeacher
+            });
         foreach (var essay in context.Essays.Where(e => e.QuestionId == original.BankQuestionId))
         {
             essay.QuestionId = revised.BankQuestionId;
@@ -129,7 +142,8 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
         var questions = write.Revised.Definition.Questions.Select(question =>
         {
             if (!current.TryGetValue(question.Id, out var authored)
-                || (grades[question.Id].ManuallyGraded && write.Binding.Policy.ManualGrades == ManualGradePolicy.Preserve))
+                || (grades[question.Id].ManuallyGraded && !grades[question.Id].Excluded
+                    && write.Binding.Policy.ManualGrades == ManualGradePolicy.Preserve))
                 return question;
             return question with { BankQuestionId = authored.BankQuestionId, Options = authored.Options };
         }).ToArray();

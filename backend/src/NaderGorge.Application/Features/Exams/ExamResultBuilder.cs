@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
@@ -17,7 +18,8 @@ public record ExamQuestionReviewDto(
     string? WrittenCorrection,
     string? StudentAudioUrl = null,
     string? GradingFeedback = null,
-    decimal? MaximumPoints = null
+    decimal? MaximumPoints = null,
+    bool IsExcludedFromScore = false
 );
 
 public record QuestionReviewSnapshot(
@@ -66,6 +68,7 @@ internal static class ExamResultBuilder
                 var canRevealCorrectAnswer = revealCorrectAnswers
                     && (resultIsCompleted || eq.Question.Type != QuestionType.Essay);
                 var correctText = GetCorrectReviewText(eq.Question);
+                var excluded = eq.Question.Type == QuestionType.Essay && exam.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly;
 
                 return new ExamQuestionReviewDto(
                     eq.Id,
@@ -73,8 +76,8 @@ internal static class ExamResultBuilder
                     eq.Question.Text,
                     snapshot?.SelectedText,
                     snapshot?.IsAnswered ?? false,
-                    snapshot?.IsCorrect ?? false,
-                    snapshot?.PointsAwarded ?? 0,
+                    !excluded && (snapshot?.IsCorrect ?? false),
+                    excluded ? 0 : snapshot?.PointsAwarded ?? 0,
                     canRevealCorrectAnswer ? correctText : null,
                     canRevealCorrectAnswer ? eq.Question.AudioUrl : null,
                     eq.Question.ImageUrl,
@@ -82,8 +85,9 @@ internal static class ExamResultBuilder
                         ? eq.Question.WrittenCorrection
                         : null,
                     snapshot?.StudentAudioUrl,
-                    resultIsCompleted ? snapshot?.GradingFeedback : null,
-                    eq.Points
+                    resultIsCompleted && !excluded ? snapshot?.GradingFeedback : null,
+                    eq.Points,
+                    excluded
                 );
             })
             .ToList();

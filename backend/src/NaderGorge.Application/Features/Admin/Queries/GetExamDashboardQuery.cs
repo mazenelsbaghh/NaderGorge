@@ -158,7 +158,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             }).ToList();
 
         var answerCounts = await _context.StudentAnswers
-            .Where(sa => sa.ExamQuestion.ExamId == request.ExamId)
+            .Where(sa => sa.ExamQuestion.ExamId == request.ExamId && !sa.IsExcludedFromScore)
             .GroupBy(answer => answer.ExamQuestionId)
             .Select(group => new
             {

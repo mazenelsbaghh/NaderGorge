@@ -16,6 +16,7 @@ import { getApiErrorSummary } from '@/lib/api-errors';
 import { createClientId } from '@/lib/client-id';
 import { questionTextToPlainText } from '@/lib/question-text';
 import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
+import { ExamEssayGradingSettings } from './ExamEssayGradingSettings';
 import { disabledParentNotification } from '@/services/assessment-revision-service';
 
 const button = 'min-h-11 rounded-xl border border-[var(--admin-border)] px-4 py-2 text-sm font-bold hover:bg-[var(--admin-card-soft)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]';
@@ -104,6 +105,8 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
               <label className="space-y-2"><span>عدد الأسئلة المعروضة، فارغ لعرض الكل</span><input type="number" min="1" max={definition.questions.length} className="admin-input w-full" value={definition.displayQuestionCount ?? ''} onChange={event => updateDefinition({ displayQuestionCount: event.target.value ? Number(event.target.value) : null })} /></label>
             </>}
           </div>
+          {kind === 'exam' && <ExamEssayGradingSettings mode={definition.essayGradingMode ?? 'Automatic'}
+            onChange={essayGradingMode => updateDefinition({ essayGradingMode })} disabled={busy} />}
           <div className="flex flex-wrap gap-6">
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isActive} onChange={event => updateDefinition({ isActive: event.target.checked })} />متاح للطلاب</label>
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isMandatory} onChange={event => updateDefinition({ isMandatory: event.target.checked })} />{label} إلزامي</label>

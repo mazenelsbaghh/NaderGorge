@@ -48,6 +48,7 @@ public static class AssessmentDefinitionWriter
         exam.TotalScore = definition.TotalScore;
         exam.PassingScore = definition.PassingScore ?? 0;
         exam.DurationMinutes = definition.DurationMinutes;
+        exam.EssayGradingMode = definition.EssayGradingMode;
         exam.IsMandatory = definition.IsMandatory;
         exam.IsRandomized = definition.IsRandomized;
         exam.DisplayQuestionCount = definition.DisplayQuestionCount;
@@ -63,6 +64,7 @@ public static class AssessmentDefinitionWriter
 
     public static void Validate(AssessmentDefinitionSnapshot definition, string kind, Guid assessmentId)
     {
+        if (!Enum.IsDefined(definition.EssayGradingMode)) throw new ArgumentException("اختر طريقة تصحيح مقالي صحيحة.");
         if (definition.ParentNotification is null) throw new ArgumentException("راجع إعدادات رسالة ولي الأمر.");
         if (definition.SchemaVersion != 1 || definition.Kind != kind || definition.AssessmentId != assessmentId)
             throw new ArgumentException("تعريف الواجب أو الامتحان لا يطابق العنصر المطلوب.");

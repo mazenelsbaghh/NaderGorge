@@ -104,6 +104,7 @@ export interface PublicExamProductDto {
 }
 
 export interface CreatePublicExamDto {
+  essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
   title: string;
   description?: string | null;
   slug: string;

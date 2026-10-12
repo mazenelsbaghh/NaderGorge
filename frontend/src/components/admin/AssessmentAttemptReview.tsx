@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 
 interface AnswerReview {
+  isExcludedFromScore?: boolean;
   questionId: string; order: number; text: string; imageUrl?: string;
   answer?: string; audioUrl?: string; correction?: string; maximum: number; score: number | null; aiFeedback?: string | null; aiScore?: number | null;
 }
@@ -57,7 +58,7 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, student
     if (!review || mutationRef.current) return;
     mutationRef.current = true; setBusy(true); setError('');
     try {
-      const payload = { scores: review.questions.map(q => ({ questionId: q.questionId, score: Number(scores[q.questionId]) })), feedback };
+      const payload = { scores: review.questions.filter(q => !q.isExcludedFromScore).map(q => ({ questionId: q.questionId, score: Number(scores[q.questionId]) })), feedback };
       if (kind === 'homework') await apiClient.put(`/admin/homework/${assessmentId}/submissions/${attemptId}/grade`, payload);
       else await apiClient.put(`/admin/exams/${assessmentId}/attempts/${attemptId}/grade`, payload);
       toast.success('تم حفظ التصحيح وتحديث النتيجة.');
@@ -106,14 +107,14 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, student
             {q.audioUrl && <audio controls preload="none" className="mt-2 w-full" src={resolveMediaUrl(q.audioUrl)} aria-label={`إجابة السؤال ${index + 1} الصوتية`} />}
           </div>
           {q.correction && <div><p className="text-sm font-bold">الإجابة المرجعية</p><div dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correction) }} /></div>}
-          {q.aiFeedback && <div className="rounded-lg bg-[var(--admin-card-soft)] p-3">
+          {q.aiFeedback && !q.isExcludedFromScore && <div className="rounded-lg bg-[var(--admin-card-soft)] p-3">
             <p className="mb-1 text-sm font-bold">تعليل تصحيح الذكاء الاصطناعي{q.aiScore != null ? ` — درجته: ${q.aiScore} / ${q.maximum}` : ''}</p>
             <p dir="auto" className="whitespace-pre-wrap break-words">{q.aiFeedback}</p>
           </div>}
-          <label className="flex flex-wrap items-center gap-3 text-sm font-bold">درجة السؤال (من {q.maximum})
+          {q.isExcludedFromScore ? <p className="text-sm text-[var(--admin-muted)]">بدون تصحيح، المقالي مستبعد من الدرجة النهائية.</p> : <label className="flex flex-wrap items-center gap-3 text-sm font-bold">درجة السؤال (من {q.maximum})
             <input aria-label={`درجة السؤال ${index + 1}`} type="number" required min={0} max={q.maximum} step={kind === 'homework' ? 1 : '0.01'} disabled={!review.canGrade || busy} value={scores[q.questionId] ?? ''} onChange={e => setScores(previous => ({ ...previous, [q.questionId]: e.target.value }))} className="min-h-11 w-28 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" />
             {q.score == null && <span className="text-[var(--admin-muted)]">لم تُصحّح بعد</span>}
-          </label>
+          </label>}
         </section>)}
         <label className="block text-sm font-bold">ملاحظات التصحيح<textarea maxLength={4000} value={feedback} disabled={busy || !review.canGrade} onChange={e => setFeedback(e.target.value)} rows={3} className="mt-2 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3" /></label>
         <div className="flex flex-wrap justify-between gap-3">

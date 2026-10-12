@@ -17,6 +17,7 @@ public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
     public decimal PassingScore { get; set; }
     public decimal TotalScore { get; set; }
     public int? DurationMinutes { get; set; }
+    public ExamEssayGradingMode EssayGradingMode { get; set; }
     public bool IsMandatory { get; set; } = true;
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
@@ -66,6 +67,9 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
 
     public async Task<ApiResponse<Guid>> Handle(CreateInlineExamCommand request, CancellationToken ct)
     {
+        if (!Enum.IsDefined(request.EssayGradingMode))
+            return ApiResponse<Guid>.Fail("اختر طريقة تصحيح مقالي صحيحة.");
+
         // 1. Validate Target
         Lesson? lesson = null;
         LessonVideo? video = null;
@@ -187,6 +191,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             PassingScore = request.PassingScore,
             TotalScore = request.TotalScore,
             DurationMinutes = request.DurationMinutes,
+            EssayGradingMode = request.EssayGradingMode,
             IsMandatory = request.IsMandatory,
             IsRandomized = request.IsRandomized,
             DisplayQuestionCount = request.DisplayQuestionCount,

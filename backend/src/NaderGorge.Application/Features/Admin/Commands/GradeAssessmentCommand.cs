@@ -94,7 +94,9 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
         var essays = await db.EssaySubmissions.Where(e => e.StudentExamAttemptId == attempt.Id).ToListAsync(ct);
         if (attempt.Evaluation == null && essays.Count == 0) return ApiResponse<bool>.Fail("لم يتم تسليم الامتحان.");
         var assignedIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-        var maximums = definition.ExamQuestions.Where(q => assignedIds.Contains(q.Id)).ToDictionary(q => q.Id, q => q.Points);
+        var maximums = definition.ExamQuestions.Where(q => assignedIds.Contains(q.Id)
+            && !(definition.EssayGradingMode == NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly
+                && q.Question.Type == NaderGorge.Domain.Entities.QuestionType.Essay)).ToDictionary(q => q.Id, q => q.Points);
         if (!ValidScores(request.Scores, maximums)) return ApiResponse<bool>.Fail("أدخل درجة لكل سؤال بين صفر والحد الأقصى.");
         var teacherId = await db.TeacherProfiles.Where(t => t.UserId == request.Target.ActorId).Select(t => (Guid?)t.Id).FirstOrDefaultAsync(ct);
         foreach (var score in request.Scores)

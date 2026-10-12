@@ -132,7 +132,7 @@ export function ExamResultPanel({
   const needsTeacherReview = effectiveResultState === 'PartiallyGraded';
   const pendingEssayCount = gradingStatus?.essays.filter((essay) => essay.status !== 'TeacherGraded').length ?? 0;
   const wrongQuestions = isFinalResult
-    ? reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect)
+    ? reviewedQuestions.filter((q) => !q.isExcludedFromScore && q.isAnswered && !q.isCorrect)
     : [];
 
   if (effectiveResultState === 'RequiresCompletion') {
@@ -164,13 +164,18 @@ export function ExamResultPanel({
         <p className="mt-4 rounded-full bg-background/70 px-4 py-2 text-sm font-black text-amber-700 dark:text-amber-400">
           {pendingEssayCount > 0 ? `${needsTeacherReview ? 'بانتظار مراجعة' : 'جاري تصحيح'} ${pendingEssayCount} سؤال مقالي` : 'جاري تجهيز النتيجة'}
         </p>
+        {!result.blocksNextLesson && resolvedLessonId && resolvedPackageId && (
+          <p className="mt-4 max-w-md text-sm font-bold leading-7 text-muted-foreground">
+            تقدر ترجع للحصة وتكمل التعلم أثناء انتظار التصحيح. إجاباتك محفوظة.
+          </p>
+        )}
         {gradingError && <p className="mt-4 text-sm font-bold text-destructive">{gradingError}</p>}
         <button
           type="button"
           onClick={() => router.push(returnHref ?? (resolvedLessonId && resolvedPackageId ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}` : resolvedPackageId ? `/student/packages/${resolvedPackageId}` : '/student'))}
           className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-border bg-background px-6 py-3 text-sm font-black text-foreground transition hover:bg-muted"
         >
-          العودة الآن
+          {returnLabel ?? (resolvedLessonId && resolvedPackageId ? 'العودة للحصة' : 'العودة الآن')}
           <ArrowRight className="h-4 w-4" />
         </button>
       </section>
@@ -435,7 +440,9 @@ export function ExamResultPanel({
                   <article
                     key={q.examQuestionId}
                     className={`rounded-2xl border p-5 transition-colors ${
-                      q.isAnswered
+                      q.isExcludedFromScore
+                        ? 'border-border bg-muted/20'
+                        : q.isAnswered
                         ? q.isCorrect
                           ? 'border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
                           : hasPartialCredit
@@ -450,7 +457,9 @@ export function ExamResultPanel({
                       </span>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-black ${
-                          !q.isAnswered
+                          q.isExcludedFromScore
+                            ? 'bg-muted text-muted-foreground'
+                            : !q.isAnswered
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
                             : q.isCorrect
                               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
@@ -459,12 +468,12 @@ export function ExamResultPanel({
                                 : 'bg-destructive/10 text-destructive'
                         }`}
                       >
-                        {!q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : hasPartialCredit ? 'صحيحة جزئيًا' : 'خاطئة ✗'}
+                        {q.isExcludedFromScore ? 'بدون تصحيح' : !q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : hasPartialCredit ? 'صحيحة جزئيًا' : 'خاطئة ✗'}
                       </span>
                     </div>
 
                     <p className="mb-3 text-xs font-black text-muted-foreground">
-                      {q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة
+                      {q.isExcludedFromScore ? 'المقالي مستبعد من حساب الدرجة النهائية' : <>{q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة</>}
                     </p>
 
                     <div

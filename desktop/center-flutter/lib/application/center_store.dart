@@ -2207,7 +2207,7 @@ class CenterStore extends ChangeNotifier {
             'للحضور رصيد أو دفع سابق؛ صحح السجل قبل استخدام علامة باكدج.',
           );
         }
-        final entry = AttendanceRecord(
+        var entry = AttendanceRecord(
           id: _uuid.v4(),
           studentId: student.id,
           sessionId: session.id,
@@ -2231,6 +2231,15 @@ class CenterStore extends ChangeNotifier {
                   sourceId != null ||
                   session.kind != SessionKind.free),
         );
+        final exemption = _automaticAttendanceExemption(
+          student,
+          session,
+          entry,
+        );
+        if (exemption != null) {
+          _state.payments.add(exemption);
+          entry = entry.copyWith(paymentPending: false);
+        }
         _state.attendances.add(entry);
         if (previous != null) {
           _state.corrections.add(
@@ -2253,6 +2262,40 @@ class CenterStore extends ChangeNotifier {
       commitWhen: () => recorded,
       auditDescription: () =>
           'تسجيل حضور — كود ${_student(request.studentId).code} — حصة ${_session(request.sessionId).number}${reviewed.isEmpty ? '' : ' — مراجعة التسجيلات ${reviewed.join(', ')}'}',
+    );
+  }
+
+  PaymentRecord? _automaticAttendanceExemption(
+    Student student,
+    LessonSession session,
+    AttendanceRecord entry,
+  ) {
+    if (!entry.paymentPending || entry.centerFeeOnly || entry.packageMember) {
+      return null;
+    }
+    final group = _group(entry.makeupSourceGroupId ?? session.groupId);
+    final baseAmount =
+        entry.makeupSourceGroupId == null && session.kind == SessionKind.extra
+        ? session.extraPrice
+        : group.priceConfigured
+        ? group.sessionPrice
+        : null;
+    if (baseAmount == null || _studentDiscounted(student, baseAmount) != 0) {
+      return null;
+    }
+    return PaymentRecord(
+      id: _uuid.v4(),
+      studentId: student.id,
+      groupId: group.id,
+      sessionId: session.id,
+      description: 'إعفاء الحصة تلقائيًا — دون تحصيل',
+      baseAmount: baseAmount,
+      discountPercent: student.discountPercent,
+      netAmount: 0,
+      paidAmount: 0,
+      method: 'إعفاء تلقائي',
+      createdAt: entry.recordedAt,
+      staffId: currentUser!.id,
     );
   }
 

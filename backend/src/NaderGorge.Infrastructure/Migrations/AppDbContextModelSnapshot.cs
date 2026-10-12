@@ -4694,6 +4694,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int?>("DurationMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<int>("EssayGradingMode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("InternalCode")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -13129,6 +13132,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsExcludedFromScore")
                         .HasColumnType("boolean");
 
                     b.Property<decimal>("PointsAwarded")

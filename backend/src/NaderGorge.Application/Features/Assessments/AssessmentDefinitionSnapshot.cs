@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using HomeworkEntity = NaderGorge.Domain.Entities.Homework.Homework;
 using HomeworkQuestion = NaderGorge.Domain.Entities.Homework.HomeworkQuestion;
 
@@ -25,6 +26,7 @@ public sealed record AssessmentDefinitionSnapshot(
     public Guid? RevisionId { get; init; }
     public bool IsActive { get; init; } = true;
     public bool UsesAssignedQuestionPoints { get; init; }
+    public ExamEssayGradingMode EssayGradingMode { get; init; }
     public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
@@ -61,14 +63,31 @@ public sealed record AssessmentDefinitionSnapshot(
         (assignedQuestions ?? exam.ExamQuestions).Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromExamQuestion).ToArray())
     {
         IsActive = exam.IsActive,
+        EssayGradingMode = exam.EssayGradingMode,
         ParentNotification = AssessmentParentNotificationSettings.Read(exam.ParentNotificationSettingsJson),
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
             .OrderBy(q => q.Order).ThenBy(q => q.Id).Select(FromExamQuestion).ToArray()
         };
         // A sampled attempt is marked so later edits and swaps keep its own points scale.
-        return assignedQuestions is not null && snapshot.ReserveQuestions.Length > 0
-            ? snapshot.WithAssignedQuestionPoints() : snapshot;
+        if (assignedQuestions is null) return snapshot;
+        if (snapshot.ReserveQuestions.Length > 0) snapshot = snapshot.WithAssignedQuestionPoints();
+        return snapshot.WithEssayGradingScale();
+    }
+
+    public AssessmentDefinitionSnapshot WithEssayGradingScale()
+    {
+        if (Kind != "exam" || EssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly) return this;
+        var rawMaximum = Questions.Sum(q => q.Points);
+        var scoredMaximum = Questions.Where(q => q.Type != (int)QuestionType.Essay).Sum(q => q.Points);
+        var ratio = rawMaximum > 0 ? scoredMaximum / rawMaximum : 0;
+        return this with
+        {
+            TotalScore = Math.Round(TotalScore * ratio, 2),
+            PassingScore = Math.Round((PassingScore ?? 0) * ratio, 2),
+            Questions = Questions.Select(q => q.Type == (int)QuestionType.Essay ? q with { Points = 0 } : q).ToArray(),
+            ReserveQuestions = ReserveQuestions.Select(q => q.Type == (int)QuestionType.Essay ? q with { Points = 0 } : q).ToArray()
+        };
     }
 
     public static IReadOnlyList<ExamQuestion> ResolveSwapCandidates(Exam current, string? snapshotJson)
@@ -112,6 +131,7 @@ public sealed record AssessmentDefinitionSnapshot(
             IsActive = current.IsActive, ArchiveMode = current.ArchiveMode,
             Title = snapshot.Title, Description = snapshot.Description ?? string.Empty,
             TotalScore = snapshot.TotalScore, PassingScore = snapshot.PassingScore ?? 0,
+            EssayGradingMode = snapshot.EssayGradingMode,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
             ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id)).ToList()

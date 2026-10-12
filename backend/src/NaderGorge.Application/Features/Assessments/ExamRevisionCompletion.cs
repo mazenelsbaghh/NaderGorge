@@ -5,6 +5,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Assessments;
@@ -74,7 +75,7 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         var expired = definition.DurationMinutes is int minutes
             && DateTime.UtcNow - definition.CompletionStartedAt!.Value > TimeSpan.FromMinutes(minutes).Add(TimeSpan.FromSeconds(60));
         var grades = definition.Revision!.Answers.Select(grade => !grade.RequiresCompletion || grade.Excluded ? grade
-            : CompleteAnswer(attempt, questions[grade.QuestionId], provided.GetValueOrDefault(grade.QuestionId), expired)).ToArray();
+            : CompleteAnswer(attempt, questions[grade.QuestionId], provided.GetValueOrDefault(grade.QuestionId), (expired, definition.EssayGradingMode))).ToArray();
         var revision = definition.Revision! with { Answers = grades };
         attempt.DefinitionSnapshotJson = (definition with { Revision = revision }).ToJson();
         attempt.ScoreAchieved = revision.ScaledScore(definition.TotalScore);
@@ -85,7 +86,7 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
     }
 
     private RevisionAnswer CompleteAnswer(StudentExamAttempt attempt, AssessmentQuestionSnapshot question,
-        AnswerSubmissionDto? provided, bool expired)
+        AnswerSubmissionDto? provided, (bool Expired, ExamEssayGradingMode Mode) grading)
     {
         var answer = attempt.Answers.Single(a => a.ExamQuestionId == question.Id);
         var option = question.Options.SingleOrDefault(o => o.Id == provided?.SelectedOptionId);
@@ -93,25 +94,28 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         answer.SubmittedText = question.Type == (int)QuestionType.MCQ ? option?.Text
             : question.Type == (int)QuestionType.FindTheMistake ? provided?.SelectedText?.Trim() : provided?.AnswerText?.Trim();
         var hasAnswer = !string.IsNullOrWhiteSpace(answer.SubmittedText);
-        var points = expired || !hasAnswer ? 0 : AssessmentAttemptRegrader.AutomaticGrade(question,
+        var points = grading.Expired || !hasAnswer ? 0 : AssessmentAttemptRegrader.AutomaticGrade(question,
             new(question.Id, answer.SubmittedText, answer.SelectedOptionId, null, false), "exam");
         answer.PointsAwarded = points ?? 0;
         answer.IsCorrect = points >= question.Points;
-        if (question.Type == (int)QuestionType.Essay) AddEssay(attempt, question, provided, points);
+        if (question.Type == (int)QuestionType.Essay && grading.Mode != ExamEssayGradingMode.ModelAnswerOnly)
+            AddEssay(attempt, question, provided, (points, grading.Mode));
         return new(question.Id, question.Points, points, false);
     }
 
-    private void AddEssay(StudentExamAttempt attempt, AssessmentQuestionSnapshot question, AnswerSubmissionDto? provided, decimal? points)
+    private void AddEssay(StudentExamAttempt attempt, AssessmentQuestionSnapshot question, AnswerSubmissionDto? provided, (decimal? Points, ExamEssayGradingMode Mode) grade)
     {
         var essay = new EssaySubmission
         {
             StudentExamAttemptId = attempt.Id, StudentId = attempt.UserId, QuestionId = question.BankQuestionId,
             AnswerText = provided?.AnswerText?.Trim() ?? string.Empty,
-            Status = points is null ? EssaySubmissionStatus.WaitAI : EssaySubmissionStatus.TeacherGraded,
-            TeacherFinalScore = points
+            Status = grade.Points is not null ? EssaySubmissionStatus.TeacherGraded
+                : grade.Mode == ExamEssayGradingMode.Manual
+                    ? EssaySubmissionStatus.WaitTeacher : EssaySubmissionStatus.WaitAI,
+            TeacherFinalScore = grade.Points
         };
         db.EssaySubmissions.Add(essay);
-        if (points is not null) return;
+        if (grade.Points is not null) return;
         EssayEvaluationQueue.Enqueue(db, essay, question.Text, question.WrittenCorrection);
     }
 

@@ -6,6 +6,7 @@ import 'student_debt_dialog.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/domain/models.dart';
+import 'package:massar_center/domain/discount_calculation.dart';
 import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/theme.dart';
 
@@ -130,6 +131,87 @@ class StudentHistoryPanel extends StatelessWidget {
     return links.singlePaymentsBySession[record.sessionId];
   }
 
+  _AttendancePaymentView _attendancePaymentView(
+    AttendanceRecord record,
+    _HistoryLinks links,
+  ) {
+    final payment = _attendancePayment(record, links);
+    final (centerDue, centerPaid) = _attendanceCenterFee(record, links);
+    if (payment != null || record.centerFeeOnly) {
+      return _AttendancePaymentView(
+        due: (payment?.netAmount ?? 0) + centerDue,
+        collected:
+            (payment == null ? 0 : store.paymentCollectedFor(payment.id)) +
+            centerPaid,
+        account: _accountLabel(record, links),
+        receiptNote:
+            record.packageId != null || record.originalAttendanceId != null
+            ? 'المبلغ هو إجمالي إيصال الشهر، وليس تحصيلًا جديدًا لهذه الحصة.'
+            : null,
+      );
+    }
+    if (!record.paymentPending &&
+        record.status != AttendanceStatus.absent &&
+        (record.packageMember ||
+            _session(record.sessionId)?.kind == SessionKind.free &&
+                record.makeupSourceGroupId == null)) {
+      return _AttendancePaymentView(
+        due: centerDue,
+        collected: centerPaid,
+        account: _accountLabel(record, links),
+        zeroLabel: record.packageMember ? 'باكدج' : 'مجاني',
+      );
+    }
+    if (record.importSource.isEmpty && record.paymentPending) {
+      return _pendingAttendancePayment(record, links, centerDue, centerPaid);
+    }
+    return _AttendancePaymentView(account: _accountLabel(record, links));
+  }
+
+  (int, int) _attendanceCenterFee(
+    AttendanceRecord record,
+    _HistoryLinks links,
+  ) {
+    final hasCenterFee =
+        record.centerFeeOnly ||
+        links.centerFeeSessionIds.contains(record.sessionId) ||
+        record.sessionId == currentSessionId && student.centerFeeEnabled;
+    final centerDue = hasCenterFee
+        ? store.centerFeeDueFor(student.id, record.sessionId)
+        : 0;
+    final centerPaid = hasCenterFee
+        ? store.centerFeeCollectedFor(student.id, record.sessionId)
+        : 0;
+    return (centerDue, centerPaid);
+  }
+
+  _AttendancePaymentView _pendingAttendancePayment(
+    AttendanceRecord record,
+    _HistoryLinks links,
+    int centerDue,
+    int centerPaid,
+  ) {
+    final session = _session(record.sessionId);
+    final group = store.groupById(
+      record.makeupSourceGroupId ?? session?.groupId,
+    );
+    final base =
+        record.makeupSourceGroupId == null && session?.kind == SessionKind.extra
+        ? session!.extraPrice
+        : group?.priceConfigured == true
+        ? group!.sessionPrice
+        : null;
+    final discount = record.fixedDiscountPercent;
+    return _AttendancePaymentView(
+      due: base == null || discount == null
+          ? null
+          : discountedAmount(base, discount) + centerDue,
+      collected: centerPaid,
+      account: _accountLabel(record, links),
+      estimated: true,
+    );
+  }
+
   String _collectionStatus(int due, int collected, int remaining) {
     if (due == 0) return 'معفى — لا يوجد مبلغ مستحق';
     if (remaining == 0) return 'مسدد';
@@ -147,6 +229,11 @@ class StudentHistoryPanel extends StatelessWidget {
 
   String _accountLabel(AttendanceRecord record, _HistoryLinks links) {
     if (record.packageMember) return 'باكدج — دون تحصيل';
+    if (record.centerFeeOnly) {
+      final due = store.centerFeeDueFor(student.id, record.sessionId);
+      final paid = store.centerFeeCollectedFor(student.id, record.sessionId);
+      return 'سنتر فقط · ${_collectionStatus(due, paid, due - paid)}';
+    }
     if (record.paymentPending) return 'حضور محفوظ — غير مدفوع';
     final payment = _attendancePayment(record, links);
     if (payment != null) {
@@ -612,6 +699,13 @@ class StudentHistoryPanel extends StatelessWidget {
         .join('، ');
     final recentAttendance = (expanded ? attendance : attendance.take(4))
         .toList();
+    final attendancePayments = store.canCollect
+        ? recentAttendance
+              .map((record) => _attendancePaymentView(record, links))
+              .toList()
+        : const <_AttendancePaymentView>[];
+    final attendanceColumn = expanded ? 3 : 1;
+    final paymentStatusColumn = attendanceColumn + 3;
     final recentExams = (expanded ? examRecords : examRecords.take(4)).toList();
     final recentHomework =
         (expanded ? homeworkRecords : homeworkRecords.take(4)).toList();
@@ -621,37 +715,55 @@ class StudentHistoryPanel extends StatelessWidget {
         if (expanded) 'التاريخ',
         if (expanded) 'وقت الحضور',
         'الحضور',
+        if (store.canCollect) ...['المطلوب', 'المدفوع', 'السداد'],
         if (store.canCollect) 'الحساب',
         if (expanded) 'التعويض',
       ],
       recentAttendance
+          .asMap()
+          .entries
           .map(
-            (record) => [
+            (row) => [
               expanded
-                  ? _sessionLabel(record.sessionId)
-                  : 'شهر ${_session(record.sessionId)?.monthNumber ?? '—'} · حصة ${_session(record.sessionId)?.number ?? '—'}',
+                  ? _sessionLabel(row.value.sessionId)
+                  : 'شهر ${_session(row.value.sessionId)?.monthNumber ?? '—'} · حصة ${_session(row.value.sessionId)?.number ?? '—'}',
               if (expanded)
-                _session(record.sessionId) == null
-                    ? shortDate(record.recordedAt)
-                    : sessionDateLabel(_session(record.sessionId)!),
+                _session(row.value.sessionId) == null
+                    ? shortDate(row.value.recordedAt)
+                    : sessionDateLabel(_session(row.value.sessionId)!),
               if (expanded)
-                record.recordedAtKnown
-                    ? _paymentTime(record.recordedAt)
+                row.value.recordedAtKnown
+                    ? _paymentTime(row.value.recordedAt)
                     : 'وقت الحضور غير موثق',
               expanded
-                  ? _attendanceLabel(record)
-                  : switch (record.status) {
+                  ? _attendanceLabel(row.value)
+                  : switch (row.value.status) {
                       AttendanceStatus.present => 'حاضر',
                       AttendanceStatus.makeup => 'معوّض',
                       AttendanceStatus.absent => 'غائب',
                     },
-              if (store.canCollect) _accountLabel(record, links),
-              if (expanded) _makeupLabel(record, links),
+              if (store.canCollect) ...[
+                attendancePayments[row.key].dueLabel,
+                attendancePayments[row.key].collectedLabel,
+                attendancePayments[row.key].status,
+                attendancePayments[row.key].account,
+              ],
+              if (expanded) _makeupLabel(row.value, links),
             ],
           )
           .toList(),
       'سجل الحضور يظهر بعد تسجيل أول حصة.',
-      cell: (row, column) => !expanded && column == 1
+      cell: (row, column) => store.canCollect && column == paymentStatusColumn
+          ? Tooltip(
+              message: attendancePayments[row].detail,
+              child: _stateCell(
+                context,
+                attendancePayments[row].status,
+                good: attendancePayments[row].settled,
+                warning: !attendancePayments[row].settled,
+              ),
+            )
+          : !expanded && column == 1
           ? _stateCell(
               context,
               _attendanceLabel(recentAttendance[row]),
@@ -1125,6 +1237,42 @@ class StudentHistoryPanel extends StatelessWidget {
 
 // Built from the current snapshot on every refresh; canceled history and active
 // coverage stay separate so a refund cannot become a valid attendance payment.
+class _AttendancePaymentView {
+  const _AttendancePaymentView({
+    this.due,
+    this.collected,
+    required this.account,
+    this.estimated = false,
+    this.zeroLabel = 'مجاني',
+    this.receiptNote,
+  });
+  final int? due, collected;
+  final String account, zeroLabel;
+  final String? receiptNote;
+  final bool estimated;
+  bool get settled =>
+      !estimated && due != null && collected != null && collected! >= due!;
+  String get dueLabel =>
+      due == null ? '—' : '${money(due!)}${estimated ? ' *' : ''}';
+  String get collectedLabel => collected == null ? '—' : money(collected!);
+  String get status => settled
+      ? due == 0
+            ? zeroLabel
+            : 'مسدد'
+      : collected == null
+      ? 'غير موثق'
+      : collected! > 0
+      ? 'دفع جزئي'
+      : 'غير مدفوع';
+  String get detail => [
+    account,
+    if (estimated)
+      'المطلوب حسب السعر الحالي وخصم الحضور؛ لم يُسجّل إيصال للحصة بعد.',
+    ?receiptNote,
+    if (due != null && collected != null) 'المتبقي ${money(due! - collected!)}',
+  ].join('\n');
+}
+
 class _HistoryLinks {
   _HistoryLinks(StudentHistoryRecords history, this.store)
     : activeAttendanceById = {
@@ -1136,6 +1284,9 @@ class _HistoryLinks {
       madeUpAttendanceIds = {
         for (final record in history.attendances)
           if (record.originalAttendanceId != null) record.originalAttendanceId!,
+      },
+      centerFeeSessionIds = {
+        for (final fee in history.centerFees) fee.sessionId,
       },
       paymentsById = {
         for (final payment in history.payments) payment.id: payment,
@@ -1155,6 +1306,7 @@ class _HistoryLinks {
 
   final Map<String, AttendanceRecord> activeAttendanceById, allAttendanceById;
   final Set<String> madeUpAttendanceIds;
+  final Set<String> centerFeeSessionIds;
   final Map<String, PaymentRecord> paymentsById, activePaymentsById;
   final CenterStore store;
   late final packagePaymentIds = {

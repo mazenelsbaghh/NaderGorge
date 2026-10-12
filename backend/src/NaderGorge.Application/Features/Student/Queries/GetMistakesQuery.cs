@@ -84,7 +84,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
         request = request with { Skip = Math.Max(0, request.Skip), Take = Math.Clamp(request.Take, 1, 50) };
         var mistakeExamIds = await _db.StudentAnswers
             .AsNoTracking()
-            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
+            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect && !sa.IsExcludedFromScore)
             .Select(sa => sa.Attempt.ExamId)
             .Distinct()
             .ToListAsync(ct);
@@ -100,7 +100,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .AsNoTracking()
             .CountAsync(sa =>
                 sa.Attempt.UserId == request.UserId &&
-                !sa.IsCorrect &&
+                !sa.IsCorrect && !sa.IsExcludedFromScore &&
                 eligibleMistakeExamIds.Contains(sa.Attempt.ExamId),
                 ct);
 
@@ -182,7 +182,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
         var passedExamsSet = passedExamIds.ToHashSet();
 
         var examMistakeGroups = answers
-            .Where(a => !a.IsCorrect && attemptsById.ContainsKey(a.StudentExamAttemptId))
+            .Where(a => !a.IsCorrect && !a.IsExcludedFromScore && attemptsById.ContainsKey(a.StudentExamAttemptId))
             .GroupBy(a => attemptsById[a.StudentExamAttemptId].ExamId)
             .Select(group =>
             {

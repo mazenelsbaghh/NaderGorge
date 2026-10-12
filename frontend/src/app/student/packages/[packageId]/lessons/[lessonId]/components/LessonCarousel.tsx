@@ -165,7 +165,7 @@ export function LessonCarousel({
     const params = useParams();
     const lessonId = params?.lessonId as string;
     const packageId = params?.packageId as string;
-    const precedingVideoExamUnpassed = videos.slice(0, activeStep).some(v => v.examId && !v.examPassed);
+    const precedingVideoExamLocked = videos.slice(0, activeStep).some(v => v.isExamLocked);
     const homeworkComingSoonLabel = getHomeworkComingSoonLabel(homeworkComingSoonOn);
 
     const [mounted, setMounted] = useState(false);
@@ -230,13 +230,13 @@ export function LessonCarousel({
                                     {examId && (
                                         <button
                                             type="button"
-                                            disabled={precedingVideoExamUnpassed && !examPassed}
+                                            disabled={precedingVideoExamLocked && !examPassed}
                                             onClick={() => router.push(`/student/exams/${examId}?packageId=${packageId}&lessonId=${lessonId}`)}
                                             className={cn(
                                                 "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-[1.02] shadow-sm",
                                                 examPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                                    : precedingVideoExamUnpassed
+                                                    : precedingVideoExamLocked
                                                     ? "bg-gray-500/10 text-gray-400 border border-gray-500/20 opacity-60 cursor-not-allowed"
                                                     : "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]"
                                             )}

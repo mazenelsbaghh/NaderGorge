@@ -12,6 +12,7 @@ public enum QuestionType
 
 public class Exam : BaseEntity, IArchivableContent
 {
+    public ExamEssayGradingMode EssayGradingMode { get; set; }
     public string? ParentNotificationSettingsJson { get; set; }
     public DateTime? ParentNotificationEnabledAt { get; set; }
     public string InternalCode { get; private set; } = string.Empty;
@@ -142,6 +143,7 @@ public class StudentAnswer : BaseEntity
     public QuestionOption? SelectedOption { get; set; }
     public string? SubmittedText { get; set; }
 
+    public bool IsExcludedFromScore { get; set; }
     public bool HintUsed { get; set; }
     public bool IsCorrect { get; set; }
     public decimal PointsAwarded { get; set; }

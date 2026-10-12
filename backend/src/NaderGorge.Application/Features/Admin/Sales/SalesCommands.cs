@@ -525,6 +525,8 @@ public sealed class CreatePublicExamProductCommandHandler : IRequestHandler<Crea
     public async Task<ApiResponse<PublicExamProductDto>> Handle(CreatePublicExamProductCommand request, CancellationToken ct)
     {
         var r = request.Request;
+        if (!Enum.IsDefined(r.EssayGradingMode))
+            return ApiResponse<PublicExamProductDto>.Fail("اختر طريقة تصحيح مقالي صحيحة.");
         var availability = PublicExamAvailabilityRules.Resolve(r.AvailableFrom, r.AvailableUntil, r.IsPublished);
         if (string.IsNullOrWhiteSpace(r.Title))
             return ApiResponse<PublicExamProductDto>.Fail("اسم الامتحان مطلوب.");
@@ -567,6 +569,7 @@ public sealed class CreatePublicExamProductCommandHandler : IRequestHandler<Crea
             PassingScore = r.PassingScore,
             TotalScore = r.TotalScore,
             DurationMinutes = r.DurationMinutes,
+            EssayGradingMode = r.EssayGradingMode,
             IsMandatory = false,
             IsRandomized = r.IsRandomized,
             CreatedByTeacherId = examOwnerTeacherId.Value

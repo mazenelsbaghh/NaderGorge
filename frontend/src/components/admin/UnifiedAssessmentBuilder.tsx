@@ -14,6 +14,7 @@ import {
 import { getApiErrorSummary } from '@/lib/api-errors';
 import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
 import { disabledParentNotification } from '@/services/assessment-revision-service';
+import { ExamEssayGradingSettings, type ExamEssayGradingMode } from './ExamEssayGradingSettings';
 
 interface UnifiedAssessmentBuilderProps {
   type: 'exam' | 'homework';
@@ -49,6 +50,7 @@ export function UnifiedAssessmentBuilder({
   // New Toggles
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
+  const [essayGradingMode, setEssayGradingMode] = useState<ExamEssayGradingMode>('Automatic');
   const [showComingSoon, setShowComingSoon] = useState(
     !isExam && Boolean(initialHomeworkComingSoonOn)
   );
@@ -107,6 +109,7 @@ export function UnifiedAssessmentBuilder({
         // Exam payload mapping
         const payload = {
           parentNotification,
+          essayGradingMode,
           title,
           description,
           totalScore,
@@ -151,6 +154,7 @@ export function UnifiedAssessmentBuilder({
       setParentNotification(disabledParentNotification);
       setDescription('');
       setDurationMinutes(undefined);
+      setEssayGradingMode('Automatic');
       setDisplayQuestionCount(undefined);
       setIsMandatory(true);
       setIsRandomized(false);
@@ -277,6 +281,8 @@ export function UnifiedAssessmentBuilder({
                   </Checkbox.Content>
                 </Checkbox>
               </div>
+
+              {isExam && <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving} />}
 
               {!isExam && (
                 <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">

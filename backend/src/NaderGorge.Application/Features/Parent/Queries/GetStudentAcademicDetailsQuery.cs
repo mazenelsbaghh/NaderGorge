@@ -515,7 +515,7 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     attempt == null ? "NotStarted" : attempt.DefinitionSnapshotJson is null
                         ? "ManualReconciliationRequired" : scale!.IsPassed ? "Passed" : "Failed",
                     attempt?.Answers
-                        .Where(answer => !answer.IsCorrect)
+                        .Where(answer => !answer.IsCorrect && !answer.IsExcludedFromScore)
                         .OrderBy(answer => answer.ExamQuestion.Order)
                         .Select(answer => new QuestionReviewDto(
                             answer.ExamQuestion.Question.Text,

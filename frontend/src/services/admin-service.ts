@@ -2153,6 +2153,7 @@ export const adminService = {
     return res.data;
   },
   createInlineExam: async (payload: {
+    essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
     parentNotification?: AssessmentParentNotificationSettings;
     title: string;
     description: string;

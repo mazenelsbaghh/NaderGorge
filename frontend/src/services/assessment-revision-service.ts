@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { ExamEssayGradingMode } from '@/services/exam-service';
 import { invalidateMany } from '@/lib/cache-invalidation';
 import type { LiveSupportWhatsAppTemplate } from './live-support-service';
 
@@ -24,6 +25,7 @@ export interface AssessmentDefinition {
   isMandatory: boolean; isRandomized: boolean; isActive: boolean; displayQuestionCount: number | null;
   questions: RevisionQuestion[];
   parentNotification?: AssessmentParentNotificationSettings;
+  essayGradingMode?: ExamEssayGradingMode;
 }
 export interface RevisionPolicy {
   previousAttempts: 'Preserve' | 'Regrade';
