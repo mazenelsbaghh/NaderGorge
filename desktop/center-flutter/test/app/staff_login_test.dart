@@ -44,6 +44,7 @@ void main() {
           'MaterialIcons',
         )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
         final captureKey = GlobalKey();
+        bool? selectedWorkspace;
         await tester.pumpWidget(
           MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -53,12 +54,18 @@ void main() {
             theme: MassarTheme.light,
             home: RepaintBoundary(
               key: captureKey,
-              child: AuthScreen(store: store),
+              child: AuthScreen(
+                store: store,
+                examWorkspaceAvailable: true,
+                onSignedIn: (exams) => selectedWorkspace = exams,
+              ),
             ),
           ),
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('auth-confirm')), findsNothing);
+        await tester.tap(find.text('الامتحانات'));
+        await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         if (const bool.fromEnvironment('CAPTURE_UI')) {
           final boundary =
@@ -91,6 +98,7 @@ void main() {
         await tester.tap(find.byKey(const Key('auth-submit')));
         await tester.pump();
         expect(store.currentUser, isNull);
+        expect(selectedWorkspace, isNull);
         await waitForUiCondition(
           tester,
           () => find
@@ -120,6 +128,7 @@ void main() {
         expect(store.canCollect, isTrue);
         expect(store.canManage, isFalse);
         expect(store.canAssess, isTrue);
+        expect(selectedWorkspace, isTrue);
         await tester.binding.setSurfaceSize(const Size(800, 600));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

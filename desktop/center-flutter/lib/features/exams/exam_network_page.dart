@@ -155,7 +155,7 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
   Widget build(BuildContext context) => ManagementPanel(
     title: 'تهيئة الشبكة وصفحة دخول الطلاب',
     subtitle: widget.isHost
-        ? 'هذا هو الجهاز الرئيسي. شبكة الربط الخاصة تصل الساكند ببيانات السنتر.'
+        ? 'يمكن تشغيل الامتحان على هذا الجهاز. وصّل كابل الـOmada به، مع إبقاء شبكة ربط الساكند متاحة.'
         : 'وصلة الكابل للـOmada، والواي فاي للاتصال بالهوست.',
     actions: [
       OutlinedButton.icon(
@@ -178,255 +178,256 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
           ),
         if (_status['message'] is String) Text(_status['message'] as String),
         const SizedBox(height: 16),
-        if (widget.isHost) ...[
-          Text(
-            'شبكة الهوست الخاصة',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'الساكند يتصل بهذه الشبكة من إعدادات الواي فاي في ويندوز، ثم تربطه من «ربط الأجهزة». الطلاب يتصلون بشبكة الـOmada.',
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _ssid,
-            enabled: !_busy,
-            decoration: const InputDecoration(labelText: 'اسم شبكة الجهازين'),
-            textDirection: TextDirection.ltr,
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _password,
-            enabled: !_busy,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'كلمة مرور الشبكة — ٨ أحرف على الأقل',
-            ),
-            textDirection: TextDirection.ltr,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
+        if (widget.isHost)
+          ExpansionTile(
+            title: const Text('شبكة الهوست الخاصة (اختياري)'),
+            subtitle: const Text('لربط الساكند بالهوست عبر الواي فاي'),
+            tilePadding: EdgeInsets.zero,
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FilledButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        if (_password.text.length < 8 ||
-                            _password.text.length > 63 ||
-                            _ssid.text.trim().isEmpty) {
-                          setState(
-                            () => _message =
-                                'اكتب اسم الشبكة وكلمة مرور بين ٨ و٦٣ حرفًا.',
-                          );
-                          return;
-                        }
-                        _apply({
-                          'action': 'hotspot-start',
-                          'ssid': _ssid.text.trim(),
-                          'password': _password.text,
-                        });
-                      },
-                icon: const Icon(Icons.wifi),
-                label: const Text('تشغيل شبكة الهوست'),
+              const SizedBox(height: 8),
+              const Text(
+                'الساكند يتصل بهذه الشبكة من إعدادات الواي فاي في ويندوز، ثم تربطه من «ربط الأجهزة». الطلاب يتصلون بشبكة الـOmada.',
               ),
-              OutlinedButton(
-                onPressed: _busy || _hotspot['active'] != true
-                    ? null
-                    : () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('إيقاف شبكة الجهازين؟'),
-                            content: const Text(
-                              'سيتوقف التحضير والتحصيل على الساكند حتى رجوع الاتصال. أغلق أي عمل جارٍ عليه أولًا.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('رجوع'),
-                              ),
-                              FilledButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('إيقاف الشبكة'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          await _apply({'action': 'hotspot-stop'});
-                        }
-                      },
-                child: const Text('إيقاف الشبكة'),
-              ),
-            ],
-          ),
-          _check('شبكة الربط اللاسلكي', _hotspot['active']),
-          if (_hotspot['addresses'] is List &&
-              (_hotspot['addresses'] as List).isNotEmpty)
-            SelectableText(
-              'عنوان الهوست للربط اليدوي: ${(_hotspot['addresses'] as List).join('، ')}',
-            ),
-          if (_hotspot['message'] is String)
-            Text(_hotspot['message'] as String),
-          const Divider(height: 32),
-        ],
-        if (!widget.isHost) ...[
-          Text(
-            'وصلة شبكة الامتحان',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'اختَر منفذ الكابل الموصل بالـOmada فقط. لا تختَر وصلة الإنترنت أو شبكة الربط بين الجهازين. تغيير الإعداد متاح بعد إغلاق القاعات.',
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            key: ValueKey(_adapter),
-            initialValue: _adapter,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'منفذ كابل الـOmada'),
-            items: _adapters
-                .where((adapter) => adapter['wireless'] != true)
-                .map(
-                  (adapter) => DropdownMenuItem(
-                    value: adapter['id'] as String,
-                    child: Text(
-                      '${adapter['name']} • ${adapter['status']}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: _busy
-                ? null
-                : (value) => setState(() => _adapter = value),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: _busy || _adapter == null
-                    ? null
-                    : () => _apply({
-                        'action': 'configure',
-                        'adapterId': _adapter,
-                      }),
-                icon: const Icon(Icons.settings_ethernet),
-                label: const Text('تجهيز وصلة الامتحان'),
-              ),
-              OutlinedButton(
-                onPressed: _busy || _status['configured'] != true
-                    ? null
-                    : () => _apply({'action': 'restore'}),
-                child: const Text('استعادة إعداد الوصلة السابق'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _check('توزيع عناوين الموبايلات', _status['dhcpReady']),
-          _check('توجيه صفحة الدخول', _status['dnsReady']),
-          _check('البورتال وخدمة الامتحان', _status['portalReady']),
-          if (_status['studentUrl'] is String)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('رابط دخول الطلاب'),
-              subtitle: SelectableText(
-                _status['studentUrl'] as String,
+              const SizedBox(height: 12),
+              TextField(
+                controller: _ssid,
+                enabled: !_busy,
+                decoration: const InputDecoration(
+                  labelText: 'اسم شبكة الجهازين',
+                ),
                 textDirection: TextDirection.ltr,
               ),
-              trailing: IconButton(
-                tooltip: 'نسخ رابط الدخول',
-                onPressed: () => Clipboard.setData(
-                  ClipboardData(text: _status['studentUrl'] as String),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _password,
+                enabled: !_busy,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'كلمة مرور الشبكة — ٨ أحرف على الأقل',
                 ),
-                icon: const Icon(Icons.copy),
+                textDirection: TextDirection.ltr,
               ),
-            ),
-          const Divider(height: 32),
-          Text(
-            'البورتال — طريقة دخول الموبايلات',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'صفحة الطالب تعرض إدخال الموبايل، ثم الاسم والكود، وقاعة الانتظار والامتحان. لو صفحة الدخول التلقائي لم تظهر، افتح رابط الطلاب يدويًا.',
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            key: ValueKey('portal-$_portalMode'),
-            initialValue: _portalMode,
-            decoration: const InputDecoration(labelText: 'طريقة البوابة'),
-            items: const [
-              DropdownMenuItem(value: 'legacy', child: Text('دخول محلي HTTP')),
-              DropdownMenuItem(
-                value: 'https',
-                child: Text('HTTPS بشهادة موثوقة'),
-              ),
-            ],
-            onChanged: _busy
-                ? null
-                : (value) => setState(() => _portalMode = value!),
-          ),
-          if (_portalMode == 'https') ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _hostname,
-              onChanged: (_) => setState(() {}),
-              enabled: !_busy,
-              decoration: const InputDecoration(
-                labelText: 'اسم النطاق الموجود في الشهادة',
-              ),
-              textDirection: TextDirection.ltr,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _pickCertificate(false),
-                  icon: Icon(
-                    _certificate == null ? Icons.upload_file : Icons.check,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () {
+                            if (_password.text.length < 8 ||
+                                _password.text.length > 63 ||
+                                _ssid.text.trim().isEmpty) {
+                              setState(
+                                () => _message =
+                                    'اكتب اسم الشبكة وكلمة مرور بين ٨ و٦٣ حرفًا.',
+                              );
+                              return;
+                            }
+                            _apply({
+                              'action': 'hotspot-start',
+                              'ssid': _ssid.text.trim(),
+                              'password': _password.text,
+                            });
+                          },
+                    icon: const Icon(Icons.wifi),
+                    label: const Text('تشغيل شبكة الهوست'),
                   ),
-                  label: const Text('اختيار الشهادة'),
+                  OutlinedButton(
+                    onPressed: _busy || _hotspot['active'] != true
+                        ? null
+                        : () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('إيقاف شبكة الجهازين؟'),
+                                content: const Text(
+                                  'سيتوقف التحضير والتحصيل على الساكند حتى رجوع الاتصال. أغلق أي عمل جارٍ عليه أولًا.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('رجوع'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('إيقاف الشبكة'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await _apply({'action': 'hotspot-stop'});
+                            }
+                          },
+                    child: const Text('إيقاف الشبكة'),
+                  ),
+                ],
+              ),
+              _check('شبكة الربط اللاسلكي', _hotspot['active']),
+              if (_hotspot['addresses'] is List &&
+                  (_hotspot['addresses'] as List).isNotEmpty)
+                SelectableText(
+                  'عنوان الهوست للربط اليدوي: ${(_hotspot['addresses'] as List).join('، ')}',
                 ),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _pickCertificate(true),
-                  icon: Icon(_key == null ? Icons.key : Icons.check),
-                  label: const Text('اختيار المفتاح الخاص'),
+              if (_hotspot['message'] is String)
+                Text(_hotspot['message'] as String),
+            ],
+          ),
+        const SizedBox(height: 16),
+        Text(
+          'وصلة شبكة الامتحان',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'اختَر منفذ الكابل الموصل بالـOmada فقط. لا تختَر وصلة الإنترنت أو شبكة الربط بين الجهازين. تغيير الإعداد متاح بعد إغلاق القاعات.',
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          key: ValueKey(_adapter),
+          initialValue: _adapter,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'منفذ كابل الـOmada'),
+          items: _adapters
+              .where((adapter) => adapter['wireless'] != true)
+              .map(
+                (adapter) => DropdownMenuItem(
+                  value: adapter['id'] as String,
+                  child: Text(
+                    '${adapter['name']} • ${adapter['status']}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ],
+              )
+              .toList(),
+          onChanged: _busy ? null : (value) => setState(() => _adapter = value),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: _busy || _adapter == null
+                  ? null
+                  : () =>
+                        _apply({'action': 'configure', 'adapterId': _adapter}),
+              icon: const Icon(Icons.settings_ethernet),
+              label: const Text('تجهيز وصلة الامتحان'),
+            ),
+            OutlinedButton(
+              onPressed: _busy || _status['configured'] != true
+                  ? null
+                  : () => _apply({'action': 'restore'}),
+              child: const Text('استعادة إعداد الوصلة السابق'),
             ),
           ],
-          const SizedBox(height: 12),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FilledButton(
-              onPressed:
-                  _busy ||
-                      _status['configured'] != true ||
-                      (_portalMode == 'https' &&
-                          (_certificate == null ||
-                              _key == null ||
-                              _hostname.text.trim().isEmpty))
-                  ? null
-                  : () => _apply({
-                      'action': 'portal-configure',
-                      'mode': _portalMode,
-                      if (_portalMode == 'https') ...{
-                        'hostname': _hostname.text.trim(),
-                        'certificatePath': _certificate,
-                        'privateKeyPath': _key,
-                      },
-                    }),
-              child: const Text('تطبيق إعداد البورتال'),
+        ),
+        const SizedBox(height: 12),
+        _check('توزيع عناوين الموبايلات', _status['dhcpReady']),
+        _check('توجيه صفحة الدخول', _status['dnsReady']),
+        _check('البورتال وخدمة الامتحان', _status['portalReady']),
+        if (_status['studentUrl'] is String)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('رابط دخول الطلاب'),
+            subtitle: SelectableText(
+              _status['studentUrl'] as String,
+              textDirection: TextDirection.ltr,
+            ),
+            trailing: IconButton(
+              tooltip: 'نسخ رابط الدخول',
+              onPressed: () => Clipboard.setData(
+                ClipboardData(text: _status['studentUrl'] as String),
+              ),
+              icon: const Icon(Icons.copy),
             ),
           ),
-          const SizedBox(height: 16),
+        const Divider(height: 32),
+        Text(
+          'البورتال — طريقة دخول الموبايلات',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'صفحة الطالب تعرض إدخال الموبايل، ثم الاسم والكود، وقاعة الانتظار والامتحان. لو صفحة الدخول التلقائي لم تظهر، افتح رابط الطلاب يدويًا.',
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          key: ValueKey('portal-$_portalMode'),
+          initialValue: _portalMode,
+          decoration: const InputDecoration(labelText: 'طريقة البوابة'),
+          items: const [
+            DropdownMenuItem(value: 'legacy', child: Text('دخول محلي HTTP')),
+            DropdownMenuItem(
+              value: 'https',
+              child: Text('HTTPS بشهادة موثوقة'),
+            ),
+          ],
+          onChanged: _busy
+              ? null
+              : (value) => setState(() => _portalMode = value!),
+        ),
+        if (_portalMode == 'https') ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _hostname,
+            onChanged: (_) => setState(() {}),
+            enabled: !_busy,
+            decoration: const InputDecoration(
+              labelText: 'اسم النطاق الموجود في الشهادة',
+            ),
+            textDirection: TextDirection.ltr,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _busy ? null : () => _pickCertificate(false),
+                icon: Icon(
+                  _certificate == null ? Icons.upload_file : Icons.check,
+                ),
+                label: const Text('اختيار الشهادة'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : () => _pickCertificate(true),
+                icon: Icon(_key == null ? Icons.key : Icons.check),
+                label: const Text('اختيار المفتاح الخاص'),
+              ),
+            ],
+          ),
         ],
+        const SizedBox(height: 12),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FilledButton(
+            onPressed:
+                _busy ||
+                    _status['configured'] != true ||
+                    (_portalMode == 'https' &&
+                        (_certificate == null ||
+                            _key == null ||
+                            _hostname.text.trim().isEmpty))
+                ? null
+                : () => _apply({
+                    'action': 'portal-configure',
+                    'mode': _portalMode,
+                    if (_portalMode == 'https') ...{
+                      'hostname': _hostname.text.trim(),
+                      'certificatePath': _certificate,
+                      'privateKeyPath': _key,
+                    },
+                  }),
+            child: const Text('تطبيق إعداد البورتال'),
+          ),
+        ),
+        const SizedBox(height: 16),
       ],
     ),
   );

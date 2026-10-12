@@ -387,4 +387,45 @@ void main() {
     );
     expect(store.academics, isEmpty);
   });
+
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    test('${role.name} operates exams without management privileges', () async {
+      await attend(0);
+      await store.saveStaff(name: role.name, password: password, role: role);
+      store.signOut();
+      await store.signIn(role.name, password);
+      expect(store.canManage, isFalse);
+      final roster = store.integratedExamRoster(
+        groupId: group.id,
+        sessionId: session.id,
+        activityId: exam.id,
+      );
+      expect(
+        roster.singleWhere((entry) => entry.present).phone,
+        students[0].phone,
+      );
+      final receipt = await store.recordIntegratedExamResult(result(score: 0));
+      expect(receipt.alreadyRecorded, isFalse);
+      expect(progress().recorded, 1);
+      expect(store.audit.last.staffId, store.currentUser!.id);
+      await expectLater(
+        store.saveStaff(
+          name: 'not-authorized',
+          password: password,
+          role: StaffRole.admin,
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      if (role == StaffRole.assistant) {
+        await expectLater(
+          store.collectStudentCard(studentId: students[0].id),
+          throwsA(isA<CenterException>()),
+        );
+        expect(store.canCollect, isFalse);
+      }
+      expect(store.cardPayments, isEmpty);
+      expect(store.payments, isEmpty);
+      expect(store.academics.single.score, 0);
+    });
+  }
 }

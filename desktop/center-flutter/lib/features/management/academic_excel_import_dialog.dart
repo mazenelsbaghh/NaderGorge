@@ -12,6 +12,7 @@ import '../../domain/student_lookup.dart';
 import '../../lan/lan_transport.dart';
 import '../../shared/scrollable_dialog.dart';
 import '../../shared/performance_trace.dart';
+import '../../shared/problem_reporting.dart';
 import 'management_widgets.dart';
 
 part 'academic_excel_import_review.dart';
@@ -259,12 +260,16 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       }
       final trace = PerformanceTrace('academic.import.read', budgetMs: 250);
       final AcademicExcelWorkbook workbook;
+      var failed = false;
       try {
         workbook = await compute(readAcademicExcel, file.bytes);
+      } catch (_) {
+        failed = true;
+        rethrow;
       } finally {
         trace.stage('decode');
         trace.counts['bytes'] = file.bytes.length;
-        trace.finish();
+        trace.finish(failed: failed);
       }
       if (!mounted) return;
       _workbook = workbook;
@@ -273,7 +278,8 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       _rows = [];
       _sheetContextReviewed = false;
       await _refreshRows();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      reportProblem(error, stackTrace, operation: 'academic.import.read');
       if (mounted) setState(() => _error = _errorText(error));
     } finally {
       if (mounted) setState(() => _busy = false);

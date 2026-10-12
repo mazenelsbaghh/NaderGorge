@@ -143,6 +143,8 @@ class _AuthScreenState extends State<AuthScreen> {
                 Text(
                   firstRun
                       ? 'أنشئ حسابك الأول لإدارة الطلاب والمجموعات والحسابات.'
+                      : widget.examWorkspaceAvailable
+                      ? 'ادخل بحساب الموظف للسنتر أو الامتحانات.'
                       : 'استخدم حسابك لمتابعة الطلاب والمراجعة وتقفيلة الحسابات.',
                   style: TextStyle(
                     color: MassarPalette.of(context).muted,

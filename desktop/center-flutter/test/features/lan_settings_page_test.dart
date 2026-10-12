@@ -344,7 +344,7 @@ void main() {
   }
 
   testLanWidgets(
-    'host UI starts actual gateway, refreshes pairing and enforces cashier control denial',
+    'host staff can configure the gateway while signed-out access stays blocked',
     (tester) async {
       await realAsync(tester, setUpFixture);
       expect(tester.takeException(), isNull);
@@ -376,6 +376,33 @@ void main() {
           password: 'cashier-password',
         );
         await hostStore.signIn('host-cashier', 'cashier-password');
+        expect(hostStore.canManage, isFalse);
+        await host.renewPairingCode();
+      });
+      await settleRoutes(tester);
+      expect(find.byKey(const Key('lan-pairing-code')), findsOneWidget);
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const Key('lan-stop-host')))
+            .onPressed,
+        isNotNull,
+      );
+      await realAsync(tester, () async {
+        await host.stopHost();
+        expect(host.isHost, isFalse);
+        await host.startHost();
+        await hostStore.signIn('host-owner', 'host-password-123');
+        await hostStore.saveStaff(
+          name: 'host-assistant',
+          role: StaffRole.assistant,
+          password: 'assistant-password',
+        );
+        await hostStore.signIn('host-assistant', 'assistant-password');
+        expect(hostStore.canManage, isFalse);
+        await host.renewPairingCode();
+        await host.stopHost();
+        await host.startHost();
+        hostStore.signOut();
         await expectLater(host.stopHost(), throwsA(isA<CenterException>()));
         await expectLater(
           host.renewPairingCode(),

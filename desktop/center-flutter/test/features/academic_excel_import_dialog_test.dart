@@ -13,6 +13,7 @@ import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/academic_excel_import_dialog.dart';
 import 'package:massar_center/features/management/academics_page.dart';
+import 'package:massar_center/shared/problem_log.dart';
 import 'package:massar_center/shared/theme.dart';
 import 'package:xml/xml.dart';
 
@@ -203,6 +204,8 @@ void main() {
     WidgetTester tester,
     Map<String, List<List<String>>> sheets, {
     Size size = const Size(1500, 1000),
+    AcademicExcelFile? selectedFile,
+    String? expectedReadError,
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -242,6 +245,7 @@ void main() {
                     sessionId: session.id,
                     activityId: exam.id,
                     fileLoader: () async =>
+                        selectedFile ??
                         AcademicExcelFile('results.xlsx', bytes),
                   ),
                 ),
@@ -255,7 +259,14 @@ void main() {
     await tap(tester, find.text('فتح الاستيراد'));
     await tester.tap(find.byKey(const Key('import-choose-file')));
     await waitForIo(tester);
-    expect(find.byKey(const Key('import-error')), findsNothing);
+    if (expectedReadError == null) {
+      expect(find.byKey(const Key('import-error')), findsNothing);
+    } else {
+      expect(
+        tester.widget<Text>(find.byKey(const Key('import-error'))).data,
+        expectedReadError,
+      );
+    }
   }
 
   bool saveEnabled(WidgetTester tester) =>
@@ -290,6 +301,60 @@ void main() {
       notes: 'ملاحظة محفوظة',
       updatedAt: DateTime.now(),
     ),
+  );
+
+  importWidgetTest(
+    'a failed file read stays unsaved and logs diagnostics without the filename',
+    (tester) async {
+      final previousLog = ProblemLog.current;
+      final log = ProblemLog(Directory('${directory.path}/diagnostics'));
+      ProblemLog.current = log;
+      Future<T> drainLog<T>(Future<T> operation) async {
+        var finished = false;
+        final completion = operation.whenComplete(() => finished = true);
+        for (var attempt = 0; attempt < 100 && !finished; attempt++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump();
+        }
+        expect(finished, isTrue, reason: 'The diagnostic queue must finish.');
+        return completion;
+      }
+
+      try {
+        const privateFilename = 'private-student-01012345678.xlsx';
+        await open(
+          tester,
+          const {},
+          selectedFile: const AcademicExcelFile(privateFilename, [0]),
+          expectedReadError: 'اختر ملف Excel بصيغة ‎.xlsx سليمة.',
+        );
+        expect(store.academics, isEmpty);
+        expect(store.attendances, isEmpty);
+        expect(saveEnabled(tester), isFalse);
+        final destination = '${directory.path}/import-diagnostics.txt';
+        await drainLog(log.flush());
+        await drainLog(log.exportTo(destination));
+        final contents = await tester.runAsync(
+          () => File(destination).readAsString(),
+        );
+        final events = const LineSplitter()
+            .convert(contents!)
+            .map((line) => jsonDecode(line) as Map<String, dynamic>)
+            .where((entry) => entry['kind'] == 'error');
+        final readFailure = events.singleWhere(
+          (entry) => entry['operation'] == 'academic.import.read',
+        );
+        expect(readFailure['errors'], [
+          {'type': 'FormatException'},
+        ]);
+        expect(contents, isNot(contains(privateFilename)));
+      } finally {
+        ProblemLog.current = previousLog;
+        await drainLog(log.flush());
+      }
+    },
   );
 
   importWidgetTest(

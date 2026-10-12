@@ -92,7 +92,9 @@ class LanController extends ChangeNotifier {
   bool get isBusy => _busy;
   bool get isHost => _configuration?.mode == LanMode.host;
   bool get canConfigureHost =>
-      !clientOnly && identical(activeStore, localStore) && localStore.canManage;
+      !clientOnly &&
+      identical(activeStore, localStore) &&
+      localStore.currentUser != null;
   LanHostReady? get hostReady => _hostReady;
   String? get pairingCode => _pairingCode;
   DateTime? get pairingExpiresAt => _pairingExpiresAt;
@@ -155,7 +157,7 @@ class LanController extends ChangeNotifier {
       }
     }
     if (_configuration!.mode == LanMode.host) {
-      // A saved host was enabled by an administrator in an earlier run.
+      // A saved host was enabled by a signed-in employee in an earlier run.
       try {
         await _startHost(_configuration!);
       } catch (error, stackTrace) {
@@ -386,7 +388,7 @@ class LanController extends ChangeNotifier {
     }
   }
 
-  void _requireHostAdmin() {
+  void _requireHostStaff() {
     if (clientOnly) {
       throw const CenterException(
         'نسخة الجهاز الفرعي لا تعمل كسيرفر أو جهاز مستقل.',
@@ -394,13 +396,13 @@ class LanController extends ChangeNotifier {
     }
     if (!canConfigureHost) {
       throw const CenterException(
-        'تشغيل السيرفر وإدارة الأجهزة متاحان لمدير الجهاز الرئيسي فقط.',
+        'سجّل دخول الموظف على الجهاز الرئيسي لتشغيل السيرفر وإدارة الأجهزة.',
       );
     }
   }
 
   Future<void> startHost({String? name}) => _exclusive(() async {
-    _requireHostAdmin();
+    _requireHostStaff();
     if (_hostProcess.isRunning) {
       throw const CenterException('السيرفر المحلي يعمل بالفعل.');
     }
@@ -477,7 +479,7 @@ class LanController extends ChangeNotifier {
   }
 
   Future<void> stopHost() => _exclusive(() async {
-    _requireHostAdmin();
+    _requireHostStaff();
     final candidate = _configuration!.copyWith(mode: LanMode.standalone);
     await _settings.save(candidate);
     await _stopHostResources();
@@ -491,7 +493,7 @@ class LanController extends ChangeNotifier {
         'نسخة الجهاز الفرعي تعمل ببيانات الجهاز الرئيسي فقط؛ لا يوجد وضع محلي مستقل.',
       );
     }
-    if (isHost) _requireHostAdmin();
+    if (isHost) _requireHostStaff();
     await activeStore.prepareLanSwitch();
     final candidate = _configuration!.copyWith(mode: LanMode.standalone);
     await _settings.save(candidate);
@@ -513,14 +515,14 @@ class LanController extends ChangeNotifier {
   }
 
   Future<void> refreshDevices() => _exclusive(() async {
-    _requireHostAdmin();
+    _requireHostStaff();
     if (!isHost || !_hostProcess.isRunning) {
       throw const CenterException('شغّل السيرفر المحلي أولًا.');
     }
     await _loadDevices();
   });
   Future<void> renewPairingCode() => _exclusive(() async {
-    _requireHostAdmin();
+    _requireHostStaff();
     if (!isHost || !_hostProcess.isRunning) {
       throw const CenterException('شغّل السيرفر المحلي أولًا.');
     }
@@ -537,7 +539,7 @@ class LanController extends ChangeNotifier {
     _pairingExpiresAt = DateTime.parse(expires);
   });
   Future<void> revokeDevice(String id) => _exclusive(() async {
-    _requireHostAdmin();
+    _requireHostStaff();
     if (!isHost || !_hostProcess.isRunning) {
       throw const CenterException('شغّل السيرفر المحلي أولًا.');
     }

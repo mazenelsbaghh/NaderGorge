@@ -34,12 +34,6 @@ class _ExamWorkspaceState extends State<ExamWorkspace> {
         );
       }
       final isHost = !controller.store.isRemote;
-      if (isHost) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('تهيئة شبكة الهوست')),
-          body: ExamNetworkPage(controller: controller, isHost: true),
-        );
-      }
       return Scaffold(
         appBar: AppBar(
           title: const Text('امتحانات السنتر'),

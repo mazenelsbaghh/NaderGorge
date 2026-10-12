@@ -9,6 +9,37 @@ import 'package:xml/xml.dart';
 
 void main() {
   test(
+    'accepts the exam application Arabic export without renaming columns',
+    () {
+      final rows = [
+        _row(score: '0', code: '00123')
+          ..[13] = 'تم التصحيح'
+          ..[16] = 'exam-session-1'
+          ..[17] = 'attempt-1'
+          ..[18] = 'massar-results-v1',
+        _row(score: '18.5', code: '00124')
+          ..[13] = 'تم التصحيح'
+          ..[16] = 'exam-session-1'
+          ..[17] = 'attempt-2'
+          ..[18] = 'massar-results-v1',
+      ];
+      final parsed = readAcademicExcel(
+        _xlsx(rows, headers: _examApplicationHeaders),
+      ).sheets.single.rows;
+      expect(parsed.map((row) => row.score), [0, 18.5]);
+      expect(parsed.map((row) => row.maxScore), [20, 20]);
+      expect(
+        parsed.every((row) => row.eligible && row.warnings.isEmpty),
+        isTrue,
+      );
+      expect(parsed.map((row) => row.code), ['00123', '00124']);
+      expect(parsed.first.metadata['externalSessionId'], 'exam-session-1');
+      expect(parsed.last.metadata['externalAttemptId'], 'attempt-2');
+      expect(parsed.first.metadata['sheetVersion'], 'massar-results-v1');
+    },
+  );
+
+  test(
     'reads Arabic headers and a genuine zero with source metadata intact',
     () {
       final row = _row(score: '٠', maximum: '۲۰', code: '٠٠١٢٣');
@@ -90,6 +121,8 @@ void main() {
       for (final headers in [
         [...academicExcelColumns.skip(1), 'extra'],
         [...academicExcelColumns]..[10] = 'finalScore',
+        [..._examApplicationHeaders]..[12] = 'الحالة',
+        [..._examApplicationHeaders]..[16] = 'معرّف محاولة الطالب',
       ]) {
         expect(
           () => readAcademicExcel(_xlsx([_row()], headers: headers)),
@@ -503,6 +536,29 @@ const _arabicHeaders = [
   'جاب كام من كام',
   'سبب الإلغاء',
   'معرّف الجلسة',
+  'معرّف محاولة الطالب',
+  'إصدار الشيت',
+];
+
+// Public A–S export headings from the exam app, including its M/Q wording.
+const _examApplicationHeaders = [
+  'اسم الطالب',
+  'رقم الموبايل',
+  'كود الطالب',
+  'الصف الدراسي',
+  'السنتر',
+  'المجموعة',
+  'الحصة',
+  'الامتحان',
+  'تاريخ الجلسة',
+  'الدرجة النهائية',
+  'المجموع',
+  'النسبة',
+  'متبقي للتصحيح',
+  'الحالة',
+  'جاب كام من كام',
+  'سبب الإلغاء',
+  'معرّف جلسة الامتحان',
   'معرّف محاولة الطالب',
   'إصدار الشيت',
 ];

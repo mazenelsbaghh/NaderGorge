@@ -312,80 +312,100 @@ void main() {
   });
   tearDown(() async => h.close());
 
-  test(
-    'integrated exam result from secondary survives lost reply without a local database',
-    () async {
-      final month = await h.host.saveStudyMonth(
-        StudyMonth(
-          name: 'Synthetic integrated month',
-          lessons: [const PreparedLesson(number: 1)],
-        ),
-      );
-      final session = await h.host.startPreparedLesson(
-        groupId: h.group.id,
-        preparedLessonId: month.lessons.single.id,
-      );
-      final exam = await h.host.saveAcademicActivity(
-        AcademicActivity(
-          preparedLessonId: session.preparedLessonId,
-          name: 'Synthetic integrated exam',
-          kind: AcademicActivityKind.exam,
-          createdAt: DateTime.now(),
-        ),
-      );
-      await h.host.recordAttendance(
-        EntryRequest(
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    test(
+      '${role.name} exam result from secondary survives lost reply without a local database',
+      () async {
+        h.remote.signOut();
+        await h.remote.signIn(role.name, 'test-${role.name}-123');
+        final month = await h.host.saveStudyMonth(
+          StudyMonth(
+            name: 'Synthetic integrated month',
+            lessons: [const PreparedLesson(number: 1)],
+          ),
+        );
+        final session = await h.host.startPreparedLesson(
+          groupId: h.group.id,
+          preparedLessonId: month.lessons.single.id,
+        );
+        final exam = await h.host.saveAcademicActivity(
+          AcademicActivity(
+            preparedLessonId: session.preparedLessonId,
+            name: 'Synthetic integrated exam',
+            kind: AcademicActivityKind.exam,
+            createdAt: DateTime.now(),
+          ),
+        );
+        await h.host.recordAttendance(
+          EntryRequest(
+            studentId: h.student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+        await h.remote.refreshRemote();
+        final roster = h.remote.integratedExamRoster(
+          groupId: h.group.id,
+          sessionId: session.id,
+          activityId: exam.id,
+        );
+        expect(roster.single.present, isTrue);
+        expect(roster.single.studentId, h.student.id);
+        expect(h.remote.canManage, isFalse);
+        final examResult = IntegratedExamResult(
+          sourceId: 'synthetic-engine',
+          examId: 'synthetic-exam',
+          attemptId: 'synthetic-attempt',
           studentId: h.student.id,
           sessionId: session.id,
-          mode: EntryMode.single,
-        ),
-      );
-      await h.remote.refreshRemote();
-      final examResult = IntegratedExamResult(
-        sourceId: 'synthetic-engine',
-        examId: 'synthetic-exam',
-        attemptId: 'synthetic-attempt',
-        studentId: h.student.id,
-        sessionId: session.id,
-        activityId: exam.id,
-        version: 1,
-        score: 0,
-        maxScore: 10,
-      );
-      final actor = h.remote.currentUser!.id;
-      h.loseNextCommandReply = true;
-      await expectLater(
-        h.remote.recordIntegratedExamResult(examResult),
-        throwsA(
-          isA<LanConnectionException>().having(
-            (error) => error.outcomeUnknown,
-            'outcomeUnknown',
-            isTrue,
+          activityId: exam.id,
+          version: 1,
+          score: 0,
+          maxScore: 10,
+        );
+        final actor = h.remote.currentUser!.id;
+        h.loseNextCommandReply = true;
+        await expectLater(
+          h.remote.recordIntegratedExamResult(examResult),
+          throwsA(
+            isA<LanConnectionException>().having(
+              (error) => error.outcomeUnknown,
+              'outcomeUnknown',
+              isTrue,
+            ),
           ),
-        ),
-      );
-      expect(h.host.academics.single.score, 0);
-      expect(
-        h.host.academics.single.integration!.result.attemptId,
-        'synthetic-attempt',
-      );
-      expect(h.host.audit.last.staffId, actor);
-      expect(await h.pendingFile.exists(), isTrue);
-      await h.remote.refreshRemote();
-      final receipt = await h.remote.recordIntegratedExamResult(examResult);
-      expect(receipt.alreadyRecorded, isTrue);
-      expect(receipt.recordId, h.host.academics.single.id);
-      expect(h.host.academics, hasLength(1));
-      expect(h.remote.academics.single.score, 0);
-      expect(h.host.payments, isEmpty);
-      expect(await h.pendingFile.exists(), isFalse);
-      expect(
-        await File('${h.clientDirectory.path}/center.sqlite').exists(),
-        isFalse,
-      );
-      await h.expectMatchingPublicState();
-    },
-  );
+        );
+        expect(h.host.academics.single.score, 0);
+        expect(
+          h.host.academics.single.integration!.result.attemptId,
+          'synthetic-attempt',
+        );
+        expect(h.host.audit.last.staffId, actor);
+        expect(await h.pendingFile.exists(), isTrue);
+        await h.remote.refreshRemote();
+        final receipt = await h.remote.recordIntegratedExamResult(examResult);
+        expect(receipt.alreadyRecorded, isTrue);
+        expect(receipt.recordId, h.host.academics.single.id);
+        expect(h.host.academics, hasLength(1));
+        expect(h.remote.academics.single.score, 0);
+        expect(h.host.payments, isEmpty);
+        expect(await h.pendingFile.exists(), isFalse);
+        expect(
+          await File('${h.clientDirectory.path}/center.sqlite').exists(),
+          isFalse,
+        );
+        await h.expectMatchingPublicState();
+        if (role == StaffRole.assistant) {
+          await expectLater(
+            h.remote.collectStudentCard(studentId: h.student.id),
+            throwsA(isA<CenterException>()),
+          );
+          expect(h.host.cardPayments, isEmpty);
+          expect(h.remote.canCollect, isFalse);
+        }
+      },
+    );
+  }
 
   test(
     'secondary free attendance commits its zero receipt in one host command',

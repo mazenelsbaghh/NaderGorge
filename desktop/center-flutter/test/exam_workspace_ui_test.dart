@@ -94,6 +94,7 @@ class _UIEngine implements ExamEngine {
       },
       'hotspot-status' => {'active': true, 'message': 'شبكة الجهازين متاحة'},
       'hotspot-start' => {'ok': true, 'message': 'تم تشغيل شبكة الجهازين'},
+      'configure' || 'portal-configure' => {'ok': true},
       _ => throw StateError('Unexpected network action ${command['action']}'),
     };
   }
@@ -105,9 +106,13 @@ class _Fixture {
   final CenterStore store;
   final _UIEngine engine;
   final ExamRoomController controller;
+  bool _controllerDisposed = false;
   static const password = 'synthetic-ui-password';
 
-  static Future<_Fixture> open({bool roster = false}) async {
+  static Future<_Fixture> open({
+    bool roster = false,
+    StaffRole role = StaffRole.admin,
+  }) async {
     final directory = await Directory.systemTemp.createTemp('exam-ui-');
     final store = await CenterStore.open(directory: directory.path);
     await store.setupAdmin('موظف التجربة', password);
@@ -115,6 +120,11 @@ class _Fixture {
     final controller = ExamRoomController(engine: engine, store: store);
     final fixture = _Fixture(directory, store, engine, controller);
     if (roster) await fixture.seedRoster();
+    if (role != StaffRole.admin) {
+      await store.saveStaff(name: 'موظف عادي', password: password, role: role);
+      store.signOut();
+      await store.signIn('موظف عادي', password);
+    }
     return fixture;
   }
 
@@ -258,8 +268,14 @@ class _Fixture {
         'درجة الطالب مرصودة يدويًا؛ راجع التعارض.';
   }
 
-  Future<void> close() async {
+  void disposeController() {
+    if (_controllerDisposed) return;
+    _controllerDisposed = true;
     controller.dispose();
+  }
+
+  Future<void> close() async {
+    disposeController();
     await store.close();
     await directory.delete(recursive: true);
   }
@@ -327,6 +343,45 @@ void main() {
       );
     }
   });
+
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    testWidgets(
+      'host ${role.name} can open all exam tabs and logout closes access',
+      (tester) async {
+        late _Fixture fixture;
+        await tester.runAsync(() async {
+          fixture = await _Fixture.open(role: role);
+        });
+        addTearDown(() => tester.runAsync(fixture.close));
+        await _show(
+          tester,
+          ExamWorkspace(controller: fixture.controller),
+          const Size(1280, 800),
+        );
+        expect(fixture.store.canManage, isFalse);
+        expect(find.text('إدارة الامتحان'), findsOneWidget);
+        expect(find.text('التهيئة والبورتال'), findsOneWidget);
+        expect(fixture.engine.commands, isEmpty);
+        await tester.tap(find.text('الربط والرصد التلقائي').first);
+        await tester.pumpAndSettle();
+        expect(find.text('إنشاء قاعة مرتبطة'), findsOneWidget);
+        await tester.tap(find.text('التهيئة والبورتال'));
+        await tester.pumpAndSettle();
+        expect(find.text('منفذ كابل الـOmada'), findsOneWidget);
+        expect(find.text('شبكة الهوست الخاصة (اختياري)'), findsOneWidget);
+        fixture.store.signOut();
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'سجّل دخول الموظف لعرض إدارة الامتحان. خدمة الطلاب تستمر في الخلفية.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('التهيئة والبورتال'), findsNothing);
+        expect(find.text('تجهيز وصلة الامتحان'), findsNothing);
+      },
+    );
+  }
 
   for (final width in [720.0, 1280.0]) {
     testWidgets(
@@ -500,39 +555,56 @@ void main() {
 
     for (final host in [false, true]) {
       testWidgets(
-        '${host ? 'host private wifi' : 'secondary Omada portal'} at width $width',
+        '${host ? 'host' : 'secondary'} Omada and portal setup at width $width',
         (tester) async {
           late _Fixture fixture;
           await tester.runAsync(() async {
-            fixture = await _Fixture.open();
+            fixture = await _Fixture.open(
+              role: host ? StaffRole.cashier : StaffRole.assistant,
+            );
           });
           addTearDown(() => tester.runAsync(fixture.close));
-          await _show(
-            tester,
-            host
-                ? ExamWorkspace(controller: fixture.controller)
-                : Scaffold(
-                    body: ExamNetworkPage(
-                      controller: fixture.controller,
-                      isHost: false,
-                    ),
-                  ),
-            Size(width, 800),
+          final previousHitTestPolicy =
+              WidgetController.hitTestWarningShouldBeFatal;
+          WidgetController.hitTestWarningShouldBeFatal = true;
+          addTearDown(
+            () => WidgetController.hitTestWarningShouldBeFatal =
+                previousHitTestPolicy,
           );
-          expect(fixture.engine.starts, 0);
-          expect(fixture.engine.commands.map((command) => command['action']), [
-            'status',
-            'list-adapters',
-            'hotspot-status',
-          ]);
-          if (host) {
-            expect(find.text('شبكة الهوست الخاصة'), findsOneWidget);
-            expect(find.text('جاهز'), findsOneWidget);
-            expect(find.text('لم يتأكد بعد'), findsNothing);
-            expect(find.text('منفذ كابل الـOmada'), findsNothing);
-            expect(find.text('طريقة البوابة'), findsNothing);
-          } else {
-            expect(find.text('شبكة الهوست الخاصة'), findsNothing);
+          Future<void> reveal(Finder finder) async {
+            await tester.scrollUntilVisible(
+              finder,
+              250,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await Scrollable.ensureVisible(
+              tester.element(finder),
+              alignment: 0.5,
+            );
+            await tester.pumpAndSettle();
+          }
+
+          try {
+            await _show(
+              tester,
+              Scaffold(
+                body: ExamNetworkPage(
+                  controller: fixture.controller,
+                  isHost: host,
+                ),
+              ),
+              Size(width, 800),
+            );
+            expect(fixture.engine.starts, 0);
+            expect(
+              fixture.engine.commands.map((command) => command['action']),
+              ['status', 'list-adapters', 'hotspot-status'],
+            );
+            expect(fixture.store.canManage, isFalse);
+            expect(
+              find.text('شبكة الهوست الخاصة (اختياري)'),
+              host ? findsOneWidget : findsNothing,
+            );
             expect(find.text('منفذ كابل الـOmada'), findsOneWidget);
             await tester.tap(
               find.byType(DropdownButtonFormField<String>).first,
@@ -542,23 +614,59 @@ void main() {
             await tester.tap(find.text('Omada Ethernet • Up').last);
             await tester.pumpAndSettle();
             expect(find.text('http://10.77.0.1/'), findsOneWidget);
-          }
-          await _capture(
-            tester,
-            'network-${host ? 'host' : 'secondary'}-${width.toInt()}',
-          );
-          if (!host) {
-            await tester.ensureVisible(find.text('طريقة البوابة'));
+            await reveal(find.text('تجهيز وصلة الامتحان'));
+            await tester.tap(find.text('تجهيز وصلة الامتحان'));
+            await tester.pumpAndSettle();
+            expect(fixture.engine.starts, 1);
+            expect(
+              fixture.engine.commands,
+              contains(
+                equals({'action': 'configure', 'adapterId': 'ethernet'}),
+              ),
+            );
+            await reveal(find.text('تطبيق إعداد البورتال'));
+            await tester.tap(find.text('تطبيق إعداد البورتال'));
+            await tester.pumpAndSettle();
+            expect(
+              fixture.engine.commands,
+              contains(
+                equals({'action': 'portal-configure', 'mode': 'legacy'}),
+              ),
+            );
+            await _capture(
+              tester,
+              'network-${host ? 'host' : 'secondary'}-${width.toInt()}',
+            );
+            await reveal(find.text('طريقة البوابة'));
             await tester.tap(find.byKey(const ValueKey('portal-legacy')));
             await tester.pumpAndSettle();
             await tester.tap(find.text('HTTPS بشهادة موثوقة').last);
             await tester.pumpAndSettle();
-            await tester.ensureVisible(find.text('اختيار المفتاح الخاص'));
+            await reveal(find.text('اختيار المفتاح الخاص'));
             expect(find.text('اسم النطاق الموجود في الشهادة'), findsOneWidget);
             expect(find.text('اختيار الشهادة'), findsOneWidget);
-            await _capture(tester, 'network-https-${width.toInt()}');
+            await _capture(
+              tester,
+              'network-https-${host ? 'host' : 'secondary'}-${width.toInt()}',
+            );
+            if (host) {
+              await tester.scrollUntilVisible(
+                find.text('شبكة الهوست الخاصة (اختياري)'),
+                -300,
+                scrollable: find.byType(Scrollable).first,
+              );
+              await reveal(find.text('شبكة الهوست الخاصة (اختياري)'));
+              await tester.tap(find.text('شبكة الهوست الخاصة (اختياري)'));
+              await tester.pumpAndSettle();
+              await reveal(find.text('تشغيل شبكة الهوست'));
+              expect(find.text('شبكة الربط اللاسلكي'), findsOneWidget);
+              expect(find.text('تشغيل شبكة الهوست'), findsOneWidget);
+            }
+            expect(tester.takeException(), isNull);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            fixture.disposeController();
           }
-          expect(tester.takeException(), isNull);
         },
       );
     }

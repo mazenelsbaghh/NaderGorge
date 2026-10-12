@@ -403,7 +403,7 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
     final ready = controller.hostReady;
     if (!controller.canConfigureHost || ready == null) {
       throw const CenterException(
-        'بيانات الربط متاحة لمدير السيرفر أثناء تشغيله.',
+        'سجّل دخول الموظف على الجهاز الرئيسي لعرض بيانات الربط أثناء تشغيل السيرفر.',
       );
     }
     final interfaces = await NetworkInterface.list(
@@ -516,7 +516,7 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
       const SizedBox(height: 12),
       if (!controller.canConfigureHost)
         const Text(
-          'سجّل دخول مدير هذا الجهاز لتشغيل السيرفر أو إدارة الأجهزة المرتبطة.',
+          'سجّل دخول الموظف على هذا الجهاز لتشغيل السيرفر أو إدارة الأجهزة المرتبطة.',
         ),
       Wrap(
         spacing: 12,

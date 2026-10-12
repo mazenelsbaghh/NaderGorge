@@ -423,9 +423,7 @@ class _CenterAppState extends State<CenterApp> {
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => ExamWorkspace(
-            controller: controller,
-          ),
+          builder: (_) => ExamWorkspace(controller: controller),
         ),
       );
     } finally {
@@ -482,11 +480,7 @@ class _CenterAppState extends State<CenterApp> {
                                 key: const Key('open-integrated-exams'),
                                 onPressed: () => _openExams(context),
                                 icon: const Icon(Icons.quiz_outlined),
-                                label: Text(
-                                  store.isRemote
-                                      ? 'الامتحانات والتهيئة'
-                                      : 'تهيئة شبكة الهوست',
-                                ),
+                                label: const Text('الامتحانات والتهيئة'),
                               ),
                             ],
                           ),
@@ -548,7 +542,7 @@ class _CenterAppState extends State<CenterApp> {
                     key: ValueKey(store),
                     store: store,
                     onOpenLan: () => _openLan(context),
-                    examWorkspaceAvailable: _exams != null && store.isRemote,
+                    examWorkspaceAvailable: _exams != null,
                     onSignedIn: (exams) {
                       if (exams) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {

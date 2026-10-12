@@ -214,6 +214,30 @@ void main() {
     await controller.refresh();
   }
 
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    test(
+      '${role.name} opens exams and synchronizes grades without management',
+      () async {
+        await store.saveStaff(name: role.name, password: password, role: role);
+        store.signOut();
+        await store.signIn(role.name, password);
+        expect(store.canManage, isFalse);
+        expect(controller.canSync, isTrue);
+        expect(await controller.openAdmin(), 'http://127.0.0.1:8766/');
+        engine.snapshot['results'] = [result()];
+        await controller.refresh();
+        expect(store.academics.single.score, 0);
+        expect(engine.acknowledgments.single['attemptId'], 'attempt-zero');
+        store.signOut();
+        expect(controller.canSync, isFalse);
+        await expectLater(
+          controller.openAdmin(),
+          throwsA(isA<CenterException>()),
+        );
+      },
+    );
+  }
+
   test(
     'room opens already bound to the official center roster without a second catalog',
     () async {
