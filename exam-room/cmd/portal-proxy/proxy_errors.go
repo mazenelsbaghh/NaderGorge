@@ -30,11 +30,11 @@ func proxyErrorCategory(err error) string {
 	switch {
 	case errors.Is(err, context.Canceled):
 		return "request_canceled"
-	case errors.Is(err, syscall.ECONNREFUSED):
+	case errors.Is(err, nativeConnectionRefused):
 		return "connection_refused"
-	case errors.Is(err, syscall.EMFILE), errors.Is(err, syscall.ENFILE):
+	case errors.Is(err, syscall.EMFILE), errors.Is(err, syscall.ENFILE), errors.Is(err, nativeSocketLimit):
 		return "descriptor_limit"
-	case errors.Is(err, syscall.ECONNRESET):
+	case errors.Is(err, nativeConnectionReset):
 		return "connection_reset"
 	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
 		return "connection_closed"

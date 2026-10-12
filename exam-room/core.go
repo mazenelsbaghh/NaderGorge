@@ -10,10 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -657,8 +657,11 @@ func (d *DB) backup() (string, error) {
 	}
 	// WAL lets a read-only connection snapshot committed data without taking
 	// the sole connection used by student saves and session checks.
-	query := url.Values{"mode": {"ro"}, "_pragma": {"busy_timeout=15000", "synchronous=FULL"}}
-	source, e := sql.Open("sqlite", (&url.URL{Scheme: "file", Path: sourcePath, RawQuery: query.Encode()}).String())
+	uri, e := readOnlyBackupURI(sourcePath, runtime.GOOS)
+	if e != nil {
+		return "", e
+	}
+	source, e := sql.Open("sqlite", uri)
 	if e != nil {
 		return "", e
 	}

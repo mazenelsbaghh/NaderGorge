@@ -76,6 +76,9 @@ func diagnosticErrorCategory(err error) string {
 	case errors.Is(err, syscall.EACCES), errors.Is(err, syscall.EPERM):
 		return "permission_denied"
 	}
+	if category := nativeDiagnosticCategory(err); category != "" {
+		return category
+	}
 	var sqlite interface{ Code() int }
 	if errors.As(err, &sqlite) {
 		switch sqlite.Code() & 255 {
