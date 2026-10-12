@@ -22,18 +22,24 @@ function Exam-InputFingerprints([string]$ExamRoot) {
     }
 }
 
-function Build-ExamRuntime([string]$ExamRoot,[string]$ReleaseDirectory,[bool]$SkipTests) {
+function Test-ExamNativeRuntime([string]$ExamRoot,[string]$NativeDirectory) {
+    New-Item -ItemType Directory -Force -Path $NativeDirectory | Out-Null
+    # Only our three generated files may be replaced; no application/user data.
+    foreach ($Name in @('massar-exam-room.exe','massar-exam-portal-proxy.exe','massar-exam-network.exe')) {
+        $Generated = Join-Path $NativeDirectory $Name
+        if (Test-Path -LiteralPath $Generated) { Remove-Item -LiteralPath $Generated -Force }
+    }
     Push-Location $ExamRoot
     try {
         # Native Windows behavior must be tested even when preverified Flutter tests are skipped.
         & go test -count=1 -timeout=5m ./... | Out-Host
         if ($LASTEXITCODE -ne 0) { throw 'Windows exam engine HTTP, data or network protocol tests failed.' }
         foreach ($Target in @(@('massar-exam-room.exe','.'),@('massar-exam-portal-proxy.exe','./cmd/portal-proxy'),@('massar-exam-network.exe','./cmd/center-network'))) {
-            & go build -trimpath -ldflags='-s -w' -o (Join-Path $ReleaseDirectory $Target[0]) $Target[1] | Out-Host
+            & go build -trimpath -ldflags='-s -w' -o (Join-Path $NativeDirectory $Target[0]) $Target[1] | Out-Host
             if ($LASTEXITCODE -ne 0) { throw "Exam native compilation failed: $($Target[0])" }
         }
         $PreviousRuntime = $env:MASSAR_TEST_EXAM_RUNTIME
-        $env:MASSAR_TEST_EXAM_RUNTIME = $ReleaseDirectory
+        $env:MASSAR_TEST_EXAM_RUNTIME = $NativeDirectory
         Push-Location (Join-Path $PSScriptRoot '..')
         try {
             & flutter test test/windows_exam_engine_runtime_test.dart --reporter expanded | Out-Host
@@ -42,6 +48,32 @@ function Build-ExamRuntime([string]$ExamRoot,[string]$ReleaseDirectory,[bool]$Sk
         finally {
             Pop-Location
             $env:MASSAR_TEST_EXAM_RUNTIME = $PreviousRuntime
+        }
+        $Hashes = [ordered]@{}
+        foreach ($Name in @('massar-exam-room.exe','massar-exam-portal-proxy.exe','massar-exam-network.exe')) {
+            $Hashes[$Name] = (Get-FileHash -LiteralPath (Join-Path $NativeDirectory $Name) -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        return [ordered]@{ directory=$NativeDirectory; executables=$Hashes; windowsGoTestsPassed=$true; windowsCredentialReconnectTestsPassed=$true }
+    }
+    finally { Pop-Location }
+}
+
+function Build-ExamRuntime([string]$ExamRoot,[string]$ReleaseDirectory,[System.Collections.IDictionary]$NativeVerification) {
+    if ($NativeVerification.windowsGoTestsPassed -ne $true -or $NativeVerification.windowsCredentialReconnectTestsPassed -ne $true) {
+        throw 'The native Windows runtime must pass before packaging.'
+    }
+    Push-Location $ExamRoot
+    try {
+        foreach ($Name in @('massar-exam-room.exe','massar-exam-portal-proxy.exe','massar-exam-network.exe')) {
+            $Native = Join-Path $NativeVerification.directory $Name
+            if ((Get-FileHash -LiteralPath $Native -Algorithm SHA256).Hash.ToLowerInvariant() -ne $NativeVerification.executables[$Name]) {
+                throw 'Tested native executable changed before packaging.'
+            }
+            $Packaged = Join-Path $ReleaseDirectory $Name
+            Copy-Item -LiteralPath $Native -Destination $Packaged -Force
+            if ((Get-FileHash -LiteralPath $Packaged -Algorithm SHA256).Hash.ToLowerInvariant() -ne $NativeVerification.executables[$Name]) {
+                throw 'Packaged native executable differs from the tested runtime.'
+            }
         }
         $HotspotDestination = Join-Path $ReleaseDirectory 'hotspot'
         if (Test-Path -LiteralPath $HotspotDestination) { Remove-Item -LiteralPath $HotspotDestination -Recurse -Force }
@@ -72,7 +104,7 @@ https://developer.microsoft.com/microsoft-edge/webview2/
         foreach ($Name in @('massar-exam-room.exe','massar-exam-portal-proxy.exe','massar-exam-network.exe','hotspot/Massar.Hotspot.exe','report-pdf/massar-report-pdf.exe')) {
             $Hashes[$Name] = (Get-FileHash -LiteralPath (Join-Path $ReleaseDirectory $Name) -Algorithm SHA256).Hash.ToLowerInvariant()
         }
-        return [ordered]@{ schemaVersion=1; executables=$Hashes; networkModes=@('legacy','https'); windowsGoTestsPassed=$true; windowsCredentialReconnectTestsPassed=$true; windowsCliSmokePassed=$true; syntheticPdfAndZipPassed=$true; physicalWindowsVerified=$false; includesRuntimeDatabase=$false; webView2='installed Windows runtime required' }
+        return [ordered]@{ schemaVersion=1; executables=$Hashes; networkModes=@('legacy','https'); windowsGoTestsPassed=$NativeVerification.windowsGoTestsPassed; windowsCredentialReconnectTestsPassed=$NativeVerification.windowsCredentialReconnectTestsPassed; windowsCliSmokePassed=$true; syntheticPdfAndZipPassed=$true; physicalWindowsVerified=$false; includesRuntimeDatabase=$false; webView2='installed Windows runtime required' }
     }
     finally { Pop-Location }
 }

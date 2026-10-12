@@ -35,6 +35,8 @@ class WindowsExamEngine implements ExamEngine, ExamDownloadSource {
   bool _running = false;
   bool _starting = false;
   bool _closed = false;
+  String? _credentialProtectionDiagnostic;
+  String? get credentialProtectionDiagnostic => _credentialProtectionDiagnostic;
   @override
   bool get running => _running;
   File get _connectionFile =>
@@ -44,10 +46,33 @@ class WindowsExamEngine implements ExamEngine, ExamDownloadSource {
     if (!Platform.isWindows) return;
     const script = r'''
 $ErrorActionPreference = 'Stop'
+$stage = 'decode_input'
+try {
 $payload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd()))
 $root = ($payload | ConvertFrom-Json).path
+$stage = 'resolve_identity'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().User
 $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+$sections = [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access
+function Assert-PrivateAcl($security, [bool]$directory) {
+  $rules = @($security.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+  if (-not $security.AreAccessRulesProtected -or $security.GetOwner([Security.Principal.SecurityIdentifier]).Value -ne $identity.Value -or $rules.Count -ne 2) {
+    throw [Security.SecurityException]::new('credential_acl_postcondition')
+  }
+  $seen = @{}
+  foreach ($rule in $rules) {
+    $sid = $rule.IdentityReference.Value
+    if ($sid -notin @($identity.Value, $system.Value) -or $rule.IsInherited -or $rule.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow -or ($rule.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -ne [Security.AccessControl.FileSystemRights]::FullControl) {
+      throw [Security.SecurityException]::new('credential_acl_postcondition')
+    }
+    if ($directory -and $rule.InheritanceFlags -ne ([Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit)) {
+      throw [Security.SecurityException]::new('credential_acl_inheritance')
+    }
+    $seen[$sid] = $true
+  }
+  if ($seen.Count -ne 2) { throw [Security.SecurityException]::new('credential_acl_principals') }
+}
+$stage = 'create_directory_acl'
 $acl = [Security.AccessControl.DirectorySecurity]::new()
 $acl.SetOwner($identity)
 $acl.SetAccessRuleProtection($true, $false)
@@ -55,18 +80,38 @@ foreach ($sid in @($identity, $system)) {
   $rule = [Security.AccessControl.FileSystemAccessRule]::new($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
   $acl.AddAccessRule($rule)
 }
-Set-Acl -LiteralPath $root -AclObject $acl
+$stage = 'apply_directory_acl'
+# Persist only the modified Owner and Access sections. Set-Acl reconstructs
+# all sections and can request unrelated audit privileges on Windows.
+[IO.DirectoryInfo]::new($root).SetAccessControl($acl)
+$stage = 'verify_directory_acl'
+Assert-PrivateAcl ([IO.DirectoryInfo]::new($root).GetAccessControl($sections)) $true
 foreach ($name in @('engine-connection.json', 'engine-connection.json.tmp')) {
   $file = Join-Path $root $name
   if (Test-Path -LiteralPath $file) {
+    $stage = 'create_file_acl'
     $fileAcl = [Security.AccessControl.FileSecurity]::new()
     $fileAcl.SetOwner($identity)
     $fileAcl.SetAccessRuleProtection($true, $false)
     foreach ($sid in @($identity, $system)) {
       $fileAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($sid, 'FullControl', 'Allow'))
     }
-    Set-Acl -LiteralPath $file -AclObject $fileAcl
+    $stage = 'apply_file_acl'
+    [IO.FileInfo]::new($file).SetAccessControl($fileAcl)
+    $stage = 'verify_file_acl'
+    Assert-PrivateAcl ([IO.FileInfo]::new($file).GetAccessControl($sections)) $false
   }
+}
+} catch {
+  # Never emit Exception.Message, TargetObject, stack or input: those can contain
+  # profile paths or credentials. Only bounded diagnostic identifiers leave us.
+  $cause = $_.Exception.GetBaseException()
+  $type = $cause.GetType().Name
+  $id = $_.FullyQualifiedErrorId
+  if ($type -notmatch '^[A-Za-z0-9_]{1,80}$') { $type = 'UnknownException' }
+  if ($id -notmatch '^[A-Za-z0-9_.,:]{1,160}$') { $id = 'unclassified' }
+  [Console]::Error.WriteLine((@{stage=$stage; type=$type; id=$id; hresult=$cause.HResult} | ConvertTo-Json -Compress))
+  exit 1
 }
 ''';
     final utf16 = <int>[];
@@ -85,15 +130,60 @@ foreach ($name in @('engine-connection.json', 'engine-connection.json.tmp')) {
       runInShell: false,
     );
     unawaited(process.stdout.drain<void>());
-    unawaited(process.stderr.drain<void>());
+    _credentialProtectionDiagnostic = null;
+    final diagnostic = _readCredentialDiagnostic(process.stderr);
     process.stdin.write(
       base64Encode(utf8.encode(jsonEncode({'path': directory.path}))),
     );
     await process.stdin.close();
-    if (await process.exitCode.timeout(const Duration(seconds: 15)) != 0) {
-      throw const CenterException(
-        'تعذر حماية بيانات اتصال الامتحان لهذا المستخدم.',
+    final exitCode = await process.exitCode.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        process.kill();
+        return -1;
+      },
+    );
+    final detail = await diagnostic.timeout(
+      const Duration(seconds: 3),
+      onTimeout: () => null,
+    );
+    if (exitCode != 0) {
+      _credentialProtectionDiagnostic =
+          detail ?? (exitCode == -1 ? 'timeout' : 'helper_failed');
+      throw CenterException(
+        'تعذر حماية بيانات اتصال الامتحان لهذا المستخدم. '
+        'رمز الفحص: $_credentialProtectionDiagnostic',
       );
+    }
+  }
+
+  static Future<String?> _readCredentialDiagnostic(
+    Stream<List<int>> stream,
+  ) async {
+    final bytes = <int>[];
+    await for (final chunk in stream) {
+      final remaining = 4096 - bytes.length;
+      if (remaining > 0) bytes.addAll(chunk.take(remaining));
+    }
+    try {
+      final value = jsonDecode(utf8.decode(bytes));
+      if (value is! Map) return null;
+      final stage = value['stage'];
+      final type = value['type'];
+      final id = value['id'];
+      final hresult = value['hresult'];
+      if (stage is! String ||
+          !RegExp(r'^[a-z_]{1,40}$').hasMatch(stage) ||
+          type is! String ||
+          !RegExp(r'^[A-Za-z0-9_]{1,80}$').hasMatch(type) ||
+          id is! String ||
+          !RegExp(r'^[A-Za-z0-9_.,:]{1,160}$').hasMatch(id) ||
+          hresult is! int) {
+        return null;
+      }
+      return '$stage/$type/$id/$hresult';
+    } on FormatException {
+      return null;
     }
   }
 

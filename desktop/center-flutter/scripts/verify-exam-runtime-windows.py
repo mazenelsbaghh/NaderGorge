@@ -55,19 +55,20 @@ def verify(directory):
             ],
         }
         source, pdf, archive = folder / 'report.json', folder / 'report.pdf', folder / 'reports.zip'
-        # ASCII JSON also exercises the renderer on Windows installations with a legacy locale.
-        source.write_text(json.dumps(report, ensure_ascii=True), encoding='ascii')
+        # Match Go's json.Marshal output: real UTF-8 Arabic, regardless of the Windows locale.
+        source.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
         helper = directory / 'report-pdf/massar-report-pdf.exe'
         run(helper, source, pdf, cwd=folder)
         content = pdf.read_bytes()
         if len(content) < 2000 or not content.startswith(b'%PDF-') or b'%%EOF' not in content[-64:]:
             raise RuntimeError('Packaged Arabic PDF export is incomplete.')
-        source.write_text(json.dumps([report, report], ensure_ascii=True), encoding='ascii')
+        source.write_text(json.dumps([report, report], ensure_ascii=False), encoding='utf-8')
         run(helper, '--zip', source, archive, cwd=folder)
         with zipfile.ZipFile(archive) as bundle:
             names = bundle.namelist()
-            if len(names) != 2 or len(set(names)) != 2 or bundle.testzip() is not None:
-                raise RuntimeError('Packaged PDF ZIP export lost duplicate student names.')
+            expected_names = ['طالب اختبار فقط - 1 من 2.pdf', 'طالب اختبار فقط - 1 من 2 (2).pdf']
+            if names != expected_names or bundle.testzip() is not None:
+                raise RuntimeError('Packaged PDF ZIP export changed Arabic names or lost duplicate reports.')
             if any(not bundle.read(name).startswith(b'%PDF-') for name in names):
                 raise RuntimeError('Packaged PDF ZIP contains invalid reports.')
     return {'windowsCliSmokePassed': True, 'syntheticPdfAndZipPassed': True,

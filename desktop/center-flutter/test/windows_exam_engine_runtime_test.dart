@@ -31,7 +31,7 @@ void main() {
       expect(engine.running, isFalse);
       await expectPrivateAcl(data.path);
     },
-    skip: skip,
+    skip: !Platform.isWindows,
     timeout: const Timeout(Duration(minutes: 1)),
   );
 
@@ -119,7 +119,11 @@ void main() {
       await connection.writeAsString(jsonEncode(credentials), flush: true);
       await staged.writeAsString(jsonEncode(credentials), flush: true);
 
-      expect(await engine.reconnect(), isTrue);
+      expect(
+        await engine.reconnect(),
+        isTrue,
+        reason: engine.credentialProtectionDiagnostic,
+      );
       expect(engine.running, isTrue);
       for (final path in [data.path, connection.path, staged.path]) {
         await expectPrivateAcl(path);

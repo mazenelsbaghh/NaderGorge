@@ -111,6 +111,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
     & flutter analyze
     if ($LASTEXITCODE -ne 0) { throw "Analysis failed." }
+    # Fail Windows credential protection before native or Flutter release builds.
+    & flutter test test/windows_exam_engine_runtime_test.dart --plain-name 'first startup protects an Arabic directory before launching a child' --reporter expanded | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Windows credential protection preflight failed.' }
     if (-not $SkipTests) {
         & flutter test
         if ($LASTEXITCODE -ne 0) { throw "Tests failed." }
@@ -125,6 +128,7 @@ try {
     }
     finally { Pop-Location }
     Build-ExamFrontend $ExamRoot
+    $NativeVerification = Test-ExamNativeRuntime $ExamRoot (Join-Path $AppRoot 'build/exam-native')
     $ExamFingerprints = @(Exam-InputFingerprints $ExamRoot)
     $PackagingFingerprints = Get-ChildItem -LiteralPath $PSScriptRoot -File | Where-Object { $_.Extension -in @(".ps1", ".py") } | Sort-Object FullName | ForEach-Object { $_.Name + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
     $SourceFingerprints = Get-ChildItem (Join-Path $AppRoot "lib") -Filter *.dart -Recurse |
@@ -203,7 +207,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
     }
     finally { Pop-Location }
-    $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory ([bool]$SkipTests)
+    $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory $NativeVerification
     Copy-VisualCppRuntime $ReleaseDirectory
     $Manifest = [ordered]@{
         role = $PackageMode
