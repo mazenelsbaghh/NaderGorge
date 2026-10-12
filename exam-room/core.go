@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -85,7 +86,6 @@ func validateExam(p M) (M, error) {
 		return nil, fail("الامتحان يحتاج من سؤال واحد إلى ١٠٠ سؤال", 400)
 	}
 	qs := []M{}
-	points := map[int]bool{}
 	for _, x := range raw {
 		q, ok := x.(map[string]any)
 		if !ok {
@@ -104,7 +104,6 @@ func validateExam(p M) (M, error) {
 			return nil, e
 		}
 		clean := M{"id": id(), "kind": kind, "text": txt, "points": pt}
-		points[pt] = true
 		if kind == "essay" {
 			a, e := textField(q, "modelAnswer", 1, 10000)
 			if e != nil {
@@ -133,12 +132,9 @@ func validateExam(p M) (M, error) {
 		}
 		qs = append(qs, clean)
 	}
-	count, e := integerField(p, "questionCount", 1, len(qs))
+	selection, e := validateQuestionSelection(p, qs)
 	if e != nil {
 		return nil, e
-	}
-	if count < len(qs) && len(points) > 1 {
-		return nil, fail("للسحب العشوائي، اجعل درجة كل سؤال متساوية لضمان تساوي المجموع", 400)
 	}
 	mode := str(p["timerMode"])
 	if mode != "shared" && mode != "individual" {
@@ -171,7 +167,11 @@ func validateExam(p M) (M, error) {
 			return nil, e
 		}
 	}
-	return M{"title": title, "instructions": instructions, "minutes": mins, "timerMode": mode, "allowLate": late, "shuffle": shuffle, "questionCount": count, "shuffleOptions": shuffleOptions, "questions": qs}, nil
+	config := M{"title": title, "instructions": instructions, "minutes": mins, "timerMode": mode, "allowLate": late, "shuffle": shuffle, "shuffleOptions": shuffleOptions, "questions": qs}
+	for key, count := range selection {
+		config[key] = count
+	}
+	return config, nil
 }
 func normalizeDigits(s string) string {
 	return strings.Map(func(r rune) rune {
@@ -291,7 +291,7 @@ func openDB(path string) (*DB, error) {
 		}
 	}
 	schema := []string{`CREATE TABLE IF NOT EXISTS exams(id TEXT PRIMARY KEY,config TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'draft',created_at REAL NOT NULL,started_at REAL,ended_at REAL)`, `CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,exam_id TEXT NOT NULL REFERENCES exams(id),code TEXT NOT NULL,name TEXT,phone TEXT,token_hash TEXT UNIQUE,joined_at REAL,last_seen REAL,deadline REAL,question_ids TEXT NOT NULL DEFAULT '{}',answers TEXT NOT NULL DEFAULT '{}',revision INTEGER NOT NULL DEFAULT 0,submitted_at REAL,submit_reason TEXT,grades TEXT NOT NULL DEFAULT '{}',UNIQUE(exam_id,code))`, `CREATE INDEX IF NOT EXISTS attempts_by_exam ON attempts(exam_id)`, `CREATE INDEX IF NOT EXISTS attempts_by_deadline ON attempts(deadline) WHERE submitted_at IS NULL`, `CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,created_at REAL NOT NULL,action TEXT NOT NULL,subject_id TEXT NOT NULL)`, `CREATE TABLE IF NOT EXISTS essay_grade_jobs(id TEXT PRIMARY KEY,exam_id TEXT NOT NULL REFERENCES exams(id),state TEXT NOT NULL,model TEXT NOT NULL,total INTEGER NOT NULL,processed INTEGER NOT NULL DEFAULT 0,graded INTEGER NOT NULL DEFAULT 0,skipped INTEGER NOT NULL DEFAULT 0,needs_review INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL DEFAULT '',created_at REAL NOT NULL,updated_at REAL NOT NULL)`, `CREATE UNIQUE INDEX IF NOT EXISTS one_running_essay_job ON essay_grade_jobs ((1)) WHERE state='running'`, `CREATE INDEX IF NOT EXISTS essay_jobs_by_exam ON essay_grade_jobs(exam_id,created_at DESC)`}
-	schema = append(schema, presenceSchema, cancellationSchema, screenGuardSchema, whatsappSendSchema)
+	schema = append(schema, answerRecoverySchema, presenceSchema, cancellationSchema, screenGuardSchema, whatsappSendSchema, whatsappJobsSchema, networkMaintenanceSchema)
 	for _, q := range schema {
 		if _, e = s.Exec(q); e != nil {
 			s.Close()
@@ -382,6 +382,10 @@ func openDB(path string) (*DB, error) {
 		s.Close()
 		return nil, err
 	}
+	if err = initCenterSchema(s); err != nil {
+		s.Close()
+		return nil, err
+	}
 	_ = os.Chmod(path, 0600)
 	return &DB{s, path}, nil
 }
@@ -397,8 +401,9 @@ func (d *DB) tx(fn func(*sql.Tx) error) error {
 	if e != nil {
 		return e
 	}
+	// The HTTP recovery boundary must not leave our only connection in a transaction.
+	defer t.Rollback()
 	if e = fn(t); e != nil {
-		_ = t.Rollback()
 		return e
 	}
 	return t.Commit()
@@ -500,7 +505,7 @@ func adminAttempt(x Exam, a Attempt) M {
 	if a.Submitted.Valid {
 		p = pending
 	}
-	return M{"id": a.ID, "code": a.Code, "name": nullableString(a.Name), "phone": nullableString(a.Phone), "joined_at": nullableFloat(a.Joined), "last_seen": nullableFloat(a.LastSeen), "deadline": nullableFloat(a.Deadline), "submitted_at": nullableFloat(a.Submitted), "submit_reason": nullableString(a.SubmitReason), "revision": a.Revision, "answers": decode(a.Answers), "grades": grades, "questionIds": array(a.QuestionIDs), "score": score, "maximum": max, "pending": p, "cancelled_at": nullableFloat(a.Cancelled), "cancelReason": a.CancelReason}
+	return M{"id": a.ID, "code": a.Code, "name": nullableString(a.Name), "phone": nullableString(a.Phone), "joined_at": nullableFloat(a.Joined), "last_seen": nullableFloat(a.LastSeen), "deadline": nullableFloat(a.Deadline), "submitted_at": nullableFloat(a.Submitted), "submit_reason": nullableString(a.SubmitReason), "recoveryVersion": recoveryVersion(a), "revision": a.Revision, "answers": decode(a.Answers), "grades": grades, "questionIds": array(a.QuestionIDs), "score": score, "maximum": max, "pending": p, "cancelled_at": nullableFloat(a.Cancelled), "cancelReason": a.CancelReason}
 }
 func finalize(q Q, a Attempt, x Exam, reason string) error {
 	if a.Submitted.Valid || a.Cancelled.Valid {
@@ -646,17 +651,45 @@ func examMap(x Exam) M {
 	return M{"id": x.ID, "config": x.Config, "state": x.State, "created_at": x.Created, "started_at": nullableFloat(x.Started), "ended_at": nullableFloat(x.Ended), "templateId": nullableString(x.TemplateID), "lessonId": nullableString(x.LessonID)}
 }
 func (d *DB) backup() (string, error) {
+	sourcePath, e := filepath.Abs(d.path)
+	if e != nil {
+		return "", e
+	}
+	// WAL lets a read-only connection snapshot committed data without taking
+	// the sole connection used by student saves and session checks.
+	query := url.Values{"mode": {"ro"}, "_pragma": {"busy_timeout=15000", "synchronous=FULL"}}
+	source, e := sql.Open("sqlite", (&url.URL{Scheme: "file", Path: sourcePath, RawQuery: query.Encode()}).String())
+	if e != nil {
+		return "", e
+	}
+	defer source.Close()
 	dir := filepath.Join(filepath.Dir(d.path), "backups")
 	if e := os.MkdirAll(dir, 0700); e != nil {
 		return "", e
 	}
 	name := fmt.Sprintf("exam-room-%d.sqlite3", time.Now().UnixNano())
 	target := filepath.Join(dir, name)
-	safe := strings.ReplaceAll(target, "'", "''")
-	_, e := d.sql.Exec(`VACUUM INTO '` + safe + `'`)
+	stagingFile, e := os.CreateTemp(dir, "exam-room-*.partial")
 	if e != nil {
 		return "", e
 	}
-	_ = os.Chmod(target, 0600)
+	staged := stagingFile.Name()
+	defer os.Remove(staged)
+	if e = stagingFile.Close(); e != nil {
+		return "", e
+	}
+	safe := strings.ReplaceAll(staged, "'", "''")
+	_, e = source.Exec(`VACUUM INTO '` + safe + `'`)
+	if e != nil {
+		return "", e
+	}
+	if e = os.Chmod(staged, 0600); e != nil {
+		return "", e
+	}
+	// Publish without replacing an existing snapshot after a clock collision.
+	// Both paths share a directory/filesystem; unsupported links fail safely.
+	if e = os.Link(staged, target); e != nil {
+		return "", e
+	}
 	return target, nil
 }

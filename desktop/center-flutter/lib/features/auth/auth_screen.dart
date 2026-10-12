@@ -7,9 +7,17 @@ import '../../shared/theme.dart';
 import '../../shared/appearance.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, required this.store, this.onOpenLan});
+  const AuthScreen({
+    super.key,
+    required this.store,
+    this.onOpenLan,
+    this.onSignedIn,
+    this.examWorkspaceAvailable = false,
+  });
   final CenterStore store;
   final VoidCallback? onOpenLan;
+  final ValueChanged<bool>? onSignedIn;
+  final bool examWorkspaceAvailable;
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -23,6 +31,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _showPassword = false;
   String? _error;
   bool _submitted = false;
+  bool _examsMode = false;
   final _confirmFocus = FocusNode();
 
   @override
@@ -48,6 +57,7 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         await widget.store.setupAdmin(_name.text.trim(), _password.text);
       }
+      widget.onSignedIn?.call(_examsMode);
     } catch (failure, stackTrace) {
       reportProblem(failure, stackTrace, operation: 'ui.auth_screen');
       if (mounted) {
@@ -110,7 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     key: const Key('auth-lan-settings'),
                     onPressed: _busy ? null : widget.onOpenLan,
                     icon: const Icon(Icons.router_outlined),
-                    label: const Text('ربط الأجهزة على نفس الراوتر'),
+                    label: const Text('ربط الجهازين على الشبكة المحلية'),
                   ),
                 Text(
                   firstRun ? 'نبدأ بإعداد السنتر' : 'أهلًا بعودتك',
@@ -140,6 +150,32 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
+                if (widget.examWorkspaceAvailable && !firstRun) ...[
+                  SegmentedButton<bool>(
+                    key: const Key('auth-workspace-choice'),
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('السنتر'),
+                        icon: Icon(Icons.how_to_reg),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('الامتحانات'),
+                        icon: Icon(Icons.quiz_outlined),
+                      ),
+                    ],
+                    selected: {_examsMode},
+                    onSelectionChanged: _busy
+                        ? null
+                        : (value) => setState(() => _examsMode = value.first),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'اختيار شاشة البداية فقط؛ التحضير والامتحان يظلان متاحين أثناء العمل.',
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 TextFormField(
                   key: const Key('auth-name'),
                   controller: _name,

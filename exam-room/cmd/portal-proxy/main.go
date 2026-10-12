@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -33,15 +34,31 @@ func localHost(host string) bool {
 	return false
 }
 
-func handler() http.Handler {
+func studentUpstream() *url.URL {
 	target, _ := url.Parse("http://127.0.0.1:8765")
-	proxy := &httputil.ReverseProxy{
+	return target
+}
+
+func studentProxy(target *url.URL) *httputil.ReverseProxy {
+	return &httputil.ReverseProxy{
 		Rewrite: func(request *httputil.ProxyRequest) {
 			request.SetURL(target)
 			request.Out.Host = target.Host
 			request.Out.Header.Del("X-Forwarded-For")
 			request.Out.Header.Del("X-Forwarded-Host")
 			request.Out.Header.Del("X-Forwarded-Proto")
+			request.Out.Header.Del("Forwarded")
+			request.Out.Header.Del("X-Massar-Client-IP")
+			if address, _, err := net.SplitHostPort(request.In.RemoteAddr); err == nil && net.ParseIP(address) != nil {
+				request.Out.Header.Set("X-Massar-Client-IP", address)
+			}
+			request.Out.Header.Del("X-Admin-Token")
+			request.Out.Header.Del("Cookie")
+			for _, cookie := range request.In.Cookies() {
+				if cookie.Name == "massar_student" {
+					request.Out.AddCookie(cookie)
+				}
+			}
 			if request.In.Header.Get("Origin") != "" {
 				request.Out.Header.Set("Origin", target.String())
 			}
@@ -54,8 +71,17 @@ func handler() http.Handler {
 			IdleConnTimeout:       90 * time.Second,
 			ResponseHeaderTimeout: 15 * time.Second,
 		},
+		ErrorHandler: studentProxyError,
 	}
+}
+
+func handler() http.Handler {
+	proxy := studentProxy(studentUpstream())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/capport" {
+			http.Error(w, "CAPPORT requires its configured HTTPS endpoint", http.StatusNotFound)
+			return
+		}
 		host := r.Host
 		if strings.HasSuffix(host, ":80") {
 			host = strings.TrimSuffix(host, ":80")
@@ -81,10 +107,57 @@ func handler() http.Handler {
 	})
 }
 
+func portalServer(address string, handler http.Handler) *http.Server {
+	// Interrupted phone connections must not retain sockets or upstream work for
+	// the entire exam. These deadlines apply per request, not to the exam session.
+	return &http.Server{Addr: address, Handler: handler, ReadHeaderTimeout: 12 * time.Second,
+		ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 30 * time.Second}
+}
+
 func main() {
 	listen := flag.String("listen", ":80", "local HTTP listener")
+	diagnosticPath := flag.String("diagnostic-log", "/var/db/massar-exam-room/portal-events.jsonl", "bounded portal diagnostics")
+	var capport capportConfig
+	flag.StringVar(&capport.listen, "https-listen", ":443", "local HTTPS listener")
+	flag.StringVar(&capport.hostname, "capport-hostname", "", "DNS hostname for the trusted HTTPS CAPPORT endpoint")
+	flag.StringVar(&capport.certFile, "capport-cert", "", "PEM certificate chain for CAPPORT")
+	flag.StringVar(&capport.keyFile, "capport-key", "", "private key file for CAPPORT")
+	checkCapport := flag.Bool("check-capport", false, "validate CAPPORT certificate configuration and exit without opening listeners")
+	checkPortal := flag.Bool("check-portal", false, "verify trusted HTTPS discovery and exam service at 10.77.0.1, then exit")
 	flag.Parse()
-	server := &http.Server{Addr: *listen, Handler: handler(), ReadHeaderTimeout: 12 * time.Second}
+	if *checkCapport && *checkPortal {
+		log.Fatal("Choose either --check-capport or --check-portal")
+	}
+	if *checkPortal {
+		if err := writePortalReadiness(capport.hostname, os.Stdout); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *checkCapport {
+		if err := writeCapportMetadata(capport, os.Stdout); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	diagnosticFile, err := openDiagnostics(*diagnosticPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sink := queueDiagnostics(diagnosticFile)
+	server := portalServer(*listen, diagnosticHandler(handler(), sink))
+	if capport.configured() {
+		httpsServer, err := capportServer(capport, sink)
+		if err != nil {
+			log.Fatal(err)
+		}
+		listener, err := net.Listen("tcp", httpsServer.Addr)
+		if err != nil {
+			log.Fatalf("CAPPORT HTTPS listener: %v", err)
+		}
+		go func() { log.Fatal(httpsServer.ServeTLS(listener, "", "")) }()
+		log.Printf("CAPPORT endpoint: https://%s/capport", capport.hostname)
+	}
 	log.Printf("Massar student portal: http://%s -> http://127.0.0.1:8765", *listen)
 	log.Fatal(server.ListenAndServe())
 }

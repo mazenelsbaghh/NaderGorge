@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func reportCloudFixture(t *testing.T) (*whatsappCloud, M) {
@@ -51,10 +54,13 @@ func reportCloudFixture(t *testing.T) (*whatsappCloud, M) {
 		t.Fatal(err)
 	}
 	aid := str(dashboard["attempts"].([]M)[0]["id"])
-	renderer := filepath.Join(t.TempDir(), "renderer")
-	if err = os.WriteFile(renderer, []byte("#!/usr/bin/env python3\nimport sys,json,pathlib\nr=json.loads(pathlib.Path(sys.argv[1]).read_text())\npathlib.Path(sys.argv[2]).write_bytes(b'%PDF-1.7\\n'+r['attempt']['name'].encode())\n"), 0700); err != nil {
+	// Execute the native test binary as the external renderer boundary on every OS.
+	// The real packaged PDF worker is exercised separately by the Windows build.
+	renderer, err := os.Executable()
+	if err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("MASSAR_TEST_PDF_RENDERER", "1")
 	a := &app{db: d, pdfHelper: renderer}
 	cloud := newWhatsAppCloud(a)
 	a.whatsapp = cloud
@@ -189,7 +195,7 @@ func TestWhatsAppCredentialsStayOutsidePublicResponsesAndBackup(t *testing.T) {
 		t.Fatal("token in settings response")
 	}
 	file, err := os.Stat(cloud.path)
-	if err != nil || file.Mode().Perm() != 0600 {
+	if err != nil || (runtime.GOOS != "windows" && file.Mode().Perm() != 0600) {
 		t.Fatal("private configuration permissions", err)
 	}
 	var leaked int
@@ -281,5 +287,209 @@ func TestWhatsAppRestartPreservesAmbiguousSendProtection(t *testing.T) {
 	reply, err := cloud.sendReport(context.Background(), body)
 	if err != nil || reply["record"].(M)["state"] != "unknown" || reply["replayed"] != true {
 		t.Fatal("lost restart send protection", err)
+	}
+}
+
+func TestWhatsAppStaleTemplatesRefreshAutomaticallyOnce(t *testing.T) {
+	cloud, body := reportCloudFixture(t)
+	cache, _ := cloud.templates()
+	cache["syncedAt"] = now() - 700
+	if _, err := cloud.app.db.sql.Exec(`UPDATE app_settings SET value=? WHERE key='whatsapp_cloud_templates'`, encode(cache)); err != nil {
+		t.Fatal(err)
+	}
+	var refreshes atomic.Int32
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "phone_numbers"):
+			json.NewEncoder(w).Encode(M{"data": []M{{"id": "123456"}}})
+		case strings.Contains(r.URL.Path, "message_templates"):
+			refreshes.Add(1)
+			json.NewEncoder(w).Encode(M{"data": cache["templates"]})
+		default:
+			t.Error("unexpected Meta request", r.URL.Path)
+			w.WriteHeader(500)
+		}
+	}))
+	defer provider.Close()
+	cloud.baseURL = provider.URL
+	cloud.client = provider.Client()
+	for range 2 {
+		result, err := cloud.currentTemplates(context.Background())
+		if err != nil || result["syncError"] != nil || now()-num(result["syncedAt"]) > 1 {
+			t.Fatal("automatic refresh failed", result, err)
+		}
+	}
+	if refreshes.Load() != 1 {
+		t.Fatal("fresh cache fetched repeatedly", refreshes.Load())
+	}
+	if _, err := cloud.prepare(body); err != nil {
+		t.Fatal("fresh template unusable", err)
+	}
+}
+
+func TestWhatsAppFiveReportsUploadConcurrentlyWithoutDuplicateClaims(t *testing.T) {
+	cloud, body := reportCloudFixture(t)
+	arrived := make(chan struct{}, 5)
+	release := make(chan struct{})
+	var sends atomic.Int32
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/media") {
+			arrived <- struct{}{}
+			<-release
+			json.NewEncoder(w).Encode(M{"id": "media-1"})
+			return
+		}
+		sends.Add(1)
+		json.NewEncoder(w).Encode(M{"messages": []M{{"id": "message-1"}}})
+	}))
+	defer provider.Close()
+	cloud.baseURL = provider.URL
+	cloud.client = provider.Client()
+	outcomes := make(chan error, 5)
+	for i := range 5 {
+		candidate := decode(encode(body))
+		if i > 0 {
+			source, err := attempt(cloud.app.db.sql, str(body["attemptId"]))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cloneID := fmt.Sprint("parallel-student-", i)
+			cloneReportAttempt(t, cloud, source.ID, cloneID, source.ExamID)
+			candidate["attemptId"] = cloneID
+		}
+		candidate["mappings"] = []any{M{"source": "name"}, M{"source": "literal", "text": fmt.Sprint(i)}}
+		prepared, err := cloud.prepare(candidate)
+		if err != nil {
+			t.Fatal(err)
+		}
+		candidate["fingerprint"] = prepared.fingerprint
+		go func() { _, err := cloud.sendReport(context.Background(), candidate); outcomes <- err }()
+	}
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+	for range 5 {
+		select {
+		case <-arrived:
+		case <-timer.C:
+			close(release)
+			for range 5 {
+				<-outcomes
+			}
+			t.Fatal("five uploads did not overlap")
+		}
+	}
+	// Replaying an accepted report must not start another upload.
+	duplicate := decode(encode(body))
+	duplicate["mappings"] = []any{M{"source": "name"}, M{"source": "literal", "text": "0"}}
+	prepared, err := cloud.prepare(duplicate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	duplicate["fingerprint"] = prepared.fingerprint
+	close(release)
+	for range 5 {
+		if err := <-outcomes; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = cloud.sendReport(context.Background(), duplicate); err != nil {
+		t.Fatal(err)
+	}
+	if sends.Load() != 5 {
+		t.Fatal("duplicate sends", sends.Load())
+	}
+}
+
+func TestWhatsAppOfflineRefreshRetainsCacheButBlocksSending(t *testing.T) {
+	cloud, body := reportCloudFixture(t)
+	cache, _ := cloud.templates()
+	cache["syncedAt"] = now() - 700
+	if _, err := cloud.app.db.sql.Exec(`UPDATE app_settings SET value=? WHERE key='whatsapp_cloud_templates'`, encode(cache)); err != nil {
+		t.Fatal(err)
+	}
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(503) }))
+	defer provider.Close()
+	cloud.baseURL = provider.URL
+	cloud.client = provider.Client()
+	cached, err := cloud.currentTemplates(context.Background())
+	if err != nil || cached["syncError"] == nil || len(cached["templates"].([]any)) != 1 {
+		t.Fatal("offline cache lost", cached, err)
+	}
+	if _, err = cloud.sendReport(context.Background(), body); err == nil {
+		t.Fatal("stale offline send allowed")
+	}
+	history, err := cloud.history()
+	if err != nil || len(history["items"].([]M)) != 0 {
+		t.Fatal("offline send created a claim", history, err)
+	}
+}
+
+func TestWhatsAppConcurrentDuplicateReturnsInFlightClaim(t *testing.T) {
+	cloud, body := reportCloudFixture(t)
+	arrived := make(chan struct{}, 1)
+	release := make(chan struct{})
+	var sends atomic.Int32
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/media") {
+			arrived <- struct{}{}
+			<-release
+			json.NewEncoder(w).Encode(M{"id": "media-1"})
+			return
+		}
+		sends.Add(1)
+		json.NewEncoder(w).Encode(M{"messages": []M{{"id": "message-1"}}})
+	}))
+	defer provider.Close()
+	cloud.baseURL = provider.URL
+	cloud.client = provider.Client()
+	first := make(chan error, 1)
+	go func() { _, err := cloud.sendReport(context.Background(), body); first <- err }()
+	select {
+	case <-arrived:
+	case <-time.After(10 * time.Second):
+		close(release)
+		<-first
+		t.Fatal("upload never started")
+	}
+	reply, err := cloud.sendReport(context.Background(), body)
+	close(release)
+	firstErr := <-first
+	if err != nil || firstErr != nil || reply["replayed"] != true || reply["record"].(M)["state"] != "preparing" {
+		t.Fatal("concurrent duplicate not blocked", reply, err, firstErr)
+	}
+	if sends.Load() != 1 {
+		t.Fatal("duplicate provider messages", sends.Load())
+	}
+}
+
+func TestAcceptedReportIsNotResentWhenNameOrTemplateParametersChange(t *testing.T) {
+	c, body := reportCloudFixture(t)
+	var sends atomic.Int32
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/media") {
+			json.NewEncoder(w).Encode(M{"id": "media"})
+			return
+		}
+		sends.Add(1)
+		json.NewEncoder(w).Encode(M{"messages": []M{{"id": "message"}}})
+	}))
+	defer provider.Close()
+	c.baseURL = provider.URL
+	c.client = provider.Client()
+	if _, err := c.sendReport(context.Background(), body); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.app.db.sql.Exec(`UPDATE attempts SET name='اسم مصحح' WHERE id=?`, body["attemptId"]); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := c.prepare(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body["fingerprint"] = prepared.fingerprint
+	body["retry"] = true
+	reply, err := c.sendReport(context.Background(), body)
+	if err != nil || reply["replayed"] != true || sends.Load() != 1 {
+		t.Fatal("accepted student resent", reply, err, sends.Load())
 	}
 }

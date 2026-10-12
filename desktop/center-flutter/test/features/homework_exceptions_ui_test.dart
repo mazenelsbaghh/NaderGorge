@@ -71,6 +71,9 @@ void main() {
           }
         }
       });
+      final attendanceReceipts = store.payments
+          .map((payment) => payment.toJson())
+          .toList();
       addTearDown(() async {
         await tester.binding.setSurfaceSize(null);
         await store.close();
@@ -149,7 +152,10 @@ void main() {
       expect(find.byType(AcademicQuickEntry), findsNothing);
       expect(tester.widget<TextField>(search).controller!.text, isEmpty);
       expect(tester.widget<TextField>(search).focusNode!.hasFocus, isTrue);
-      expect(store.payments, isEmpty);
+      expect(
+        store.payments.map((payment) => payment.toJson()).toList(),
+        attendanceReceipts,
+      );
       expect(tester.takeException(), isNull);
     },
   );

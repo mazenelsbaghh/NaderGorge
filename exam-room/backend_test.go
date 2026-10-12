@@ -448,7 +448,7 @@ func TestCanceledWaitingRoomDoesNotConsumeExamAttempt(t *testing.T) {
 	}
 }
 
-func TestExpiredStudentCookieIsClearedWithoutChangingAttempts(t *testing.T) {
+func TestExpiredSessionRejectsAccessWithoutClearingNewerLoginCookie(t *testing.T) {
 	d, err := openDB(filepath.Join(t.TempDir(), "exam.sqlite3"))
 	if err != nil {
 		t.Fatal(err)
@@ -462,19 +462,35 @@ func TestExpiredStudentCookieIsClearedWithoutChangingAttempts(t *testing.T) {
 	if response.Code != 401 {
 		t.Fatalf("status %d", response.Code)
 	}
-	cleared := false
-	for _, cookie := range response.Result().Cookies() {
-		if cookie.Name == "massar_student" && cookie.MaxAge < 0 && cookie.Path == "/" {
-			cleared = true
-		}
-	}
-	if !cleared {
-		t.Fatal("expired cookie not cleared")
+	if len(response.Result().Cookies()) != 0 {
+		t.Fatal("an old unauthorized response could overwrite a newer login cookie")
 	}
 	req = httptest.NewRequest("GET", "http://127.0.0.1:8765/api/session", nil)
 	response = httptest.NewRecorder()
 	a.handler(false).ServeHTTP(response, req)
 	if response.Code != 200 || !strings.Contains(response.Body.String(), `"session":null`) {
 		t.Fatalf("anonymous retry: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestAdminDownloadHeaderAuthDoesNotAllowUnauthenticatedRequests(t *testing.T) {
+	db, err := openDB(filepath.Join(t.TempDir(), "exam.sqlite3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.sql.Close()
+	a := &app{db: db, adminToken: "download-secret", studentPort: 8765, adminPort: 8766}
+	for _, header := range []string{"", "wrong", "download-secret"} {
+		request := httptest.NewRequest("GET", "http://127.0.0.1:8766/api/exams", nil)
+		request.Header.Set("X-Admin-Token", header)
+		response := httptest.NewRecorder()
+		a.handler(true).ServeHTTP(response, request)
+		expected := 401
+		if header == "download-secret" {
+			expected = 200
+		}
+		if response.Code != expected {
+			t.Fatalf("header %q response %d", header, response.Code)
+		}
 	}
 }

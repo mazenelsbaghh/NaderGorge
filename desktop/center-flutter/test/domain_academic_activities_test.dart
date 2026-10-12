@@ -186,6 +186,9 @@ void main() {
           ),
         );
       }
+      final attendanceReceipts = store.payments
+          .map((payment) => payment.toJson())
+          .toList();
       await store.saveAcademic(result(activity: exam, score: 9));
       await store.recordHomeworkExceptions(
         sessionId: session.id,
@@ -247,7 +250,10 @@ void main() {
         9,
       );
       expect(store.academics.any((r) => r.studentId == absent.id), isFalse);
-      expect(store.payments, isEmpty);
+      expect(
+        store.payments.map((payment) => payment.toJson()).toList(),
+        attendanceReceipts,
+      );
       await reopen();
       expect(
         store.academics.where((r) => r.activityId == homework.id),

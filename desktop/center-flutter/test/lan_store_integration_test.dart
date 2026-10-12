@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/academic_import_command.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
+import 'package:massar_center/domain/center_exam_integration.dart';
 import 'package:massar_center/lan/center_store_host_bridge.dart';
 import 'package:massar_center/lan/lan_host_process.dart';
 import 'package:massar_center/lan/lan_transport.dart';
@@ -310,6 +311,81 @@ void main() {
     await h.start();
   });
   tearDown(() async => h.close());
+
+  test(
+    'integrated exam result from secondary survives lost reply without a local database',
+    () async {
+      final month = await h.host.saveStudyMonth(
+        StudyMonth(
+          name: 'Synthetic integrated month',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      final session = await h.host.startPreparedLesson(
+        groupId: h.group.id,
+        preparedLessonId: month.lessons.single.id,
+      );
+      final exam = await h.host.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: session.preparedLessonId,
+          name: 'Synthetic integrated exam',
+          kind: AcademicActivityKind.exam,
+          createdAt: DateTime.now(),
+        ),
+      );
+      await h.host.recordAttendance(
+        EntryRequest(
+          studentId: h.student.id,
+          sessionId: session.id,
+          mode: EntryMode.single,
+        ),
+      );
+      await h.remote.refreshRemote();
+      final examResult = IntegratedExamResult(
+        sourceId: 'synthetic-engine',
+        examId: 'synthetic-exam',
+        attemptId: 'synthetic-attempt',
+        studentId: h.student.id,
+        sessionId: session.id,
+        activityId: exam.id,
+        version: 1,
+        score: 0,
+        maxScore: 10,
+      );
+      final actor = h.remote.currentUser!.id;
+      h.loseNextCommandReply = true;
+      await expectLater(
+        h.remote.recordIntegratedExamResult(examResult),
+        throwsA(
+          isA<LanConnectionException>().having(
+            (error) => error.outcomeUnknown,
+            'outcomeUnknown',
+            isTrue,
+          ),
+        ),
+      );
+      expect(h.host.academics.single.score, 0);
+      expect(
+        h.host.academics.single.integration!.result.attemptId,
+        'synthetic-attempt',
+      );
+      expect(h.host.audit.last.staffId, actor);
+      expect(await h.pendingFile.exists(), isTrue);
+      await h.remote.refreshRemote();
+      final receipt = await h.remote.recordIntegratedExamResult(examResult);
+      expect(receipt.alreadyRecorded, isTrue);
+      expect(receipt.recordId, h.host.academics.single.id);
+      expect(h.host.academics, hasLength(1));
+      expect(h.remote.academics.single.score, 0);
+      expect(h.host.payments, isEmpty);
+      expect(await h.pendingFile.exists(), isFalse);
+      expect(
+        await File('${h.clientDirectory.path}/center.sqlite').exists(),
+        isFalse,
+      );
+      await h.expectMatchingPublicState();
+    },
+  );
 
   test(
     'secondary free attendance commits its zero receipt in one host command',

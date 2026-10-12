@@ -3,12 +3,9 @@ document.querySelector('#download-report').addEventListener('click', async event
   const button=event.currentTarget, status=document.querySelector('#download-status');
   button.disabled=true;status.textContent='جارٍ تجهيز ملف PDF…';
   try {
-    const response=await fetch(button.dataset.url);
-    if(!response.ok)throw new Error((await response.json()).error);
-    const url=URL.createObjectURL(await response.blob());
-    const link=document.createElement('a');link.href=url;link.download=button.dataset.filename;
-    document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-    status.textContent='تم تنزيل التقرير.';
+    const {downloadFile}=await import('./common.js');
+    const saved=await downloadFile(button.dataset.url,button.dataset.filename,'application/pdf');
+    status.textContent=saved?'تم تنزيل التقرير.':'أُلغي حفظ التقرير.';
   } catch(error) {status.textContent=error.message||'تعذر إنشاء PDF. حاول مرة أخرى.';}
   finally{button.disabled=false;}
 });

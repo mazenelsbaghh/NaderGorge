@@ -15,6 +15,9 @@ import 'features/attendance/attendance_workspace.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/management/management_workspace.dart';
 import 'features/management/lan_settings_page.dart';
+import 'features/exams/exam_workspace.dart';
+import 'exams/exam_engine.dart';
+import 'exams/exam_room_controller.dart';
 import 'lan/lan_controller.dart';
 import 'shared/appearance.dart';
 import 'shared/notice_dialog.dart';
@@ -228,6 +231,8 @@ class _CenterAppState extends State<CenterApp> {
   CenterStore? _previousStore;
   LanConnectionStatus? _lastConnectionStatus;
   final _navigator = GlobalKey<NavigatorState>();
+  ExamRoomController? _exams;
+  bool _examRouteOpen = false;
 
   @override
   void initState() {
@@ -241,6 +246,15 @@ class _CenterAppState extends State<CenterApp> {
       clientOnly: widget.clientOnly || widget.store.isClientWorkspace,
     )..addListener(_lanChanged);
     final dataDirectory = File(widget.store.databasePath).parent;
+    if (Platform.isWindows) {
+      _exams = ExamRoomController(
+        engine: WindowsExamEngine(
+          directory: Directory(p.join(dataDirectory.path, 'exam-room')),
+        ),
+        store: _lan.activeStore,
+      );
+      unawaited(_exams!.initialize());
+    }
     void requireSupportHost() {
       if (!identical(_lan.activeStore, widget.store)) {
         throw const CenterException(
@@ -339,6 +353,7 @@ class _CenterAppState extends State<CenterApp> {
   }
 
   void _lanChanged() {
+    _exams?.useStore(_lan.activeStore);
     if (!identical(_previousStore, _lan.activeStore)) {
       _previousStore = _lan.activeStore;
       _focusMode = false;
@@ -386,6 +401,7 @@ class _CenterAppState extends State<CenterApp> {
 
   @override
   void dispose() {
+    _exams?.dispose();
     _appearance.dispose();
     widget.store.supportUploadQueue = null;
     widget.store.supportStatusReader = null;
@@ -396,6 +412,25 @@ class _CenterAppState extends State<CenterApp> {
     _lan.removeListener(_lanChanged);
     unawaited(_lan.close().whenComplete(_lan.dispose));
     super.dispose();
+  }
+
+  Future<void> _openExams(BuildContext context) async {
+    final controller = _exams;
+    if (controller == null || _examRouteOpen || !controller.store.canAssess) {
+      return;
+    }
+    _examRouteOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ExamWorkspace(
+            controller: controller,
+          ),
+        ),
+      );
+    } finally {
+      _examRouteOpen = false;
+    }
   }
 
   @override
@@ -428,6 +463,36 @@ class _CenterAppState extends State<CenterApp> {
               }
               Widget withConnection(Widget child) => Column(
                 children: [
+                  if (_exams != null && store.canAssess)
+                    Material(
+                      color: MassarPalette.of(context).subtle,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Text('السنتر • التحضير والتحصيل'),
+                              ),
+                              TextButton.icon(
+                                key: const Key('open-integrated-exams'),
+                                onPressed: () => _openExams(context),
+                                icon: const Icon(Icons.quiz_outlined),
+                                label: Text(
+                                  store.isRemote
+                                      ? 'الامتحانات والتهيئة'
+                                      : 'تهيئة شبكة الهوست',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   if (store.isRemote)
                     Material(
                       color: store.remoteConnected
@@ -483,6 +548,16 @@ class _CenterAppState extends State<CenterApp> {
                     key: ValueKey(store),
                     store: store,
                     onOpenLan: () => _openLan(context),
+                    examWorkspaceAvailable: _exams != null && store.isRemote,
+                    onSignedIn: (exams) {
+                      if (exams) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && context.mounted) {
+                            unawaited(_openExams(context));
+                          }
+                        });
+                      }
+                    },
                   ),
                 );
               }

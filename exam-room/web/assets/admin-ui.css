@@ -213,3 +213,6 @@
 .roster-problem-row > td { background:#fffaf0; }
 .roster-problem-row > td:first-child { border-inline-start:3px solid #b17a20; }
 .roster-problem-note { color:#765014; font-weight:700; }
+
+.student-qr { margin:0; text-align:center; min-width:0; }
+.student-qr figcaption { margin-top:8px; font-family:monospace; font-size:14px; overflow-wrap:anywhere; color:var(--ink); }

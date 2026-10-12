@@ -32,11 +32,16 @@ type whatsappConfig struct {
 }
 
 type whatsappCloud struct {
-	app     *app
-	path    string
-	client  *http.Client
-	baseURL string
-	mu      sync.Mutex
+	app         *app
+	path        string
+	client      *http.Client
+	baseURL     string
+	mu          sync.Mutex
+	sendSlots   chan struct{}
+	jobsMu      sync.Mutex
+	jobsRunning bool
+	jobsWG      sync.WaitGroup
+	batchGap    time.Duration
 }
 
 var metaIDPattern = regexp.MustCompile(`^[0-9]{5,30}$`)
@@ -44,7 +49,7 @@ var metaVersionPattern = regexp.MustCompile(`^v[0-9]{2,3}\.0$`)
 var templatePositionPattern = regexp.MustCompile(`\{\{\s*([0-9]+)\s*\}\}`)
 
 func newWhatsAppCloud(a *app) *whatsappCloud {
-	return &whatsappCloud{app: a, path: filepath.Join(filepath.Dir(a.db.path), "whatsapp-cloud.json"), client: &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, baseURL: "https://graph.facebook.com"}
+	return &whatsappCloud{app: a, path: filepath.Join(filepath.Dir(a.db.path), "whatsapp-cloud.json"), client: &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, baseURL: "https://graph.facebook.com", sendSlots: make(chan struct{}, 5), batchGap: 5 * time.Second}
 }
 
 func (c *whatsappCloud) config() (whatsappConfig, error) {
@@ -202,9 +207,47 @@ func (c *whatsappCloud) templates() (M, error) {
 	return decode(raw), nil
 }
 
+// The caller holds mu, so simultaneous senders share one refresh.
+func (c *whatsappCloud) ensureTemplatesLocked(ctx context.Context) (M, error) {
+	cache, err := c.templates()
+	if err != nil {
+		return nil, err
+	}
+	config, err := c.config()
+	if err != nil {
+		return nil, err
+	}
+	if config.AccessToken == "" {
+		return cache, nil
+	}
+	if str(cache["businessAccountId"]) == config.BusinessAccountID && str(cache["phoneNumberId"]) == config.PhoneNumberID && now()-num(cache["syncedAt"]) < 300 {
+		return cache, nil
+	}
+	return c.syncTemplatesLocked(ctx)
+}
+
+func (c *whatsappCloud) currentTemplates(ctx context.Context) (M, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	cache, err := c.ensureTemplatesLocked(ctx)
+	if err == nil {
+		return cache, nil
+	}
+	cache, readErr := c.templates()
+	if readErr != nil {
+		return nil, readErr
+	}
+	cache["syncError"] = "تعذر تحديث القوالب؛ تأكد من الإنترنت وبيانات حساب واتساب. سيُعاد التحديث تلقائيًا."
+	return cache, nil
+}
+
 func (c *whatsappCloud) syncTemplates(ctx context.Context) (M, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.syncTemplatesLocked(ctx)
+}
+
+func (c *whatsappCloud) syncTemplatesLocked(ctx context.Context) (M, error) {
 	config, err := c.config()
 	if err != nil {
 		return nil, err

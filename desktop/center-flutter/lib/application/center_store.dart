@@ -17,6 +17,7 @@ import '../data/copy_on_write_list.dart';
 import '../domain/models.dart';
 import '../domain/discount_calculation.dart';
 import '../domain/student_lookup.dart';
+import '../domain/center_exam_integration.dart';
 import 'session_finance.dart';
 import 'historical_academic_import.dart';
 import 'academic_import_command.dart';
@@ -40,6 +41,7 @@ part 'center_store_data_repair.dart';
 part 'center_store_center_fees.dart';
 part 'center_store_study_months.dart';
 part 'center_store_academic_import.dart';
+part 'center_store_exam_integration.dart';
 
 class _EntryReversalOptions {
   const _EntryReversalOptions({
@@ -2908,13 +2910,32 @@ class CenterStore extends ChangeNotifier {
   Future<void> importAcademicGrades(AcademicImportCommand command) =>
       _importAcademicGrades(command);
 
+  Future<IntegratedExamReceipt> recordIntegratedExamResult(
+    IntegratedExamResult result,
+  ) => _recordIntegratedExamResult(result);
+
+  List<IntegratedExamStudent> integratedExamRoster({
+    required String groupId,
+    required String sessionId,
+    required String activityId,
+  }) => _integratedExamRoster(groupId, sessionId, activityId);
+
+  IntegratedExamProgress integratedExamProgress({
+    required String groupId,
+    required String sessionId,
+    required String activityId,
+  }) => _integratedExamProgress(groupId, sessionId, activityId);
+
   Future<void> saveAcademic(AcademicRecord record) => _change(
     'academic_save',
     'رصد امتحان وواجب',
     () async => _saveAcademicRecord(record),
   );
 
-  void _saveAcademicRecord(AcademicRecord record) {
+  void _saveAcademicRecord(
+    AcademicRecord record, {
+    IntegratedExamOwnership? integration,
+  }) {
     _require(canAssess);
     if (!record.maxScoreKnown) {
       throw const CenterException('حدد الدرجة النهائية للامتحان قبل الرصد.');
@@ -2984,6 +3005,7 @@ class CenterStore extends ChangeNotifier {
       throw const CenterException('سجل الرصد غير موجود.');
     }
     final id = existing.isEmpty ? _uuid.v4() : existing.first.id;
+    final previousIntegration = existing.firstOrNull?.integration;
     final saved = AcademicRecord(
       id: id,
       studentId: record.studentId,
@@ -2995,6 +3017,14 @@ class CenterStore extends ChangeNotifier {
       maxScoreKnown: true,
       examAbsent: record.examAbsent,
       notes: record.notes,
+      integration:
+          integration ??
+          (previousIntegration == null
+              ? null
+              : IntegratedExamOwnership(
+                  previousIntegration.result,
+                  manuallyEdited: true,
+                )),
       updatedAt: DateTime.now(),
     );
     if (cairo) {
@@ -5472,6 +5502,8 @@ void validateState(CenterState state) {
     );
   }
   final academicKeys = <(String, String, String?)>{};
+  final integratedAttempts = <(String, String)>{};
+  final integratedExams = <(String, String), (String, String, num)>{};
   late final historicalAcademicAttendees = state.attendances
       .where(
         (entry) =>
@@ -5481,6 +5513,28 @@ void validateState(CenterState state) {
       .map((entry) => (entry.studentId, entry.sessionId))
       .toSet();
   for (final academic in state.academics) {
+    final ownership = academic.integration;
+    if (ownership != null) {
+      final result = ownership.result;
+      final mapping = (result.sessionId, result.activityId, result.maxScore);
+      final examKey = (result.sourceId, result.examId);
+      check(
+        result.isValid &&
+            result.studentId == academic.studentId &&
+            result.sessionId == academic.sessionId &&
+            result.activityId == academic.activityId &&
+            result.maxScore == academic.maxScore &&
+            activities[academic.activityId]?.kind ==
+                AcademicActivityKind.exam &&
+            integratedAttempts.add((result.sourceId, result.attemptId)) &&
+            (integratedExams[examKey] == null ||
+                integratedExams[examKey] == mapping) &&
+            (ownership.manuallyEdited ||
+                academic.score == result.score && !academic.examAbsent),
+        'هوية نتيجة الامتحان المرتبط أو مصدرها غير صالح أو مكرر.',
+      );
+      integratedExams[examKey] = mapping;
+    }
     check(
       students.containsKey(academic.studentId) &&
           sessions.containsKey(academic.sessionId) &&

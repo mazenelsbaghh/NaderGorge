@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -82,7 +84,7 @@ func (c *whatsappCloud) preview(body M) (M, error) {
 			return nil, err
 		}
 		attempt := prepared.report["attempt"].(M)
-		prior, err := c.sendRecord(prepared.fingerprint)
+		prior, err := c.guardedSendRecord(prepared)
 		if err != nil {
 			return nil, err
 		}
@@ -104,19 +106,29 @@ func (c *whatsappCloud) sendRecord(fingerprint string) (M, error) {
 }
 
 func (c *whatsappCloud) sendReport(ctx context.Context, body M) (M, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	select {
+	case c.sendSlots <- struct{}{}:
+		defer func() { <-c.sendSlots }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	prepared, err := c.prepare(body)
-	if err != nil {
-		return nil, err
+	c.mu.Lock()
+	_, err := c.ensureTemplatesLocked(ctx)
+	var prepared *preparedWhatsAppReport
+	var previous M
+	if err == nil {
+		prepared, err = c.prepare(body)
 	}
-	if str(body["fingerprint"]) != prepared.fingerprint {
-		return nil, fail("بيانات التقرير أو القالب اتغيرت؛ افتح المعاينة من جديد", 409)
+	if err == nil && str(body["fingerprint"]) != prepared.fingerprint {
+		err = fail("بيانات التقرير أو القالب اتغيرت؛ افتح المعاينة من جديد", 409)
 	}
-	previous, err := c.claimSend(prepared, body)
+	if err == nil {
+		previous, err = c.claimSend(prepared, body)
+	}
+	c.mu.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -125,20 +137,52 @@ func (c *whatsappCloud) sendReport(ctx context.Context, body M) (M, error) {
 	}
 	mediaID, err := c.uploadPreparedReport(ctx, prepared)
 	if err != nil {
-		return c.finishSend(prepared.fingerprint, "failed", "", safeSendError(err))
+		reply, saveErr := c.finishSend(prepared.fingerprint, "failed", "", safeSendError(err))
+		if reply != nil {
+			reply["retryable"] = retryableWhatsAppError(err)
+		}
+		return reply, saveErr
 	}
-	fresh, err := c.prepare(body)
+	c.mu.Lock()
+	_, err = c.ensureTemplatesLocked(ctx)
+	var fresh *preparedWhatsAppReport
+	if err == nil {
+		fresh, err = c.prepare(body)
+	}
+	c.mu.Unlock()
 	if err == nil && fresh.fingerprint != prepared.fingerprint {
 		err = fail("تغيّر التقرير أثناء التجهيز؛ راجع المعاينة الجديدة", 409)
 	}
 	if err != nil {
-		return c.finishSend(prepared.fingerprint, "failed", "", safeSendError(err))
+		reply, saveErr := c.finishSend(prepared.fingerprint, "failed", "", safeSendError(err))
+		if reply != nil {
+			reply["retryable"] = retryableWhatsAppError(err)
+		}
+		return reply, saveErr
 	}
 	return c.deliverReport(ctx, prepared, mediaID)
 }
 
+func retryableWhatsAppError(err error) bool {
+	var expected roomError
+	return errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &expected) && expected.status == 502)
+}
+
+func (c *whatsappCloud) guardedSendRecord(report *preparedWhatsAppReport) (M, error) {
+	var fingerprint string
+	err := c.app.db.sql.QueryRow(`SELECT fingerprint FROM whatsapp_report_sends WHERE attempt_id=? AND recipient=? AND state IN ('accepted','unknown','sending','preparing') ORDER BY created_at LIMIT 1`,
+		str(report.report["attempt"].(M)["id"]), report.recipient).Scan(&fingerprint)
+	if errors.Is(err, sql.ErrNoRows) {
+		return c.sendRecord(report.fingerprint)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return c.sendRecord(fingerprint)
+}
+
 func (c *whatsappCloud) claimSend(report *preparedWhatsAppReport, body M) (M, error) {
-	prior, err := c.sendRecord(report.fingerprint)
+	prior, err := c.guardedSendRecord(report)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +200,18 @@ func (c *whatsappCloud) claimSend(report *preparedWhatsAppReport, body M) (M, er
 }
 
 func (c *whatsappCloud) uploadPreparedReport(ctx context.Context, report *preparedWhatsAppReport) (string, error) {
-	pdf, err := c.app.reportPDF(report.report)
+	cacheDir := filepath.Join(filepath.Dir(c.app.db.path), "report-cache")
+	cachePath := filepath.Join(cacheDir, report.fingerprint+".pdf")
+	pdf, err := os.ReadFile(cachePath)
+	if errors.Is(err, os.ErrNotExist) {
+		pdf, err = c.app.reportPDF(report.report)
+		if err == nil {
+			err = os.MkdirAll(cacheDir, 0700)
+			if err == nil {
+				err = os.WriteFile(cachePath, pdf, 0600)
+			}
+		}
+	}
 	if err != nil {
 		return "", err
 	}
@@ -167,6 +222,13 @@ func (c *whatsappCloud) uploadPreparedReport(ctx context.Context, report *prepar
 }
 
 func (c *whatsappCloud) deliverReport(ctx context.Context, report *preparedWhatsAppReport, mediaID string) (M, error) {
+	if err := ctx.Err(); err != nil {
+		reply, saveErr := c.finishSend(report.fingerprint, "failed", "", "الطلب لم يصل إلى مرحلة إرسال الرسالة")
+		if reply != nil {
+			reply["retryable"] = true
+		}
+		return reply, saveErr
+	}
 	// Persist the uncertain boundary before contacting Meta; a crash cannot authorize a duplicate.
 	if _, err := c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state='sending',updated_at=? WHERE fingerprint=?`, now(), report.fingerprint); err != nil {
 		return nil, err
@@ -220,6 +282,10 @@ func (c *whatsappCloud) history() (M, error) {
 
 func (c *whatsappCloud) recoverSends() error {
 	_, err := c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state=CASE WHEN state='sending' THEN 'unknown' ELSE 'failed' END,error='توقف البرنامج أثناء الإرسال؛ راجع الحالة قبل إعادة المحاولة',updated_at=? WHERE state IN ('preparing','sending')`, now())
+	if err != nil {
+		return err
+	}
+	_, err = c.app.db.sql.Exec(`UPDATE whatsapp_report_jobs SET state='interrupted',message='توقف البرنامج؛ راجع سجل الإرسال ثم أعد معاينة الباقي',updated_at=? WHERE state IN ('queued','running')`, now())
 	return err
 }
 
@@ -229,7 +295,7 @@ func (c *whatsappCloud) reportTemplate(config whatsappConfig, templateID string)
 		return nil, nil, err
 	}
 	if str(cache["businessAccountId"]) != config.BusinessAccountID || str(cache["phoneNumberId"]) != config.PhoneNumberID || now()-num(cache["syncedAt"]) > 600 {
-		return nil, nil, fail("زامن القوالب قبل الإرسال؛ آخر مزامنة يجب أن تكون خلال 10 دقائق", 409)
+		return nil, nil, fail("تعذر تحديث القوالب تلقائيًا؛ راجع الإنترنت وحساب واتساب ثم أعد المحاولة", 409)
 	}
 	var template M
 	rows, _ := cache["templates"].([]any)

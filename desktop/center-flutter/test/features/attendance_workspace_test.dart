@@ -1218,21 +1218,21 @@ void main() {
         tester.getRect(find.text('8 / 10')).bottom,
         lessThanOrEqualTo(800),
       );
+      final lastPayment = store.payments.last;
+      final paymentAction = find.byKey(
+        ValueKey('cancel-payment-${lastPayment.id}'),
+      );
       final paymentTable = find.ancestor(
-        of: find.text('المدفوع'),
+        of: paymentAction,
         matching: find.byType(DataTable),
       );
       expect(find.text('المدفوعات الأصلية'), findsOneWidget);
       expect(paymentTable, findsOneWidget);
-      final lastPayment = store.payments.last;
       final paymentAmount = find.descendant(
         of: paymentTable,
         matching: find.text(money(lastPayment.netAmount)),
       );
       expect(paymentAmount, findsWidgets);
-      final paymentAction = find.byKey(
-        ValueKey('cancel-payment-${lastPayment.id}'),
-      );
       await tester.ensureVisible(paymentAction);
       await tester.pumpAndSettle();
       expect(tester.getRect(paymentAction).bottom, lessThanOrEqualTo(800));

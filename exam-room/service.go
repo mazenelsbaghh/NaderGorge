@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"errors"
 	"math"
-	"math/big"
 	"strings"
 )
 
@@ -61,6 +59,9 @@ func (d *DB) duplicateExam(eid string) (M, error) {
 	return d.createExam(x.Config)
 }
 func (d *DB) changeState(eid, action string) (M, error) {
+	return d.changeStateForCenter(eid, action, false)
+}
+func (d *DB) changeStateForCenter(eid, action string, integrated bool) (M, error) {
 	e := d.tx(func(q *sql.Tx) error {
 		x, e := exam(q, eid)
 		if e != nil {
@@ -68,8 +69,23 @@ func (d *DB) changeState(eid, action string) (M, error) {
 		}
 		switch action {
 		case "publish", "start":
+			if integrated {
+				binding, err := readCenterBinding(q, eid)
+				if errors.Is(err, sql.ErrNoRows) {
+					return fail("اربط القاعة بامتحان وكشف السنتر قبل فتحها للطلاب", 409)
+				}
+				if err != nil {
+					return err
+				}
+				if err = validateCenterMaximum(x, binding.MaxScore); err != nil {
+					return err
+				}
+			}
 			expected, target := "draft", "waiting"
 			if action == "start" {
+				if e = allowRoomDuringNetworkMaintenance(q); e != nil {
+					return e
+				}
 				expected, target = "waiting", "running"
 			}
 			if action == "publish" {
@@ -261,21 +277,10 @@ func (d *DB) session(tok string) (M, error) {
 	return out, e
 }
 func (d *DB) join(p M, current string) (M, string, error) {
-	code, e := normalizeCode(p["code"])
-	if e != nil {
-		return nil, "", e
-	}
-	name, e := textField(p, "name", 2, 100)
-	if e != nil {
-		return nil, "", e
-	}
-	phone, e := normalizePhone(p["phone"])
-	if e != nil {
-		return nil, "", e
-	}
+	var code, name, phone, centerStudentID string
 	var out M
 	newToken := ""
-	e = d.tx(func(q *sql.Tx) error {
+	e := d.tx(func(q *sql.Tx) error {
 		rooms, e := activeRooms(q)
 		if e != nil {
 			return e
@@ -299,6 +304,30 @@ func (d *DB) join(p M, current string) (M, string, error) {
 		if !found {
 			return fail("القاعة المختارة لم تعد مفتوحة. اختر القاعة من جديد", 409)
 		}
+
+		if _, bindingError := readCenterBinding(q, eid); bindingError == nil {
+			official, lookupError := lookupCenterStudent(q, eid, p)
+			if lookupError != nil {
+				return lookupError
+			}
+			code, name, phone, centerStudentID = official.Code, official.Name, official.Phone, official.ID
+		} else {
+			if !errors.Is(bindingError, sql.ErrNoRows) {
+				return bindingError
+			}
+			code, e = normalizeCode(p["code"])
+			if e != nil {
+				return e
+			}
+			name, e = textField(p, "name", 2, 100)
+			if e != nil {
+				return e
+			}
+			phone, e = normalizePhone(p["phone"])
+			if e != nil {
+				return e
+			}
+		}
 		if current != "" {
 			var original string
 			err := q.QueryRow(`SELECT a.exam_id FROM attempts a JOIN exams e ON e.id=a.exam_id WHERE a.token_hash=? AND e.state IN ('waiting','running') AND a.submitted_at IS NULL AND NOT EXISTS(SELECT 1 FROM attempt_cancellations WHERE attempt_id=a.id)`, hash(current)).Scan(&original)
@@ -310,7 +339,7 @@ func (d *DB) join(p M, current string) (M, string, error) {
 			}
 		}
 		var existingRoom string
-		err := q.QueryRow(`SELECT a.exam_id FROM attempts a JOIN exams e ON e.id=a.exam_id WHERE a.code=? AND a.exam_id<>? AND a.joined_at IS NOT NULL AND a.submitted_at IS NULL AND e.state IN ('waiting','running') AND NOT EXISTS(SELECT 1 FROM attempt_cancellations WHERE attempt_id=a.id)`, code, eid).Scan(&existingRoom)
+		err := q.QueryRow(`SELECT a.exam_id FROM attempts a JOIN exams e ON e.id=a.exam_id WHERE (a.code=? OR (?<>'' AND EXISTS(SELECT 1 FROM center_attempts ca WHERE ca.attempt_id=a.id AND ca.student_id=?))) AND a.exam_id<>? AND a.joined_at IS NOT NULL AND a.submitted_at IS NULL AND e.state IN ('waiting','running') AND NOT EXISTS(SELECT 1 FROM attempt_cancellations WHERE attempt_id=a.id)`, code, centerStudentID, centerStudentID, eid).Scan(&existingRoom)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -339,6 +368,9 @@ func (d *DB) join(p M, current string) (M, string, error) {
 		if e != nil {
 			return e
 		}
+		if e = bindCenterAttempt(q, eid, a.ID, centerStudentID); e != nil {
+			return e
+		}
 		if x.TemplateID.Valid {
 			var previousID string
 			var previousSubmitted sql.NullFloat64
@@ -346,8 +378,8 @@ func (d *DB) join(p M, current string) (M, string, error) {
 				FROM attempts a JOIN exams previous ON previous.id=a.exam_id
 				WHERE previous.template_id=? AND previous.started_at IS NOT NULL
 				  AND a.joined_at IS NOT NULL
-				  AND a.code=? AND a.id<>?
-				ORDER BY a.joined_at LIMIT 1`, x.TemplateID.String, code, a.ID).Scan(&previousID, &previousSubmitted)
+				  AND (a.code=? OR (?<>'' AND EXISTS(SELECT 1 FROM center_attempts ca WHERE ca.attempt_id=a.id AND ca.student_id=?))) AND a.id<>?
+				ORDER BY a.joined_at LIMIT 1`, x.TemplateID.String, code, centerStudentID, centerStudentID, a.ID).Scan(&previousID, &previousSubmitted)
 			if e != nil && !errors.Is(e, sql.ErrNoRows) {
 				return e
 			}
@@ -380,7 +412,7 @@ func (d *DB) join(p M, current string) (M, string, error) {
 			if a.Submitted.Valid {
 				return fail("أديت الامتحان ده قبل كده، ولا يمكن تبدأ محاولة جديدة", 409)
 			}
-			if phone != a.Phone.String {
+			if phone != a.Phone.String && centerStudentID == "" {
 				return fail("لاستكمال المحاولة، استخدم رقم الموبايل المسجل مع نفس الكود", 400)
 			}
 		}
@@ -397,25 +429,14 @@ func (d *DB) join(p M, current string) (M, string, error) {
 		}
 		newToken = token()
 		if a.Joined.Valid {
-			if phone != a.Phone.String {
+			if phone != a.Phone.String && centerStudentID == "" {
 				return fail("للاستعادة، استخدم نفس رقم الموبايل المسجل", 400)
 			}
 			_, e = q.Exec(`UPDATE attempts SET token_hash=?,last_seen=? WHERE id=?`, hash(newToken), now(), a.ID)
 		} else {
-			qs := append([]any{}, x.Config["questions"].([]any)...)
-			if x.Config["shuffle"] == true || intv(x.Config["questionCount"]) < len(qs) {
-				for i := len(qs) - 1; i > 0; i-- {
-					choice, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
-					if err != nil {
-						return err
-					}
-					j := int(choice.Int64())
-					qs[i], qs[j] = qs[j], qs[i]
-				}
-			}
-			selected := []string{}
-			for _, qv := range qs[:intv(x.Config["questionCount"])] {
-				selected = append(selected, str(qv.(map[string]any)["id"]))
+			selected, err := selectQuestionIDs(x.Config)
+			if err != nil {
+				return err
 			}
 			var deadline any
 			if x.State == "running" {
@@ -460,7 +481,8 @@ func (d *DB) saveAnswers(tok string, p M) (M, error) {
 			return fail("محاولتك ملغاة. راجع المشرف", 423)
 		}
 		if a.Submitted.Valid {
-			out = M{"session": studentView(x, a)}
+			answers, validationError := validAnswers(p["answers"], questions(x, a))
+			out = M{"session": studentView(x, a), "answersReceived": validationError == nil && rev == a.Revision && encode(answers) == encode(decode(a.Answers))}
 			return nil
 		}
 		if x.State != "running" {
@@ -495,7 +517,7 @@ func (d *DB) saveAnswers(tok string, p M) (M, error) {
 				return e
 			}
 		}
-		out = M{"session": studentView(x, a)}
+		out = M{"session": studentView(x, a), "answersReceived": true}
 		return nil
 	})
 	return out, e

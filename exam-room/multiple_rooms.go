@@ -57,6 +57,9 @@ func (d *DB) saveRoomSettings(p M) (M, error) {
 	return M{"multipleRooms": enabled}, err
 }
 func allowAnotherRoom(q Q) error {
+	if err := allowRoomDuringNetworkMaintenance(q); err != nil {
+		return err
+	}
 	enabled, err := multipleRooms(q)
 	if err != nil {
 		return err

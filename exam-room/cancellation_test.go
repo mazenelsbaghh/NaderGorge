@@ -117,7 +117,7 @@ func TestCancellationPreservesAnswersBlocksReturnAndExportsReason(t *testing.T) 
 						t.Fatal(err)
 					}
 					sheet := string(b)
-					if !strings.Contains(sheet, "سبب الإلغاء") || !strings.Contains(sheet, "ملغي") || !strings.Contains(sheet, "مخالفة تعليمات القاعة &lt;ملاحظة&gt;") || strings.Contains(sheet, `r="J5"`) || strings.Contains(sheet, `r="O5"`) {
+					if !strings.Contains(sheet, "سبب الإلغاء") || !strings.Contains(sheet, "ملغي") || !strings.Contains(sheet, "مخالفة تعليمات القاعة &lt;ملاحظة&gt;") || strings.Contains(sheet, `r="J2"`) || strings.Contains(sheet, `r="O2"`) {
 						t.Fatal(sheet)
 					}
 				}

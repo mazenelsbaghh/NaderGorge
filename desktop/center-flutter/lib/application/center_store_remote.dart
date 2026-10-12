@@ -681,6 +681,15 @@ class _RemoteCenterStore extends CenterStore {
   @override
   Future<void> importAcademicGrades(AcademicImportCommand command) =>
       _send('importAcademicGrades', command.toJson());
+
+  @override
+  Future<IntegratedExamReceipt> recordIntegratedExamResult(
+    IntegratedExamResult result,
+  ) async => IntegratedExamReceipt.fromJson(
+    Map<String, dynamic>.from(
+      (await _command('recordIntegratedExamResult', result.toJson())) as Map,
+    ),
+  );
   @override
   Future<void> saveCardSettings(CenterCardSettings value) =>
       _send('saveCardSettings', value.toJson());

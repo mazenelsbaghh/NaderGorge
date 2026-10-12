@@ -72,3 +72,14 @@
 .send-dialog{max-height:calc(100dvh - 48px);overflow:auto}
 .send-dialog table{min-width:650px}
 @media(max-width:600px){.whatsapp-fields,.whatsapp-templates{grid-template-columns:1fr}.send-dialog{max-height:calc(100dvh - 20px)}}
+
+dialog:not([open]){display:none}
+.student-shortcut{font-size:14px;line-height:1.8}
+.student-shortcut p{font-size:14px;color:var(--muted);margin:10px 0}
+.student-shortcut [id=shortcut-instructions]{margin-top:12px;border:1px solid var(--line);border-radius:8px;padding:14px;background:#f6f8f9}
+.student-shortcut [data-shortcut-url]{font-size:14px;margin-top:6px}
+.student-shortcut [data-copy-shortcut],.student-shortcut [data-install-shortcut]{margin-top:10px}
+.student-shortcut details{border-bottom:1px solid var(--line);padding:12px 0}
+.student-shortcut summary{cursor:pointer;font-weight:700;min-height:32px}
+.student-shortcut ol{padding-inline-start:24px;margin:8px 0}
+.student-shortcut [data-shortcut-status]:empty{display:none}

@@ -3,26 +3,57 @@ import {number, toast} from '../../web/assets/common.js';
 
 const emptyQuestion = kind => ({kind, text: '', points: 2, options: ['', '', '', ''], correct: 0, modelAnswer: ''});
 const initial = {title: '', instructions: '', minutes: 15, timerMode: 'shared', allowLate: true,
-  shuffleOptions: true, shuffle: false, questionCount: 1, questions: [emptyQuestion('mcq')]};
+  shuffleOptions: true, shuffle: false, questionCount: 1, mcqCount: 1, essayCount: 0, questions: [emptyQuestion('mcq')]};
+
+const bankCount = (draft, kind) => draft.questions.filter(question => question.kind === kind).length;
+const editorDraft = config => {
+  const draft = structuredClone(config || initial);
+  if (draft.mcqCount == null && draft.questionCount === draft.questions.length) {
+    draft.mcqCount = bankCount(draft, 'mcq');
+    draft.essayCount = bankCount(draft, 'essay');
+  }
+  return draft;
+};
 
 export default function Editor({config, onSave, onCancel, onDirty}) {
-  const [draft, setDraft] = useState(() => structuredClone(config || initial));
+  const [draft, setDraft] = useState(() => editorDraft(config));
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   useEffect(() => {onDirty(dirty);}, [dirty, onDirty]);
-  const edit = update => {setDraft(previous => update(structuredClone(previous))); setDirty(true);};
+  const edit = update => {setDraft(previous => {
+    const next = update(structuredClone(previous));
+    if (next.mcqCount != null) next.questionCount = next.mcqCount + next.essayCount;
+    return next;
+  }); setDirty(true);};
+  const byKind = draft.mcqCount != null;
+  const selectByKind = enabled => edit(next => {
+    if (enabled) {next.mcqCount = bankCount(next, 'mcq'); next.essayCount = bankCount(next, 'essay');}
+    else {delete next.mcqCount; delete next.essayCount;}
+    return next;
+  });
   const field = (key, value) => edit(next => ({...next, [key]: value}));
   const questionField = (index, key, value) => edit(next => {next.questions[index][key] = value; return next;});
   const optionField = (index, choice, value) => edit(next => {next.questions[index].options[choice] = value; return next;});
   const add = kind => {
     if (draft.questions.length >= 100) {toast('الحد الأقصى ١٠٠ سؤال', true); return;}
-    edit(next => {const allShown = next.questionCount === next.questions.length; next.questions.push(emptyQuestion(kind));
-      if (allShown) next.questionCount++; return next;});
+    edit(next => {
+      const allShown = byKind ? next[kind+'Count'] === bankCount(next, kind) : next.questionCount === next.questions.length;
+      next.questions.push(emptyQuestion(kind));
+      if (allShown) {if (byKind) next[kind+'Count']++; else next.questionCount++;}
+      return next;
+    });
   };
-  const remove = index => edit(next => {next.questions.splice(index, 1);
-    next.questionCount = Math.min(next.questionCount, next.questions.length); return next;});
+  const remove = index => edit(next => {
+    const kind = next.questions[index].kind;
+    next.questions.splice(index, 1);
+    if (byKind) next[kind+'Count'] = Math.min(next[kind+'Count'], bankCount(next, kind));
+    else next.questionCount = Math.min(next.questionCount, next.questions.length);
+    return next;
+  });
   const submit = async event => {
-    event.preventDefault(); setSaving(true);
+    event.preventDefault();
+    if (draft.questionCount < 1) {toast('اختر سؤالًا واحدًا على الأقل لكل طالب', true); return;}
+    setSaving(true);
     try {await onSave(draft); setDirty(false);}
     catch (error) {toast(error.message, true);}
     finally {setSaving(false);}
@@ -40,13 +71,25 @@ export default function Editor({config, onSave, onCancel, onDirty}) {
         <div className="form-grid">
           <label>المدة بالدقائق<input name="minutes" type="number" min="1" max="240" required value={draft.minutes}
             onChange={event => field('minutes', Number(event.target.value))} /></label>
-          <label>عدد الأسئلة اللي تظهر لكل طالب<input name="questionCount" type="number" min="1" max={draft.questions.length}
-            required value={draft.questionCount} onChange={event => field('questionCount', Number(event.target.value))} /></label>
+          {!byKind && <label>عدد الأسئلة اللي تظهر لكل طالب<input name="questionCount" type="number" min="1" max={draft.questions.length}
+            required value={draft.questionCount} onChange={event => field('questionCount', Number(event.target.value))} /></label>}
           <label>نظام الوقت<select name="timerMode" value={draft.timerMode} onChange={event => field('timerMode', event.target.value)}>
             <option value="shared">نهاية موحدة للجميع</option><option value="individual">مدة كاملة لكل طالب</option></select></label>
         </div>
-        <div className="question-bank-summary" aria-live="polite"><strong>بنك الأسئلة: {number(draft.questions.length)} سؤال · يظهر لكل طالب: {number(draft.questionCount)} سؤال</strong><p>{draft.questionCount<draft.questions.length?'تُسحب الأسئلة عشوائيًا لكل طالب من البنك. يمكن أن تتكرر بعض الأسئلة بين الطلاب، وأسئلة الطالب نفسه تظل محفوظة عند الخروج والعودة.':'كل طالب يرى جميع أسئلة البنك. قلل العدد المعروض لو عايز سحبًا عشوائيًا؛ مثلًا أضف ٢٠ سؤالًا واختر عرض ١٠.'}</p></div>
-        <p className="help">في النهاية الموحدة، الطالب المتأخر يأخذ الوقت المتبقي. لو عرضت جزءًا من الأسئلة، تُسحب عشوائيًا ويجب أن تتساوى درجاتها.</p>
+        <label className="check-label"><input type="checkbox" checked={byKind}
+          onChange={event => selectByKind(event.target.checked)} />تحديد عدد الاختياري والمقالي كل نوع لوحده</label>
+        {byKind && <div className="form-grid">
+          <label>عدد الاختياري لكل طالب<input name="mcqCount" type="number" min="0" max={bankCount(draft, 'mcq')}
+            required value={draft.mcqCount} onChange={event => field('mcqCount', Number(event.target.value))} />
+            <span className="help">متاح في البنك: {number(bankCount(draft, 'mcq'))} سؤال اختياري</span></label>
+          <label>عدد المقالي لكل طالب<input name="essayCount" type="number" min="0" max={bankCount(draft, 'essay')}
+            required value={draft.essayCount} onChange={event => field('essayCount', Number(event.target.value))} />
+            <span className="help">متاح في البنك: {number(bankCount(draft, 'essay'))} سؤال مقالي</span></label>
+        </div>}
+        <div className="question-bank-summary" aria-live="polite"><strong>بنك الأسئلة: {number(draft.questions.length)} سؤال · يظهر لكل طالب: {number(draft.questionCount)} سؤال</strong>
+          {byKind && <p>اختياري: {number(draft.mcqCount)} من {number(bankCount(draft, 'mcq'))} · مقالي: {number(draft.essayCount)} من {number(bankCount(draft, 'essay'))}</p>}
+          <p>{byKind ? 'أضف الأسئلة في البنك تحت، ثم حدد العدد المعروض من كل نوع؛ مثلًا ٥ اختياري من ٢٠، و١ مقالي من ٢. صفر يعني عدم عرض أسئلة من هذا النوع.' : 'تُسحب الأسئلة من البنك كله دون تحديد عدد لكل نوع.'} السحب عشوائي لكل طالب بدون تكرار السؤال داخل محاولته، وأسئلته تظل محفوظة عند الخروج والعودة.</p></div>
+        <p className="help">في النهاية الموحدة، الطالب المتأخر يأخذ الوقت المتبقي. {byKind ? 'عند سحب جزء من نوع معين، لازم درجات أسئلة النوع ده تتساوى. ممكن درجة المقالي تختلف عن الاختياري.' : 'عند سحب جزء من البنك كله، لازم درجات الأسئلة كلها تتساوى.'}</p>
         <div className="check-row"><label className="check-label"><input type="checkbox" checked={draft.allowLate}
           onChange={event => field('allowLate', event.target.checked)} />السماح بالدخول بعد البداية</label>
           <label className="check-label"><input type="checkbox" checked={draft.shuffle}

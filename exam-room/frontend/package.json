@@ -4,8 +4,8 @@
   "version": "0.2.1",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "check": "vite build"
+    "build": "vite build && vite build --config vite.student.config.js",
+    "check": "npm run build"
   },
   "dependencies": {
     "html2pdf.js": "^0.14.0",

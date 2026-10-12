@@ -1,11 +1,11 @@
 import React, {useEffect, useState} from 'react';
-import {api, copyText, number, toast} from '../../web/assets/common.js';
+import {api, copyText, number, toast, downloadFile} from '../../web/assets/common.js';
 import NetworkSetup from './NetworkSetup.jsx';
 const size = bytes => bytes >= 1024 ** 3 ? `${number(bytes / 1024 ** 3)} GB` :
   bytes >= 1024 ** 2 ? `${number(bytes / 1024 ** 2)} MB` : `${number(bytes / 1024)} KB`;
 const date = seconds => new Date(seconds * 1000).toLocaleString('ar-EG', {dateStyle:'medium', timeStyle:'short'});
 
-export default function Storage({token,onWhatsApp}) {
+export default function Storage({token,onWhatsApp,centerIntegrated=false}) {
   const [details, setDetails] = useState(null);
   const [gemini, setGemini] = useState(null);
   const [key, setKey] = useState('');
@@ -26,7 +26,7 @@ export default function Storage({token,onWhatsApp}) {
     <div className="page-heading"><div><span className="context-label">كل شيء على جهازك</span>
       <h1>الإعدادات والبيانات</h1><p>مفتاح التصحيح وبيانات الامتحانات وإعدادات الواتساب محفوظة على هذا الكمبيوتر.</p></div>
       <button className="button" disabled={busy} onClick={() => perform(async () => {await api('/api/storage/backup', {}, token); await load(); toast('تم إنشاء نسخة احتياطية جديدة');})}>إنشاء نسخة احتياطية</button></div>
-    <NetworkSetup />
+    {centerIntegrated?<p className="notice">تهيئة شبكة ويندوز ومتابعة الاتصال من شاشة الامتحانات في برنامج السنتر.</p>:<NetworkSetup />}
     <section className="panel gemini-settings"><div className="section-top"><div><span className="context-label">إعدادات التصحيح</span>
       <h2>مفتاح خدمة التصحيح</h2><p className="help">أدخل المفتاح مرة واحدة لتشغيل تصحيح المقالي للجميع بعد انتهاء الامتحان.</p></div>
       <span className={`badge ${gemini.configured ? 'complete' : 'quiet'}`}>{gemini.configured ? 'المفتاح محفوظ' : 'لم يُضف مفتاح'}</span></div>
@@ -61,11 +61,11 @@ export default function Storage({token,onWhatsApp}) {
         <tbody>{details.backups.length ? details.backups.map((backup,index) => <tr key={backup.name}>
           <td><strong>{date(backup.createdAt)}</strong>{index===0 && <small>أحدث نسخة</small>}</td><td dir="ltr">{size(backup.bytes)}</td>
           <td><span className="backup-filename" dir="ltr">{backup.name}</span></td>
-          <td><a className="button secondary small" download href={`/api/backups/${encodeURIComponent(backup.name)}`}>تنزيل النسخة ↓</a></td></tr>) :
+          <td><button className="button secondary small" disabled={busy} onClick={()=>perform(()=>downloadFile(`/api/backups/${encodeURIComponent(backup.name)}`,backup.name,'application/octet-stream'))}>تنزيل النسخة ↓</button></td></tr>) :
           <tr><td className="empty" colSpan="4">لا توجد نسخ بعد. أنشئ أول نسخة الآن.</td></tr>}</tbody></table></div>
       <p className="help padded">نعرض أحدث ٣٠ نسخة. النسخ الأقدم تظل في مجلد backups.</p></section>
     <details className="restore-guide"><summary>إزاي أسترجع نسخة احتياطية؟</summary><ol>
-      <li>نزّل النسخة المطلوبة وافتح مجلد البيانات، ثم أغلق البرنامج.</li><li>احتفظ بالمجلد الحالي باسم مختلف، وأنشئ مجلدًا فارغًا بنفس الاسم.</li>
+      {centerIntegrated?<li>أنه كل قاعات الامتحان، ونزّل النسخة المطلوبة واحتفظ بمسار مجلد البيانات. أعد تشغيل ويندوز، ولا تفتح برنامج السنتر قبل إنهاء الخطوات التالية؛ إغلاق نافذة السنتر وحده يترك خدمة الامتحان شغالة.</li>:<li>نزّل النسخة المطلوبة وافتح مجلد البيانات، ثم أغلق البرنامج.</li>}<li>احتفظ بالمجلد الحالي باسم مختلف، وأنشئ مجلدًا فارغًا بنفس الاسم.</li>
       <li>ضع النسخة في المجلد الجديد باسم <b dir="ltr">exams.sqlite3</b>، ثم افتح البرنامج وراجع البيانات.</li></ol></details>
   </>;
 }

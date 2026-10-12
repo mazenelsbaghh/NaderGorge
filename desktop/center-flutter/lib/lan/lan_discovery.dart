@@ -13,7 +13,164 @@ class LanDiscovery {
     int discoveryPort = port,
     List<InternetAddress>? targets,
     Future<RawDatagramSocket> Function()? bindSocket,
+    Future<List<InternetAddress>> Function()? listSourceAddresses,
+    Future<RawDatagramSocket> Function(InternetAddress)? bindSourceSocket,
   }) async {
+    // Explicit destinations and socket injection retain the single-socket API.
+    if (listSourceAddresses == null &&
+        bindSourceSocket == null &&
+        (targets != null || bindSocket != null)) {
+      return _deduplicate(
+        await _searchSocket(
+          timeout: timeout,
+          discoveryPort: discoveryPort,
+          targets: targets,
+          bindSocket: bindSocket,
+        ),
+      );
+    }
+    final clock = Stopwatch()..start();
+    final List<InternetAddress> sources;
+    try {
+      sources = await (listSourceAddresses?.call() ?? _localIPv4()).timeout(
+        timeout,
+      );
+    } on SocketException catch (error, stack) {
+      throw CenterException(
+        'تعذر فحص اتصالات الشبكة.',
+        cause: error,
+        stackTrace: stack,
+      );
+    } on TimeoutException catch (error, stack) {
+      throw CenterException(
+        'انتهت مهلة فحص اتصالات الشبكة.',
+        cause: error,
+        stackTrace: stack,
+      );
+    }
+    final unique = <String, InternetAddress>{
+      for (final address in sources)
+        if (address.type == InternetAddressType.IPv4 &&
+            address.address != '0.0.0.0')
+          address.address: address,
+    }.values.take(8).toList();
+    if (unique.isEmpty) {
+      throw const CenterException('لا يوجد اتصال شبكة محلي متاح للبحث.');
+    }
+    final discoveryTime =
+        timeout - clock.elapsed - const Duration(milliseconds: 250);
+    final errors = <Object>[];
+    StackTrace? failureStack;
+    final batches = await Future.wait([
+      for (final source in unique)
+        () async {
+          try {
+            final endpoints = await _searchSocket(
+              timeout: discoveryTime > Duration.zero
+                  ? discoveryTime
+                  : const Duration(milliseconds: 1),
+              discoveryPort: discoveryPort,
+              targets:
+                  targets ??
+                  [
+                    if (source.isLoopback)
+                      InternetAddress.loopbackIPv4
+                    else
+                      InternetAddress('255.255.255.255'),
+                  ],
+              bindSocket: () =>
+                  bindSourceSocket?.call(source) ??
+                  RawDatagramSocket.bind(source, 0),
+            );
+            return [
+              for (final endpoint in endpoints)
+                _DiscoveryCandidate(endpoint, source),
+            ];
+          } on CenterException catch (error, stack) {
+            errors.add(error.cause ?? error);
+            failureStack ??= stack;
+            return <_DiscoveryCandidate>[];
+          }
+        }(),
+    ]);
+    final candidates = batches.expand((batch) => batch).take(64).toList();
+    if (candidates.isEmpty && errors.isNotEmpty) {
+      throw CenterException(
+        'تعذر البحث عن أجهزة السنتر على الشبكة.',
+        cause: List<Object>.unmodifiable(errors),
+        stackTrace: failureStack,
+      );
+    }
+    final remaining = timeout - clock.elapsed;
+    final reachable = await Future.wait([
+      for (final candidate in candidates) _reachable(candidate, remaining),
+    ]);
+    return _deduplicate([
+      for (final loopback in [false, true])
+        for (var index = 0; index < candidates.length; index++)
+          if (reachable[index] &&
+              InternetAddress(candidates[index].endpoint.address).isLoopback ==
+                  loopback)
+            candidates[index].endpoint,
+      for (var index = 0; index < candidates.length; index++)
+        if (!reachable[index]) candidates[index].endpoint,
+    ], preferFirst: true);
+  }
+
+  static Future<List<InternetAddress>> _localIPv4() async => [
+    for (final network in await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLoopback: false,
+    ))
+      ...network.addresses,
+    InternetAddress.loopbackIPv4,
+  ];
+
+  static Future<bool> _reachable(
+    _DiscoveryCandidate candidate,
+    Duration remaining,
+  ) async {
+    if (remaining <= Duration.zero) return false;
+    Socket? connection;
+    try {
+      connection = await Socket.connect(
+        candidate.endpoint.address,
+        candidate.endpoint.port,
+        sourceAddress: candidate.source,
+        timeout: remaining,
+      );
+      return true;
+    } on SocketException {
+      return false;
+    } on TimeoutException {
+      return false;
+    } finally {
+      connection?.destroy();
+    }
+  }
+
+  static List<LanEndpoint> _deduplicate(
+    List<LanEndpoint> candidates, {
+    bool preferFirst = false,
+  }) {
+    final endpoints = <String, LanEndpoint>{};
+    for (final endpoint in candidates) {
+      final previous = endpoints[endpoint.hostId];
+      if (previous == null ||
+          (!preferFirst && InternetAddress(previous.address).isLoopback)) {
+        endpoints[endpoint.hostId] = endpoint;
+      }
+    }
+    return List.unmodifiable(endpoints.values);
+  }
+
+  static Future<List<LanEndpoint>> _searchSocket({
+    required Duration timeout,
+    required int discoveryPort,
+    List<InternetAddress>? targets,
+    Future<RawDatagramSocket> Function()? bindSocket,
+  }) async {
+    final deadline = Stopwatch()..start();
     RawDatagramSocket? socket;
     StreamSubscription<RawSocketEvent>? subscription;
     final endpoints = <String, LanEndpoint>{};
@@ -21,9 +178,21 @@ class LanDiscovery {
     StackTrace? sendStack;
     var socketFailed = false;
     try {
-      socket =
-          await (bindSocket?.call() ??
-              RawDatagramSocket.bind(InternetAddress.anyIPv4, 0));
+      final binding =
+          bindSocket?.call() ??
+          RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      try {
+        socket = await binding.timeout(timeout);
+      } on TimeoutException {
+        // Closing a socket that arrives late avoids leaking it after the deadline.
+        unawaited(
+          binding.then<void>(
+            (lateSocket) => lateSocket.close(),
+            onError: (Object error) {},
+          ),
+        );
+        throw const SocketException('Discovery socket binding timed out');
+      }
       socket.broadcastEnabled = true;
       subscription = socket.listen(
         (event) {
@@ -42,10 +211,10 @@ class LanDiscovery {
                 ...json,
                 'address': packet.address.address,
               });
-              final previous = endpoints[endpoint.hostId];
-              if (previous == null ||
-                  InternetAddress(previous.address).isLoopback) {
-                endpoints[endpoint.hostId] = endpoint;
+              final key =
+                  '${endpoint.hostId}|${endpoint.address}|${endpoint.port}';
+              if (endpoints.length < 64 || endpoints.containsKey(key)) {
+                endpoints[key] = endpoint;
               }
             } on FormatException {
               // Ignore unrelated or malformed UDP packets, never trust their text.
@@ -63,7 +232,6 @@ class LanDiscovery {
       final query = utf8.encode(
         jsonEncode({'kind': 'massar-discover', 'protocol': 1}),
       );
-      final deadline = Stopwatch()..start();
       await Future.wait([
         for (final destination
             in targets ??
@@ -116,4 +284,10 @@ class LanDiscovery {
       socket?.close();
     }
   }
+}
+
+class _DiscoveryCandidate {
+  const _DiscoveryCandidate(this.endpoint, this.source);
+  final LanEndpoint endpoint;
+  final InternetAddress source;
 }

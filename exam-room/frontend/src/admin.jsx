@@ -1,8 +1,10 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {api, copyText, downloadBlob, confirmAction, number, timeLabel, stateLabels, toast} from '../../web/assets/common.js';
+import {api, copyText, downloadFile, confirmAction, number, timeLabel, stateLabels, toast} from '../../web/assets/common.js';
 import {QrCode} from '../../web/assets/qr.js';
 import Editor from './Editor.jsx';
+import ExamHealth from './ExamHealth.jsx';
+import RecoverAnswers from './RecoverAnswers.jsx';
 import Storage from './Storage.jsx';
 import WhatsApp from './WhatsApp.jsx';
 import CenterSetup from './CenterSetup.jsx';
@@ -17,6 +19,9 @@ import ScreenControls from './ScreenControls.jsx';
 import AbsenceControls from './AbsenceControls.jsx';
 import DownloadReports from './DownloadReports.jsx';
 import SendReports from './SendReports.jsx';
+import WhatsAppJobs from './WhatsAppJobs.jsx';
+import {useNetworkStatus,verifiedPortalUrl} from './networkStatus.js';
+import {centerRoomSelection} from './centerRoomSelection.js';
 
 const labels = {whatsapp:'واتساب السنتر',sheets:'شيتات',room:'قاعة السنتر',catalog:'تنظيم السنتر',exams:'مكتبة الامتحانات',storage:'الإعدادات والبيانات',guide:'دليل التشغيل',editor:'تجهيز امتحان'};
 const activeStates = ['waiting','running'];
@@ -26,8 +31,8 @@ function QR({url}) {
   const cells = [];
   for (let y=0; y<qr.size; y++) for (let x=0; x<qr.size; x++)
     if (qr.getModule(x,y)) cells.push(`M${x+4},${y+4}h1v1h-1z`);
-  return <svg className="qr" viewBox={`0 0 ${qr.size+8} ${qr.size+8}`} role="img" aria-label="رمز دخول الطلاب">
-    <rect width="100%" height="100%" fill="white"/><path d={cells.join('')} fill="#0A1D3D"/></svg>;
+  return <figure className="student-qr"><svg className="qr" viewBox={`0 0 ${qr.size+8} ${qr.size+8}`} role="img" aria-label="رمز دخول الطلاب">
+    <rect width="100%" height="100%" fill="white"/><path d={cells.join('')} fill="#0A1D3D"/></svg><figcaption dir="ltr">{url}</figcaption></figure>;
 }
 
 function AdminApp() {
@@ -57,7 +62,10 @@ function AdminApp() {
     if(next==='sheets'){await Promise.all([list(),loadCatalog()]);} if (next==='exams') await loadTemplates();if(next==='catalog')await loadCatalog();setView(next);setEditorDirty(false);
   };
   useEffect(() => {let alive=true;(async()=>{try{
+    const capability=new URLSearchParams(location.hash.slice(1)).get('center-access');
+    if(capability){history.replaceState(null,'',location.pathname+location.search);await api('/api/center/browser-login',{capability});}
     const boot=await api('/api/bootstrap');if(!alive)return;tokenRef.current=boot.token;setBootstrap(boot);
+    if(boot.centerIntegrated){const note=document.createElement('p');note.className='notice';note.textContent='إدارة الامتحانات مرتبطة ببرنامج السنتر. يمكنك الرجوع للتحضير من تبويب السنتر، والامتحان يفضل شغال. تجهيز شبكة ويندوز وربط الحصة من شاشة الامتحانات في السنتر.';document.querySelector('.sidebar')?.appendChild(note);}
     const [rows,templateRows,catalogRows]=await Promise.all([api('/api/exams'),api('/api/templates'),api('/api/catalog')]);if(!alive)return;setExams(rows.exams);setTemplates(templateRows.templates);setCatalog(catalogRows);
     const sessions=rows.exams;
     if(sessions.length){const chosen=sessions.find(exam=>activeStates.includes(exam.state))||sessions[0];
@@ -70,8 +78,7 @@ function AdminApp() {
     const nav=document.querySelector('.sidebar nav');nav?.addEventListener('click',navigation);return()=>nav?.removeEventListener('click',navigation);
   },[view,editorDirty,busy]);
   useEffect(()=>{const backup=document.getElementById('backup');if(!backup)return;
-    const click=()=>run(async()=>{const response=await fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json','X-Exam-Request':'1','X-Admin-Token':tokenRef.current},body:'{}'});
-      if(!response.ok)throw new Error((await response.json()).error);downloadBlob(await response.blob(),`massar-backup-${new Date().toISOString().slice(0,10)}.sqlite3`);toast('تم تجهيز النسخة الاحتياطية');});
+    const click=()=>run(async()=>{const saved=await downloadFile('/api/backup',`massar-backup-${new Date().toISOString().slice(0,10)}.sqlite3`,'application/octet-stream');if(saved)toast('تم تجهيز النسخة الاحتياطية');});
     backup.addEventListener('click',click);return()=>backup.removeEventListener('click',click);
   },[busy]);
   useEffect(()=>{if(!bootstrap)return;let live=true;const tick=async()=>{try{
@@ -80,6 +87,12 @@ function AdminApp() {
       if(!current||JSON.stringify(current.studentUrls)===JSON.stringify(status.studentUrls))return current;
       return {...current,studentUrls:status.studentUrls};
     });
+    if(bootstrap.centerIntegrated&&view==='room'&&!busy){
+      const rows=await api('/api/exams');if(!live)return;setExams(rows.exams);
+      const protectedView=Boolean(document.querySelector('#review-panel,dialog[open]')||document.activeElement?.matches('input,textarea,select'));
+      const next=centerRoomSelection(rows.exams,selectedId,protectedView);
+      if(next){const result=await api(`/api/exams/${next}`);if(live){setDashboard(result);setSelectedId(next);setConnected(true);}return;}
+    }
     if(view==='room'&&selectedId&&!busy){const result=await api(`/api/exams/${selectedId}`);
       if(live){if(dashboard&&result.exam.state!==dashboard.exam.state)await list();setDashboard(result);}}
     if(live)setConnected(true);
@@ -102,16 +115,16 @@ function AdminApp() {
   if(startError)return <div className="empty"><h1>تعذر فتح الإدارة</h1><p>{startError}</p><a className="button" href="/">إعادة المحاولة</a></div>;
   if(!bootstrap)return <div className="loading">جارٍ فتح قاعة السنتر…</div>;
   if(view==='sheets')return <Sheets catalog={catalog} exams={exams}/>;
-  if(view==='storage')return <Storage token={bootstrap.token} onWhatsApp={()=>setView('whatsapp')}/>;
+  if(view==='storage')return <Storage centerIntegrated={bootstrap.centerIntegrated} token={bootstrap.token} onWhatsApp={()=>setView('whatsapp')}/>;
   if(view==='whatsapp')return <WhatsApp token={bootstrap.token}/>;
-  if(view==='guide')return <Guide/>;
+  if(view==='guide')return <Guide centerIntegrated={bootstrap.centerIntegrated}/>;
   if(view==='catalog')return <CenterSetup catalog={catalog} request={request} refresh={loadCatalog}/>;
   if(view==='editor')return <Editor key={templateId||'new'} config={editorConfig} onDirty={setEditorDirty}
     onSave={saveExam} onCancel={()=>switchView('exams')}/>;
   if(view==='exams')return <Library templates={templates} onEdit={edit} onNew={()=>edit(null)}/>;
-  if(!dashboard)return <RoomLauncher catalog={catalog} templates={templates} exams={exams} onOpen={openRoom} onHistory={loadExam} busy={busy} request={request}/>;
+  if(!dashboard)return <RoomLauncher centerIntegrated={bootstrap.centerIntegrated} catalog={catalog} templates={templates} exams={exams} onOpen={openRoom} onHistory={loadExam} busy={busy} request={request}/>;
   return <Room key={selectedId} dashboard={dashboard} bootstrap={bootstrap} busy={busy} onState={changeState}
-    request={request} refresh={()=>loadExam(selectedId)} launcher={<RoomLauncher catalog={catalog} templates={templates} exams={exams} onOpen={openRoom} onHistory={loadExam} busy={busy} request={request} currentId={selectedId}/>}/>;
+    request={request} refresh={()=>loadExam(selectedId)} launcher={<RoomLauncher centerIntegrated={bootstrap.centerIntegrated} catalog={catalog} templates={templates} exams={exams} onOpen={openRoom} onHistory={loadExam} busy={busy} request={request} currentId={selectedId}/>}/>;
 }
 function Library({templates,onEdit,onNew}) {
   const [search,setSearch]=useState('');
@@ -126,7 +139,7 @@ function Library({templates,onEdit,onNew}) {
         <span className="exam-open-label">فتح وتعديل ←</span></button>):
         <div className="empty"><h2>لا يوجد امتحان بهذا الاسم</h2><p>أنشئ امتحانًا جديدًا أو غيّر البحث.</p></div>}</div></section></>;
 }
-function RoomLauncher({catalog,templates,exams,onOpen,onHistory,busy,currentId,request}) {
+function RoomLauncher({catalog,templates,exams,onOpen,onHistory,busy,currentId,request,centerIntegrated=false}) {
   const [grade,setGrade]=useState('');const [center,setCenter]=useState('');const [group,setGroup]=useState('');
   const [lesson,setLesson]=useState('');const [template,setTemplate]=useState('');
   const by=(kind,key,value)=>(catalog[kind]||[]).filter(item=>item[key]===value);
@@ -138,24 +151,26 @@ function RoomLauncher({catalog,templates,exams,onOpen,onHistory,busy,currentId,r
     const g=catalog.groups?.find(item=>item.id===l.groupId);const c=catalog.centers?.find(item=>item.id===g?.centerId);
     return [c?.name,g?.name,l.name].filter(Boolean).join(' · ');};
   return <><div className="page-heading"><div><span className="context-label">قاعة السنتر</span><h1>اختر الحصة والامتحان</h1>
-    <p>الامتحانات تُجهّز في المكتبة. هنا تربط نسخة من الامتحان بالحصة وتفتحها للطلاب.</p></div></div>
+    <p>{centerIntegrated?'جهّز الأسئلة من «مكتبة الامتحانات»، ثم افتح «الربط والرصد التلقائي» في برنامج السنتر لإنشاء قاعة من المجموعة والحصة والامتحان المسجلين. ستظهر القاعة هنا تلقائيًا.':'الامتحانات تُجهّز في المكتبة. هنا تربط نسخة من الامتحان بالحصة وتفتحها للطلاب.'}</p></div></div>
     <section className="panel launcher-panel"><div className="section-top"><div><h2>فتح جلسة جديدة</h2><p className="help">{multiple?'يمكن فتح أكثر من قاعة؛ الطلاب الجدد يختارون القاعة عند وجود قاعتين أو أكثر.':'يمكن فتح جلسة واحدة في الوقت نفسه.'}</p></div>
       {active.length>0&&<span className="badge waiting">{number(active.length)} قاعة مفتوحة</span>}</div>
       <label className="multiple-rooms-option"><input type="checkbox" checked={multiple===true} disabled={busy||settingBusy||multiple===null} onChange={e=>changeMultiple(e.target.checked)}/><span><strong>تشغيل أكثر من قاعة في نفس الوقت</strong><small>قاعة واحدة: دخول مباشر. أكثر من قاعة: اختيار إجباري للطلاب الجدد. الطلاب الموجودون يظلون في قاعتهم.</small></span></label>
-      <div className="launcher-grid"><label>الصف الدراسي<select value={grade} onChange={e=>{setGrade(e.target.value);setCenter('');setGroup('');setLesson('');}}><option value="">اختر الصف</option>{catalog.grades?.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
+      {!centerIntegrated&&<><div className="launcher-grid"><label>الصف الدراسي<select value={grade} onChange={e=>{setGrade(e.target.value);setCenter('');setGroup('');setLesson('');}}><option value="">اختر الصف</option>{catalog.grades?.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
         <label>السنتر<select value={center} disabled={!grade} onChange={e=>{setCenter(e.target.value);setGroup('');setLesson('');}}><option value="">اختر السنتر</option>{by('centers','gradeId',grade).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
         <label>المجموعة<select value={group} disabled={!center} onChange={e=>{setGroup(e.target.value);setLesson('');}}><option value="">اختر المجموعة</option>{by('groups','centerId',center).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
         <label>الحصة<select value={lesson} disabled={!group} onChange={e=>setLesson(e.target.value)}><option value="">اختر الحصة</option>{by('lessons','groupId',group).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
         <label>اسم الامتحان<select value={template} onChange={e=>setTemplate(e.target.value)}><option value="">اختر الامتحان</option>{templates.map(i=><option key={i.id} value={i.id}>{i.config.title}</option>)}</select></label></div>
       <div className="actions launcher-actions"><button className="button" disabled={busy||settingBusy||multiple===null||!lesson||!template||(!multiple&&active.length>0)} onClick={()=>onOpen(lesson,template)}>فتح قاعة السنتر ←</button>
         {(!catalog.grades?.length||!catalog.lessons?.length)&&<span className="help">أضف الصف والسنتر والمجموعة والحصة من «تنظيم السنتر» أولًا.</span>}
-        {!templates.length&&<span className="help">أنشئ امتحانًا من «مكتبة الامتحانات» أولًا.</span>}</div></section>
+        {!templates.length&&<span className="help">أنشئ امتحانًا من «مكتبة الامتحانات» أولًا.</span>}</div></>}
+      {centerIntegrated&&<p className="notice">إنشاء القاعة من «الربط والرصد التلقائي» يربطها بكشف السنتر مباشرةً، دون إعادة إضافة الصفوف والمجموعات هنا.</p>}</section>
     {exams.length>0&&<section className="panel history-panel"><div className="padded section-top"><h2>سجل الجلسات والنتائج</h2><span className="muted">{number(exams.length)} جلسة</span></div>
       {exams.map(item=><button className={`exam-list-row ${item.id===currentId?'selected':''}`} key={item.id} onClick={()=>onHistory(item.id)}>
         <div><strong>{item.title}</strong><small>{label(item.lessonId)} · {new Date(item.createdAt*1000).toLocaleDateString('ar-EG')} · {number(item.submitted)} تسليم</small></div>{badge(item.state)}
         <span className="exam-open-label">عرض ←</span></button>)}</section>}</>;
 }
 function Room({dashboard,bootstrap,busy,onState,request,refresh,launcher}) {
+  const portalUrl=verifiedPortalUrl(useNetworkStatus());
   const exam=dashboard.exam;
   const [tab,setTab]=useState(exam.state==='closed'?'results':'students');
   const [chosenUrl,setChosenUrl]=useState('');
@@ -165,7 +180,7 @@ function Room({dashboard,bootstrap,busy,onState,request,refresh,launcher}) {
   const submitted=joined.filter(attempt=>!attempt.cancelled_at&&attempt.submitted_at).length;
   const pending=joined.filter(attempt=>!attempt.cancelled_at&&attempt.submitted_at&&attempt.pending>0).length;
   const titles={draft:'جهّز امتحانك، ثم افتح القاعة.',waiting:'القاعة جاهزة لاستقبال الطلاب.',running:'الامتحان جارٍ. تابع القاعة.',closed:'انتهى الامتحان. راجع النتائج.'};
-  const studentUrl=bootstrap.studentUrls.includes(chosenUrl)?chosenUrl:bootstrap.studentUrls[0];
+  const studentUrl=portalUrl||(bootstrap.studentUrls.includes(chosenUrl)?chosenUrl:bootstrap.studentUrls[0]);
   return <>{launcher}<div className="page-heading room-current-heading"><div><span className="context-label">{titles[exam.state]}</span>
     <h1>{exam.config.title}</h1><div className="exam-meta">{badge(exam.state)}<span>{number(exam.config.questionCount)} أسئلة</span>
       <span>{number(exam.config.minutes)} دقيقة</span><span>{exam.config.timerMode==='shared'?'نهاية موحدة':'وقت مستقل لكل طالب'}</span></div></div>
@@ -177,15 +192,20 @@ function Room({dashboard,bootstrap,busy,onState,request,refresh,launcher}) {
     {activeStates.includes(exam.state)&&<><AbsenceControls exam={exam} request={request} refresh={refresh}/><ScreenControls exam={exam} request={request} refresh={refresh}/></>}
     <ol className="exam-steps" aria-label="مراحل الامتحان">{[['draft','تجهيز الأسئلة'],['waiting','استقبال الطلاب'],['running','حل الامتحان'],['closed','مراجعة النتائج']].map(([state,label],index)=><li className={exam.state===state?'current':''} key={state}><span>{number(index+1)}</span>{label}</li>)}</ol>
     <div className={`room-overview room-state-${exam.state}`}><section className="join-panel"><div><span className="context-label">دخول الطلاب</span>
-      <h2>رابط دخول الطلاب</h2><p>الطالب يتصل بالواي فاي، يمسح الرمز، ثم يدخل اسمه ورقمه وكوده.</p>
-      {bootstrap.studentUrls.length>1&&<label>اختر عنوان الشبكة المتصل بها الطلاب
+      <h2>رابط دخول الطلاب</h2><p>{bootstrap.centerIntegrated?'الطالب يتصل بالواي فاي، يمسح الرمز، ثم يكتب موبايله المسجل في السنتر ليظهر اسمه وكوده.':'الطالب يتصل بالواي فاي، يمسح الرمز، ثم يدخل اسمه ورقمه وكوده.'}</p>
+      {bootstrap.centerIntegrated&&<p className="help">قبل استقبال الطلاب، أكمل ربط القاعة بالمجموعة والحصة واسم الامتحان من «الربط والرصد التلقائي» في برنامج السنتر.</p>}
+      {!portalUrl&&bootstrap.studentUrls.length>1&&<label>اختر عنوان الشبكة المتصل بها الطلاب
         <select value={studentUrl} onChange={event=>setChosenUrl(event.target.value)}>
           {bootstrap.studentUrls.map(url=><option key={url} value={url}>{url}</option>)}
         </select></label>}
       {studentUrl?<div className="link-field"><input readOnly dir="ltr" value={studentUrl}/><button className="button secondary small" onClick={()=>copyText(studentUrl).catch(error=>toast(error.message,true))}>نسخ الرابط</button></div>:
         <p className="inline-error">لا يوجد عنوان شبكة محلية للكمبيوتر. اتصل بشبكة الهوت سبوت أو الراوتر أولًا.</p>}
-      <a className="text-link" href={bootstrap.localStudentUrl} target="_blank" rel="noopener">فتح صفحة طالب على هذا الجهاز ↗</a>
-      <p className="help">شارك الرابط بعد اتصال الطلاب بنفس الشبكة. إذا كان الهوت سبوت بلا إنترنت، يختار الطالب «البقاء متصلًا بالشبكة» ويوقف التحويل التلقائي لبيانات الهاتف، ويفتح الرابط بصيغة http://. يتحدث العنوان تلقائيًا عند تغيير الشبكة.</p></div>{studentUrl&&<QR url={studentUrl}/>}</section>
+      {portalUrl&&<details className="notice"><summary>رابط محلي بديل قبل تسجيل الدخول فقط</summary>
+        <p>الرابط الأساسي والرمز يفتحان نفس عنوان صفحة الدخول التلقائي. إذا تعذّر فتحه قبل دخول الامتحان، استخدم <b dir="ltr">http://10.77.0.1/</b>.</p>
+        <button className="button secondary small" onClick={()=>copyText('http://10.77.0.1/').catch(error=>toast(error.message,true))}>نسخ الرابط المحلي البديل</button>
+        <p>من بدأ الامتحان يستمر في نفس الرابط والمتصفح؛ الانتقال إلى عنوان آخر لا ينقل الجلسة والإجابات المحفوظة على الموبايل.</p></details>}
+      {bootstrap.centerIntegrated?<button className="text-button" onClick={()=>copyText(bootstrap.localStudentUrl).catch(error=>toast(error.message,true))}>نسخ رابط تجربة الطالب على هذا الجهاز</button>:<a className="text-link" href={bootstrap.localStudentUrl} target="_blank" rel="noopener">فتح صفحة طالب على هذا الجهاز ↗</a>}
+      <p className="help">شارك الرابط بعد اتصال الطلاب بنفس الشبكة. يختار الطالب «البقاء متصلًا بالشبكة» ويوقف التحويل التلقائي لبيانات الهاتف. الرابط والرمز للطلاب الجدد؛ من بدأ الامتحان يستمر في نفس العنوان والمتصفح حتى التسليم.</p></div>{studentUrl&&<QR url={studentUrl}/>}</section>
       <section className="attendance-summary" aria-label="ملخص الحضور"><div><span>دخل القاعة</span><strong>{number(joined.length)}</strong></div>
         <div><span>متصل الآن</span><strong>{number(online)}</strong></div><div><span>سلّم الامتحان</span><strong>{number(submitted)}</strong></div>
         <div><span>ينتظر تصحيح المقالي</span><strong>{number(pending)}</strong></div></section></div>
@@ -228,8 +248,8 @@ function Roster({dashboard,tab,request,refresh,busy}) {
     <input placeholder="ابحث باسم الطالب أو كوده…" value={search} onChange={event=>setSearch(event.target.value)}/></label>
     <label className="roster-order">ترتيب الطلاب<select value={order} onChange={event=>setOrder(event.target.value)}>{rosterOrders.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
     <label className="roster-priority" title="الموقوف، خارج الصفحة، غير المتصل، أو عنده تنبيه شاشة حالي"><input type="checkbox" checked={problemsFirst} onChange={event=>setProblemsFirst(event.target.checked)}/>المشاكل أولًا <span className="badge quiet">{number(problemsCount)}</span></label>
-    <a className="button secondary small" download href={`/api/exams/${exam.id}/${tab==='students'?'students.csv':'results.csv'}`}>
-      {tab==='students'?'تنزيل كشف الطلاب ↓':'تنزيل النتائج CSV ↓'}</a></div>
+    <button className="button secondary small" onClick={()=>downloadFile(`/api/exams/${exam.id}/${tab==='students'?'students.csv':'results.csv'}`,tab==='students'?'students.csv':'results.csv','text/csv').catch(error=>toast(error.message,true))}>
+      {tab==='students'?'تنزيل كشف الطلاب ↓':'تنزيل النتائج CSV ↓'}</button></div>
     {tab==='results'&&<><p className="results-note">الاختيارات تُصحح تلقائيًا. راجع المقالي قبل طباعة التقارير. الدرجات لا تظهر للطلاب.</p>
       <EssayBatch exam={exam} dashboard={dashboard} request={request} refresh={refresh}/></>}
     {tab==='results'&&<div className="whatsapp-send-row"><DownloadReports examId={exam.id} attempts={dashboard.attempts}/><SendReports attempts={dashboard.attempts.filter(a=>a.joined_at)} label="إرسال تقارير كل الطلاب عبر واتساب"/></div>}
@@ -264,13 +284,14 @@ function EssayBatch({exam,dashboard,request,refresh}) {
     catch(error){toast(error.message,true);}finally{setBusy(false);}};
   const job=status?.job;const running=job?.state==='running';
   const summary=!job?`${number(pending)} إجابة مقالية تنتظر التصحيح.`:
-    `${{running:'التصحيح جارٍ',completed:'اكتمل التصحيح',partial:'اكتمل مع إجابات للمراجعة',interrupted:'توقف التصحيح'}[job.state]||'حالة التصحيح'} · ${number(job.processed)} من ${number(job.total)} سؤال · ${number(job.graded)} صُحح · ${number(job.skipped)} كان مصححًا · ${number(job.needs_review+job.failed)} يحتاج مراجعة. ${job.message||''}`;
+    `${{running:'التصحيح جارٍ',completed:'اكتمل التصحيح',partial:'اكتمل مع إجابات بدون درجة',interrupted:'توقف التصحيح'}[job.state]||'حالة التصحيح'} · ${number(job.processed)} من ${number(job.total)} سؤال · ${number(job.graded)} صُحح · ${number(job.skipped)} كان مصححًا · ${number(job.failed)} بدون نتيجة مؤكدة.${job.needs_review?` ${number(job.needs_review)} إجابة معلقة من التصحيح السابق.`:''} ${job.message||''}`;
   return <section className="essay-batch-panel" aria-label="التصحيح الجماعي للمقالي"><div className="section-top"><div>
     <span className="context-label">تصحيح جماعي</span><h2>المقالي لكل الطلاب</h2>
     <p className="help">يصحح الإجابات المسلّمة غير المصححة فقط. يمكنك اختيار درجات جزئية وتعديل كل درجة يدويًا.</p></div>
     <button className="button" disabled={exam.state!=='closed'||running||pending===0||busy||!status}
       onClick={()=>status?.keyConfigured?launch({}):setShowKey(true)}>تصحيح المقالي للجميع ✦</button></div>
     <label className="check-label"><input type="checkbox" checked={partialCredit} disabled={running||busy} onChange={e=>setPartialCredit(e.target.checked)}/>منح درجات جزئية للأجزاء الصحيحة في المقالي</label><p className="help">{partialCredit?'توزيع درجة السؤال على الأجزاء المطلوبة، مع قبول الإجابات بنفس المعنى.':'التقدير الحالي: صح أو غلط فقط.'} ينطبق على الإجابات التي لم تُصحح بعد.</p>
+    <p className="help">٥ طلبات معًا، ثم انتظار ٥ ثوانٍ بين الدفعات. أي طلب مؤقت لا يوقف بقية الدفعة ويعاد تلقائيًا. كل إجابة تحصل على درجة نهائية حسب المعنى والأجزاء الصحيحة المفهومة. يمكنك تعديل الدرجة يدويًا بعد التصحيح.</p>
     <p className="help" role="status">{status?summary:'جارٍ قراءة حالة التصحيح…'} {number(pending)} إجابة ما زالت بدون درجة.
       {running&&<button className="text-button" onClick={async()=>{try{await request(`/api/exams/${exam.id}/essay-batch/stop`,{});toast('سيقف التصحيح بعد السؤال الحالي');}
         catch(error){toast(error.message,true);}}}>إيقاف بعد السؤال الحالي</button>}</p>
@@ -294,6 +315,7 @@ function Review({attempt,exam,request,onClose,refresh}) {
     <div className="actions">{attempt.pending?<span className="badge waiting">أكمل المقالي لفتح التقرير</span>:
       <a className="button secondary small" href={`/report/${attempt.id}`}>فتح تقرير الطالب / تنزيل PDF ↗</a>}
       <SendReports attempts={[attempt]}/><button className="text-button" onClick={onClose}>إغلاق</button></div></div>
+    <RecoverAnswers attempt={attempt} exam={exam} request={request} refresh={refresh}/>
     {questions.map((question,index)=>{const answer=attempt.answers[question.id];const mark=attempt.grades[question.id];
       return <article className="review-question" key={question.id}><h3>{number(index+1)}. {question.text}</h3>
         <p className="answer-text"><strong>إجابة الطالب:</strong> {question.kind==='mcq'?(answer==null?'لم يجب':question.options[answer]):answer||'لم يجب'}</p>
@@ -306,13 +328,13 @@ function Review({attempt,exam,request,onClose,refresh}) {
           <span className="badge complete">{number(mark?.score||0)} / {number(question.points)}</span>}</article>;
     })}</div>;
 }
-function Guide(){return <><div className="page-heading"><div><span className="context-label">قبل أول تجربة</span>
+function Guide({centerIntegrated=false}){return <><div className="page-heading"><div><span className="context-label">قبل أول تجربة</span>
   <h1>جهّز القاعة بخطوات بسيطة.</h1><p>ابدأ بعدد قليل من الموبايلات، ثم زوّد العدد تدريجيًا.</p></div></div>
   <section className="panel guide"><ol><li><h2>وصّل الكمبيوتر والطلاب بنفس الشبكة</h2>
-    <p>مع الـOmada المباشر، افتح «الإعدادات والبيانات» ثم «تهيئة الماك الآن». بعد اكتمالها، وصّل كابل الـOmada بالماك واترك محوّل كهربائه موصولًا. الطلاب يتصلون بواي فاي الامتحان؛ قد تظهر لهم صفحة الدخول تلقائيًا. لو لم تظهر، يفتحون رابط الطلاب المحلي. يمكن إبقاء الماك متصلًا بواي فاي آخر للإنترنت؛ شبكة الامتحان نفسها لا تحتاج إنترنت. لو ظهر للموبايل تنبيه «بلا إنترنت»، اختر البقاء متصلًا بهذه الشبكة.</p></li>
-    <li><h2>جهّز الامتحان وافتح القاعة</h2><p>الطالب يكتب اسمه ورقمه وكوده الحالي، ثم ينتظر بدء الامتحان.</p></li>
+    <p>{centerIntegrated?'من برنامج السنتر افتح «التهيئة والبورتال» على جهاز الساكند، وافحص الاتصال قبل فتح القاعة. الطلاب يتصلون بواي فاي الامتحان ويفتحون الرابط الظاهر في القاعة. إن ظهر تنبيه «بلا إنترنت»، يختارون البقاء متصلين بالشبكة. يظل تسجيل الطلاب والحضور والتحصيل متاحًا على الهوست والساكند أثناء الاتصال.':'مع الـOmada المباشر، افتح «الإعدادات والبيانات» ثم «تهيئة الماك الآن». بعد اكتمالها، وصّل كابل الـOmada بالماك واترك محوّل كهربائه موصولًا. الطلاب يتصلون بواي فاي الامتحان؛ قد تظهر لهم صفحة الدخول تلقائيًا. لو لم تظهر، يفتحون رابط الطلاب المحلي. يمكن إبقاء الماك متصلًا بواي فاي آخر للإنترنت؛ شبكة الامتحان نفسها لا تحتاج إنترنت. لو ظهر للموبايل تنبيه «بلا إنترنت»، اختر البقاء متصلًا بهذه الشبكة.'}</p></li>
+    <li><h2>جهّز الامتحان وافتح القاعة</h2><p>{centerIntegrated?'جهّز الأسئلة واحفظ الامتحان من «مكتبة الامتحانات». من «الربط والرصد التلقائي» في برنامج السنتر اختَر الامتحان المحفوظ والمجموعة والحصة التي بدأت واسم الامتحان في الرصد، ثم أنشئ القاعة. يجب أن تتطابق الدرجة النهائية. تظهر القاعة هنا مرتبطةً بكشف الطلاب؛ لا تعِد إنشاء الصفوف والمجموعات. الطالب يكتب موبايله المسجل ليظهر اسمه وكوده، ويحتاج كوده أيضًا لو كان الرقم مشتركًا. بعد استقبال الطلاب اضغط «ابدأ الامتحان للجميع».':'الطالب يكتب اسمه ورقمه وكوده الحالي، ثم ينتظر بدء الامتحان.'}</p></li>
     <li><h2>ابدأ وتابع الحفظ</h2><p>راقب المتصلين وحالة حفظ الإجابات. عند تغيير الموبايل استخدم «استعادة الدخول».</p></li>
-    <li><h2>راجع واحتفظ بنسخة</h2><p>بعد انتهاء الامتحان راجع المقالي واطبع تقرير كل طالب أو احفظه PDF، ثم نزّل نسخة احتياطية.</p></li></ol>
+    <li><h2>راجع واحتفظ بنسخة</h2><p>{centerIntegrated?'أغلق القاعة وأكمل تصحيح المقالي. تُرسل النتائج النهائية تلقائيًا إلى السنتر بعد تأكيد حفظها، بما فيها الصفر. شاشة الربط تعرض الحاضرين الذين لم تُرصد لهم درجة وسبب الانتظار. نزّل نسخة احتياطية بعد المراجعة.':'بعد انتهاء الامتحان راجع المقالي واطبع تقرير كل طالب أو احفظه PDF، ثم نزّل نسخة احتياطية.'}</p></li></ol>
     <div className="notice"><strong>حدود نسخة التجربة</strong><p>تصحيح المقالي الذكي يحتاج إنترنت على جهاز الإدارة. إرسال تقارير واتساب يحتاج حسابًا رسميًا وقالب مستند معتمدًا وإنترنت على جهاز الإدارة. أبقِ الكمبيوتر مفتوحًا طوال الامتحان.</p></div></section></>}
 
-createRoot(document.getElementById('main')).render(<AdminApp/>);
+createRoot(document.getElementById('main')).render(<><ExamHealth/><WhatsAppJobs/><AdminApp/></>);

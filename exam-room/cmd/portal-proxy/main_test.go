@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -30,5 +31,25 @@ func TestCaptiveProbeRedirectDoesNotProxyForeignHost(t *testing.T) {
 	handler().ServeHTTP(response, request)
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("foreign Origin response = %d", response.Code)
+	}
+}
+
+func TestProxyReplacesForgedClientAddressForDiagnosticRateLimit(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Header.Get("X-Massar-Client-IP") != "192.0.2.10" {
+			http.Error(writer, "wrong client address", http.StatusForbidden)
+			return
+		}
+		writer.WriteHeader(http.StatusNoContent)
+	}))
+	defer backend.Close()
+	target, _ := url.Parse(backend.URL)
+	request := httptest.NewRequest(http.MethodPost, "http://127.0.0.1/api/client-diagnostics", nil)
+	request.RemoteAddr = "192.0.2.10:4321"
+	request.Header.Set("X-Massar-Client-IP", "192.0.2.99")
+	response := httptest.NewRecorder()
+	studentProxy(target).ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("proxy forwarded forged limiter identity: %d", response.Code)
 	}
 }

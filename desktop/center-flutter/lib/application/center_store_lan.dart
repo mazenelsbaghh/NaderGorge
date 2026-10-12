@@ -349,6 +349,10 @@ extension CenterStoreLanHost on CenterStore {
         await saveAcademic(AcademicRecord.fromJson(a));
       case 'importAcademicGrades':
         await importAcademicGrades(AcademicImportCommand.fromJson(a));
+      case 'recordIntegratedExamResult':
+        return (await recordIntegratedExamResult(
+          IntegratedExamResult.fromJson(a),
+        )).toJson();
       case 'saveCardSettings':
         await saveCardSettings(CenterCardSettings.fromJson(a));
       case 'collectStudentCard':

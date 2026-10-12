@@ -58,6 +58,104 @@ void main() {
           mode: EntryMode.single,
         );
         await store.recordAttendance(request);
+        if (discount == 100) {
+          final historicalAttendance = store.attendances.single.toJson();
+          final automaticReceipt = store.payments.single.toJson();
+          expect(store.attendances.single.paymentPending, isFalse);
+          expect(store.attendances.single.packageMember, isFalse);
+          expect(store.attendanceNeedsPayment(student.id, session.id), isFalse);
+          expect(store.payments.single.netAmount, 0);
+          expect(store.payments.single.collectedAmount, 0);
+          expect(store.payments.single.discountPercent, 100);
+
+          await store.setStudentCenterFee(studentId: student.id, enabled: true);
+          final beforeRejectedChange = store.students.single.toJson();
+          await expectLater(
+            store.setStudentPackageMember(
+              studentId: student.id,
+              enabled: true,
+              sessionId: session.id,
+            ),
+            throwsA(isA<CenterException>()),
+          );
+          expect(store.students.single.toJson(), beforeRejectedChange);
+          expect(store.attendances.single.toJson(), historicalAttendance);
+          expect(store.payments.single.toJson(), automaticReceipt);
+
+          await store.setStudentPackageMember(
+            studentId: student.id,
+            enabled: true,
+          );
+          expect(store.students.single.packageMember, isTrue);
+          expect(store.students.single.centerFeeEnabled, isFalse);
+          expect(store.students.single.discountPercent, 100);
+          await store.recordAttendance(request);
+          await expectLater(
+            store.collectAndAttend(request),
+            throwsA(isA<CenterException>()),
+          );
+          expect(store.attendances.single.toJson(), historicalAttendance);
+          expect(store.payments.single.toJson(), automaticReceipt);
+          await store.closeSession(session.id);
+          await store.finalizeSession(sessionId: session.id, actualCash: 0);
+
+          await store.saveSession(
+            LessonSession(
+              groupId: group.id,
+              number: 2,
+              startsAt: DateTime.now(),
+              createdAt: DateTime.now(),
+            ),
+          );
+          final nextSession = store.sessions.firstWhere((s) => s.number == 2);
+          await store.recordAttendance(
+            EntryRequest(
+              studentId: student.id,
+              sessionId: nextSession.id,
+              mode: EntryMode.single,
+            ),
+          );
+          final nextAttendance = store.attendances.singleWhere(
+            (a) => a.sessionId == nextSession.id,
+          );
+          expect(nextAttendance.packageMember, isTrue);
+          expect(nextAttendance.paymentPending, isFalse);
+          expect(
+            store.attendanceNeedsPayment(student.id, nextSession.id),
+            isFalse,
+          );
+          expect(store.payments.map((payment) => payment.toJson()).toList(), [
+            automaticReceipt,
+          ]);
+          expect(store.centerFees, isEmpty);
+          await store.setStudentPackageMember(
+            studentId: student.id,
+            enabled: false,
+          );
+          await store.close();
+          store = await CenterStore.open(directory: directory.path);
+          await store.signIn('fee-test', 'fee-test-password');
+          expect(store.attendances, hasLength(2));
+          expect(
+            store.attendances
+                .singleWhere((a) => a.sessionId == session.id)
+                .toJson(),
+            historicalAttendance,
+          );
+          expect(
+            store.attendances
+                .singleWhere((a) => a.sessionId == nextSession.id)
+                .toJson(),
+            nextAttendance.toJson(),
+          );
+          expect(store.payments.map((payment) => payment.toJson()).toList(), [
+            automaticReceipt,
+          ]);
+          expect(store.students.single.packageMember, isFalse);
+          expect(store.students.single.discountPercent, 100);
+          expect(store.centerFees, isEmpty);
+          return;
+        }
         expect(store.attendances.single.paymentPending, isTrue);
         await store.setStudentCenterFee(studentId: student.id, enabled: true);
         await store.setStudentPackageMember(

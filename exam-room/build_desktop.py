@@ -20,16 +20,17 @@ binary_dir.mkdir(parents=True, exist_ok=True)
 binary = binary_dir / ('massar-exam-room.exe' if sys.platform == 'win32' else 'massar-exam-room')
 subprocess.run(['go', 'build', '-trimpath', '-o', str(binary), '.'], cwd=root, check=True)
 pdf_dist = root / 'build' / 'pdf-dist'
-subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile',
+subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir',
                 '--name', 'massar-report-pdf', '--distpath', str(pdf_dist),
                 '--workpath', str(root / 'build' / 'pdf-work'), '--specpath', str(root / 'build'),
                 '--add-data', f'{root / "web/assets/Tajawal-Regular.ttf"}{os.pathsep}fonts',
                 '--add-data', f'{root / "web/assets/Tajawal-Bold.ttf"}{os.pathsep}fonts',
                 str(root / 'pdf_report.py')], cwd=root, check=True)
-pdf_binary = pdf_dist / ('massar-report-pdf.exe' if sys.platform == 'win32' else 'massar-report-pdf')
+pdf_binary = pdf_dist / 'massar-report-pdf' / ('massar-report-pdf.exe' if sys.platform == 'win32' else 'massar-report-pdf')
 command = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--windowed',
            '--name', 'Massar Exam Room', '--add-binary', f'{binary}{os.pathsep}go-server',
            '--add-binary', f'{pdf_binary}{os.pathsep}report-helper',
+           '--add-data', f'{pdf_binary.parent / "_internal"}{os.pathsep}report-helper/_internal',
            '--distpath', str(args.output_dir.resolve()), '--workpath', str(root / 'build'),
            '--specpath', str(root / 'build'), '--paths', str(root)]
 if sys.platform == 'darwin':
@@ -56,14 +57,14 @@ if sys.platform == 'darwin':
     info = app / 'Contents' / 'Info.plist'
     with info.open('rb') as source:
         metadata = plistlib.load(source)
-    metadata['CFBundleShortVersionString'] = '0.4.4'
-    metadata['CFBundleVersion'] = '23'
+    metadata['CFBundleShortVersionString'] = '0.4.24'
+    metadata['CFBundleVersion'] = '43'
     with info.open('wb') as target:
         plistlib.dump(metadata, target)
     subprocess.run(['codesign', '--force', '--deep', '--sign', '-', '--timestamp=none', str(app)], check=True)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
     installer = args.output_dir.resolve() / 'Massar-Exam-Room-macOS-arm64-Installer.pkg'
     subprocess.run(['pkgbuild', '--component', str(app), '--install-location', '/Applications',
-                    '--identifier', 'com.massar.examroom.installer', '--version', '0.4.4',
+                    '--identifier', 'com.massar.examroom.installer', '--version', '0.4.24',
                     str(installer)], check=True)
     print(f'Installable package: {installer}')

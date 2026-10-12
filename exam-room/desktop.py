@@ -9,7 +9,11 @@ import time
 from urllib.request import urlopen
 
 import webview
-from network_setup import NetworkSetupApi
+from exam_downloads import ExamDownloads
+from network_setup import NetworkSetupApi, bundle_path
+from network_timeline import NetworkTimeline
+from portal_settings import PortalSettings
+from sleep_protection import SleepProtection
 
 
 def data_directory():
@@ -33,6 +37,7 @@ def main():
     parser.add_argument('--admin-port', type=int, default=8766)
     args = parser.parse_args()
     args.data_dir.mkdir(parents=True, exist_ok=True)
+    timeline = NetworkTimeline(args.data_dir)
     binary = backend_binary()
     if not binary.is_file():
         message = 'ملف خادم Go غير موجود في حزمة البرنامج.'
@@ -63,28 +68,47 @@ def main():
         else:
             message = 'الخادم لم يبدأ خلال عشر ثوانٍ؛ راجع room.log في مجلد البيانات.'
     if message:
-        webview.create_window('مسار · تعذر التشغيل', html=f'<html lang="ar" dir="rtl"><body><h1>تعذر تشغيل مسار</h1><p>{escape(message)}</p><p>{escape(str(args.data_dir))}</p></body></html>', width=680, height=360)
-        webview.start()
-        if process and process.poll() is None:
-            process.terminate()
+        try:
+            webview.create_window('مسار · تعذر التشغيل', html=f'<html lang="ar" dir="rtl"><body><h1>تعذر تشغيل مسار</h1><p>{escape(message)}</p><p>{escape(str(args.data_dir))}</p></body></html>', width=680, height=360)
+            webview.start()
+        finally:
+            timeline.stop('startup_failed')
+            if process and process.poll() is None:
+                process.terminate()
         return 1
+    sleep_protection = SleepProtection()
+    sleep_protection.start(process.pid)
     try:
         webview.settings['ALLOW_DOWNLOADS'] = True
-        webview.create_window('مسار · امتحانات السنتر', f'http://127.0.0.1:{args.admin_port}',
+        downloads = ExamDownloads(args.admin_port, lambda filename: window.create_file_dialog(
+            webview.FileDialog.SAVE, save_filename=filename))
+        def choose_certificate_file(title):
+            window.set_title(title)
+            try:
+                selection = window.create_file_dialog(webview.FileDialog.OPEN, allow_multiple=False, file_types=('PEM files (*.pem;*.crt;*.key)', 'All files (*.*)'))
+                return selection[0] if selection else None
+            finally:
+                window.set_title('مسار · امتحانات السنتر')
+        portal_settings = PortalSettings(args.data_dir, bundle_path() / 'massar-exam-portal-proxy', choose_certificate_file)
+        api = NetworkSetupApi(sleep_protection, downloads, portal_settings, args.admin_port, timeline)
+        timeline.start(api._collect_network_status)
+        window = webview.create_window('مسار · امتحانات السنتر', f'http://127.0.0.1:{args.admin_port}',
                               width=1360, height=900, min_size=(800, 600), confirm_close=True,
-                              js_api=NetworkSetupApi(),
+                              js_api=api,
                               text_select=True,
                               localization={'global.quit': 'إغلاق البرنامج', 'global.cancel': 'رجوع',
                                             'global.saveFile': 'حفظ ملف',
                                             'global.quitConfirmation': 'إغلاق البرنامج سيوقف اتصال الطلاب. الإجابات المحفوظة ستبقى، والوقت سيستمر في الانقضاء. هل تريد الإغلاق؟'})
         webview.start(private_mode=True, gui='edgechromium' if sys.platform == 'win32' else None)
     finally:
+        timeline.stop()
         process.terminate()
         try:
             process.wait(timeout=50)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
+        sleep_protection.stop()
     return 0
 
 

@@ -7,6 +7,8 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $AppRoot = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot "build-exam-windows.ps1")
+$ExamRoot = Join-Path (Split-Path (Split-Path $AppRoot -Parent) -Parent) "exam-room"
 
 function Assert-RunnerIdentity {
     $ResourcePath = Join-Path $AppRoot "windows/runner/Runner.rc"
@@ -40,7 +42,7 @@ function Copy-VisualCppRuntime([string]$Directory) {
 }
 
 function Assert-NoRuntimeData([string]$Directory) {
-    $PrivateNames = @("identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "center.sqlite.lock", "data-repair-status.json")
+    $PrivateNames = @("identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "center.sqlite.lock", "data-repair-status.json", "network.json", "leases.json", "heartbeat.json", "adapter-backup.json", "portal-mode.json", "capport-public.json")
     foreach ($File in Get-ChildItem -LiteralPath $Directory -File -Recurse) {
         foreach ($PrivateName in $PrivateNames) {
             if ($File.Name -eq $PrivateName -or $File.Name.StartsWith($PrivateName + ".", [StringComparison]::OrdinalIgnoreCase)) {
@@ -49,6 +51,9 @@ function Assert-NoRuntimeData([string]$Directory) {
         }
         if ($File.Name -match '(?i)\.(sqlite3?|db)(-wal|-shm|-journal)?$') {
             throw "Release contains a database; refusing to package."
+        }
+        if ($File.Extension -in @(".pem", ".key", ".pfx") -or $File.Name -eq ".env") {
+            throw "Release contains a certificate, private key or environment file; refusing to package."
         }
         $Stream = [System.IO.File]::OpenRead($File.FullName)
         try {
@@ -119,6 +124,9 @@ try {
         }
     }
     finally { Pop-Location }
+    Build-ExamFrontend $ExamRoot
+    $ExamFingerprints = @(Exam-InputFingerprints $ExamRoot)
+    $PackagingFingerprints = Get-ChildItem -LiteralPath $PSScriptRoot -File | Where-Object { $_.Extension -in @(".ps1", ".py") } | Sort-Object FullName | ForEach-Object { $_.Name + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
     $SourceFingerprints = Get-ChildItem (Join-Path $AppRoot "lib") -Filter *.dart -Recurse |
         Sort-Object FullName | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     $LanFingerprints = Get-ChildItem $LanRoot -Filter *.go -Recurse | Sort-Object FullName |
@@ -134,7 +142,7 @@ try {
             $_.FullName.Substring($AppRoot.Length) + (Get-FileHash $_.FullName -Algorithm SHA256).Hash
         }
     $SourceFingerprintText = ($SourceFingerprints -join "") + ($LanFingerprints -join "") +
-        ($AssetFingerprints -join "") + $PackageMode +
+        ($AssetFingerprints -join "") + ($ExamFingerprints -join "") + ($PackagingFingerprints -join "") + $PackageMode +
         (Get-FileHash (Join-Path $LanRoot "go.mod") -Algorithm SHA256).Hash +
         (Get-FileHash "pubspec.yaml" -Algorithm SHA256).Hash +
         (Get-FileHash "pubspec.lock" -Algorithm SHA256).Hash
@@ -195,6 +203,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
     }
     finally { Pop-Location }
+    $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory ([bool]$SkipTests)
     Copy-VisualCppRuntime $ReleaseDirectory
     $Manifest = [ordered]@{
         role = $PackageMode
@@ -204,6 +213,7 @@ try {
         sourceCommit = $env:GITHUB_SHA
         builtAt = [DateTime]::UtcNow.ToString("o")
         testsSkipped = [bool]$SkipTests
+        examRuntime = $ExamRuntime
         seedId = if ($ClientOnly) { $null } else { $Seed.state.installationSeedId }
         students = if ($ClientOnly) { 0 } else { @($Seed.state.students).Count }
         groups = if ($ClientOnly) { 0 } else { @($Seed.state.groups).Count }

@@ -1,0 +1,26 @@
+{
+  "name": "امتحانات مسار",
+  "short_name": "مسار",
+  "lang": "ar",
+  "dir": "rtl",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#0a1d3d",
+  "background_color": "#f6f7f8",
+  "icons": [
+    {
+      "src": "/assets/student-icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/student-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

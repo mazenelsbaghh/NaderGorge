@@ -25,7 +25,7 @@ func xmlText(v any) string {
 
 func excelExport(dashboard M, labels []string) ([]byte, error) {
 	var sheet strings.Builder
-	sheet.WriteString(`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" rightToLeft="1"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="3" width="18" customWidth="1"/><col min="4" max="8" width="24" customWidth="1"/><col min="9" max="9" width="18" customWidth="1"/><col min="10" max="13" width="18" customWidth="1"/><col min="14" max="16" width="40" customWidth="1"/></cols><sheetData>`)
+	sheet.WriteString(`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" rightToLeft="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="3" width="18" customWidth="1"/><col min="4" max="8" width="24" customWidth="1"/><col min="9" max="9" width="24" customWidth="1"/><col min="10" max="13" width="18" customWidth="1"/><col min="14" max="16" width="40" customWidth="1"/><col min="17" max="18" width="38" customWidth="1"/><col min="19" max="19" width="24" customWidth="1"/></cols><sheetData>`)
 	cell := func(col, row, style int, value any, numeric bool) {
 		ref := fmt.Sprintf("%c%d", 'A'+col, row)
 		if numeric {
@@ -36,34 +36,33 @@ func excelExport(dashboard M, labels []string) ([]byte, error) {
 	}
 	exam := dashboard["exam"].(M)
 	title := str(exam["config"].(M)["title"])
-	sheet.WriteString(`<row r="1" ht="32" customHeight="1">`)
-	cell(0, 1, 1, "نتائج امتحان: "+title, false)
-	sheet.WriteString(`</row>`)
-	sheet.WriteString(`<row r="2" ht="28" customHeight="1">`)
-	cell(0, 2, 0, strings.Join(labels, " · "), false)
-	sheet.WriteString(`</row>`)
-	headers := []string{"اسم الطالب", "رقم الموبايل", "كود الطالب", "الصف الدراسي", "السنتر", "المجموعة", "الحصة", "الامتحان", "تاريخ الجلسة", "الدرجة المصححة", "المجموع", "النسبة", "متبقي للتصحيح", "الحالة", "جاب كام من كام", "سبب الإلغاء"}
-	sheet.WriteString(`<row r="4" ht="30" customHeight="1">`)
+	headers := []string{"اسم الطالب", "رقم الموبايل", "كود الطالب", "الصف الدراسي", "السنتر", "المجموعة", "الحصة", "الامتحان", "تاريخ الجلسة", "الدرجة النهائية", "المجموع", "النسبة", "متبقي للتصحيح", "الحالة", "جاب كام من كام", "سبب الإلغاء", "معرّف جلسة الامتحان", "معرّف محاولة الطالب", "إصدار الشيت"}
+	sheet.WriteString(`<row r="1" ht="36" customHeight="1">`)
 	for col, header := range headers {
-		cell(col, 4, 1, header, false)
+		cell(col, 1, 1, header, false)
 	}
 	sheet.WriteString(`</row>`)
 	location, err := time.LoadLocation("Africa/Cairo")
 	if err != nil {
 		return nil, err
 	}
-	_, offset := time.Unix(int64(num(exam["created_at"])), 0).In(location).Zone()
-	sessionDate := (num(exam["created_at"])+float64(offset))/86400 + 25569
-	row := 4
+	timestamp := num(exam["started_at"])
+	if timestamp == 0 {
+		timestamp = num(exam["created_at"])
+	}
+	_, offset := time.Unix(int64(timestamp), 0).In(location).Zone()
+	sessionDate := (timestamp+float64(offset))/86400 + 25569
+	row := 1
 	for _, attempt := range dashboard["attempts"].([]M) {
 		if attempt["joined_at"] == nil {
 			continue
 		}
 		row++
+		pending, _ := attempt["pending"].(int)
 		status := "لم يسلّم"
 		if attempt["submitted_at"] != nil {
 			status = "تم التصحيح"
-			if attempt["pending"].(int) > 0 {
+			if pending > 0 {
 				status = "تصحيح غير مكتمل"
 			}
 		}
@@ -71,13 +70,13 @@ func excelExport(dashboard M, labels []string) ([]byte, error) {
 		if cancelled {
 			status = "ملغي"
 		}
-		fmt.Fprintf(&sheet, `<row r="%d">`, row)
+		fmt.Fprintf(&sheet, `<row r="%d" ht="32" customHeight="1">`, row)
 		values := []any{attempt["name"], attempt["phone"], attempt["code"], labels[0], labels[1], labels[2], labels[3], title}
 		for col, value := range values {
 			cell(col, row, 0, value, false)
 		}
 		cell(8, row, 2, sessionDate, true)
-		if !cancelled && attempt["submitted_at"] != nil {
+		if !cancelled && attempt["submitted_at"] != nil && pending == 0 {
 			cell(9, row, 3, attempt["score"], true)
 			maximum := attempt["maximum"].(float64)
 			if maximum > 0 {
@@ -89,19 +88,22 @@ func excelExport(dashboard M, labels []string) ([]byte, error) {
 			cell(12, row, 3, attempt["pending"], true)
 		}
 		cell(13, row, 0, status, false)
-		if !cancelled && attempt["submitted_at"] != nil {
+		if !cancelled && attempt["submitted_at"] != nil && pending == 0 {
 			cell(14, row, 0, fmt.Sprintf("%v من %v", attempt["score"], attempt["maximum"]), false)
 		}
 		cell(15, row, 0, attempt["cancelReason"], false)
+		cell(16, row, 0, exam["id"], false)
+		cell(17, row, 0, attempt["id"], false)
+		cell(18, row, 0, "massar-results-v1", false)
 		sheet.WriteString(`</row>`)
 	}
-	fmt.Fprintf(&sheet, `</sheetData><autoFilter ref="A4:P%d"/><mergeCells count="2"><mergeCell ref="A1:P1"/><mergeCell ref="A2:P2"/></mergeCells></worksheet>`, row)
+	fmt.Fprintf(&sheet, `</sheetData><autoFilter ref="A1:S%d"/><pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.25" footer="0.25"/><pageSetup orientation="landscape"/></worksheet>`, row)
 	files := map[string]string{
 		"[Content_Types].xml":        `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
 		"_rels/.rels":                `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
 		"xl/workbook.xml":            `<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="نتائج الامتحان" sheetId="1" r:id="rId1"/></sheets></workbook>`,
 		"xl/_rels/workbook.xml.rels": `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
-		"xl/styles.xml":              `<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/><numFmt numFmtId="165" formatCode="0.##"/></numFmts><fonts count="2"><font><sz val="12"/><name val="Arial"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF102A43"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" horizontal="right" readingOrder="2" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" horizontal="right" readingOrder="2" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
+		"xl/styles.xml":              `<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/><numFmt numFmtId="165" formatCode="0.00"/></numFmts><fonts count="2"><font><sz val="12"/><name val="Arial"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF102A43"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left style="thin"><color rgb="FFDCE5EB"/></left><right style="thin"><color rgb="FFDCE5EB"/></right><top style="thin"><color rgb="FFDCE5EB"/></top><bottom style="thin"><color rgb="FFDCE5EB"/></bottom></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" horizontal="right" readingOrder="2" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" horizontal="right" readingOrder="2" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
 		"xl/worksheets/sheet1.xml":   sheet.String(),
 	}
 	var output bytes.Buffer

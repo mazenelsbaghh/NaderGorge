@@ -1,3 +1,5 @@
+import 'center_exam_integration.dart';
+
 enum CatalogKind { subject, center, grade }
 
 enum SessionKind { counted, free, extra }
@@ -1337,6 +1339,7 @@ class AcademicRecord {
     this.maxScoreKnown = true,
     this.examAbsent = false,
     this.notes = '',
+    this.integration,
     required this.updatedAt,
   });
   final String id;
@@ -1349,6 +1352,7 @@ class AcademicRecord {
   final bool maxScoreKnown;
   final bool examAbsent;
   final String notes;
+  final IntegratedExamOwnership? integration;
   final DateTime updatedAt;
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -1361,6 +1365,7 @@ class AcademicRecord {
     if (!maxScoreKnown) 'maxScoreKnown': false,
     'examAbsent': examAbsent,
     'notes': notes,
+    if (integration != null) 'integration': integration!.toJson(),
     'updatedAt': updatedAt.toIso8601String(),
   };
   factory AcademicRecord.fromJson(Map<String, dynamic> value) => AcademicRecord(
@@ -1374,6 +1379,11 @@ class AcademicRecord {
     maxScoreKnown: value['maxScoreKnown'] as bool? ?? true,
     examAbsent: value['examAbsent'] as bool,
     notes: value['notes'] as String,
+    integration: value['integration'] == null
+        ? null
+        : IntegratedExamOwnership.fromJson(
+            Map<String, dynamic>.from(value['integration'] as Map),
+          ),
     updatedAt: DateTime.parse(value['updatedAt'] as String),
   );
   AcademicRecord copyWith({
@@ -1387,6 +1397,7 @@ class AcademicRecord {
     bool? maxScoreKnown,
     bool? examAbsent,
     String? notes,
+    IntegratedExamOwnership? integration,
     DateTime? updatedAt,
   }) => AcademicRecord(
     id: id ?? this.id,
@@ -1399,6 +1410,7 @@ class AcademicRecord {
     maxScoreKnown: maxScoreKnown ?? this.maxScoreKnown,
     examAbsent: examAbsent ?? this.examAbsent,
     notes: notes ?? this.notes,
+    integration: integration ?? this.integration,
     updatedAt: updatedAt ?? this.updatedAt,
   );
 }
