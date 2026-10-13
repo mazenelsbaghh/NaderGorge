@@ -30,7 +30,6 @@ test('2026-10-03 student sees partial essay marks and the specific deduction rea
     });
     const base = process.env.ESSAY_BROWSER_BASE_URL || 'http://app.lvh.me:8738';
     await page.goto(`${base}/student/exams/test-exam`);
-    await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
     await page.getByText('صحيحة جزئيًا', { exact: true }).waitFor();
     const review = page.locator('section').filter({ has: page.getByRole('heading', { name: 'مراجعة الورقة كاملة' }) });
     assert.equal(await review.getByText('0.75 من 1 نقطة', { exact: true }).count(), 1);

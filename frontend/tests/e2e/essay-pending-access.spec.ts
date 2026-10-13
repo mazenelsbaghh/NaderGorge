@@ -37,8 +37,8 @@ test.describe('2026-10-12 pending essay access regression (synthetic HTTP and me
       essays: [{ essaySubmissionId: 'pending-essay', questionId: 'question', status: 'WaitTeacher' }],
     }));
     await page.goto(`/student/exams/lesson-exam?packageId=${packageId}&lessonId=${lessonId}`);
-    await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'إجاباتك المقالية محفوظة للمراجعة' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByText('تقدر ترجع للحصة وتكمل التعلم أثناء انتظار التصحيح. إجاباتك محفوظة.')).toBeVisible();
     await page.getByRole('button', { name: 'العودة للحصة', exact: true }).click();
     await expect(page).toHaveURL(lessonPath);

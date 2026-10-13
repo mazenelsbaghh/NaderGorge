@@ -12,12 +12,44 @@ async function studentSession(page: Page) {
     localStorage.setItem('user', JSON.stringify(authUser));
   }, user);
   await page.route('**/api/**', route => reply(route, []));
+  await page.route('**/api/student/welcome/claim', route => reply(route, null));
   await page.route('**/api/auth/session', route => reply(route, { user, authorizationVersion: 1 }));
   await page.route('**/api/public/settings', route => route.fulfill({ json: { maintenanceMode: false } }));
   await page.route('**/api/student/shell-bootstrap', route => reply(route, { hasSeenTrackingCodePopup: true, unreadNotificationsCount: 0, currentBalance: 0, gamification: { totalPoints: 0, levelName: 'طالب' } }));
 }
 
 const failedExam: ExamResultDto = { attemptId: 'expired-attempt', scoreAchieved: 9, totalScore: 13, isPassed: false, blocksNextLesson: true, evaluation: 'جيد', isTimeExpired: true, resultState: 'Completed', questions: [] };
+
+test('a completed exam opens its saved result without entry confirmation or a new attempt', async ({ page }) => {
+  await studentSession(page);
+  let starts = 0;
+  await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, {
+    ...failedExam, scoreAchieved: 13, isPassed: true, blocksNextLesson: false, isTimeExpired: false, evaluation: 'ممتاز',
+  }));
+  await page.route(`**/api/exams/${assessmentId}/start`, route => { starts++; return reply(route, examAttempt('unexpected-attempt')); });
+  await page.goto(`/student/exams/${assessmentId}`);
+  await expect(page.getByRole('heading', { name: 'ممتاز!', exact: true })).toBeVisible();
+  await expect(page.getByText('13 / 13', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(starts).toBe(0);
+  await page.screenshot({ path: test.info().outputPath('saved-result.png') });
+});
+
+for (const status of [403, 503]) {
+  test(`saved-result failure ${status} does not offer or start a new exam attempt`, async ({ page }) => {
+    await studentSession(page);
+    let starts = 0;
+    await page.route(`**/api/exams/${assessmentId}/latest-result`, route => route.fulfill({
+      status, json: { success: false, message: 'تعذر تحميل النتيجة المحفوظة' },
+    }));
+    await page.route(`**/api/exams/${assessmentId}/start`, route => { starts++; return reply(route, examAttempt('unexpected-attempt')); });
+    await page.goto(`/student/exams/${assessmentId}`);
+    await expect(page.getByRole('heading', { name: 'الامتحان غير متاح', exact: true })).toBeVisible();
+    await expect(page.getByText('تعذر تحميل النتيجة المحفوظة', { exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(starts).toBe(0);
+  });
+}
 
 test('essay completion refreshes the final result without waiting for the polling timer', async ({ page }) => {
   await studentSession(page);
@@ -46,8 +78,8 @@ test('essay completion refreshes the final result without waiting for the pollin
   });
   await page.route('**/api/exams/attempts/essay-attempt/result', route => reply(route, { ...pendingResult, resultState: 'Completed', evaluation: 'نتيجة التصحيح الفورية' }));
   await page.goto(`/student/exams/${assessmentId}`);
-  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'بنراجع إجاباتك المقالية الآن', exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => statusRequests).toBeGreaterThan(0);
   await expect.poll(() => Boolean(platformSocket)).toBe(true);
   // Freeze the fallback poll: only the real SignalR handler can refresh the result.
@@ -77,9 +109,12 @@ for (const entry of ['saved-result', 'just-expired'] as const) {
     });
     await page.route(`**/api/exams/${assessmentId}/submit/expired-attempt*`, route => { oldSubmissions++; return reply(route, failedExam); });
     await page.goto(`/student/exams/${assessmentId}`);
-  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+    if (entry === 'just-expired')
+      await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
     const restart = page.getByRole('button', { name: 'إعادة الامتحان', exact: true });
     await expect(restart).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(starts).toBe(entry === 'just-expired' ? 1 : 0);
     const startsBeforeRetry = starts;
     await restart.click();
     await page.getByRole('button', { name: 'إلغاء', exact: true }).click();
@@ -100,7 +135,6 @@ test('failed restart reports access rejection instead of redisplaying the old re
   await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, failedExam));
   await page.route(`**/api/exams/${assessmentId}/start`, route => route.fulfill({ status: 403, json: { message: 'الحصة غير متاحة لحسابك' } }));
   await page.goto(`/student/exams/${assessmentId}`);
-  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
   await page.getByRole('button', { name: 'إعادة الامتحان', exact: true }).click();
   await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
   await expect(page.getByText('الحصة غير متاحة لحسابك', { exact: true })).toBeVisible();

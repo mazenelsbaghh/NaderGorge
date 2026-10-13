@@ -78,7 +78,6 @@ test('student sees excluded essay and model answer without wrong mark (synthetic
       return route.fulfill({ json: { success: true, data } });
     });
     await page.goto(`http://app.lvh.me:${port}/student/exams/exam`);
-    await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
     await page.getByText('بدون تصحيح', { exact: true }).waitFor();
     assert.equal(await page.getByText('خاطئة ✗', { exact: true }).count(), 0);
     assert.equal(await page.getByText('0 من 0 نقطة', { exact: true }).count(), 0);

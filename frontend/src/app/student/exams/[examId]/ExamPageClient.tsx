@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AssessmentStartConfirmation } from '@/components/assessments/AssessmentStartConfirmation';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { examService, ActiveExamAttemptDto, ExamResultDto } from '@/services/exam-service';
@@ -27,7 +27,7 @@ function ExamPageClientContent() {
   const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [confirmation, setConfirmation] = useState<'entry' | 'restart' | null>('entry');
+  const [confirmation, setConfirmation] = useState<'entry' | 'restart' | null>(null);
 
   const startExam = useCallback(async () => {
     if (!examId) return;
@@ -47,35 +47,34 @@ function ExamPageClientContent() {
     }
   }, [examId]);
 
-  const loadExam = useCallback(async () => {
-    if (!examId) return;
-    setLoading(true);
-    setError('');
-    try {
-      const response = await examService.getLatestResult(examId);
-      setPassedResult(response.data.data);
-      setExam(null);
-    } catch (err: unknown) {
-      const apiError = err as { response?: { status?: number; data?: { message?: string } } };
-      if (apiError.response?.status === 404) {
-        await startExam();
-      } else {
-        setError(apiError.response?.data?.message || 'تعذر تحميل نتيجة الامتحان الحالية. حاول مرة أخرى.');
-        setExam(null);
-        setPassedResult(null);
+  useEffect(() => {
+    let cancelled = false;
+    const loadSavedResult = async () => {
+      try {
+        const response = await examService.getLatestResult(examId);
+        if (!cancelled) setPassedResult(response.data.data);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const apiError = err as { response?: { status?: number; data?: { message?: string } } };
+        if (apiError.response?.status === 404) {
+          setConfirmation('entry');
+        } else {
+          setError(apiError.response?.data?.message || 'تعذر تحميل نتيجة الامتحان الحالية. حاول مرة أخرى.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [examId, startExam]);
+    };
+    void loadSavedResult();
+    return () => { cancelled = true; };
+  }, [examId]);
 
   const confirmationDialog = confirmation ? (
     <AssessmentStartConfirmation
       kind="exam"
       onConfirm={() => {
-        const action = confirmation === 'restart' ? startExam : loadExam;
         setConfirmation(null);
-        void action();
+        void startExam();
       }}
       onCancel={() => {
         if (confirmation === 'restart') {
