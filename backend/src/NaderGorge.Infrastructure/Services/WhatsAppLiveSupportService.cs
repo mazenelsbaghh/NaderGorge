@@ -453,8 +453,34 @@ public sealed class WhatsAppLiveSupportService(
             CustomerServiceWindowExpiresAt = providerTimestamp.AddHours(24),
             Version = 1
         };
+        var pendingOutboxIds = db.OutboxEvents.Local.Select(item => item.Id).ToHashSet();
         db.LiveSupportWhatsAppBindings.Add(binding);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+        {
+            SqlState: "23505", ConstraintName: "IX_live_support_whatsapp_bindings_ConversationId"
+        })
+        {
+            // Another delivery can bind the same conversation after our first lookup.
+            // Only reuse its row if every participant/channel identity still matches.
+            var winner = await db.LiveSupportWhatsAppBindings.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.ConversationId == conversation.Id
+                    && item.AccountId == accountId && item.GuestSessionId == guest.Id
+                    && item.WhatsAppUserId == whatsAppUserId && item.PhoneNumber == phone, ct);
+            if (winner is null) throw;
+
+            db.Entry(binding).State = EntityState.Detached;
+            // SaveChanges hooks added these events to the failed transaction. They
+            // will be regenerated on the next save; preserve pre-existing work.
+            foreach (var item in db.OutboxEvents.Local.ToArray())
+                if (!pendingOutboxIds.Contains(item.Id) && db.Entry(item).State == EntityState.Added)
+                    db.Entry(item).State = EntityState.Detached;
+            db.LiveSupportWhatsAppBindings.Attach(winner);
+            binding = winner;
+        }
         return (conversation, participant, binding);
     }
 
