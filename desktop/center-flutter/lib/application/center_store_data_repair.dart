@@ -74,6 +74,7 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/gec_duplicate_codes_20261004.json',
     'assets/attendance_payment_repair_20261011.json',
     'assets/gec_month1_repair_20261013.json',
+    'assets/gec_first_secondary_attendance_repair_20261013.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,
@@ -93,6 +94,7 @@ extension _BundledCenterDataRepair on CenterStore {
     'suspensionReason': '',
   };
   static const _repairCollections = {
+    'catalogs',
     'students',
     'groups',
     'sessions',
