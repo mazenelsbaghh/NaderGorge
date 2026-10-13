@@ -17,6 +17,7 @@ final syntheticRepairAssets = <String, Object>{
     'academic_import_20261004',
     'cairo_academic_import_20261004',
     'attendance_payment_repair_20261011',
+    'gec_month1_repair_20261013',
   ])
     'assets/$name.json': {
       'id': 'synthetic-$name',

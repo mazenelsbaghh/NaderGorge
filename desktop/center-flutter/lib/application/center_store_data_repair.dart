@@ -73,6 +73,7 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/gec_codes_20261004.json',
     'assets/gec_duplicate_codes_20261004.json',
     'assets/attendance_payment_repair_20261011.json',
+    'assets/gec_month1_repair_20261013.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,
@@ -189,6 +190,7 @@ extension _BundledCenterDataRepair on CenterStore {
           final value = Map<String, dynamic>.from(insert['value'] as Map);
           _insertRepairRow(_repairRows(document, collection), value);
         }
+        _insertRepairEnrollments(document, patch);
         for (final raw in patch['inserts'] as List) {
           final insert = Map<String, dynamic>.from(raw as Map);
           if (insert['collection'] == 'attendances') {
@@ -317,6 +319,61 @@ extension _BundledCenterDataRepair on CenterStore {
     }
   }
 
+  Map<String, String> _repairEnrollmentInserts(Map<String, dynamic> patch) {
+    final enrollmentInserts = patch['enrollmentInserts'] as List? ?? const [];
+    if (enrollmentInserts.isEmpty) return const {};
+    final insertedStudents = <String, Map>{
+      for (final insert in patch['inserts'] as List)
+        if (insert['collection'] == 'students')
+          (insert['value'] as Map)['id'] as String: insert['value'] as Map,
+    };
+    final enrollments = <String, String>{};
+    for (final raw in enrollmentInserts) {
+      final enrollment = Map<String, dynamic>.from(raw as Map);
+      final studentId = enrollment['studentId'];
+      final groupId = enrollment['groupId'];
+      final enrolledAt = enrollment['enrolledAt'];
+      if (studentId is! String ||
+          studentId.trim().isEmpty ||
+          groupId is! String ||
+          groupId.trim().isEmpty ||
+          enrolledAt is! String ||
+          DateTime.tryParse(enrolledAt) == null) {
+        throw const FormatException('Repair enrollment identity or date');
+      }
+      final student = insertedStudents[studentId];
+      if (student == null || !(student['groupIds'] as List).contains(groupId)) {
+        throw const FormatException('Repair enrollment student membership');
+      }
+      final key = '$studentId:$groupId';
+      if (enrollments.containsKey(key)) {
+        throw const FormatException('Duplicate repair enrollment');
+      }
+      enrollments[key] = enrolledAt;
+    }
+    return enrollments;
+  }
+
+  void _insertRepairEnrollments(
+    Map<String, dynamic> document,
+    Map<String, dynamic> patch,
+  ) {
+    final additions = _repairEnrollmentInserts(patch);
+    if (additions.isEmpty) return;
+    // toJson shares this map with the live state; failed repairs must not edit it.
+    final enrollments = Map<String, String>.from(
+      document['enrollments'] as Map,
+    );
+    for (final addition in additions.entries) {
+      if (enrollments.containsKey(addition.key) &&
+          enrollments[addition.key] != addition.value) {
+        throw _DataRepairConflict([addition.key]);
+      }
+      enrollments[addition.key] = addition.value;
+    }
+    document['enrollments'] = enrollments;
+  }
+
   List<Map<String, dynamic>> _repairRows(
     Map<String, dynamic> document,
     String collection, {
@@ -350,6 +407,12 @@ extension _BundledCenterDataRepair on CenterStore {
     Map<String, dynamic> document,
     Map<String, dynamic> patch,
   ) {
+    for (final enrollment in _repairEnrollmentInserts(patch).entries) {
+      if ((document['enrollments'] as Map)[enrollment.key] !=
+          enrollment.value) {
+        throw _DataRepairConflict([enrollment.key]);
+      }
+    }
     for (final raw in patch['deletes'] as List? ?? const []) {
       final deletion = Map<String, dynamic>.from(raw as Map);
       final id = (deletion['before'] as Map)['id'] as String;
