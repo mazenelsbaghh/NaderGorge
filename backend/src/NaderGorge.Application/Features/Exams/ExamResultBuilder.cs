@@ -4,6 +4,8 @@ using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
+public record PartialExamResultDto(decimal ScoreAchieved, decimal TotalScore, int PendingQuestionCount);
+
 public record ExamQuestionReviewDto(
     Guid ExamQuestionId,
     int Order,
@@ -19,7 +21,8 @@ public record ExamQuestionReviewDto(
     string? StudentAudioUrl = null,
     string? GradingFeedback = null,
     decimal? MaximumPoints = null,
-    bool IsExcludedFromScore = false
+    bool IsExcludedFromScore = false,
+    bool IsPendingGrading = false
 );
 
 public record QuestionReviewSnapshot(
@@ -28,7 +31,8 @@ public record QuestionReviewSnapshot(
     bool IsCorrect,
     decimal PointsAwarded,
     string? StudentAudioUrl = null,
-    string? GradingFeedback = null
+    string? GradingFeedback = null,
+    bool IsPendingGrading = false
 );
 
 internal static class ExamResultBuilder
@@ -66,7 +70,7 @@ internal static class ExamResultBuilder
                 questionSnapshotsByQuestionId.TryGetValue(eq.Id, out var snapshot);
                 var resultIsCompleted = string.Equals(resultState ?? "Completed", "Completed", StringComparison.Ordinal);
                 var canRevealCorrectAnswer = revealCorrectAnswers
-                    && (resultIsCompleted || eq.Question.Type != QuestionType.Essay);
+                    && (resultIsCompleted || exam.ShowResultsWhileEssayPending || eq.Question.Type != QuestionType.Essay);
                 var correctText = GetCorrectReviewText(eq.Question);
                 var excluded = eq.Question.Type == QuestionType.Essay && exam.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly;
 
@@ -81,13 +85,15 @@ internal static class ExamResultBuilder
                     canRevealCorrectAnswer ? correctText : null,
                     canRevealCorrectAnswer ? eq.Question.AudioUrl : null,
                     eq.Question.ImageUrl,
-                    resultIsCompleted
+                    canRevealCorrectAnswer
                         ? eq.Question.WrittenCorrection
                         : null,
                     snapshot?.StudentAudioUrl,
                     resultIsCompleted && !excluded ? snapshot?.GradingFeedback : null,
                     eq.Points,
-                    excluded
+                    excluded,
+                    !resultIsCompleted && !excluded && eq.Question.Type == QuestionType.Essay
+                        && (snapshot?.IsPendingGrading ?? true)
                 );
             })
             .ToList();
@@ -103,8 +109,20 @@ internal static class ExamResultBuilder
             resultState ?? "Completed",
             lessonId,
             packageId,
-            questionReviews
+            questionReviews,
+            exam.ShowResultsWhileEssayPending && (resultState is "Pending" or "PartiallyGraded")
+                ? PartialResult(exam, attempt, questionReviews) : null
         );
+    }
+
+    private static PartialExamResultDto PartialResult(Exam exam, StudentExamAttempt attempt,
+        IReadOnlyList<ExamQuestionReviewDto> reviews)
+    {
+        var graded = reviews.Where(q => !q.IsPendingGrading && !q.IsExcludedFromScore).ToArray();
+        var rawMaximum = reviews.Where(q => !q.IsExcludedFromScore).Sum(q => q.MaximumPoints ?? 0);
+        var scale = rawMaximum > 0 ? exam.TotalScore / rawMaximum : 0;
+        return new(attempt.IsTimeExpired ? 0 : Math.Round(graded.Sum(q => q.PointsAwarded) * scale, 2),
+            Math.Round(graded.Sum(q => q.MaximumPoints ?? 0) * scale, 2), reviews.Count(q => q.IsPendingGrading));
     }
 
     public static Dictionary<Guid, QuestionReviewSnapshot> BuildQuestionReviewSnapshots(IEnumerable<StudentAnswer> answers, Exam exam)
@@ -145,7 +163,8 @@ internal static class ExamResultBuilder
             isGraded && awardedPoints > 0m && awardedPoints >= maximumPoints,
             awardedPoints,
             essay.AudioUrl,
-            isGraded ? essay.TeacherFeedback : null);
+            isGraded ? essay.TeacherFeedback : null,
+            IsPendingGrading: !isGraded);
     }
 
     public static string? GetCorrectReviewText(QuestionBankItem question)

@@ -570,6 +570,7 @@ public sealed class CreatePublicExamProductCommandHandler : IRequestHandler<Crea
             TotalScore = r.TotalScore,
             DurationMinutes = r.DurationMinutes,
             EssayGradingMode = r.EssayGradingMode,
+            ShowResultsWhileEssayPending = r.ShowResultsWhileEssayPending,
             IsMandatory = false,
             IsRandomized = r.IsRandomized,
             CreatedByTeacherId = examOwnerTeacherId.Value

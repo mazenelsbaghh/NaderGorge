@@ -17,6 +17,7 @@ public class Homework : NaderGorge.Domain.Entities.IArchivableContent
     public ContentArchiveMode ArchiveMode { get; set; }
     public DateTime? ArchivedAt { get; set; }
     public Guid? ArchivedByUserId { get; set; }
+    public bool ShowResultsWhileEssayPending { get; set; }
     public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }

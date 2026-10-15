@@ -127,11 +127,9 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null 
-                                      && prevHwSubmission.Status == SubmissionStatus.Graded 
-                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
+                    bool previousHomeworkAllowsContinuation = HomeworkProgressPolicy.AllowsContinuation(prevHomework, prevHwSubmission);
 
-                    if (!prevHwPassed)
+                    if (!previousHomeworkAllowsContinuation)
                     {
                         string reason = prevHwSubmission == null
                             ? $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً قبل بدء هذا الواجب."

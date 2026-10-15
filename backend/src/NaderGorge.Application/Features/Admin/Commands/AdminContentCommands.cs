@@ -1576,7 +1576,8 @@ public record AttachHomeworkCommand(
     List<AttachHomeworkQuestionDto> Questions,
     Guid? CurrentUserId = null,
     DateOnly? HomeworkComingSoonOn = null,
-    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null) : IRequest<ApiResponse<Guid>>;
+    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null,
+    bool ShowResultsWhileEssayPending = false) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
 
@@ -1691,6 +1692,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             _db.HomeworkQuestions.RemoveRange(existingQuestions);
         }
 
+        hw.ShowResultsWhileEssayPending = request.ShowResultsWhileEssayPending;
         hw.ParentNotificationEnabledAt = parentNotification.Enabled ? hw.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
         hw.ParentNotificationSettingsJson = parentNotification.ToJson();
 

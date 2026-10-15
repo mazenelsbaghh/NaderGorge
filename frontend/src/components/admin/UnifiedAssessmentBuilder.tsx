@@ -1,5 +1,6 @@
 'use client';
 
+import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
 import { useState } from 'react';
 import { Save, BookOpen, Video, Shuffle, CalendarClock } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
@@ -51,6 +52,7 @@ export function UnifiedAssessmentBuilder({
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
   const [essayGradingMode, setEssayGradingMode] = useState<ExamEssayGradingMode>('Automatic');
+  const [showResultsWhileEssayPending, setShowResultsWhileEssayPending] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(
     !isExam && Boolean(initialHomeworkComingSoonOn)
   );
@@ -110,6 +112,7 @@ export function UnifiedAssessmentBuilder({
         const payload = {
           parentNotification,
           essayGradingMode,
+          showResultsWhileEssayPending,
           title,
           description,
           totalScore,
@@ -134,6 +137,7 @@ export function UnifiedAssessmentBuilder({
           parentNotification,
           title,
           instructions: description,
+          showResultsWhileEssayPending,
           isMandatory,
           isRandomized,
           totalScore,
@@ -155,6 +159,7 @@ export function UnifiedAssessmentBuilder({
       setDescription('');
       setDurationMinutes(undefined);
       setEssayGradingMode('Automatic');
+      setShowResultsWhileEssayPending(false);
       setDisplayQuestionCount(undefined);
       setIsMandatory(true);
       setIsRandomized(false);
@@ -284,7 +289,10 @@ export function UnifiedAssessmentBuilder({
                 </Checkbox>
               </div>
 
-              {isExam && <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving} />}
+              {isExam && <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving}
+                showPendingResults={showResultsWhileEssayPending} onPendingResultsChange={setShowResultsWhileEssayPending} />}
+
+              {!isExam && <AssessmentPendingResultsSwitch enabled={showResultsWhileEssayPending} onChange={setShowResultsWhileEssayPending} disabled={saving} />}
 
               {!isExam && (
                 <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">

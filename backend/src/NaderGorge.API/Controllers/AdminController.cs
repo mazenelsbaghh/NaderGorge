@@ -931,7 +931,8 @@ public class AdminController : ControllerBase
             dto.Questions,
             GetUserId(),
             dto.HomeworkComingSoonOn,
-            dto.ParentNotification);
+            dto.ParentNotification,
+            dto.ShowResultsWhileEssayPending);
 
         var result = await _mediator.Send(cmd);
         return result.Success ? Ok(result) : BadRequest(result);
@@ -1631,7 +1632,8 @@ public record AttachHomeworkRequest(
     decimal TotalScore,
     List<AttachHomeworkQuestionDto> Questions,
     DateOnly? HomeworkComingSoonOn = null,
-    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null);
+    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null,
+    bool ShowResultsWhileEssayPending = false);
 public record LinkLessonExamRequest(Guid? ExamId);
 public record GenerateLessonMimGameRequest(Guid SourceVideoId);
 public record SetContentStatusRequest(bool IsActive);

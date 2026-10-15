@@ -1,4 +1,9 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
+using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Admin.Queries;
+using NaderGorge.Application.Features.Webhooks.Commands;
+using NaderGorge.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Homework.Commands;
 using NaderGorge.Application.Features.Homework.Queries;
@@ -197,6 +202,164 @@ public sealed class HomeworkSubmissionTests
         var questionReview = result.Data!.QuestionReviews.Single(q => q.QuestionId == firstQuestion.Id);
         Assert.Equal("/uploads/audio/homework-correction.mp3", questionReview.AudioUrl);
         Assert.Equal("التصحيح المسجل للسؤال", questionReview.WrittenCorrection);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public async Task PendingHomeworkSwitchAppliesToSavedAttemptUntilFinalGrading(bool enabled, bool manual)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Pending student", "pending-homework");
+        var lesson = new Lesson { Title = "Lesson", ContentSectionId = Guid.NewGuid() };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Work", TotalScore = 20,
+            PassingScoreThreshold = 10, ShowResultsWhileEssayPending = !enabled };
+        var mcq = new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Choose A", PointsActive = 2,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ, PossibleAnswers = ["A", "B"], CorrectAnswerKey = "A" };
+        var essay = new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Explain", PointsActive = 8,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay, WrittenCorrection = "Model explanation" };
+        homework.Questions = [mcq, essay];
+        db.Lessons.Add(lesson); db.Homeworks.Add(homework);
+        await db.SaveChangesAsync();
+        await new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        var submitted = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(mcq.Id, "A"), new(essay.Id, "Saved explanation")]), default);
+        Assert.True(submitted.Success, submitted.Message);
+        var submission = await db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync();
+        var fingerprint = HomeworkEvaluationQueue.Fingerprint(submission);
+        homework.ShowResultsWhileEssayPending = enabled;
+        // Live visibility must not change the attempt's authored scale or queued evaluation.
+        homework.TotalScore = 99;
+        essay.WrittenCorrection = "Changed model";
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        var pending = await new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        Assert.True(pending.Success, pending.Message);
+        Assert.Equal("PendingReview", pending.Data!.Status);
+        Assert.False(pending.Data.IsPassed);
+        Assert.Equal(20, pending.Data.TotalScore);
+        if (enabled)
+        {
+            Assert.Equal(4, pending.Data.PartialResult!.ScoreAchieved);
+            Assert.Equal(4, pending.Data.PartialResult.TotalScore);
+            Assert.Equal(1, pending.Data.PartialResult.PendingQuestionCount);
+            var pendingEssay = Assert.Single(pending.Data.QuestionReviews, q => q.QuestionId == essay.Id);
+            Assert.Null(pendingEssay.ScoreReceived);
+            Assert.Null(pendingEssay.IsCorrect);
+            Assert.Equal("Model explanation", pendingEssay.CorrectAnswer);
+        }
+        else
+        {
+            Assert.Null(pending.Data.PartialResult);
+            Assert.Empty(pending.Data.QuestionReviews);
+        }
+        submission = await db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync();
+        Assert.Equal(fingerprint, HomeworkEvaluationQueue.Fingerprint(submission));
+        Assert.Null(submission.Answers.Single(a => a.QuestionId == essay.Id).ScoreReceived);
+        if (manual)
+        {
+            var reviewer = await TestAppDbContextFactory.SeedUserAsync(db, "Reviewer", "reviewer-homework");
+            var adminRole = new Role { Name = "Admin", Type = NaderGorge.Domain.Enums.RoleType.Admin };
+            db.Roles.Add(adminRole);
+            db.UserRoles.Add(new UserRole { UserId = reviewer.Id, RoleId = adminRole.Id });
+            await db.SaveChangesAsync();
+            var graded = await new GradeAssessmentCommandHandler(db, new TeacherAuthorizationService(db))
+                .Handle(new(new(AssessmentKind.Homework, homework.Id, submission.Id, reviewer.Id),
+                    [new(mcq.Id, 2), new(essay.Id, 4)], "Reviewed"), default);
+            Assert.True(graded.Success, graded.Message);
+        }
+        else
+        {
+            var answer = submission.Answers.Single(a => a.QuestionId == essay.Id);
+            var graded = await new WebhookHomeworkGradedCommandHandler(db)
+                .Handle(new(submission.Id, fingerprint, [new(answer.Id, 1, "Reviewed")]), default);
+            Assert.True(graded.Success, graded.Message);
+        }
+        var final = await new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        Assert.Equal("Graded", final.Data!.Status);
+        Assert.Null(final.Data.PartialResult);
+        Assert.Equal(manual ? 12 : 20, final.Data.Score);
+        Assert.Equal(20, final.Data.TotalScore);
+        Assert.True(final.Data.IsPassed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PendingHomeworkIncludesUnansweredChoiceInPartialMaximumButNeverEssay(bool essayOnly)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Partial student", "partial-homework");
+        var homework = new Homework { LessonId = Guid.NewGuid(), Title = "Work", TotalScore = 10, ShowResultsWhileEssayPending = true };
+        var essay = new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Explain", PointsActive = 8,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay };
+        homework.Questions.Add(essay);
+        if (!essayOnly) homework.Questions.Add(new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Choose", PointsActive = 2 });
+        db.Homeworks.Add(homework);
+        db.HomeworkSubmissions.Add(new HomeworkSubmission { HomeworkId = homework.Id, StudentId = student.Id,
+            Status = SubmissionStatus.PendingReview, SubmittedAt = DateTime.UtcNow,
+            Answers = [new HomeworkAnswer { QuestionId = essay.Id, ProvidedAnswer = "Answer" }] });
+        await db.SaveChangesAsync();
+        var response = await new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(0, response.Data!.PartialResult!.ScoreAchieved);
+        Assert.Equal(essayOnly ? 0 : 2, response.Data.PartialResult.TotalScore);
+        Assert.Equal(1, response.Data.PartialResult.PendingQuestionCount);
+        Assert.Equal(essayOnly ? 0 : 1, response.Data.WrongAnswers);
+    }
+
+    [Fact]
+    public async Task HomeworkSwitchDoesNotRevealModelBeforeSubmission()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "unsubmitted-homework");
+        var homework = new Homework { LessonId = Guid.NewGuid(), Title = "Work", ShowResultsWhileEssayPending = true,
+            Questions = [new HomeworkQuestion { BodyText = "Explain", WrittenCorrection = "Secret model" }] };
+        db.Homeworks.Add(homework);
+        db.HomeworkSubmissions.Add(new HomeworkSubmission { HomeworkId = homework.Id, StudentId = student.Id, Status = SubmissionStatus.InProgress });
+        await db.SaveChangesAsync();
+        var response = await new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        Assert.False(response.Success);
+        Assert.Null(response.Data);
+    }
+
+    [Theory]
+    [InlineData(true, SubmissionStatus.PendingReview, true)]
+    [InlineData(false, SubmissionStatus.PendingReview, false)]
+    [InlineData(true, SubmissionStatus.InProgress, false)]
+    [InlineData(true, SubmissionStatus.Graded, false)]
+    public async Task NextHomeworkCanStartAndSubmitWhilePreviousEssayPendingOnlyWhenEnabled(
+        bool enabled, SubmissionStatus status, bool allowed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "next-homework");
+        var section = Guid.NewGuid();
+        var previousLesson = new Lesson { ContentSectionId = section, Title = "Previous", Order = 1 };
+        var nextLesson = new Lesson { ContentSectionId = section, Title = "Next", Order = 2 };
+        var previous = new Homework { LessonId = previousLesson.Id, Title = "Previous", TotalScore = 10,
+            PassingScoreThreshold = 9, ShowResultsWhileEssayPending = enabled,
+            Questions = [new HomeworkQuestion { BodyText = "Explain", PointsActive = 10, QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay }] };
+        var next = new Homework { LessonId = nextLesson.Id, Title = "Next", TotalScore = 1,
+            Questions = [new HomeworkQuestion { BodyText = "Choose", PointsActive = 1, CorrectAnswerKey = "A" }] };
+        db.Lessons.AddRange(previousLesson, nextLesson); db.Homeworks.AddRange(previous, next);
+        db.HomeworkSubmissions.Add(new HomeworkSubmission { HomeworkId = previous.Id, StudentId = student.Id,
+            Status = status, OverallScore = 0, SubmittedAt = status == SubmissionStatus.InProgress ? null : DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        var started = await new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(next.Id, student.Id), default);
+        var submitted = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(next.Id, student.Id, [new(next.Questions.Single().Id, "A")]), default);
+        Assert.Equal(allowed, started.Success);
+        Assert.Equal(allowed, submitted.Success);
     }
 
     private sealed class HomeworkAllowAccessService : IAccessCheckService

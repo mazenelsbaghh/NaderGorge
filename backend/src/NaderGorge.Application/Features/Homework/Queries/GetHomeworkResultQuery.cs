@@ -27,8 +27,11 @@ public record HomeworkResultDto(
     int CorrectAnswers,
     int WrongAnswers,
     int UngradedAnswers,
-    List<HomeworkQuestionReviewDto> QuestionReviews
+    List<HomeworkQuestionReviewDto> QuestionReviews,
+    PartialHomeworkResultDto? PartialResult = null
 );
+
+public record PartialHomeworkResultDto(decimal ScoreAchieved, decimal TotalScore, int PendingQuestionCount);
 
 public record HomeworkQuestionReviewDto(
     Guid QuestionId,
@@ -126,10 +129,12 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
                 _ => null
             };
 
+            int? scoreReceived = answer?.ScoreReceived
+                ?? (question.QuestionType != QuestionType.Essay || submission.Status == SubmissionStatus.Graded ? 0 : null);
             bool? isCorrect = null;
-            if (answer != null && answer.ScoreReceived.HasValue)
+            if (scoreReceived.HasValue)
             {
-                isCorrect = answer.ScoreReceived > 0;
+                isCorrect = scoreReceived > 0;
                 if (isCorrect.Value)
                     correctAnswers++;
                 else
@@ -148,7 +153,7 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
                 ProvidedAnswer: answer?.ProvidedAnswer,
                 CorrectAnswer: correctAnswer,
                 MaxPoints: question.PointsActive,
-                ScoreReceived: answer?.ScoreReceived,
+                ScoreReceived: scoreReceived,
                 IsCorrect: isCorrect,
                 WrittenCorrection: question.WrittenCorrection,
                 AudioUrl: question.AudioUrl,
@@ -159,6 +164,16 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
 
         bool isPassed = submission.Status == SubmissionStatus.Graded
             && submission.OverallScore >= (submission.PassingScoreSnapshot ?? homework.PassingScoreThreshold ?? 0);
+
+        bool canReview = submission.Status == SubmissionStatus.Graded || homework.ShowResultsWhileEssayPending;
+        var rawMaximum = homework.Questions.Sum(q => q.PointsActive);
+        var scale = rawMaximum > 0 ? homework.TotalScore / rawMaximum : 0;
+        var gradedQuestions = questionReviews.Where(q => q.ScoreReceived.HasValue).ToArray();
+        var partial = submission.Status == SubmissionStatus.PendingReview && canReview
+            ? new PartialHomeworkResultDto(
+                Math.Round(gradedQuestions.Sum(q => q.ScoreReceived!.Value) * scale, 2),
+                Math.Round(gradedQuestions.Sum(q => q.MaxPoints) * scale, 2), ungradedAnswers)
+            : null;
 
         var result = new HomeworkResultDto(
             HomeworkId: homework.Id,
@@ -173,10 +188,11 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
             GradedAt: submission.GradedAt,
             Status: submission.Status.ToString(),
             TotalQuestions: homework.Questions.Count,
-            CorrectAnswers: correctAnswers,
-            WrongAnswers: wrongAnswers,
+            CorrectAnswers: canReview ? correctAnswers : 0,
+            WrongAnswers: canReview ? wrongAnswers : 0,
             UngradedAnswers: ungradedAnswers,
-            QuestionReviews: questionReviews
+            QuestionReviews: canReview ? questionReviews : [],
+            PartialResult: partial
         );
 
         return ApiResponse<HomeworkResultDto>.Ok(result);

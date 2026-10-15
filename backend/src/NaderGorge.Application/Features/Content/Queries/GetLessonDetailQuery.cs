@@ -402,10 +402,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null
-                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
-                    if (!prevHwPassed)
+                    bool previousHomeworkAllowsContinuation = HomeworkProgressPolicy.AllowsContinuation(prevHomework, prevHwSubmission);
+                    if (!previousHomeworkAllowsContinuation)
                     {
                         isLocked = true;
                         if (prevHwSubmission == null)
@@ -614,10 +612,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     .OrderByDescending(s => s.SubmittedAt)
                     .FirstOrDefaultAsync(ct);
 
-                bool prevHwPassed = prevHwSubmission != null
-                                  && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                  && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
-                if (!prevHwPassed)
+                bool previousHomeworkAllowsContinuation = HomeworkProgressPolicy.AllowsContinuation(prevHomework, prevHwSubmission);
+                if (!previousHomeworkAllowsContinuation)
                 {
                     lessonExamLocked = true;
                     if (prevHwSubmission == null)

@@ -231,8 +231,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             var prevHomework = blockingData.Homeworks.GetValueOrDefault(previousLesson.Id);
             if (prevHomework != null && prevHomework.IsMandatory)
             {
-                var prevHwPassed = blockingData.PassedHomeworkIds.Contains(prevHomework.Id);
-                if (!prevHwPassed)
+                var previousHomeworkAllowsContinuation = blockingData.ContinuableHomeworkIds.Contains(prevHomework.Id);
+                if (!previousHomeworkAllowsContinuation)
                 {
                     return (
                         true,
@@ -281,8 +281,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             : await _db.Exams.AsNoTracking().Where(exam => examIds.Contains(exam.Id)).ToDictionaryAsync(exam => exam.Id, ct);
         var videoExams = await LoadVideoExamGatesAsync(previousLessonIds, ct);
         var homeworks = await LoadHomeworkGatesAsync(userId, previousLessonIds, ct);
-        var passedIds = await GetPassedHomeworkIdsAsync(userId, homeworks.Values.ToArray(), ct);
-        return new(exams, videoExams, homeworks, passedIds);
+        var continuableIds = await GetContinuableHomeworkIdsAsync(userId, homeworks.Values.ToArray(), ct);
+        return new(exams, videoExams, homeworks, continuableIds);
     }
 
     private async Task<ILookup<Guid, Exam>> LoadVideoExamGatesAsync(Guid[] lessonIds, CancellationToken ct)
@@ -308,21 +308,24 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             .GroupBy(homework => homework.LessonId).ToDictionary(group => group.Key, group => group.First());
     }
 
-    private async Task<HashSet<Guid>> GetPassedHomeworkIdsAsync(
+    private async Task<HashSet<Guid>> GetContinuableHomeworkIdsAsync(
         Guid userId, IReadOnlyCollection<HomeworkEntity> homeworks, CancellationToken ct)
     {
         var homeworkIds = homeworks.Select(homework => homework.Id).ToArray();
         if (homeworkIds.Length == 0) return [];
         var submissions = await _db.HomeworkSubmissions.AsNoTracking()
             .Where(submission => submission.StudentId == userId && homeworkIds.Contains(submission.HomeworkId) &&
-                submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
-            .Select(submission => new { submission.HomeworkId, submission.SubmittedAt, submission.OverallScore, submission.PassingScoreSnapshot })
+                (submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded ||
+                 submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.PendingReview))
+            .Select(submission => new NaderGorge.Domain.Entities.Homework.HomeworkSubmission {
+                HomeworkId = submission.HomeworkId, SubmittedAt = submission.SubmittedAt, Status = submission.Status,
+                OverallScore = submission.OverallScore, PassingScoreSnapshot = submission.PassingScoreSnapshot })
             .ToListAsync(ct);
         var latestSubmissions = submissions.GroupBy(submission => submission.HomeworkId)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(submission => submission.SubmittedAt).First());
         return homeworks.Where(homework =>
                 latestSubmissions.TryGetValue(homework.Id, out var submission) &&
-                submission.OverallScore >= (submission.PassingScoreSnapshot ?? homework.PassingScoreThreshold ?? 0))
+                HomeworkProgressPolicy.AllowsContinuation(homework, submission))
             .Select(homework => homework.Id).ToHashSet();
     }
 
@@ -330,7 +333,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         IReadOnlyDictionary<Guid, Exam> Exams,
         ILookup<Guid, Exam> VideoExams,
         IReadOnlyDictionary<Guid, HomeworkEntity> Homeworks,
-        IReadOnlySet<Guid> PassedHomeworkIds);
+        IReadOnlySet<Guid> ContinuableHomeworkIds);
 
     private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
     {

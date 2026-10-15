@@ -37,6 +37,7 @@ export default function AdminPublicExamsPageClient() {
     passingScore: '1',
     totalScore: '1',
     durationMinutes: '',
+    showResultsWhileEssayPending: false,
     essayGradingMode: 'Automatic' as ExamEssayGradingMode,
     isRandomized: false,
     availableFrom: '',
@@ -89,6 +90,7 @@ export default function AdminPublicExamsPageClient() {
         durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
         isRandomized: form.isRandomized,
         essayGradingMode: form.essayGradingMode,
+        showResultsWhileEssayPending: form.showResultsWhileEssayPending,
         availableFrom: form.availableFrom ? cairoDateTimeLocalToIso(form.availableFrom) : null,
         availableUntil: form.availableUntil ? cairoDateTimeLocalToIso(form.availableUntil) : null,
         academicScopes,
@@ -200,7 +202,9 @@ export default function AdminPublicExamsPageClient() {
           </div>
 
           <div className="mt-5"><ExamEssayGradingSettings mode={form.essayGradingMode}
-            onChange={essayGradingMode => setForm({ ...form, essayGradingMode })} disabled={loading} /></div>
+            onChange={essayGradingMode => setForm({ ...form, essayGradingMode })}
+            showPendingResults={form.showResultsWhileEssayPending}
+            onPendingResultsChange={showResultsWhileEssayPending => setForm({ ...form, showResultsWhileEssayPending })} disabled={loading} /></div>
           <div className="mt-5 grid gap-3 border-t border-[var(--admin-border)] pt-5 sm:grid-cols-2 lg:grid-cols-5">
             <Toggle label="منشور" checked={form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
             <Toggle label="مدفوع" checked={form.isPaid} onChange={(v) => setForm({ ...form, isPaid: v })} />

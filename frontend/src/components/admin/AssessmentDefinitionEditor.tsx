@@ -1,5 +1,6 @@
 'use client';
 
+import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { assessmentContentPath } from '@/lib/assessment-navigation';
@@ -106,7 +107,11 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
             </>}
           </div>
           {kind === 'exam' && <ExamEssayGradingSettings mode={definition.essayGradingMode ?? 'Automatic'}
-            onChange={essayGradingMode => updateDefinition({ essayGradingMode })} disabled={busy} />}
+            onChange={essayGradingMode => updateDefinition({ essayGradingMode })} disabled={busy}
+            showPendingResults={definition.showResultsWhileEssayPending ?? false}
+            onPendingResultsChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} />}
+          {kind === 'homework' && <AssessmentPendingResultsSwitch enabled={definition.showResultsWhileEssayPending ?? false}
+            onChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} disabled={busy} />}
           <div className="flex flex-wrap gap-6">
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isActive} onChange={event => updateDefinition({ isActive: event.target.checked })} />متاح للطلاب</label>
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isMandatory} onChange={event => updateDefinition({ isMandatory: event.target.checked })} />{label} إلزامي</label>

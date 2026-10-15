@@ -92,11 +92,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(cancellationToken);
 
-                    bool prevHwPassed = prevHwSubmission != null 
-                                      && prevHwSubmission.Status == SubmissionStatus.Graded 
-                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
+                    bool previousHomeworkAllowsContinuation = HomeworkProgressPolicy.AllowsContinuation(prevHomework, prevHwSubmission);
 
-                    if (!prevHwPassed)
+                    if (!previousHomeworkAllowsContinuation)
                     {
                         return ApiResponse<bool>.Fail("Previous lesson's homework is not passed.");
                     }

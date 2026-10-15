@@ -27,6 +27,7 @@ public sealed record AssessmentDefinitionSnapshot(
     public bool IsActive { get; init; } = true;
     public bool UsesAssignedQuestionPoints { get; init; }
     public ExamEssayGradingMode EssayGradingMode { get; init; }
+    public bool ShowResultsWhileEssayPending { get; init; }
     public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
@@ -64,6 +65,7 @@ public sealed record AssessmentDefinitionSnapshot(
     {
         IsActive = exam.IsActive,
         EssayGradingMode = exam.EssayGradingMode,
+        ShowResultsWhileEssayPending = exam.ShowResultsWhileEssayPending,
         ParentNotification = AssessmentParentNotificationSettings.Read(exam.ParentNotificationSettingsJson),
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
@@ -118,7 +120,11 @@ public sealed record AssessmentDefinitionSnapshot(
         1, "homework", homework.Id, homework.Title, homework.Description, homework.TotalScore,
         homework.PassingScoreThreshold, homework.DurationMinutes, homework.IsMandatory, homework.IsRandomized, null,
         homework.Questions.Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromHomeworkQuestion).ToArray())
-    { IsActive = homework.IsActive, ParentNotification = AssessmentParentNotificationSettings.Read(homework.ParentNotificationSettingsJson) };
+    {
+        IsActive = homework.IsActive,
+        ShowResultsWhileEssayPending = homework.ShowResultsWhileEssayPending,
+        ParentNotification = AssessmentParentNotificationSettings.Read(homework.ParentNotificationSettingsJson)
+    };
 
     public static Exam ResolveExam(Exam current, string? snapshotJson)
     {
@@ -132,6 +138,8 @@ public sealed record AssessmentDefinitionSnapshot(
             Title = snapshot.Title, Description = snapshot.Description ?? string.Empty,
             TotalScore = snapshot.TotalScore, PassingScore = snapshot.PassingScore ?? 0,
             EssayGradingMode = snapshot.EssayGradingMode,
+            // Visibility applies to existing pending attempts without regrading their saved answers.
+            ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
             ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id)).ToList()
@@ -150,6 +158,7 @@ public sealed record AssessmentDefinitionSnapshot(
             PassingScoreThreshold = snapshot.PassingScore, IsMandatory = snapshot.IsMandatory,
             DurationMinutes = snapshot.DurationMinutes,
             IsRandomized = snapshot.IsRandomized,
+            ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             Questions = snapshot.Questions.Select(q => ToHomeworkQuestion(q, current.Id)).ToList()
         };
     }

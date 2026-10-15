@@ -42,6 +42,9 @@ for (const width of [390, 1280]) {
       });
       await page.goto(`http://admin.lvh.me:${port}/admin/content/exams/exam/add-question`);
       const mode = page.getByRole('combobox', { name: /تصحيح الأسئلة المقالية/ });
+      const pendingSwitch = page.getByRole('switch', { name: /إظهار النتيجة أثناء تصحيح المقالي/ });
+      assert.equal(await pendingSwitch.isChecked(), false);
+      await pendingSwitch.check();
       await mode.selectOption('Manual');
       await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
       await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).waitFor();
@@ -52,6 +55,7 @@ for (const width of [390, 1280]) {
       await page.getByRole('alert').filter({ hasText: 'المعاينة التجريبية' }).waitFor();
       assert.equal(saves.length, 1);
       assert.equal(saves[0].definition.essayGradingMode, 'ModelAnswerOnly');
+      assert.equal(saves[0].definition.showResultsWhileEssayPending, true);
       assert.equal(saves[0].policy.previousAttempts, 'Preserve');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await mkdir('../artifacts/exam-essay-grading', { recursive: true });

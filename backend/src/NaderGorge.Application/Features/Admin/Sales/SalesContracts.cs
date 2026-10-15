@@ -98,7 +98,8 @@ public sealed record CreatePublicExamRequest(
     DateTime? AvailableFrom,
     DateTime? AvailableUntil,
     IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
-    NaderGorge.Domain.Enums.ExamEssayGradingMode EssayGradingMode = NaderGorge.Domain.Enums.ExamEssayGradingMode.Automatic);
+    NaderGorge.Domain.Enums.ExamEssayGradingMode EssayGradingMode = NaderGorge.Domain.Enums.ExamEssayGradingMode.Automatic,
+    bool ShowResultsWhileEssayPending = false);
 
 public sealed record DisableRequest(string? Reason);
 

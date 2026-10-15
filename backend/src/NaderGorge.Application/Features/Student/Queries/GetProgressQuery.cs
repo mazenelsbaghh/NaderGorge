@@ -136,14 +136,17 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 visibleMandatoryHomeworkIds.Add(homework.Id);
         }
 
-        var passedHomeworkIds = await _db.HomeworkSubmissions
+        var continuableHomeworkIds = await _db.HomeworkSubmissions
             .AsNoTracking()
-            .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
+            .Where(s => s.StudentId == request.UserId &&
+                (s.Status == Domain.Entities.Homework.SubmissionStatus.Graded || s.Status == Domain.Entities.Homework.SubmissionStatus.PendingReview))
             .Join(_db.Homeworks,
                 s => s.HomeworkId,
                 h => h.Id,
-                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0 })
-            .Where(x => x.OverallScore >= x.PassingScore)
+                (s, h) => new { s.HomeworkId, s.Status, s.SubmittedAt, s.OverallScore, h.ShowResultsWhileEssayPending,
+                    PassingScore = s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0 })
+            .Where(x => x.Status == Domain.Entities.Homework.SubmissionStatus.Graded && x.OverallScore >= x.PassingScore
+                || x.ShowResultsWhileEssayPending && x.Status == Domain.Entities.Homework.SubmissionStatus.PendingReview && x.SubmittedAt.HasValue)
             .Select(x => x.HomeworkId)
             .Distinct()
             .ToListAsync(ct);
@@ -216,7 +219,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
 
                     blockedByPrevHomework = mandatoryHomeworks
                         .Where(h => h.LessonId == prevLesson.Id && visibleMandatoryHomeworkIds.Contains(h.Id))
-                        .Any(h => !passedHomeworkIds.Contains(h.Id));
+                        .Any(h => !continuableHomeworkIds.Contains(h.Id));
                 }
 
                 bool blockedByCurrentExam = hasExam && !examGateSatisfiedIds.Contains(lesson.ExamId!.Value);

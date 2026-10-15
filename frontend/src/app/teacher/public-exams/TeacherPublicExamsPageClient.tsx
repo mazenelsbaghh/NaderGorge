@@ -35,6 +35,7 @@ export default function TeacherPublicExamsPageClient() {
     passingScore: "1",
     totalScore: "1",
     durationMinutes: "",
+    showResultsWhileEssayPending: false,
     essayGradingMode: "Automatic" as ExamEssayGradingMode,
   });
 
@@ -97,6 +98,7 @@ export default function TeacherPublicExamsPageClient() {
         durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
         isRandomized: false,
         essayGradingMode: form.essayGradingMode,
+        showResultsWhileEssayPending: form.showResultsWhileEssayPending,
         availableFrom: null,
         availableUntil: null,
         academicScopes,
@@ -244,7 +246,9 @@ export default function TeacherPublicExamsPageClient() {
           </label>
 
           <div className="mt-5"><ExamEssayGradingSettings mode={form.essayGradingMode}
-            onChange={essayGradingMode => setForm({ ...form, essayGradingMode })} disabled={saving} /></div>
+            onChange={essayGradingMode => setForm({ ...form, essayGradingMode })}
+            showPendingResults={form.showResultsWhileEssayPending}
+            onPendingResultsChange={showResultsWhileEssayPending => setForm({ ...form, showResultsWhileEssayPending })} disabled={saving} /></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <Toggle label="منشور للطلاب" checked={form.isPublished} onChange={(checked) => setForm({ ...form, isPublished: checked })} />
             <Toggle label="مدفوع" checked={form.isPaid} onChange={(checked) => setForm({ ...form, isPaid: checked })} />

@@ -1,3 +1,4 @@
+import type { PartialAssessmentResultDto } from './assessment-result';
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
 
@@ -46,7 +47,10 @@ export interface AnswerSubmissionDto {
   selectedText?: string;
 }
 
+export type PartialExamResultDto = PartialAssessmentResultDto;
+
 export interface ExamResultDto {
+  partialResult?: PartialExamResultDto | null;
   attemptId: string;
   scoreAchieved: number;
   totalScore: number;
@@ -73,6 +77,7 @@ export interface ExamQuestionReviewDto {
   pointsAwarded: number;
   maximumPoints?: number;
   isExcludedFromScore?: boolean;
+  isPendingGrading?: boolean;
   gradingFeedback?: string;
   correctOptionText?: string;
   audioUrl?: string;

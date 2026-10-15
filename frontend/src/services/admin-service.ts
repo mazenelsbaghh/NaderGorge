@@ -2050,6 +2050,7 @@ export const adminService = {
       totalScore: number;
       requiredPointsToPass: number;
       homeworkComingSoonOn?: string | null;
+      showResultsWhileEssayPending?: boolean;
       parentNotification?: AssessmentParentNotificationSettings;
       questions: {
         text: string;
@@ -2153,6 +2154,7 @@ export const adminService = {
     return res.data;
   },
   createInlineExam: async (payload: {
+    showResultsWhileEssayPending?: boolean;
     essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
     parentNotification?: AssessmentParentNotificationSettings;
     title: string;

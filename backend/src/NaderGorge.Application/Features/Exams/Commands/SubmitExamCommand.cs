@@ -13,7 +13,7 @@ public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<A
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
-public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions);
+public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions, PartialExamResultDto? PartialResult = null);
 
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {
@@ -446,7 +446,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         answer.IsCorrect = false;
         answer.PointsAwarded = 0;
         snapshots[answer.ExamQuestionId] = new(answer.SubmittedText,
-            !string.IsNullOrWhiteSpace(answer.SubmittedText), false, 0);
+            !string.IsNullOrWhiteSpace(answer.SubmittedText), false, 0, IsPendingGrading: !answer.IsExcludedFromScore);
     }
 
     private void AddEssaySubmission(SubmitExamCommand request, ExamQuestion question,

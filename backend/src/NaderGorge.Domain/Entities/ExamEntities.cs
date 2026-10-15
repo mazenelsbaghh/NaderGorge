@@ -13,6 +13,7 @@ public enum QuestionType
 public class Exam : BaseEntity, IArchivableContent
 {
     public ExamEssayGradingMode EssayGradingMode { get; set; }
+    public bool ShowResultsWhileEssayPending { get; set; }
     public string? ParentNotificationSettingsJson { get; set; }
     public DateTime? ParentNotificationEnabledAt { get; set; }
     public string InternalCode { get; private set; } = string.Empty;

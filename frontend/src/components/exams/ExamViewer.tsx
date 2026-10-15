@@ -29,6 +29,7 @@ import {
 } from '@/services/exam-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
+import { PartialAssessmentResultSummary } from '@/components/assessment/PartialAssessmentResultSummary';
 import { shuffleArray } from '@/lib/utils';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
@@ -128,7 +129,7 @@ export function ExamResultPanel({
     WaitTeacher: 'بانتظار المعلم',
     TeacherGraded: 'اكتمل التصحيح',
   };
-  const isFinalResult = effectiveResultState === 'Completed';
+  const isFinalResult = result.resultState === 'Completed';
   const needsTeacherReview = effectiveResultState === 'PartiallyGraded';
   const pendingEssayCount = gradingStatus?.essays.filter((essay) => essay.status !== 'TeacherGraded').length ?? 0;
   const wrongQuestions = isFinalResult
@@ -148,7 +149,7 @@ export function ExamResultPanel({
     );
   }
 
-  if (!isFinalResult) {
+  if (!isFinalResult && !result.partialResult) {
     return (
       <section className="mx-auto flex min-h-[420px] max-w-2xl flex-col items-center justify-center rounded-3xl border border-amber-200/70 bg-amber-50/70 p-8 text-center dark:border-amber-800/40 dark:bg-amber-950/20" dir="rtl" aria-live="polite">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
@@ -184,8 +185,13 @@ export function ExamResultPanel({
 
   return (
     <div className="space-y-6 pb-16" dir="rtl">
-      {/* ─── Score Hero ─── */}
-      <motion.div
+      {result.partialResult && !isFinalResult ? (
+        <PartialAssessmentResultSummary partial={result.partialResult} error={gradingError}
+          canContinue={!result.blocksNextLesson}
+          returnHref={returnHref ?? (resolvedLessonId && resolvedPackageId
+            ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}` : '/student')}
+          returnLabel={returnLabel ?? (resolvedLessonId ? 'العودة للحصة' : 'العودة للتعلم')} />
+      ) : <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -339,32 +345,7 @@ export function ExamResultPanel({
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-      </motion.div>
-
-      {!isFinalResult && (
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-6 sm:p-8 dark:border-amber-800/40 dark:bg-amber-950/20"
-        >
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
-                تحليل الإجابات المقالية
-              </p>
-              <h3 className="text-xl font-black text-foreground">يتم تحليل إجاباتك بالذكاء الاصطناعي الآن</h3>
-              <p className="text-sm leading-7 text-muted-foreground">
-                النتيجة النهائية ونقاط الضعف هتظهر تلقائيًا بعد ما يراجع النظام الأسئلة المقالية.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-background/70 px-4 py-3 text-sm font-black text-amber-700 dark:border-amber-800/50 dark:text-amber-400">
-              <RefreshCw className="h-5 w-5 animate-spin" />
-              {pendingEssayCount > 0 ? `${pendingEssayCount} سؤال قيد التحليل` : 'جاري التحليل'}
-            </div>
-          </div>
-        </motion.section>
-      )}
+      </motion.div>}
 
       {/* ─── Wrong answers summary ─── */}
       {wrongQuestions.length > 0 && (
@@ -422,15 +403,15 @@ export function ExamResultPanel({
       )}
 
       {/* ─── Full review ─── */}
-      {isFinalResult && (
+      {(isFinalResult || result.partialResult) && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }}
+          initial={result.partialResult ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
           className="rounded-3xl border border-border bg-card p-6 sm:p-8"
         >
           <h3 className="text-xl font-black text-foreground">مراجعة الورقة كاملة</h3>
-          <p className="mt-1 text-sm text-muted-foreground">كل سؤال بإجابتك وحالته النهائية.</p>
+          <p className="mt-1 text-sm text-muted-foreground">كل سؤال بإجابتك وحالة تصحيحه.</p>
 
           {hasReviewData ? (
             <div className="mt-5 space-y-3">
@@ -440,7 +421,9 @@ export function ExamResultPanel({
                   <article
                     key={q.examQuestionId}
                     className={`rounded-2xl border p-5 transition-colors ${
-                      q.isExcludedFromScore
+                      q.isPendingGrading
+                        ? 'border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20'
+                        : q.isExcludedFromScore
                         ? 'border-border bg-muted/20'
                         : q.isAnswered
                         ? q.isCorrect
@@ -457,7 +440,9 @@ export function ExamResultPanel({
                       </span>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-black ${
-                          q.isExcludedFromScore
+                          q.isPendingGrading
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                            : q.isExcludedFromScore
                             ? 'bg-muted text-muted-foreground'
                             : !q.isAnswered
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
@@ -468,12 +453,12 @@ export function ExamResultPanel({
                                 : 'bg-destructive/10 text-destructive'
                         }`}
                       >
-                        {q.isExcludedFromScore ? 'بدون تصحيح' : !q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : hasPartialCredit ? 'صحيحة جزئيًا' : 'خاطئة ✗'}
+                        {q.isPendingGrading ? 'قيد التصحيح' : q.isExcludedFromScore ? 'بدون تصحيح' : !q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : hasPartialCredit ? 'صحيحة جزئيًا' : 'خاطئة ✗'}
                       </span>
                     </div>
 
                     <p className="mb-3 text-xs font-black text-muted-foreground">
-                      {q.isExcludedFromScore ? 'المقالي مستبعد من حساب الدرجة النهائية' : <>{q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة</>}
+                      {q.isPendingGrading ? 'درجة المقالي تُضاف بعد التصحيح' : q.isExcludedFromScore ? 'المقالي مستبعد من حساب الدرجة النهائية' : <>{q.pointsAwarded}{q.maximumPoints != null ? ` من ${q.maximumPoints}` : ''} نقطة</>}
                     </p>
 
                     <div
@@ -508,7 +493,7 @@ export function ExamResultPanel({
                       {q.correctOptionText ? (
                         <div className="rounded-xl bg-background/60 border border-border/40 p-4">
                           <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            الإجابة الصحيحة
+                            {q.isPendingGrading ? 'الإجابة النموذجية' : 'الإجابة الصحيحة'}
                           </p>
                           <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
                           <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />

@@ -20,6 +20,7 @@ public static class AssessmentDefinitionWriter
         homework.PassingScoreThreshold = definition.PassingScore;
         homework.IsMandatory = definition.IsMandatory;
         homework.IsRandomized = definition.IsRandomized;
+        homework.ShowResultsWhileEssayPending = definition.ShowResultsWhileEssayPending;
         homework.ParentNotificationEnabledAt = definition.ParentNotification.Enabled
             ? homework.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
         homework.ParentNotificationSettingsJson = definition.ParentNotification.ToJson();
@@ -49,6 +50,7 @@ public static class AssessmentDefinitionWriter
         exam.PassingScore = definition.PassingScore ?? 0;
         exam.DurationMinutes = definition.DurationMinutes;
         exam.EssayGradingMode = definition.EssayGradingMode;
+        exam.ShowResultsWhileEssayPending = definition.ShowResultsWhileEssayPending;
         exam.IsMandatory = definition.IsMandatory;
         exam.IsRandomized = definition.IsRandomized;
         exam.DisplayQuestionCount = definition.DisplayQuestionCount;

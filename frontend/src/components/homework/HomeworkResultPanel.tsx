@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { PartialAssessmentResultSummary } from '@/components/assessment/PartialAssessmentResultSummary';
 import { useEffect, useState } from 'react';
 import { homeworkService } from '@/services/homework-service';
 import { invalidateMany } from '@/lib/cache-invalidation';
@@ -73,20 +75,32 @@ export function HomeworkResultPanel({
     result.totalScore > 0 ? Math.round((result.score / result.totalScore) * 100) : 0;
   const hasReviewData = reviewedQuestions.length > 0;
 
+  const returnHref = lessonId && packageId
+    ? `/student/packages/${packageId}/lessons/${lessonId}`
+    : packageId ? `/student/packages/${packageId}` : '/student';
+  const refreshError = refreshFailed ? 'تعذّر تحديث النتيجة مؤقتًا. سنحاول تلقائيًا؛ إجاباتك محفوظة.' : '';
+
+  if (isPendingReview && !result.partialResult) return (
+    <section className="space-y-4 rounded-xl border border-border bg-card p-6" dir="rtl" aria-live="polite">
+      <Clock3 className="h-8 w-8 text-primary" />
+      <h2 className="text-2xl font-bold">الواجب قيد التصحيح</h2>
+      <p className="text-sm leading-7 text-muted-foreground">إجاباتك محفوظة. ستظهر درجتك بعد اعتماد تصحيح المقالي.</p>
+      {refreshError && <p role="status" className="text-sm text-muted-foreground">{refreshError}</p>}
+      <Link href={returnHref} className="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">العودة للحصة</Link>
+    </section>
+  );
+
   return (
     <div className="space-y-6 pb-16" dir="rtl">
-      {refreshFailed && isPendingReview && (
-        <p role="status" className="text-sm text-muted-foreground">تعذّر تحديث النتيجة مؤقتًا. سنحاول تلقائيًا؛ إجاباتك محفوظة.</p>
-      )}
+      {isPendingReview && result.partialResult && <PartialAssessmentResultSummary partial={result.partialResult}
+        returnHref={returnHref} returnLabel="العودة للحصة" error={refreshError} canContinue />}
       {/* ─── Score Hero ─── */}
-      <motion.div
+      {!isPendingReview && <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={`relative overflow-hidden rounded-3xl border p-8 sm:p-10 ${
-          isPendingReview
-            ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
-            : result.isPassed
+          result.isPassed
             ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/40'
             : 'bg-destructive/5 border-destructive/20'
         }`}
@@ -103,31 +117,25 @@ export function HomeworkResultPanel({
           <div className="space-y-3">
             <div
               className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-black tracking-widest uppercase ${
-                isPendingReview
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
-                  : result.isPassed
+                result.isPassed
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
                   : 'bg-destructive/10 text-destructive'
               }`}
             >
-              {isPendingReview ? (
-                <Clock3 className="h-3.5 w-3.5" />
-              ) : result.isPassed ? (
+              {result.isPassed ? (
                 <ShieldCheck className="h-3.5 w-3.5" />
               ) : (
                 <ShieldX className="h-3.5 w-3.5" />
               )}
-              {isPendingReview ? 'بانتظار التصحيح' : result.isPassed ? 'اجتزت الواجب' : 'لم تجتز الواجب'}
+              {result.isPassed ? 'اجتزت الواجب' : 'لم تجتز الواجب'}
             </div>
 
             <h2 className="text-4xl font-black text-foreground sm:text-5xl">
-              {isPendingReview ? 'تم تسليم الواجب' : result.isPassed ? 'أحسنت!' : 'حاول مرة أخرى'}
+              {result.isPassed ? 'أحسنت!' : 'حاول مرة أخرى'}
             </h2>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-              {isPendingReview
-                ? 'إجاباتك محفوظة، ويجري تصحيح الإجابات المكتوبة تلقائيًا. ستظهر النتيجة هنا عند اكتمال التصحيح. الإجابات الصوتية تحتاج مراجعة المدرّس.'
-                : result.isPassed
+              {result.isPassed
                 ? 'أجدت في هذا الواجب. راجع إجاباتك بالتفصيل أدناه.'
                 : 'إجاباتك وأماكن الخطأ ظاهرة أدناه مع الإجابات الصحيحة.'}
             </p>
@@ -135,21 +143,17 @@ export function HomeworkResultPanel({
 
           <div
             className={`flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl ${
-              isPendingReview
-                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
-                : result.isPassed
+              result.isPassed
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
                 : 'bg-destructive/10 text-destructive'
             }`}
           >
-            {isPendingReview ? (
-              <Clock3 className="h-10 w-10" />
-            ) : result.isPassed ? (
+            {result.isPassed ? (
               <CheckCircle2 className="h-10 w-10" />
             ) : (
               <XCircle className="h-10 w-10" />
             )}
-            <span className="mt-1 text-xs font-black">{isPendingReview ? 'قيد التصحيح' : `${accuracy}%`}</span>
+            <span className="mt-1 text-xs font-black">{`${accuracy}%`}</span>
           </div>
         </div>
 
@@ -185,22 +189,14 @@ export function HomeworkResultPanel({
           )}
           <button
             type="button"
-            onClick={() =>
-              router.push(
-                lessonId && packageId
-                  ? `/student/packages/${packageId}/lessons/${lessonId}`
-                  : packageId
-                    ? `/student/packages/${packageId}`
-                    : '/student'
-              )
-            }
+            onClick={() => router.push(returnHref)}
             className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary"
           >
             العودة للحصة
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-      </motion.div>
+      </motion.div>}
 
       {/* ─── Wrong answers summary ─── */}
       {!isPendingReview && wrongQuestions.length > 0 && (
@@ -258,7 +254,7 @@ export function HomeworkResultPanel({
 
       {/* ─── Full review ─── */}
       <motion.section
-        initial={{ opacity: 0, y: 16 }}
+        initial={isPendingReview ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
         className="rounded-3xl border border-border bg-card p-6 sm:p-8"
@@ -283,6 +279,7 @@ export function HomeworkResultPanel({
                   <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-black text-muted-foreground border border-border/50">
                     سؤال {q.order}
                   </span>
+                  {q.scoreReceived != null && <span className="text-xs font-bold text-muted-foreground">{q.scoreReceived} / {q.maxPoints} نقطة</span>}
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-black ${
                       q.isCorrect

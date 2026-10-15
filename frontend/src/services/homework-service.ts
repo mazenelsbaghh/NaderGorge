@@ -1,3 +1,4 @@
+import type { PartialAssessmentResultDto } from './assessment-result';
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
 
@@ -71,6 +72,7 @@ export interface HomeworkResultDto {
     wrongAnswers: number;
     ungradedAnswers: number;
     questionReviews: HomeworkQuestionReviewDto[];
+    partialResult?: PartialAssessmentResultDto | null;
 }
 
 export interface HomeworkQuestionReviewDto {
@@ -81,8 +83,8 @@ export interface HomeworkQuestionReviewDto {
     providedAnswer?: string;
     correctAnswer?: string;
     maxPoints: number;
-    scoreReceived?: number;
-    isCorrect?: boolean;
+    scoreReceived?: number | null;
+    isCorrect?: boolean | null;
     writtenCorrection?: string;
     audioUrl?: string;
     imageUrl?: string;

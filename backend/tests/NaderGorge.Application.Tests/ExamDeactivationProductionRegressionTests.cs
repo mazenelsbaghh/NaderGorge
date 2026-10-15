@@ -348,6 +348,50 @@ public sealed class ExamDeactivationProductionRegressionTests
         await db.SaveChangesAsync();
     }
 
+    [Theory]
+    [InlineData(true, NaderGorge.Domain.Entities.Homework.SubmissionStatus.PendingReview, true)]
+    [InlineData(false, NaderGorge.Domain.Entities.Homework.SubmissionStatus.PendingReview, false)]
+    [InlineData(true, NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded, false)]
+    public async Task HomeworkPendingVisibilityKeepsLessonAndExamAccessConsistent(
+        bool enabled, NaderGorge.Domain.Entities.Homework.SubmissionStatus status, bool allowed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedDisabledLessonExamAsync(db);
+        var homework = new NaderGorge.Domain.Entities.Homework.Homework
+        {
+            LessonId = fixture.FirstLessonId, Title = "Previous homework", TotalScore = 10, PassingScoreThreshold = 9,
+            ShowResultsWhileEssayPending = enabled, Questions = [new() { BodyText = "Explain", PointsActive = 10,
+                QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay }]
+        };
+        db.Homeworks.Add(homework);
+        db.HomeworkSubmissions.Add(new() { HomeworkId = homework.Id, StudentId = fixture.StudentId,
+            Status = status, OverallScore = 0, SubmittedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        var scope = new AcademicScopeService(db);
+        var archives = new ContentArchiveAccessService(db);
+        var access = new AccessCheckService(db, scope, archives);
+        var progress = await new GetProgressQueryHandler(db, scope, archives)
+            .Handle(new(fixture.StudentId), default);
+        var currentExam = await AddCurrentExamAsync(db, fixture);
+        currentExam.IsMandatory = false;
+        await db.SaveChangesAsync();
+        var list = await new GetLessonsQueryHandler(db, access, scope, archives)
+            .Handle(new(fixture.SectionId, fixture.StudentId), default);
+        var detail = await new GetLessonDetailQueryHandler(db, access, new TeacherAuthorizationService(db), scope, archives)
+            .Handle(new(fixture.SecondLessonId, fixture.StudentId), default);
+        var startedExam = await new StartExamAttemptCommandHandler(db, access, archiveAccess: archives)
+            .Handle(new(currentExam.Id, fixture.StudentId), default);
+        Assert.True(list.Success, list.Message);
+        Assert.Equal(!allowed, list.Data!.Single(l => l.Id == fixture.SecondLessonId).IsLocked);
+        Assert.True(detail.Success, detail.Message);
+        Assert.Equal(!allowed, detail.Data!.IsLocked);
+        Assert.Equal(!allowed, detail.Data.IsExamLocked);
+        Assert.True(progress.Success, progress.Message);
+        var progressLesson = Assert.Single(progress.Data!.Packages).Lessons.Single(l => l.Id == fixture.SecondLessonId);
+        Assert.Equal(!allowed, progressLesson.IsLocked);
+        Assert.Equal(allowed, startedExam.Success);
+    }
+
     private static async Task<Exam> AddCurrentExamAsync(
         NaderGorge.Infrastructure.Data.AppDbContext db, RegressionFixture fixture)
     {

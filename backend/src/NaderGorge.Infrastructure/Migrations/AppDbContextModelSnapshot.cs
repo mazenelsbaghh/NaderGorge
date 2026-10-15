@@ -4725,6 +4725,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<decimal>("PassingScore")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("ShowResultsWhileEssayPending")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -5749,6 +5752,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<decimal?>("PassingScoreThreshold")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("ShowResultsWhileEssayPending")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Title")
                         .IsRequired()

@@ -18,6 +18,7 @@ public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
     public decimal TotalScore { get; set; }
     public int? DurationMinutes { get; set; }
     public ExamEssayGradingMode EssayGradingMode { get; set; }
+    public bool ShowResultsWhileEssayPending { get; set; }
     public bool IsMandatory { get; set; } = true;
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
@@ -192,6 +193,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             TotalScore = request.TotalScore,
             DurationMinutes = request.DurationMinutes,
             EssayGradingMode = request.EssayGradingMode,
+            ShowResultsWhileEssayPending = request.ShowResultsWhileEssayPending,
             IsMandatory = request.IsMandatory,
             IsRandomized = request.IsRandomized,
             DisplayQuestionCount = request.DisplayQuestionCount,

@@ -130,11 +130,9 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null
-                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
+                    bool previousHomeworkAllowsContinuation = HomeworkProgressPolicy.AllowsContinuation(prevHomework, prevHwSubmission);
 
-                    if (!prevHwPassed)
+                    if (!previousHomeworkAllowsContinuation)
                     {
                         string reason = prevHwSubmission == null
                             ? $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً."
