@@ -9,6 +9,11 @@ import (
 )
 
 const centerSchema = `
+CREATE TABLE IF NOT EXISTS center_standalone_targets(exam_id TEXT PRIMARY KEY REFERENCES exams(id),payload TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS center_standalone_rooms(exam_id TEXT PRIMARY KEY REFERENCES exams(id),request_id TEXT NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS center_standalone_versions(attempt_id TEXT PRIMARY KEY REFERENCES attempts(id),version INTEGER NOT NULL,fingerprint TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS center_monitor_versions(exam_id TEXT PRIMARY KEY REFERENCES exams(id),version INTEGER NOT NULL,fingerprint TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS center_contexts(context_id TEXT PRIMARY KEY,payload TEXT NOT NULL,prepared_at REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS center_bindings(exam_id TEXT PRIMARY KEY REFERENCES exams(id),group_id TEXT NOT NULL,session_id TEXT NOT NULL,activity_id TEXT NOT NULL,max_score REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS center_roster(exam_id TEXT NOT NULL REFERENCES exams(id),student_id TEXT NOT NULL,code TEXT NOT NULL,name TEXT NOT NULL,phone TEXT NOT NULL,present INTEGER NOT NULL,PRIMARY KEY(exam_id,student_id),UNIQUE(exam_id,code));
 CREATE INDEX IF NOT EXISTS center_roster_phone ON center_roster(exam_id,phone);
@@ -245,6 +250,34 @@ func lookupCenterStudent(q Q, eid string, p M) (centerStudent, error) {
 	}
 	return found[0], nil
 }
+
+func lookupCenterStudentByCode(q Q, eid string, p M) (centerStudent, error) {
+	code, err := normalizeCode(p["code"])
+	if err != nil {
+		return centerStudent{}, err
+	}
+	name, err := textField(p, "name", 2, 100)
+	if err != nil {
+		return centerStudent{}, err
+	}
+	phone, err := normalizePhone(p["phone"])
+	if err != nil {
+		return centerStudent{}, err
+	}
+	student := centerStudent{Name: name, Phone: phone}
+	lookup := func(candidate string) error {
+		return q.QueryRow(`SELECT student_id,code,present FROM center_roster WHERE exam_id=? AND code=?`, eid, candidate).
+			Scan(&student.ID, &student.Code, &student.Present)
+	}
+	err = lookup(code)
+	if err == sql.ErrNoRows && len(code) == 4 && regexp.MustCompile(`^[0-9]+$`).MatchString(code) {
+		err = lookup("0" + code)
+	}
+	if err == sql.ErrNoRows {
+		return centerStudent{}, fail("كود الطالب غير موجود في كشف القاعة. راجع الكود مع المشرف أو حدّث كشف الطلاب أثناء اتصال الساكند بالهوست", 404)
+	}
+	return student, err
+}
 func centerExamID(q Q, p M) (string, error) {
 	eid := str(p["examId"])
 	if eid != "" {
@@ -327,14 +360,24 @@ func (d *DB) centerState() (M, error) {
 	if e != nil {
 		return nil, e
 	}
-	attempts, results := []M{}, []M{}
+	attempts, results, monitors := []M{}, []M{}, []M{}
 	// Release the single SQLite connection between rooms so live answer saves do
 	// not wait for every historical room. Each result/version remains atomic.
 	for _, b := range bindings {
 		e = d.tx(func(q *sql.Tx) error {
 			summaries, err := captureCenterResults(q, b, source)
+			if err != nil {
+				return err
+			}
+			monitor, err := captureCenterMonitor(q, b, source, summaries)
+			if err != nil {
+				return err
+			}
 			attempts = append(attempts, summaries...)
-			return err
+			if monitor["roomState"] != "draft" {
+				monitors = append(monitors, monitor)
+			}
+			return nil
 		})
 		if e != nil {
 			return nil, e
@@ -352,7 +395,15 @@ func (d *DB) centerState() (M, error) {
 		}
 		results = append(results, decode(raw))
 	}
-	return M{"protocol": 1, "sourceId": source, "exams": exams["exams"], "templates": templates, "bindings": bindings, "results": results, "attempts": attempts}, rs.Err()
+	if err := rs.Err(); err != nil {
+		return nil, err
+	}
+	rs.Close()
+	offline, err := d.centerOfflineAccess()
+	if err != nil {
+		return nil, err
+	}
+	return M{"protocol": 1, "standaloneExportProtocol": 1, "academicCatalogProtocol": 1, "sourceId": source, "exams": exams["exams"], "templates": templates, "bindings": bindings, "results": results, "attempts": attempts, "monitors": monitors, "offlineAccess": offline}, nil
 }
 
 type centerAttemptState struct {

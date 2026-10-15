@@ -14,6 +14,19 @@ String normalizeStudentIdentifier(String value) {
   }).join();
 }
 
+/// Egyptian mobile aliases are shared by Excel and local exam matching.
+String normalizeStudentPhone(String value) {
+  var phone = normalizeStudentIdentifier(
+    value,
+  ).replaceAll(RegExp(r'[\s()\-\u200e\u200f]'), '');
+  if (phone.startsWith('+')) phone = phone.substring(1);
+  if (!RegExp(r'^\d+$').hasMatch(phone)) return '';
+  if (RegExp(r'^00201[0125]\d{8}$').hasMatch(phone)) phone = phone.substring(4);
+  if (RegExp(r'^201[0125]\d{8}$').hasMatch(phone)) phone = phone.substring(2);
+  if (RegExp(r'^1[0125]\d{8}$').hasMatch(phone)) phone = '0$phone';
+  return phone;
+}
+
 Iterable<String> studentIdentifiers(Student student) {
   final code = normalizeStudentIdentifier(student.code);
   return [

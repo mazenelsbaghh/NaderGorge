@@ -33,6 +33,7 @@ import 'student_debt_dialog.dart';
 import 'closed_session_dialog.dart';
 import 'attendance_conflict_dialog.dart';
 import 'student_history_panel.dart';
+import 'online_payment_allocation_action.dart';
 import '../management/closings_page.dart';
 import '../management/review_page.dart';
 
@@ -2127,6 +2128,97 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     _searchFocus.requestFocus();
   }
 
+  List<PaymentRecord> get _onlineAllocationPayments {
+    final selected = student, current = session;
+    if (selected == null || current == null || !store.canCollect) {
+      return const [];
+    }
+    final attendance = store
+        .attendancesForStudent(selected.id)
+        .where((record) => record.sessionId == current.id)
+        .firstOrNull;
+    final billingGroupId =
+        attendance?.makeupSourceGroupId ??
+        _manualMakeupSource?.id ??
+        current.groupId;
+    final receipts = store
+        .paymentsForStudent(selected.id)
+        .where(
+          (payment) =>
+              (attendance?.packageId != null
+                  ? payment.packageId == attendance!.packageId
+                  : payment.groupId == billingGroupId) &&
+              canAllocatePaymentToOnline(store, payment),
+        )
+        .toList();
+    receipts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return receipts;
+  }
+
+  bool get _canOpenOnlineAllocation =>
+      _readyForAttendanceWarning && !_submittingStudent && !_startingSession;
+
+  Future<void> _allocateMonthlyPaymentOnline() async {
+    if (!_canOpenOnlineAllocation) return;
+    final receipts = _onlineAllocationPayments;
+    if (receipts.isEmpty) return;
+    await _withHistoryModal(() async {
+      final payment = receipts.length == 1
+          ? receipts.single
+          : await _chooseOnlineAllocationReceipt(receipts);
+      if (!mounted || payment == null) return;
+      await openOnlinePaymentAllocation(
+        context,
+        store: store,
+        payment: payment,
+      );
+    });
+  }
+
+  Future<PaymentRecord?> _chooseOnlineAllocationReceipt(
+    List<PaymentRecord> receipts,
+  ) => showDialog<PaymentRecord>(
+    context: context,
+    builder: (dialogContext) => ScrollableMassarDialog(
+      title: const Text('اختار دفعة الشهر للتحويل للأونلاين'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'لهذا الطالب أكثر من دفعة شهر؛ راجع الحصة والتاريخ قبل الاختيار.',
+          ),
+          const SizedBox(height: 12),
+          for (final payment in receipts)
+            ListTile(
+              key: ValueKey('online-allocation-receipt-${payment.id}'),
+              title: Text(
+                '${payment.description} · ${shortDate(payment.createdAt)}',
+              ),
+              subtitle: Text(
+                '${_onlineReceiptContext(payment)}\n'
+                'المحصّل ${money(store.paymentCollectedFor(payment.id))} · المتبقي للسنتر ${money(store.centerAllocatedAmount(payment.id))}',
+              ),
+              isThreeLine: true,
+              onTap: () => Navigator.pop(dialogContext, payment),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('رجوع'),
+        ),
+      ],
+    ),
+  );
+
+  String _onlineReceiptContext(PaymentRecord payment) {
+    final sourceSession = store.sessionById(payment.sessionId);
+    return sourceSession == null
+        ? 'شراء خارج حصة'
+        : 'الشهر ${sourceSession.monthNumber} · حصة ${sourceSession.number}';
+  }
+
   Future<void> _collectCenterFee() async {
     if (!_canChangeCard) return;
     final selected = student!, current = session;
@@ -4122,6 +4214,15 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                   onPressed: _canEditDiscount ? _editDiscount : null,
                   icon: const Icon(Icons.percent, size: 18),
                   label: const Text('خصم سريع · S'),
+                ),
+              if (store.canCollect && _onlineAllocationPayments.isNotEmpty)
+                OutlinedButton.icon(
+                  key: const Key('attendance-allocate-online'),
+                  onPressed: _canOpenOnlineAllocation
+                      ? _allocateMonthlyPaymentOnline
+                      : null,
+                  icon: const Icon(Icons.swap_horiz_outlined, size: 18),
+                  label: const Text('تحويل جزء من الشهر للأونلاين'),
                 ),
               TextButton.icon(
                 onPressed: _discountEditing || _busy || payments.isEmpty

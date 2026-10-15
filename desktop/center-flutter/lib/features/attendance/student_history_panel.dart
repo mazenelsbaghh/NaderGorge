@@ -2,6 +2,7 @@ import 'package:massar_center/shared/scrollable_dialog.dart';
 import 'package:flutter/material.dart';
 import 'record_cancellation_dialog.dart';
 import '../management/student_profile_page.dart';
+import 'online_payment_allocation_action.dart';
 import 'student_debt_dialog.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/application/center_reports.dart';
@@ -56,6 +57,16 @@ class StudentHistoryPanel extends StatelessWidget {
       ),
     );
   });
+
+  Future<void> _allocateOnline(BuildContext context, PaymentRecord payment) =>
+      _openModal(() async {
+        if (!context.mounted || !actionsEnabled || !store.canCollect) return;
+        await openOnlinePaymentAllocation(
+          context,
+          store: store,
+          payment: payment,
+        );
+      });
 
   LessonSession? _session(String id) => store.sessionById(id);
 
@@ -1010,6 +1021,8 @@ class StudentHistoryPanel extends StatelessWidget {
                   'حالة الدفع الحالية',
                   expanded ? 'المحصّل وقت العملية' : 'المدفوع',
                   'المتبقي',
+                  'نصيب السنتر',
+                  'للأونلاين',
                   'التاريخ والوقت',
                   if (expanded) 'المستحق',
                   if (expanded) 'المحصّل حتى الآن',
@@ -1029,6 +1042,8 @@ class StudentHistoryPanel extends StatelessWidget {
                               : store.paymentCollectedFor(record.id),
                         ),
                         money(store.paymentDebtFor(record.id)),
+                        money(store.centerAllocatedAmount(record.id)),
+                        money(store.onlineAllocatedAmount(record.id)),
                         record.createdAtKnown
                             ? _paymentTime(record.createdAt)
                             : 'وقت الدفع غير موثق — من السجل القديم',
@@ -1045,17 +1060,33 @@ class StudentHistoryPanel extends StatelessWidget {
                 'لم تُسجل مدفوعات بعد.',
                 action: (index) {
                   final record = payments[index];
-                  return TextButton(
-                    key: ValueKey('cancel-payment-${record.id}'),
-                    onPressed:
-                        actionsEnabled && activePaymentIds.contains(record.id)
-                        ? () => _cancelRecord(context, paymentId: record.id)
-                        : null,
-                    child: Text(
-                      activePaymentIds.contains(record.id)
-                          ? 'إلغاء الدفع'
-                          : 'ملغاة',
-                    ),
+                  final active = activePaymentIds.contains(record.id);
+                  final allocated = store.onlineAllocatedAmount(record.id) > 0;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (active && canAllocatePaymentToOnline(store, record))
+                        TextButton(
+                          key: ValueKey('allocate-online-${record.id}'),
+                          onPressed: actionsEnabled
+                              ? () => _allocateOnline(context, record)
+                              : null,
+                          child: const Text('تحويل للأونلاين'),
+                        ),
+                      Tooltip(
+                        message: allocated
+                            ? 'الدفعة موزعة للسنتر والأونلاين؛ لا تُلغى كدفعة كاملة.'
+                            : '',
+                        child: TextButton(
+                          key: ValueKey('cancel-payment-${record.id}'),
+                          onPressed: actionsEnabled && active && !allocated
+                              ? () =>
+                                    _cancelRecord(context, paymentId: record.id)
+                              : null,
+                          child: Text(active ? 'إلغاء الدفع' : 'ملغاة'),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -1241,18 +1272,26 @@ class StudentHistoryPanel extends StatelessWidget {
                         ? '—'
                         : _sessionLabel(correction.sessionId!),
                     CenterReports.correctionLabel(correction.action),
-                    correction.oldMethod ??
-                        (correction.action == CorrectionAction.packageRefund
-                            ? 'باقة سارية'
-                            : original == null
-                            ? '—'
-                            : _historicalEntryLabel(original)),
-                    correction.newMethod ??
-                        (correction.action == CorrectionAction.packageRefund
-                            ? 'باقة مستردة'
-                            : replacement == null
-                            ? (original == null ? '—' : 'أُلغي التسجيل')
-                            : _historicalEntryLabel(replacement)),
+                    correction.action ==
+                            CorrectionAction.packageOnlineAllocation
+                        ? 'من نفس الدفعة المحصّلة'
+                        : correction.oldMethod ??
+                              (correction.action ==
+                                      CorrectionAction.packageRefund
+                                  ? 'باقة سارية'
+                                  : original == null
+                                  ? '—'
+                                  : _historicalEntryLabel(original)),
+                    correction.action ==
+                            CorrectionAction.packageOnlineAllocation
+                        ? '${money(correction.onlineAmount ?? 0)} للأونلاين'
+                        : correction.newMethod ??
+                              (correction.action ==
+                                      CorrectionAction.packageRefund
+                                  ? 'باقة مستردة'
+                                  : replacement == null
+                                  ? (original == null ? '—' : 'أُلغي التسجيل')
+                                  : _historicalEntryLabel(replacement)),
                     correction.reason,
                     store.staff
                         .firstWhere((staff) => staff.id == correction.staffId)

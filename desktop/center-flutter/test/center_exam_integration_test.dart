@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/center_exam_integration.dart';
+import 'package:massar_center/domain/center_exam_monitor.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -132,6 +134,353 @@ void main() {
         sessionId: session.id,
         activityId: activityId ?? exam.id,
       );
+
+  ExamMonitorSnapshot observation({
+    int version = 1,
+    List<int> entered = const [0, 1],
+    String? activityId,
+    String? sessionId,
+    String source = 'monitor-engine',
+    String? firstAttempt,
+  }) => ExamMonitorSnapshot(
+    sourceId: source,
+    examId: 'monitor-room',
+    groupId: group.id,
+    sessionId: sessionId ?? session.id,
+    activityId: activityId ?? exam.id,
+    version: version,
+    roomState: 'running',
+    attempts: [
+      for (final index in entered)
+        ExamMonitorAttempt(
+          attemptId: index == entered.first
+              ? firstAttempt ?? 'entry-$index'
+              : 'entry-$index',
+          studentId: students[index].id,
+          status: 'not_submitted',
+        ),
+    ],
+  );
+
+  test(
+    'exam entry alert survives restart and clears only for actual attendance without payment',
+    () async {
+      await store.publishIntegratedExamSnapshot(observation());
+      expect(store.integratedExamAttendanceAlerts.map((row) => row.code), [
+        '00100',
+        '00101',
+      ]);
+      expect(store.integratedExamMonitorStatuses.single.stale, isFalse);
+      final auditCount = store.audit.length;
+      await store.publishIntegratedExamSnapshot(observation());
+      expect(
+        store.audit.length,
+        auditCount,
+        reason: 'heartbeat must not write another audit',
+      );
+      await reopen();
+      expect(store.integratedExamAttendanceAlerts, hasLength(2));
+      expect(store.integratedExamMonitorStatuses.single.stale, isTrue);
+      await attend(0);
+      expect(
+        store.integratedExamAttendanceAlerts.single.studentId,
+        students[1].id,
+      );
+      expect(store.payments, isEmpty);
+      expect(store.academics, isEmpty);
+      await store.publishIntegratedExamSnapshot(observation());
+      expect(store.integratedExamMonitorStatuses.single.stale, isFalse);
+      store.signOut();
+      expect(store.integratedExamAttendanceAlerts, isEmpty);
+      await expectLater(
+        store.publishIntegratedExamSnapshot(observation()),
+        throwsA(isA<CenterException>()),
+      );
+    },
+  );
+
+  test(
+    'secondary results require a host download request and survive a lost reply without duplicate grades',
+    () async {
+      await attend(0);
+      final staffId = store.currentUser!.id;
+      final originalPayments = store.payments.length;
+      await store.publishExamMonitorLan(
+        deviceId: 'secondary',
+        staffId: staffId,
+        snapshot: observation(),
+        authorize: () => true,
+      );
+      final grade = result(
+        sourceId: 'monitor-engine',
+        examId: 'monitor-room',
+        attemptId: 'entry-0',
+      );
+      const commandId = '11111111-1111-4111-8111-111111111111';
+      Future<Map<String, dynamic>> sendGrade(String device) => store.commandLan(
+        deviceId: device,
+        staffId: staffId,
+        request: {
+          'requestId': commandId,
+          'operation': 'recordIntegratedExamResult',
+          'arguments': grade.toJson(),
+        },
+      );
+      await expectLater(
+        sendGrade('secondary'),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.academics, isEmpty);
+      final roomId = store.integratedExamRooms.single.id;
+      await store.requestExamResultImport(roomId);
+      final requestId = store.integratedExamRooms.single.importRequestId!;
+      await reopen();
+      expect(store.integratedExamRooms.single.importPending, isTrue);
+      await expectLater(
+        sendGrade('another-device'),
+        throwsA(isA<CenterException>()),
+      );
+      final accepted = await sendGrade('secondary');
+      expect(accepted['status'], 'committed');
+      expect(store.academics.single.score, 0);
+      final completion = {
+        'requestId': '22222222-2222-4222-8222-222222222222',
+        'operation': 'completeExamResultImport',
+        'arguments': {
+          'roomId': roomId,
+          'requestId': requestId,
+          'problems': <String, String>{},
+        },
+      };
+      await store.commandLan(
+        deviceId: 'secondary',
+        staffId: staffId,
+        request: completion,
+      );
+      expect(store.integratedExamRooms.single.importPending, isFalse);
+      expect(await sendGrade('secondary'), containsPair('status', 'committed'));
+      expect(store.academics, hasLength(1));
+      expect(progress().recorded, 1);
+      expect(
+        store.payments,
+        hasLength(originalPayments),
+        reason: 'grade import must not collect money',
+      );
+    },
+  );
+
+  test(
+    'monitor refresh preserves a requested import and pre-import backup excludes new schema',
+    () async {
+      await store.publishExamMonitorLan(
+        deviceId: 'secondary',
+        staffId: store.currentUser!.id,
+        snapshot: observation(),
+        authorize: () => true,
+      );
+      await store.requestExamResultImport(store.integratedExamRooms.single.id);
+      final request = store.integratedExamRooms.single.importRequestId;
+      await store.publishExamMonitorLan(
+        deviceId: 'secondary',
+        staffId: store.currentUser!.id,
+        snapshot: observation(version: 2, entered: [0]),
+        authorize: () => true,
+      );
+      expect(store.integratedExamRooms.single.importRequestId, request);
+      final backups = await Directory('${directory.path}/backups')
+          .list()
+          .where((file) => file.path.contains('before-exam-import-v13-'))
+          .toList();
+      expect(backups, hasLength(1));
+      final preserved =
+          (jsonDecode(await File(backups.single.path).readAsString())
+                  as Map)['data']
+              as Map;
+      expect(preserved['schemaVersion'], 12);
+      expect(
+        (preserved['examMonitors'] as List).single['importRequestId'],
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'update backup precedes the first durable exam monitor and remains legacy-readable',
+    () async {
+      await store.close();
+      final originalBackups = await Directory(
+        store.automaticBackupDirectory!,
+      ).list().map((entry) => entry.path).toSet();
+      await File('${directory.path}/last-opened-build.json').writeAsString(
+        jsonEncode({
+          'version': 1,
+          'buildIdentifier': 'synthetic-previous-build',
+        }),
+      );
+      store = await CenterStore.open(directory: directory.path);
+      await store.signIn('manager', password);
+      final files = await Directory(store.automaticBackupDirectory!)
+          .list()
+          .where(
+            (entry) => entry is File && !originalBackups.contains(entry.path),
+          )
+          .toList();
+      expect(files, hasLength(1));
+      final preserved =
+          (jsonDecode(await File(files.single.path).readAsString())
+                  as Map)['data']
+              as Map;
+      expect(preserved['schemaVersion'] as int, lessThan(12));
+      expect(preserved['examMonitors'], isNull);
+      await store.publishIntegratedExamSnapshot(observation());
+      expect(store.integratedExamAttendanceAlerts, hasLength(2));
+      final migrationBackups = await Directory('${directory.path}/backups')
+          .list()
+          .where(
+            (entry) =>
+                entry is File &&
+                entry.path.contains('before-exam-monitor-v12-'),
+          )
+          .toList();
+      expect(migrationBackups, hasLength(1));
+      final legacyState =
+          (jsonDecode(await File(migrationBackups.single.path).readAsString())
+                  as Map)['data']
+              as Map;
+      expect(legacyState['schemaVersion'] as int, lessThan(12));
+      expect(legacyState['examMonitors'], isNull);
+      expect((legacyState['students'] as List).length, students.length);
+      final unchanged =
+          jsonDecode(await File(files.single.path).readAsString()) as Map;
+      expect((unchanged['data'] as Map)['examMonitors'], isNull);
+    },
+  );
+
+  test(
+    'one thousand exam entrants do not lose a simultaneous reception attendance',
+    () async {
+      final backup = await store.createBackup(
+        destination: '${directory.path}/large-fixture.json',
+      );
+      final contents =
+          jsonDecode(await File(backup).readAsString()) as Map<String, dynamic>;
+      final rows = (contents['data'] as Map)['students'] as List;
+      final enrollments = (contents['data'] as Map)['enrollments'] as Map;
+      for (var index = 3; index < 1001; index++) {
+        enrollments['load-student-$index:${group.id}'] = DateTime.now()
+            .toIso8601String();
+        rows.add(
+          Student(
+            id: 'load-student-$index',
+            code: '${10000 + index}',
+            name: 'Synthetic entry $index',
+            groupIds: [group.id],
+            createdAt: DateTime.now(),
+          ).toJson(),
+        );
+      }
+      await File(backup).writeAsString(jsonEncode(contents));
+      await store.restoreBackup(backup);
+      await store.signIn('manager', password);
+      final entrants = store.students
+          .where((student) => student.groupIds.contains(group.id))
+          .toList();
+      expect(entrants, hasLength(1000));
+      final snapshot = ExamMonitorSnapshot(
+        sourceId: 'load-engine',
+        examId: 'load-room',
+        groupId: group.id,
+        sessionId: session.id,
+        activityId: exam.id,
+        version: 1,
+        roomState: 'running',
+        attempts: [
+          for (final student in entrants)
+            ExamMonitorAttempt(
+              attemptId: 'entry-${student.id}',
+              studentId: student.id,
+              status: 'not_submitted',
+            ),
+        ],
+      );
+      await Future.wait([
+        store.publishIntegratedExamSnapshot(snapshot),
+        attend(0),
+      ]);
+      expect(store.integratedExamAttendanceAlerts, hasLength(999));
+      expect(store.attendances.single.studentId, students[0].id);
+      final revision = store.readRevision;
+      await store.publishIntegratedExamSnapshot(snapshot);
+      expect(
+        identical(store.readRevision, revision),
+        isTrue,
+        reason: '1000-entry heartbeat must not mutate or persist center state',
+      );
+      expect(store.payments, isEmpty);
+    },
+  );
+
+  test(
+    'restoring a monitor backup clears live freshness without losing entered students',
+    () async {
+      await store.publishIntegratedExamSnapshot(observation());
+      final backup = await store.createBackup(
+        destination: '${directory.path}/monitor-backup.json',
+      );
+      await store.publishIntegratedExamSnapshot(
+        observation(version: 2, entered: []),
+      );
+      expect(store.integratedExamAttendanceAlerts, isEmpty);
+      await store.restoreBackup(backup);
+      await store.signIn('manager', password);
+      expect(store.integratedExamAttendanceAlerts, hasLength(2));
+      expect(store.integratedExamMonitorStatuses.single.stale, isTrue);
+    },
+  );
+
+  test(
+    'monitor rejects stale versions, changed binding and stolen attempt identity atomically',
+    () async {
+      await store.publishIntegratedExamSnapshot(observation(version: 2));
+      final anotherExam = await store.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: session.preparedLessonId,
+          name: 'Different named exam',
+          kind: AcademicActivityKind.exam,
+          maxScore: 10,
+          createdAt: DateTime.now(),
+        ),
+      );
+      for (final snapshot in [
+        observation(),
+        observation(version: 2, entered: []),
+        observation(version: 3, activityId: anotherExam.id),
+        observation(version: 3, entered: [1], firstAttempt: 'entry-0'),
+        observation(version: 3, entered: [2]),
+      ]) {
+        await expectLater(
+          store.publishIntegratedExamSnapshot(snapshot),
+          throwsA(isA<CenterException>()),
+        );
+        expect(store.integratedExamAttendanceAlerts, hasLength(2));
+      }
+      await store.publishIntegratedExamSnapshot(
+        observation(version: 3, entered: []),
+      );
+      expect(
+        store.integratedExamAttendanceAlerts,
+        isEmpty,
+        reason:
+            'only a complete newer successful observation can clear entrants',
+      );
+      await expectLater(
+        store.publishIntegratedExamSnapshot(
+          observation(version: 4, entered: [1], firstAttempt: 'entry-0'),
+        ),
+        throwsA(isA<CenterException>()),
+      );
+    },
+  );
 
   test(
     'zero result and ownership survive reopen, replay, and regrading',

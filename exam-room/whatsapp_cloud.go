@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -49,7 +50,7 @@ var metaVersionPattern = regexp.MustCompile(`^v[0-9]{2,3}\.0$`)
 var templatePositionPattern = regexp.MustCompile(`\{\{\s*([0-9]+)\s*\}\}`)
 
 func newWhatsAppCloud(a *app) *whatsappCloud {
-	return &whatsappCloud{app: a, path: filepath.Join(filepath.Dir(a.db.path), "whatsapp-cloud.json"), client: &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, baseURL: "https://graph.facebook.com", sendSlots: make(chan struct{}, 5), batchGap: 5 * time.Second}
+	return &whatsappCloud{app: a, path: filepath.Join(filepath.Dir(a.db.path), "whatsapp-cloud.json"), client: &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, baseURL: "https://graph.facebook.com", sendSlots: make(chan struct{}, 5), batchGap: 250 * time.Millisecond}
 }
 
 func (c *whatsappCloud) config() (whatsappConfig, error) {
@@ -66,7 +67,10 @@ func (c *whatsappCloud) config() (whatsappConfig, error) {
 	}
 	contents, err := os.ReadFile(c.path)
 	if err == nil {
-		err = json.Unmarshal(contents, &config)
+		contents, err = unprotectWhatsAppConfig(contents)
+		if err == nil {
+			err = json.Unmarshal(contents, &config)
+		}
 	}
 	return config, err
 }
@@ -90,9 +94,10 @@ func (c *whatsappCloud) saveConfig(body M) (M, error) {
 	if !metaIDPattern.MatchString(phone) || !metaIDPattern.MatchString(business) || phone == business {
 		return nil, fail("اكتب Phone Number ID وBusiness Account ID مختلفين من صفحة API Setup", 400)
 	}
-	if !metaVersionPattern.MatchString(version) {
-		return nil, fail("نسخة Meta API غير صالحة؛ مثال v23.0", 400)
+	if err = validateWhatsAppVersion(version); err != nil {
+		return nil, err
 	}
+	versionChanged := version != config.APIVersion
 	changed := phone != config.PhoneNumberID || business != config.BusinessAccountID || str(body["accessToken"]) != ""
 	if changed {
 		config.AppSecret = ""
@@ -118,10 +123,10 @@ func (c *whatsappCloud) saveConfig(body M) (M, error) {
 	if config.VerifyToken == "" {
 		config.VerifyToken = token()
 	}
-	if err = writePrivateJSON(c.path, config); err != nil {
+	if err = writeWhatsAppConfig(c.path, config); err != nil {
 		return nil, err
 	}
-	if changed {
+	if changed || versionChanged {
 		if _, err = c.app.db.sql.Exec(`DELETE FROM app_settings WHERE key='whatsapp_cloud_templates'`); err != nil {
 			return nil, err
 		}
@@ -130,6 +135,13 @@ func (c *whatsappCloud) saveConfig(body M) (M, error) {
 }
 
 func writePrivateJSON(path string, contents any) error {
+	raw, err := json.Marshal(contents)
+	if err != nil {
+		return err
+	}
+	return writePrivateBytes(path, raw)
+}
+func writePrivateBytes(path string, contents []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
@@ -139,7 +151,7 @@ func writePrivateJSON(path string, contents any) error {
 	}
 	defer os.Remove(file.Name())
 	if err = file.Chmod(0600); err == nil {
-		err = json.NewEncoder(file).Encode(contents)
+		_, err = file.Write(contents)
 	}
 	if err == nil {
 		err = file.Sync()
@@ -161,6 +173,9 @@ type metaCall struct {
 }
 
 func (c *whatsappCloud) metaRequest(ctx context.Context, config whatsappConfig, call metaCall) (M, error) {
+	if err := validateWhatsAppVersion(config.APIVersion); err != nil {
+		return nil, err
+	}
 	request, err := http.NewRequestWithContext(ctx, call.method, c.baseURL+"/"+config.APIVersion+"/"+call.path, call.body)
 	if err != nil {
 		return nil, err
@@ -189,6 +204,11 @@ func (c *whatsappCloud) metaRequest(ctx context.Context, config whatsappConfig, 
 		providerCode := 0
 		if providerError, ok := payload["error"].(map[string]any); ok {
 			providerCode = intv(providerError["code"])
+		}
+		if response.StatusCode == http.StatusTooManyRequests || providerCode == 130429 || providerCode == 131056 || providerCode == 80007 {
+			seconds, _ := strconv.Atoi(response.Header.Get("Retry-After"))
+			seconds = max(1, min(seconds, 3600))
+			return nil, whatsappRateLimit{code: providerCode, seconds: seconds}
 		}
 		return nil, fail(fmt.Sprintf("واتساب رفض الطلب (كود %d). تحقق من التوكن والقالب وأهلية الرقم", providerCode), 422)
 	}
@@ -231,14 +251,14 @@ func (c *whatsappCloud) currentTemplates(ctx context.Context) (M, error) {
 	defer c.mu.Unlock()
 	cache, err := c.ensureTemplatesLocked(ctx)
 	if err == nil {
-		return cache, nil
+		return c.withTemplateBindings(cache)
 	}
 	cache, readErr := c.templates()
 	if readErr != nil {
 		return nil, readErr
 	}
 	cache["syncError"] = "تعذر تحديث القوالب؛ تأكد من الإنترنت وبيانات حساب واتساب. سيُعاد التحديث تلقائيًا."
-	return cache, nil
+	return c.withTemplateBindings(cache)
 }
 
 func (c *whatsappCloud) syncTemplates(ctx context.Context) (M, error) {
@@ -280,6 +300,8 @@ func (c *whatsappCloud) syncTemplatesLocked(ctx context.Context) (M, error) {
 				return nil, fail("قالب واتساب غير صالح", 502)
 			}
 			_, reason := reportTemplateFields(template)
+			fields, _ := templateBindings(template)
+			template["reportFields"] = fields
 			template["reportSupported"] = reason == ""
 			template["reportReason"] = reason
 			templates = append(templates, template)
@@ -301,26 +323,15 @@ func (c *whatsappCloud) syncTemplatesLocked(ctx context.Context) (M, error) {
 }
 
 func reportTemplateFields(template M) ([]int, string) {
-	if str(template["status"]) != "APPROVED" {
-		return nil, "القالب غير معتمد بعد"
-	}
-	if !slices.Contains([]string{"UTILITY", "MARKETING"}, str(template["category"])) {
-		return nil, "قالب التحقق لا يصلح لتقارير الطلاب"
-	}
-	components, reason := templateComponents(template)
+	fields, reason := templateBindings(template)
 	if reason != "" {
 		return nil, reason
 	}
-	if str(components["HEADER"]["format"]) != "DOCUMENT" || components["BODY"] == nil {
-		return nil, "اختر قالبًا فيه رأس Document / مستند ونص الرسالة"
+	positions := make([]int, len(fields))
+	for i := range fields {
+		positions[i] = i + 1
 	}
-	if strings.Contains(str(components["FOOTER"]["text"]), "{{") {
-		return nil, "متغيرات التذييل غير مدعومة"
-	}
-	if reason = validateTemplateButtons(components["BUTTONS"]); reason != "" {
-		return nil, reason
-	}
-	return templatePositions(str(components["BODY"]["text"]))
+	return positions, ""
 }
 
 func templateComponents(template M) (map[string]M, string) {
@@ -344,26 +355,6 @@ func templateComponents(template M) (map[string]M, string) {
 		components[kind] = component
 	}
 	return components, ""
-}
-
-func validateTemplateButtons(component M) string {
-	if component == nil {
-		return ""
-	}
-	buttons, ok := component["buttons"].([]any)
-	if !ok {
-		return "أزرار القالب غير صالحة"
-	}
-	for _, raw := range buttons {
-		button, ok := raw.(map[string]any)
-		if !ok {
-			return "أزرار القالب غير صالحة"
-		}
-		if strings.Contains(encode(button), "{{") || !slices.Contains([]string{"URL", "PHONE_NUMBER", "QUICK_REPLY"}, str(button["type"])) {
-			return "أزرار القالب الديناميكية غير مدعومة لإرسال التقرير"
-		}
-	}
-	return ""
 }
 
 func templatePositions(text string) ([]int, string) {
@@ -429,13 +420,9 @@ func (c *whatsappCloud) uploadPDF(ctx context.Context, config whatsappConfig, pd
 }
 
 func (c *whatsappCloud) sendPDF(ctx context.Context, report *preparedWhatsAppReport, mediaID string) (string, error) {
-	components := []M{{"type": "header", "parameters": []M{{"type": "document", "document": M{"id": mediaID, "filename": report.filename}}}}}
-	if len(report.parameters) > 0 {
-		body := []M{}
-		for _, parameter := range report.parameters {
-			body = append(body, M{"type": "text", "text": parameter})
-		}
-		components = append(components, M{"type": "body", "parameters": body})
+	components, err := filledTemplateComponents(report.template, report.parameters, mediaID, report.filename)
+	if err != nil {
+		return "", err
 	}
 	payload, err := c.metaRequest(ctx, report.config, metaCall{"POST", report.config.PhoneNumberID + "/messages", strings.NewReader(encode(M{"messaging_product": "whatsapp", "to": report.recipient, "type": "template", "template": M{"name": report.template["name"], "language": M{"code": report.template["language"]}, "components": components}})), "application/json"})
 	if err != nil {
@@ -486,4 +473,24 @@ func (c *whatsappCloud) verifyAccount(ctx context.Context, config whatsappConfig
 		cursor = next
 	}
 	return fail("رقم الإرسال لا ينتمي إلى Business Account ID؛ راجع صفحة API Setup", 409)
+}
+
+type whatsappRateLimit struct{ code, seconds int }
+
+func (e whatsappRateLimit) Error() string {
+	return "واتساب طلب الانتظار قبل استكمال الإرسال"
+}
+
+// Meta's Graph API versions table retires v20.0 on 2026-09-24.
+// Keep the selected version explicit instead of relying on Meta's fallback.
+// https://developers.facebook.com/docs/graph-api/changelog/versions/
+func validateWhatsAppVersion(version string) error {
+	if !metaVersionPattern.MatchString(version) {
+		return fail("نسخة Meta API غير صالحة؛ مثال v23.0", 400)
+	}
+	major, _ := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(version, "v"), ".0"))
+	if major <= 20 {
+		return fail("نسخة Meta API القديمة انتهى دعمها؛ انتهى v20.0 في ٢٤ سبتمبر ٢٠٢٦. اختر نسخة مدعومة مثل v23.0 ثم احفظ الحساب من جديد", 400)
+	}
+	return nil
 }

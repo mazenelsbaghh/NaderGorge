@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {number, toast} from '../../web/assets/common.js';
 
 const emptyQuestion = kind => ({kind, text: '', points: 2, options: ['', '', '', ''], correct: 0, modelAnswer: ''});
@@ -18,13 +18,11 @@ const editorDraft = config => {
 export default function Editor({config, onSave, onCancel, onDirty}) {
   const [draft, setDraft] = useState(() => editorDraft(config));
   const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  useEffect(() => {onDirty(dirty);}, [dirty, onDirty]);
   const edit = update => {setDraft(previous => {
     const next = update(structuredClone(previous));
     if (next.mcqCount != null) next.questionCount = next.mcqCount + next.essayCount;
     return next;
-  }); setDirty(true);};
+  }); onDirty(true);};
   const byKind = draft.mcqCount != null;
   const selectByKind = enabled => edit(next => {
     if (enabled) {next.mcqCount = bankCount(next, 'mcq'); next.essayCount = bankCount(next, 'essay');}
@@ -54,7 +52,7 @@ export default function Editor({config, onSave, onCancel, onDirty}) {
     event.preventDefault();
     if (draft.questionCount < 1) {toast('اختر سؤالًا واحدًا على الأقل لكل طالب', true); return;}
     setSaving(true);
-    try {await onSave(draft); setDirty(false);}
+    try {await onSave(draft); onDirty(false);}
     catch (error) {toast(error.message, true);}
     finally {setSaving(false);}
   };

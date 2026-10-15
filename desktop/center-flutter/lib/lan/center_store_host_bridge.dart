@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import '../application/center_store.dart';
+import '../domain/center_exam_monitor.dart';
+import '../domain/standalone_exam_results.dart';
 import '../data/center_state_encoder.dart';
 import '../shared/problem_reporting.dart';
 import '../shared/performance_trace.dart';
@@ -187,6 +189,37 @@ class CenterStoreHostBridge {
             );
           }
           result['stateWatch'] = true;
+        } else if (request.uri.path == '/api/standalone-exam-results' &&
+            request.method == 'POST') {
+          final page = StandaloneExamPage.fromJson(await _body(request));
+          await store.publishStandaloneExamPageLan(
+            deviceId: deviceId,
+            staffId: session.staffId,
+            page: page,
+            authorize: () => identical(_session(request, deviceId), session),
+          );
+          result = {
+            'accepted': true,
+            'sourceId': page.sourceId,
+            'examId': page.examId,
+            'exportRevision': page.exportRevision,
+            'nextCursor': page.nextCursor,
+          };
+        } else if (request.uri.path == '/api/exam-monitor' &&
+            request.method == 'POST') {
+          final snapshot = ExamMonitorSnapshot.fromJson(await _body(request));
+          await store.publishExamMonitorLan(
+            deviceId: deviceId,
+            staffId: session.staffId,
+            snapshot: snapshot,
+            authorize: () => identical(_session(request, deviceId), session),
+          );
+          result = {
+            'sourceId': snapshot.sourceId,
+            'examId': snapshot.examId,
+            'version': snapshot.version,
+            'accepted': true,
+          };
         } else if (request.uri.path == '/api/support-upload' &&
             request.method == 'POST') {
           await _body(request);

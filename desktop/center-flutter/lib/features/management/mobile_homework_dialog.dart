@@ -75,8 +75,10 @@ class _MobileHomeworkDialog extends StatefulWidget {
 class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
   String? _activityId;
   List<String> _urls = [];
+  String? _selectedUrl;
   bool _busy = false;
   String? _error;
+  String? _hotspotMessage;
   @override
   void initState() {
     super.initState();
@@ -93,13 +95,19 @@ class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
     setState(() {
       _busy = true;
       _error = null;
+      _hotspotMessage = null;
     });
     try {
       final urls = await widget.lan.openMobileHomework(
         widget.session.id,
         _activityId!,
       );
-      if (mounted) setState(() => _urls = urls);
+      if (mounted) {
+        setState(() {
+          _urls = urls;
+          _selectedUrl = widget.lan.preferredMobileHomeworkUrl(urls);
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _error = managementError(error));
     } finally {
@@ -114,6 +122,7 @@ class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
       if (mounted) {
         setState(() {
           _urls = [];
+          _selectedUrl = null;
           _error = null;
         });
       }
@@ -124,25 +133,24 @@ class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
     }
   }
 
-  Future<void> _hotspot() async {
+  Future<void> _startHotspot() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _hotspotMessage = null;
+    });
     try {
-      final child = await Process.start('explorer.exe', [
-        'ms-settings:network-mobilehotspot',
-      ]);
-      final exitCode = await child.exitCode;
-      if (exitCode != 0 && mounted) {
-        setState(
-          () => _error =
-              'افتح إعدادات ويندوز ← الشبكة والإنترنت ← نقطة اتصال محمولة.',
-        );
-      }
-    } on ProcessException {
+      final hotspot = await widget.lan.startHomeworkHotspot();
       if (mounted) {
         setState(
-          () =>
-              _error = 'تعذر فتح إعدادات الهوت سبوت. افتحها من إعدادات ويندوز.',
+          () => _hotspotMessage =
+              'شبكة الواجب: ${hotspot['ssid'] ?? ''}. كلمة السر هي الموجودة في إعدادات نقطة اتصال ويندوز.',
         );
       }
+    } catch (failure) {
+      if (mounted) setState(() => _error = managementError(failure));
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -178,13 +186,14 @@ class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
         const SizedBox(height: 16),
         if (Platform.isWindows) ...[
           OutlinedButton.icon(
-            onPressed: _busy ? null : _hotspot,
-            icon: const Icon(Icons.wifi_tethering),
-            label: const Text('فتح إعدادات الهوت سبوت'),
+            onPressed: _busy ? null : _startHotspot,
+            icon: const Icon(Icons.wifi),
+            label: const Text('تشغيل هوتسبوت الواجب من الهوست'),
           ),
           const Text(
-            'شغّل الهوت سبوت أولًا ووصل الموبايل به، ثم جهّز الرابط. كابل الساكند يفضل متصلًا.',
+            'اضغط تشغيل الهوتسبوت من الهوست؛ يمكنه استخدام اتصال الواي فاي أو الكابل حسب دعم ويندوز. وصّل موبايل الموظف بهذه الشبكة وافتح رابط الواجب. التسجيل على الساكند يستمر ما دام متصلًا بالهوست.',
           ),
+          if (_hotspotMessage != null) Text(_hotspotMessage!),
           const SizedBox(height: 12),
         ],
         if (_urls.isEmpty)
@@ -204,9 +213,29 @@ class _MobileHomeworkDialogState extends State<_MobileHomeworkDialog> {
           ),
         if (_urls.isNotEmpty) ...[
           const Text(
-            'امسح QR من كاميرا الموبايل. استخدم عنوان شبكة الهوت سبوت أو الشبكة المتصل بها الموبايل.',
+            'تم اختيار اتصال هوتسبوت الهوست تلقائيًا إذا كان متاحًا. افتح الرابط أو امسح QR بالموبايل المتصل بنفس الشبكة.',
           ),
-          for (final url in _urls) ...[
+          DropdownButtonFormField<String>(
+            key: const Key('mobile-homework-network'),
+            initialValue: _selectedUrl,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'اتصال الموبايل بالهوست',
+            ),
+            items: _urls
+                .map(
+                  (url) => DropdownMenuItem(
+                    value: url,
+                    child: Text(
+                      widget.lan.mobileHomeworkNetwork(url),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (url) => setState(() => _selectedUrl = url),
+          ),
+          if (_selectedUrl case final String url) ...[
             const SizedBox(height: 16),
             Center(
               child: ColoredBox(

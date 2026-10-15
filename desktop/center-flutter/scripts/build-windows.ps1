@@ -42,7 +42,7 @@ function Copy-VisualCppRuntime([string]$Directory) {
 }
 
 function Assert-NoRuntimeData([string]$Directory) {
-    $PrivateNames = @("identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "center.sqlite.lock", "data-repair-status.json", "network.json", "leases.json", "heartbeat.json", "adapter-backup.json", "portal-mode.json", "capport-public.json")
+    $PrivateNames = @("identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "center.sqlite.lock", "data-repair-status.json", "network.json", "leases.json", "heartbeat.json", "adapter-backup.json", "portal-mode.json", "capport-public.json", "omada-controller.enc")
     foreach ($File in Get-ChildItem -LiteralPath $Directory -File -Recurse) {
         foreach ($PrivateName in $PrivateNames) {
             if ($File.Name -eq $PrivateName -or $File.Name.StartsWith($PrivateName + ".", [StringComparison]::OrdinalIgnoreCase)) {
@@ -114,6 +114,12 @@ try {
     # Fail Windows credential protection before native or Flutter release builds.
     & flutter test test/windows_exam_engine_runtime_test.dart --plain-name 'first startup protects an Arabic directory before launching a child' --reporter expanded | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Windows credential protection preflight failed.' }
+    & flutter test test/omada_profile_store_test.dart --reporter expanded | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Windows Omada profile protection and persistence failed.' }
+    & flutter test test/app/staff_login_test.dart --reporter expanded | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Windows login and pre-login setup checks failed.' }
+    & flutter test test/exam_login_network_test.dart test/omada_setup_panel_test.dart --reporter expanded | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Windows pre-login network and Omada setup checks failed.' }
     if (-not $SkipTests) {
         & flutter test
         if ($LASTEXITCODE -ne 0) { throw "Tests failed." }
@@ -207,7 +213,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
     }
     finally { Pop-Location }
-    $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory $NativeVerification
+    $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory $NativeVerification $AppVersion
     Copy-VisualCppRuntime $ReleaseDirectory
     $Manifest = [ordered]@{
         role = $PackageMode

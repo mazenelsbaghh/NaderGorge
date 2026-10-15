@@ -39,6 +39,14 @@ def verify(directory):
         ).decode('utf-8-sig'))
         if hotspot.get('ok') is not True or not isinstance(hotspot.get('active'), bool):
             raise RuntimeError('Packaged Wi-Fi Direct status helper did not start.')
+        tethering = json.loads(run(
+            directory / 'hotspot/Massar.Hotspot.exe',
+            request={'action': 'tethering-status'}, cwd=folder,
+        ).decode('utf-8-sig'))
+        # CI may have no physical Wi-Fi adapter. Reading must still execute the
+        # actual Windows API and return an explicit unavailable/active result.
+        if not isinstance(tethering.get('ok'), bool) or not isinstance(tethering.get('active'), bool):
+            raise RuntimeError('Packaged Windows tethering status contract failed.')
         report = {
             'exam': {'config': {'title': 'امتحان تجريبي للتحقق'}},
             'attempt': {

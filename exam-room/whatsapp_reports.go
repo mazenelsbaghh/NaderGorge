@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const whatsappSendSchema = `CREATE TABLE IF NOT EXISTS whatsapp_report_sends(fingerprint TEXT PRIMARY KEY,attempt_id TEXT NOT NULL REFERENCES attempts(id),recipient TEXT NOT NULL,template_name TEXT NOT NULL,filename TEXT NOT NULL,state TEXT NOT NULL,message_id TEXT NOT NULL DEFAULT '',error TEXT NOT NULL DEFAULT '',created_at REAL NOT NULL,updated_at REAL NOT NULL)`
+const whatsappSendSchema = `CREATE TABLE IF NOT EXISTS whatsapp_report_sends(fingerprint TEXT PRIMARY KEY,attempt_id TEXT NOT NULL REFERENCES attempts(id),recipient TEXT NOT NULL,template_name TEXT NOT NULL,filename TEXT NOT NULL,state TEXT NOT NULL,message_id TEXT NOT NULL DEFAULT '',error TEXT NOT NULL DEFAULT '',created_at REAL NOT NULL,updated_at REAL NOT NULL);` + whatsappCenterSchema
 
 type preparedWhatsAppReport struct {
 	config                           whatsappConfig
@@ -29,27 +29,47 @@ func (c *whatsappCloud) prepare(body M) (*preparedWhatsAppReport, error) {
 	if config.AccessToken == "" || config.PhoneNumberID == "" || config.BusinessAccountID == "" {
 		return nil, fail("أكمل ربط حساب واتساب أولًا", 409)
 	}
+	if err = validateWhatsAppVersion(config.APIVersion); err != nil {
+		return nil, err
+	}
 	template, positions, err := c.reportTemplate(config, str(body["templateId"]))
 	if err != nil {
 		return nil, err
 	}
-	report, err := c.app.db.report(str(body["attemptId"]))
+	if schema := str(body["bindingSchema"]); schema != "" && schema != templateBindingDigest(template) {
+		return nil, fail("القالب اتغير؛ حدّث القوالب وراجع المتغيرات ثم أعد المعاينة", 409)
+	}
+	if str(body["centerBatchId"]) != "" && templateUsesDocument(template) {
+		return nil, fail("اختر قالبًا نصيًا لرسالة تقرير السنتر؛ PDF متاح لتقارير الامتحان الإلكتروني", 400)
+	}
+	report, err := c.reportData(body)
 	if err != nil {
 		return nil, err
 	}
+	if reason := templateAttendanceConflict(template, report); reason != "" {
+		return nil, fail(reason, 409)
+	}
 	attempt := report["attempt"].(M)
-	phone, err := normalizePhone(str(attempt["phone"]))
+	rawPhone := str(attempt["phone"])
+	if body["recipientKind"] == "guardian" {
+		rawPhone = str(report["guardianPhone"])
+	}
+	phone, err := normalizeWhatsAppPhone(rawPhone)
 	if err != nil {
 		return nil, fail("رقم الطالب غير صالح للإرسال", 400)
 	}
 	recipient := "20" + phone[1:]
 	exam := report["exam"].(M)["config"].(M)
-	parameters, err := reportParameters(report, body["mappings"], len(positions))
+	parameters, err := reportParameters(report, body["mappings"], len(positions), template)
 	if err != nil {
 		return nil, err
 	}
 	filename := safeReportFilename(fmt.Sprintf("%s - %v من %v.pdf", str(attempt["name"]), attempt["score"], attempt["maximum"]))
 	fingerprint := hash(encode(M{"attemptId": attempt["id"], "recipient": recipient, "sender": config.PhoneNumberID, "template": template, "parameters": parameters, "questions": report["questions"], "answers": attempt["answers"], "grades": attempt["grades"], "name": attempt["name"], "code": attempt["code"], "score": attempt["score"], "maximum": attempt["maximum"], "exam": exam["title"]}))
+	if str(body["centerBatchId"]) != "" {
+		fingerprint = "center:" + fingerprint
+		filename = "رسالة · " + str(attempt["name"])
+	}
 	return &preparedWhatsAppReport{config, template, report, parameters, recipient, filename, fingerprint}, nil
 }
 
@@ -73,13 +93,39 @@ func (c *whatsappCloud) preview(body M) (M, error) {
 	}
 	items := []M{}
 	seen := map[string]bool{}
+	config, err := c.config()
+	if err != nil {
+		return nil, err
+	}
+	template, _, err := c.reportTemplate(config, str(body["templateId"]))
+	if err != nil {
+		return nil, err
+	}
+	if schema := str(body["bindingSchema"]); schema != "" && schema != templateBindingDigest(template) {
+		return nil, fail("القالب اتغير؛ حدّث القوالب وراجع المتغيرات ثم أعد المعاينة", 409)
+	}
 	for _, raw := range ids {
 		aid := str(raw)
 		if seen[aid] {
 			return nil, fail("قائمة الطلاب متكررة", 400)
 		}
 		seen[aid] = true
-		prepared, err := c.prepare(M{"attemptId": aid, "templateId": body["templateId"], "mappings": body["mappings"]})
+		if str(body["centerBatchId"]) != "" {
+			report, err := c.reportData(M{"attemptId": aid, "centerBatchId": body["centerBatchId"]})
+			if err != nil {
+				return nil, err
+			}
+			if reason := templateAttendanceConflict(template, report); reason != "" {
+				attempt := report["attempt"].(M)
+				phone := attempt["phone"]
+				if body["recipientKind"] == "guardian" {
+					phone = report["guardianPhone"]
+				}
+				items = append(items, M{"attemptId": aid, "name": attempt["name"], "code": attempt["code"], "phone": phone, "score": attempt["score"], "maximum": attempt["maximum"], "error": reason})
+				continue
+			}
+		}
+		prepared, err := c.prepare(M{"attemptId": aid, "templateId": body["templateId"], "bindingSchema": body["bindingSchema"], "mappings": body["mappings"], "centerBatchId": body["centerBatchId"], "recipientKind": body["recipientKind"]})
 		if err != nil {
 			return nil, err
 		}
@@ -88,14 +134,14 @@ func (c *whatsappCloud) preview(body M) (M, error) {
 		if err != nil {
 			return nil, err
 		}
-		items = append(items, M{"attemptId": aid, "name": attempt["name"], "phone": attempt["phone"], "code": attempt["code"], "score": attempt["score"], "maximum": attempt["maximum"], "filename": prepared.filename, "parameters": prepared.parameters, "fingerprint": prepared.fingerprint, "prior": prior})
+		items = append(items, M{"attemptId": aid, "name": attempt["name"], "phone": "+" + prepared.recipient, "code": attempt["code"], "score": attempt["score"], "maximum": attempt["maximum"], "filename": prepared.filename, "parameters": prepared.parameters, "fingerprint": prepared.fingerprint, "prior": prior})
 	}
 	return M{"items": items}, nil
 }
 
 func (c *whatsappCloud) sendRecord(fingerprint string) (M, error) {
 	var state, messageID, errText string
-	err := c.app.db.sql.QueryRow(`SELECT state,message_id,error FROM whatsapp_report_sends WHERE fingerprint=?`, fingerprint).Scan(&state, &messageID, &errText)
+	err := c.app.db.sql.QueryRow(`SELECT state,message_id,error FROM `+whatsappSendTable(fingerprint)+` WHERE fingerprint=?`, fingerprint).Scan(&state, &messageID, &errText)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -135,7 +181,10 @@ func (c *whatsappCloud) sendReport(ctx context.Context, body M) (M, error) {
 	if previous != nil {
 		return previous, nil
 	}
-	mediaID, err := c.uploadPreparedReport(ctx, prepared)
+	mediaID := ""
+	if templateUsesDocument(prepared.template) {
+		mediaID, err = c.uploadPreparedReport(ctx, prepared)
+	}
 	if err != nil {
 		reply, saveErr := c.finishSend(prepared.fingerprint, "failed", "", safeSendError(err))
 		if reply != nil {
@@ -165,13 +214,17 @@ func (c *whatsappCloud) sendReport(ctx context.Context, body M) (M, error) {
 
 func retryableWhatsAppError(err error) bool {
 	var expected roomError
+	var limited whatsappRateLimit
+	if errors.As(err, &limited) {
+		return true
+	}
 	return errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &expected) && expected.status == 502)
 }
 
 func (c *whatsappCloud) guardedSendRecord(report *preparedWhatsAppReport) (M, error) {
 	var fingerprint string
-	err := c.app.db.sql.QueryRow(`SELECT fingerprint FROM whatsapp_report_sends WHERE attempt_id=? AND recipient=? AND state IN ('accepted','unknown','sending','preparing') ORDER BY created_at LIMIT 1`,
-		str(report.report["attempt"].(M)["id"]), report.recipient).Scan(&fingerprint)
+	err := c.app.db.sql.QueryRow(`SELECT fingerprint FROM `+whatsappSendTable(report.fingerprint)+` WHERE attempt_id=? AND recipient=? AND template_name=? AND state IN ('accepted','unknown','sending','preparing') ORDER BY created_at LIMIT 1`,
+		str(report.report["attempt"].(M)["id"]), report.recipient, str(report.template["name"])).Scan(&fingerprint)
 	if errors.Is(err, sql.ErrNoRows) {
 		return c.sendRecord(report.fingerprint)
 	}
@@ -191,10 +244,10 @@ func (c *whatsappCloud) claimSend(report *preparedWhatsAppReport, body M) (M, er
 		return M{"record": prior, "replayed": true}, nil
 	}
 	if prior != nil {
-		_, err = c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state='preparing',error='',updated_at=? WHERE fingerprint=? AND state IN ('failed','rejected')`, now(), report.fingerprint)
+		_, err = c.app.db.sql.Exec(`UPDATE `+whatsappSendTable(report.fingerprint)+` SET state='preparing',error='',updated_at=? WHERE fingerprint=? AND state IN ('failed','rejected')`, now(), report.fingerprint)
 	} else {
 		aid := str(report.report["attempt"].(M)["id"])
-		_, err = c.app.db.sql.Exec(`INSERT INTO whatsapp_report_sends(fingerprint,attempt_id,recipient,template_name,filename,state,created_at,updated_at) VALUES(?,?,?,?,?,'preparing',?,?)`, report.fingerprint, aid, report.recipient, str(report.template["name"]), report.filename, now(), now())
+		_, err = c.app.db.sql.Exec(`INSERT INTO `+whatsappSendTable(report.fingerprint)+`(fingerprint,attempt_id,recipient,template_name,filename,state,created_at,updated_at) VALUES(?,?,?,?,?,'preparing',?,?)`, report.fingerprint, aid, report.recipient, str(report.template["name"]), report.filename, now(), now())
 	}
 	return nil, err
 }
@@ -230,7 +283,7 @@ func (c *whatsappCloud) deliverReport(ctx context.Context, report *preparedWhats
 		return reply, saveErr
 	}
 	// Persist the uncertain boundary before contacting Meta; a crash cannot authorize a duplicate.
-	if _, err := c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state='sending',updated_at=? WHERE fingerprint=?`, now(), report.fingerprint); err != nil {
+	if _, err := c.app.db.sql.Exec(`UPDATE `+whatsappSendTable(report.fingerprint)+` SET state='sending',updated_at=? WHERE fingerprint=?`, now(), report.fingerprint); err != nil {
 		return nil, err
 	}
 	messageID, err := c.sendPDF(ctx, report, mediaID)
@@ -242,10 +295,23 @@ func (c *whatsappCloud) deliverReport(ctx context.Context, report *preparedWhats
 	if errors.As(err, &provider) && provider.status == 422 {
 		state = "rejected"
 	}
+	var limited whatsappRateLimit
+	if errors.As(err, &limited) {
+		reply, saveErr := c.finishSend(report.fingerprint, "rejected", "", safeSendError(err))
+		if reply != nil {
+			reply["retryable"] = true
+			reply["retryAfterSeconds"] = limited.seconds
+		}
+		return reply, saveErr
+	}
 	return c.finishSend(report.fingerprint, state, "", safeSendError(err))
 }
 
 func safeSendError(err error) string {
+	var limited whatsappRateLimit
+	if errors.As(err, &limited) {
+		return limited.Error()
+	}
 	var expected roomError
 	if errors.As(err, &expected) {
 		return expected.msg
@@ -254,7 +320,7 @@ func safeSendError(err error) string {
 }
 
 func (c *whatsappCloud) finishSend(fingerprint, state, messageID, errText string) (M, error) {
-	_, err := c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state=?,message_id=?,error=?,updated_at=? WHERE fingerprint=?`, state, messageID, errText, now(), fingerprint)
+	_, err := c.app.db.sql.Exec(`UPDATE `+whatsappSendTable(fingerprint)+` SET state=?,message_id=?,error=?,updated_at=? WHERE fingerprint=?`, state, messageID, errText, now(), fingerprint)
 	if err != nil {
 		return nil, err
 	}
@@ -277,10 +343,30 @@ func (c *whatsappCloud) history() (M, error) {
 		}
 		items = append(items, M{"attemptId": aid, "name": name, "code": code, "phone": phone, "template": template, "filename": filename, "state": state, "messageId": messageID, "error": errText, "createdAt": created})
 	}
-	return M{"items": items}, rows.Err()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	centerRows, err := c.app.db.sql.Query(`SELECT attempt_id,recipient,template_name,filename,state,message_id,error,created_at FROM whatsapp_center_sends ORDER BY created_at DESC LIMIT 1000`)
+	if err != nil {
+		return nil, err
+	}
+	defer centerRows.Close()
+	for centerRows.Next() {
+		var id, phone, template, filename, state, messageID, errText string
+		var created float64
+		if err = centerRows.Scan(&id, &phone, &template, &filename, &state, &messageID, &errText, &created); err != nil {
+			return nil, err
+		}
+		items = append(items, M{"attemptId": id, "name": strings.TrimPrefix(filename, "رسالة · "), "phone": phone, "template": template, "filename": filename, "state": state, "messageId": messageID, "error": errText, "createdAt": created})
+	}
+	return M{"items": items}, centerRows.Err()
 }
 
 func (c *whatsappCloud) recoverSends() error {
+	if _, err := c.app.db.sql.Exec(`UPDATE whatsapp_center_sends SET state=CASE WHEN state='sending' THEN 'unknown' ELSE 'failed' END,error='توقف البرنامج؛ راجع السجل',updated_at=? WHERE state IN ('preparing','sending')`, now()); err != nil {
+		return err
+	}
 	_, err := c.app.db.sql.Exec(`UPDATE whatsapp_report_sends SET state=CASE WHEN state='sending' THEN 'unknown' ELSE 'failed' END,error='توقف البرنامج أثناء الإرسال؛ راجع الحالة قبل إعادة المحاولة',updated_at=? WHERE state IN ('preparing','sending')`, now())
 	if err != nil {
 		return err
@@ -316,7 +402,7 @@ func (c *whatsappCloud) reportTemplate(config whatsappConfig, templateID string)
 	return template, positions, nil
 }
 
-func reportParameters(report M, rawMappings any, count int) ([]string, error) {
+func reportParameters(report M, rawMappings any, count int, template M) ([]string, error) {
 	mappings, ok := rawMappings.([]any)
 	if !ok || len(mappings) != count {
 		return nil, fail("حدد بيانات كل متغير في القالب", 400)
@@ -324,6 +410,13 @@ func reportParameters(report M, rawMappings any, count int) ([]string, error) {
 	attempt := report["attempt"].(M)
 	exam := report["exam"].(M)["config"].(M)
 	fields := M{"name": attempt["name"], "code": attempt["code"], "score": fmt.Sprint(attempt["score"]), "maximum": fmt.Sprint(attempt["maximum"]), "result": fmt.Sprintf("%v من %v", attempt["score"], attempt["maximum"]), "exam": exam["title"]}
+	if extras, ok := report["centerFields"].(M); ok {
+		for key, value := range extras {
+			if value != nil {
+				fields[key] = fmt.Sprint(value)
+			}
+		}
+	}
 	parameters := []string{}
 	for _, raw := range mappings {
 		mapping, ok := raw.(map[string]any)
@@ -331,6 +424,9 @@ func reportParameters(report M, rawMappings any, count int) ([]string, error) {
 			return nil, fail("تعيين المتغير غير صالح", 400)
 		}
 		parameter := str(fields[str(mapping["source"])])
+		if mapping["source"] == "homework" {
+			parameter = templateHomeworkValue(template, parameter)
+		}
 		if str(mapping["source"]) == "literal" {
 			parameter = str(mapping["text"])
 		}
@@ -340,4 +436,20 @@ func reportParameters(report M, rawMappings any, count int) ([]string, error) {
 		parameters = append(parameters, parameter)
 	}
 	return parameters, nil
+}
+
+func normalizeWhatsAppPhone(raw string) (string, error) {
+	phone := normalizeDigits(strings.TrimSpace(raw))
+	phone = strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(phone)
+	if strings.HasPrefix(phone, "0020") {
+		phone = "0" + strings.TrimPrefix(phone, "0020")
+	} else if strings.HasPrefix(phone, "+20") {
+		phone = "0" + strings.TrimPrefix(phone, "+20")
+	} else if strings.HasPrefix(phone, "20") && len(phone) == 12 {
+		phone = "0" + phone[2:]
+	}
+	if len(phone) != 11 || !strings.HasPrefix(phone, "01") || !strings.ContainsRune("0125", rune(phone[2])) {
+		return "", fail("رقم واتساب المصري غير صالح", 400)
+	}
+	return normalizePhone(phone)
 }

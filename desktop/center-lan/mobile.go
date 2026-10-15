@@ -96,6 +96,34 @@ func mobileAddresses() ([]net.IP, error) {
 	return addresses, nil
 }
 
+func mobileNetworkLinks(addresses []net.IP) []map[string]string {
+	names := map[string]string{}
+	interfaces, _ := net.Interfaces()
+	for _, adapter := range interfaces {
+		entries, err := adapter.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			ip, _, err := net.ParseCIDR(entry.String())
+			if err == nil {
+				names[ip.String()] = adapter.Name
+			}
+		}
+	}
+	links := []map[string]string{}
+	for _, ip := range addresses {
+		if ip.IsLoopback() {
+			continue
+		}
+		links = append(links, map[string]string{
+			"url":     "https://" + net.JoinHostPort(ip.String(), "43875") + "/mobile/",
+			"network": names[ip.String()], "address": ip.String(),
+		})
+	}
+	return links
+}
+
 func (g *Gateway) mobileHandler(authority savedIdentity) http.Handler {
 	upstream, _ := g.config.upstreamURL()
 	proxy := &httputil.ReverseProxy{Transport: g.transport, Rewrite: func(request *httputil.ProxyRequest) {
@@ -172,7 +200,7 @@ func (g *Gateway) startMobile(w http.ResponseWriter, r *http.Request) {
 			urls = append(urls, "https://"+net.JoinHostPort(ip.String(), "43875")+"/mobile/")
 		}
 	}
-	writeJSON(w, 200, map[string]any{"urls": urls})
+	writeJSON(w, 200, map[string]any{"urls": urls, "links": mobileNetworkLinks(addresses)})
 }
 
 func (g *Gateway) closeMobile() {

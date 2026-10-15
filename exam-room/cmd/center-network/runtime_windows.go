@@ -194,12 +194,12 @@ func hotspot(request input) output {
 	encoded, _ := json.Marshal(map[string]string{"action": strings.TrimPrefix(request.Action, "hotspot-"), "ssid": request.SSID, "password": request.Password})
 	command.Stdin = bytes.NewReader(encoded)
 	content, err := command.Output()
-	if err != nil {
-		return output{"ok": false, "supported": true, "active": false, "message": "تعذر تشغيل شبكة الهوست؛ راجع دعم Wi-Fi Direct ومحول الواي فاي."}
-	}
 	var response output
 	if json.Unmarshal(content, &response) != nil {
-		return output{"ok": false, "message": "تعذر قراءة حالة شبكة الهوست."}
+		return output{"ok": false, "message": "تعذر تشغيل أو قراءة حالة شبكة الهوست؛ راجع محول الواي فاي ومكوّن الشبكة في الحزمة."}
+	}
+	if err != nil {
+		response["ok"] = false
 	}
 	return response
 }

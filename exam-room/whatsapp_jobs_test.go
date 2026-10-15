@@ -43,8 +43,9 @@ func waitReportQueue(t *testing.T, c *whatsappCloud) {
 	}
 }
 
-func TestBackgroundReportsContinueAcrossExamsWithFiveSecondBatchGap(t *testing.T) {
+func TestBackgroundReportsContinueAcrossExamsWithConfiguredBatchPacing(t *testing.T) {
 	c, body := reportCloudFixture(t)
+	c.batchGap = 30 * time.Millisecond
 	original, err := attempt(c.app.db.sql, str(body["attemptId"]))
 	if err != nil {
 		t.Fatal(err)
@@ -124,8 +125,8 @@ func TestBackgroundReportsContinueAcrossExamsWithFiveSecondBatchGap(t *testing.T
 	}
 	select {
 	case stamp := <-sixthAt:
-		if stamp.Sub(releasedAt) < 5*time.Second {
-			t.Fatal("batch gap shorter than five seconds")
+		if stamp.Sub(releasedAt) < c.batchGap {
+			t.Fatal("next batch ignored configured pacing")
 		}
 	default:
 		t.Fatal("second batch not sent")

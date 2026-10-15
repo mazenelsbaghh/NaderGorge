@@ -17,6 +17,18 @@ import 'package:massar_center/shared/formatters.dart';
 
 import 'management_widgets.dart';
 
+List<int>? _examMaxima(String text) {
+  final pieces = text.trim().split(RegExp(r'[,،;؛\s]+'));
+  final maxima = pieces.map(parseAcademicInteger).toList();
+  if (maxima.isEmpty ||
+      maxima.length > 8 ||
+      maxima.any((value) => value == null || value <= 0 || value > 1000000)) {
+    return null;
+  }
+  final result = maxima.cast<int>();
+  return result.toSet().length == result.length ? result : null;
+}
+
 class AcademicsPage extends StatefulWidget {
   const AcademicsPage({
     super.key,
@@ -359,7 +371,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
       text: existing == null
           ? '10'
           : existing.maxScoreKnown
-          ? '${existing.maxScore}'
+          ? existing.allowedMaxScores.join('، ')
           : '',
     );
     AcademicActivity? created;
@@ -395,10 +407,14 @@ class _AcademicsPageState extends State<AcademicsPage> {
               key: const Key('academic-activity-max'),
               controller: maximum,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'الدرجة النهائية'),
-              validator: (text) => (parseAcademicInteger(text ?? '') ?? 0) > 0
+              decoration: const InputDecoration(
+                labelText: 'الدرجات النهائية المتاحة',
+                helperText:
+                    'مثال: ١٠، ١٢ للورقي والإلكتروني. أول رقم هو الافتراضي.',
+              ),
+              validator: (text) => _examMaxima(text ?? '') != null
                   ? null
-                  : 'الدرجة النهائية عدد صحيح أكبر من صفر',
+                  : 'اكتب نهايات صحيحة موجبة بدون تكرار، مثل ١٠، ١٢',
             ),
           Text(
             _preparedLesson != null
@@ -418,7 +434,8 @@ class _AcademicsPageState extends State<AcademicsPage> {
                   : _preparedLesson?.id,
               kind: kind,
               name: name.text.trim(),
-              maxScore: exam ? parseAcademicInteger(maximum.text)! : 10,
+              maxScore: exam ? _examMaxima(maximum.text)!.first : 10,
+              allowedMaxScores: exam ? _examMaxima(maximum.text)! : [10],
               createdAt: existing?.createdAt ?? DateTime.now(),
             ),
           );
@@ -535,7 +552,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
     final maxScore = TextEditingController(
       text: record?.maxScoreKnown == false && legacy
           ? ''
-          : '${activity?.maxScore ?? record?.maxScore ?? 10}',
+          : '${record?.maxScore ?? activity?.maxScore ?? 10}',
     );
     final notes = TextEditingController(text: record?.notes);
     final saved = await showDialog<bool>(
@@ -569,15 +586,22 @@ class _AcademicsPageState extends State<AcademicsPage> {
               TextFormField(
                 key: const Key('academic-result-max'),
                 controller: maxScore,
-                readOnly: !legacy,
+                readOnly: !legacy && activity.allowedMaxScores.length < 2,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'الدرجة النهائية',
-                  helperText: legacy ? null : 'محددة عند إنشاء الامتحان.',
+                  helperText: legacy
+                      ? null
+                      : 'النهايات المتاحة: ${activity.allowedMaxScores.join('، ')}',
                 ),
-                validator: (text) => (parseAcademicInteger(text ?? '') ?? 0) > 0
-                    ? null
-                    : 'الدرجة النهائية عدد صحيح أكبر من صفر',
+                validator: (text) {
+                  final parsed = parseAcademicInteger(text ?? '');
+                  return parsed != null &&
+                          parsed > 0 &&
+                          (legacy || activity.acceptsMaxScore(parsed))
+                      ? null
+                      : 'اختر نهاية من النهايات المتاحة للامتحان';
+                },
               ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
@@ -1059,7 +1083,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                 '${!exam
                     ? ''
                     : activity.maxScoreKnown
-                    ? ' · الدرجة النهائية ${activity.maxScore}'
+                    ? ' · النهايات المتاحة ${activity.allowedMaxScores.join('، ')}'
                     : ' · الدرجة النهائية غير معروفة'}',
                 key: const Key('selected-academic-activity'),
                 style: Theme.of(context).textTheme.titleMedium,

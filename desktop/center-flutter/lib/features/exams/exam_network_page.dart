@@ -6,6 +6,7 @@ import '../../exams/exam_room_controller.dart';
 import '../../domain/models.dart';
 import '../../shared/theme.dart';
 import '../management/management_widgets.dart';
+import 'omada_setup_panel.dart';
 
 class ExamNetworkPage extends StatefulWidget {
   const ExamNetworkPage({
@@ -27,8 +28,6 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
   String? _adapter;
   String? _message;
   String _portalMode = 'legacy';
-  final _ssid = TextEditingController(text: 'Massar-Host');
-  final _password = TextEditingController();
   final _hostname = TextEditingController();
   String? _certificate, _key;
 
@@ -40,8 +39,6 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
 
   @override
   void dispose() {
-    _ssid.dispose();
-    _password.dispose();
     _hostname.dispose();
     super.dispose();
   }
@@ -70,9 +67,9 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
   Future<void> _read() async {
     final status = await widget.controller.network({'action': 'status'});
     final list = await widget.controller.network({'action': 'list-adapters'});
-    final hotspot = await widget.controller.network({
-      'action': 'hotspot-status',
-    });
+    final hotspot = widget.isHost
+        ? await widget.controller.network({'action': 'tethering-status'})
+        : const <String, dynamic>{};
     if (!mounted) return;
     final adapters = (list['adapters'] as List? ?? [])
         .whereType<Map>()
@@ -91,11 +88,24 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
   }
 
   Future<void> _inspect() => _run(_read);
+  Future<void> _startHostNetwork() => _run(() async {
+    final result = await widget.controller.network({
+      'action': 'tethering-start',
+    });
+    if (!mounted) return;
+    setState(() => _hotspot = result);
+    if (result['ok'] != true || result['active'] != true) {
+      throw CenterException(
+        result['message'] as String? ?? 'لم يؤكد ويندوز تشغيل شبكة الهوست.',
+      );
+    }
+    setState(() => _message = result['message'] as String?);
+  });
   Future<void> _apply(Map<String, dynamic> command) => _run(() async {
     if (command['action'] == 'configure' ||
         command['action'] == 'restore' ||
         command['action'] == 'portal-configure') {
-      await widget.controller.start();
+      await widget.controller.prepareNetworkEngine();
     }
     final result = await widget.controller.network(command);
     if (result['ok'] == false || result['error'] != null) {
@@ -155,8 +165,8 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
   Widget build(BuildContext context) => ManagementPanel(
     title: 'تهيئة الشبكة وصفحة دخول الطلاب',
     subtitle: widget.isHost
-        ? 'يمكن تشغيل الامتحان على هذا الجهاز. وصّل كابل الـOmada به، مع إبقاء شبكة ربط الساكند متاحة.'
-        : 'وصلة الكابل للـOmada، والواي فاي للاتصال بالهوست.',
+        ? 'شغّل شبكة الهوست لربط الساكند وواجب الموبايل. تجهيز كابل الـOmada يتم على الساكند.'
+        : 'وصّل الواي فاي بالهوست لتحميل دليل الحصص ورفع النتائج، والكابل بالـOmada. الامتحان يعمل محليًا عند فصل الهوست.',
     actions: [
       OutlinedButton.icon(
         onPressed: _busy ? null : _inspect,
@@ -177,107 +187,52 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
             ),
           ),
         if (_status['message'] is String) Text(_status['message'] as String),
-        const SizedBox(height: 16),
-        if (widget.isHost)
-          ExpansionTile(
-            title: const Text('شبكة الهوست الخاصة (اختياري)'),
-            subtitle: const Text('لربط الساكند بالهوست عبر الواي فاي'),
-            tilePadding: EdgeInsets.zero,
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              const Text(
-                'الساكند يتصل بهذه الشبكة من إعدادات الواي فاي في ويندوز، ثم تربطه من «ربط الأجهزة». الطلاب يتصلون بشبكة الـOmada.',
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _ssid,
-                enabled: !_busy,
-                decoration: const InputDecoration(
-                  labelText: 'اسم شبكة الجهازين',
-                ),
-                textDirection: TextDirection.ltr,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _password,
-                enabled: !_busy,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'كلمة مرور الشبكة — ٨ أحرف على الأقل',
-                ),
-                textDirection: TextDirection.ltr,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            if (_password.text.length < 8 ||
-                                _password.text.length > 63 ||
-                                _ssid.text.trim().isEmpty) {
-                              setState(
-                                () => _message =
-                                    'اكتب اسم الشبكة وكلمة مرور بين ٨ و٦٣ حرفًا.',
-                              );
-                              return;
-                            }
-                            _apply({
-                              'action': 'hotspot-start',
-                              'ssid': _ssid.text.trim(),
-                              'password': _password.text,
-                            });
-                          },
-                    icon: const Icon(Icons.wifi),
-                    label: const Text('تشغيل شبكة الهوست'),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy || _hotspot['active'] != true
-                        ? null
-                        : () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('إيقاف شبكة الجهازين؟'),
-                                content: const Text(
-                                  'سيتوقف التحضير والتحصيل على الساكند حتى رجوع الاتصال. أغلق أي عمل جارٍ عليه أولًا.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('رجوع'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('إيقاف الشبكة'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirmed == true) {
-                              await _apply({'action': 'hotspot-stop'});
-                            }
-                          },
-                    child: const Text('إيقاف الشبكة'),
-                  ),
-                ],
-              ),
-              _check('شبكة الربط اللاسلكي', _hotspot['active']),
-              if (_hotspot['addresses'] is List &&
-                  (_hotspot['addresses'] as List).isNotEmpty)
-                SelectableText(
-                  'عنوان الهوست للربط اليدوي: ${(_hotspot['addresses'] as List).join('، ')}',
-                ),
-              if (_hotspot['message'] is String)
-                Text(_hotspot['message'] as String),
-            ],
+        if (widget.isHost) ...[
+          const SizedBox(height: 16),
+          Text('شبكة الهوست', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text(
+            'يمكن البدء من اتصال الواي فاي على الهوست دون كابل بين الجهازين، إذا كان ويندوز ومحول الواي فاي يدعمان نقطة الاتصال. الشبكة المشغّلة بالفعل تبقى كما هي.',
           ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FilledButton.icon(
+              onPressed: _busy ? null : _startHostNetwork,
+              icon: const Icon(Icons.wifi_tethering),
+              label: const Text('تشغيل شبكة الهوست'),
+            ),
+          ),
+          _check('هوتسبوت الهوست يعمل', _hotspot['active']),
+          if (_hotspot['message'] is String)
+            Text(_hotspot['message'] as String),
+          if (_hotspot['active'] == true && _hotspot['ssid'] is String)
+            SelectableText('اسم الشبكة: ${_hotspot['ssid']}'),
+          const Text(
+            'اسم الشبكة وكلمة سرها في إعدادات ويندوز ← الشبكة والإنترنت ← نقطة اتصال الهواتف المحمولة. وصّل الساكند بها من قائمة الواي فاي، ثم افتح ربط الأجهزة. لا تطفئ الشبكة أثناء التسجيل أو واجب الموبايل.',
+          ),
+          const Divider(height: 32),
+        ],
+        const SizedBox(height: 16),
+        const Text(
+          '١. أول اتصال: اربط الساكند بالهوست بالواي فاي أو الكابل وسجّل دخول السنتر لتحميل المجموعات والحصص والامتحانات تلقائيًا.',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '٢. افتح امتحان الساكند واختر نموذج الأسئلة والمجموعة والحصة وامتحان الرصد من الدليل المحفوظ. لا يحتاج الامتحان كشف طلاب أو تجهيزًا مسبقًا للحصة.',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '٣. داخل القاعة: وصّل الـOmada بالساكند على منفذ الكابل المجهّز، والطلاب يتصلون بشبكة Mr Nader Center exam الحالية.',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '٤. بعد التصحيح أعد الاتصال بالهوست. النتائج تصل إلى شاشة تحميل درجات الساكند؛ تأكيد واحد يرصد المطابقين ويعرض الحاضرين الذين لم يدخلوا الامتحان وشيتًا لتنزيلهم.',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'واجب الموبايل: من الهوست افتح واجب الموبايل واضغط تشغيل هوتسبوت الواجب، ثم وصّل موبايل الموظف به وجهّز الرابط.',
+        ),
         const SizedBox(height: 16),
         Text(
           'وصلة شبكة الامتحان',
@@ -285,7 +240,7 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'اختَر منفذ الكابل الموصل بالـOmada فقط. لا تختَر وصلة الإنترنت أو شبكة الربط بين الجهازين. تغيير الإعداد متاح بعد إغلاق القاعات.',
+          'على الساكند: اختَر منفذ الكابل الذي سيتصل بالـOmada داخل القاعة. يمكن استخدام نفس المنفذ لكابل الهوست قبل القاعة وبعدها. لا تختَر منفذ الإنترنت، وجهّزه بعد إغلاق القاعات.',
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
@@ -313,7 +268,7 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
           runSpacing: 8,
           children: [
             FilledButton.icon(
-              onPressed: _busy || _adapter == null
+              onPressed: _busy || _adapter == null || widget.isHost
                   ? null
                   : () =>
                         _apply({'action': 'configure', 'adapterId': _adapter}),
@@ -329,6 +284,10 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
           ],
         ),
         const SizedBox(height: 12),
+        if (widget.isHost)
+          const Text(
+            'تجهيز وصلة الامتحان يتم على الساكند فقط حتى لا يأخذ الجهازان العنوان نفسه.',
+          ),
         _check('توزيع عناوين الموبايلات', _status['dhcpReady']),
         _check('توجيه صفحة الدخول', _status['dnsReady']),
         _check('البورتال وخدمة الامتحان', _status['portalReady']),
@@ -349,13 +308,27 @@ class _ExamNetworkPageState extends State<ExamNetworkPage> {
             ),
           ),
         const Divider(height: 32),
+        ExpansionTile(
+          title: const Text('إعدادات Omada الإضافية (اختياري)'),
+          subtitle: const Text(
+            'إذا كانت شبكة الطلاب تعمل بالفعل، استخدمها مباشرة مع تجهيز الوصلة. إدارة Omada مطلوبة لتغيير إعدادات الأكسس بوينت.',
+          ),
+          children: [
+            OmadaSetupPanel(
+              controller: widget.controller,
+              networkReady: _status['ready'] == true,
+              disabled: _busy,
+            ),
+          ],
+        ),
+        const Divider(height: 32),
         Text(
           'البورتال — طريقة دخول الموبايلات',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
         const Text(
-          'صفحة الطالب تعرض إدخال الموبايل، ثم الاسم والكود، وقاعة الانتظار والامتحان. لو صفحة الدخول التلقائي لم تظهر، افتح رابط الطلاب يدويًا.',
+          'الطالب يكتب اسمه ورقم تلفونه وكوده، ثم يدخل الانتظار والامتحان. لو صفحة الدخول التلقائي لم تظهر، افتح رابط الطلاب يدويًا.',
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(

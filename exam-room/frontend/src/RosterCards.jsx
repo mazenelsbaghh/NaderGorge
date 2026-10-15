@@ -4,7 +4,7 @@ import {rosterFilters,screenFilters} from './rosterStatus.js';
 
 export default function RosterCards({counts,filter,onChange,searching,showScreenCards}) {
  return <section className="roster-card-area" aria-label="حالات الطلاب">
-  <div className="roster-card-heading"><h2>حالات الطلاب</h2><p className="help">{searching?'الأعداد حسب البحث الحالي. ':''}اضغط على الكارت لعرض طلابه.</p></div>
+  <div className="roster-card-heading"><h2>حالات الطلاب</h2><p className="help">{searching?'الأعداد حسب البحث الحالي. ':''}اختر الحالة لعرض طلابها.</p></div>
   {[{label:'حالات الطلاب',filters:rosterFilters},...(showScreenCards?[{label:'مراقبة الشاشة',filters:screenFilters}]:[])].map(group=><React.Fragment key={group.label}>
    {group.label==='مراقبة الشاشة'&&<h3 className="screen-card-heading">آخر حالة للشاشة · المحاولات غير المسلّمة</h3>}
    <div className="roster-status-cards" role="group" aria-label={group.label==='حالات الطلاب'?'تصفية الطلاب':'تصفية مراقبة الشاشة'}>

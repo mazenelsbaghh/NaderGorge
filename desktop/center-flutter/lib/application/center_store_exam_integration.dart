@@ -141,6 +141,7 @@ extension _CenterExamIntegration on CenterStore {
 
   void _validateIntegratedContext(IntegratedExamResult examResult) {
     _require(canAssess);
+    _requireRequestedExamResult(examResult);
     if (!examResult.isValid) {
       throw const CenterException('نتيجة الامتحان أو هوية مصدرها غير صالحة.');
     }
@@ -150,7 +151,7 @@ extension _CenterExamIntegration on CenterStore {
       session.id,
       examResult.activityId,
     );
-    if (activity.maxScore != examResult.maxScore) {
+    if (!activity.acceptsMaxScore(examResult.maxScore)) {
       throw const CenterException('الدرجة النهائية لا تطابق الامتحان المرتبط.');
     }
     _validateIntegratedPresence(_student(examResult.studentId), session);
@@ -205,6 +206,21 @@ extension _CenterExamIntegration on CenterStore {
   }
 
   void _validateIntegratedBinding(IntegratedExamResult result) {
+    for (final monitor in _state.examMonitors) {
+      final room = monitor.snapshot;
+      if (room.sourceId != result.sourceId) continue;
+      final studentId = monitor.identities[result.attemptId];
+      if (room.examId == result.examId &&
+              (room.sessionId != result.sessionId ||
+                  room.activityId != result.activityId) ||
+          studentId != null &&
+              (studentId != result.studentId || room.examId != result.examId)) {
+        throw const CenterException(
+          'النتيجة لا تطابق كشف دخول الامتحان المحفوظ.',
+        );
+      }
+    }
+
     for (final record in _state.academics) {
       final saved = record.integration?.result;
       if (saved == null || saved.sourceId != result.sourceId) continue;

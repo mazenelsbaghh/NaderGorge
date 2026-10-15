@@ -3,11 +3,10 @@ import '../../cloud/app_update_controller.dart';
 import 'cloud_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:massar_center/application/center_store.dart';
-import 'package:massar_center/shared/theme.dart';
-import 'package:massar_center/shared/appearance.dart';
 import 'package:massar_center/shared/formatters.dart';
 import '../../lan/lan_controller.dart';
-import '../../shared/massar_logo.dart';
+import '../../application/center_reports.dart';
+import '../../shared/workspace_navigation.dart';
 import '../../shared/workspace_draft_guard.dart';
 
 import 'academics_page.dart';
@@ -18,6 +17,7 @@ import 'cards_page.dart';
 import 'card_settings_page.dart';
 import 'groups_page.dart';
 import 'reports_page.dart';
+import 'whatsapp_page.dart';
 import 'review_page.dart';
 import 'closings_page.dart';
 import 'corrections_page.dart';
@@ -35,6 +35,7 @@ class ManagementWorkspace extends StatefulWidget {
     this.lanController,
     this.cloudController,
     this.updateController,
+    this.onWhatsApp,
   });
   final CenterStore store;
   final VoidCallback onOpenAttendance;
@@ -42,6 +43,7 @@ class ManagementWorkspace extends StatefulWidget {
   final LanController? lanController;
   final CloudSupportController? cloudController;
   final AppUpdateController? updateController;
+  final Future<void> Function(CenterReportData report)? onWhatsApp;
 
   @override
   State<ManagementWorkspace> createState() => _ManagementWorkspaceState();
@@ -86,6 +88,7 @@ class _ManagementWorkspaceState extends State<ManagementWorkspace> {
         icon: Icons.fact_check_outlined,
       ),
     (id: 'reports', label: 'التقارير', icon: Icons.bar_chart_outlined),
+    (id: 'whatsapp', label: 'رسائل واتساب', icon: Icons.chat_outlined),
     if (widget.lanController != null)
       (id: 'lan', label: 'ربط الأجهزة', icon: Icons.lan_outlined),
     if (widget.cloudController != null && widget.updateController != null)
@@ -132,7 +135,14 @@ class _ManagementWorkspaceState extends State<ManagementWorkspace> {
       store: widget.store,
       lanController: widget.lanController,
     ),
-    'reports' => ReportsPage(store: widget.store),
+    'whatsapp' => WhatsAppPage(
+      store: widget.store,
+      onWhatsApp: widget.onWhatsApp,
+    ),
+    'reports' => ReportsPage(
+      store: widget.store,
+      onWhatsApp: widget.onWhatsApp,
+    ),
     'review' => ReviewPage(store: widget.store),
     'closings' => ClosingsPage(store: widget.store),
     'corrections' => CorrectionsPage(store: widget.store),
@@ -151,127 +161,58 @@ class _ManagementWorkspaceState extends State<ManagementWorkspace> {
     ),
   };
 
-  Widget _navigation() => Container(
-    width: 220,
-    color: MassarPalette.of(context).nav,
-    child: SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 28, 24, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: MassarLogo(height: 42, onDarkSurface: true),
-                  ),
-                ),
-                AppearanceToggle(onDarkSurface: true),
-              ],
-            ),
+  Widget _navigation() => MassarWorkspaceNavigation(
+    sections: [
+      for (final section in _sections)
+        WorkspaceNavigationSection(
+          id: section.id,
+          label: section.label,
+          icon: section.icon,
+        ),
+    ],
+    selectedId: _page,
+    onSelected: _selectPage,
+    listKey: const Key('management-navigation'),
+    actions: [
+      if (widget.store.canCollect)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilledButton.icon(
+            onPressed: () => _leaveFor(widget.onOpenAttendance),
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('التحضير والتحصيل'),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'نادر جورج · إدارة السناتر',
-              style: TextStyle(color: Color(0xFFCDDBE5)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (widget.store.canCollect)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.icon(
-                onPressed: () => _leaveFor(widget.onOpenAttendance),
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('التحضير والتحصيل'),
-              ),
-            ),
-          if (widget.store.canAssess)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: FilledButton.icon(
-                key: const Key('open-cairo-attendance'),
-                onPressed: () => _selectPage('cairo'),
-                icon: const Icon(Icons.school_outlined),
-                label: const Text(
-                  'حضور مجموعات القاهرة',
-                  textAlign: TextAlign.center,
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _page == 'cairo'
-                      ? const Color(0xFF087F8C)
-                      : const Color(0xFF183A59),
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          if (widget.store.canCollect || widget.store.canAssess)
-            const SizedBox(height: 20),
-          Expanded(
-            child: ListView(
-              key: const Key('management-navigation'),
-              children: _sections
-                  .map(
-                    (section) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      child: ListTile(
-                        selected: _page == section.id,
-                        selectedTileColor: const Color(0xFF183A59),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        leading: Icon(
-                          section.icon,
-                          color: _page == section.id
-                              ? const Color(0xFF71D4C7)
-                              : const Color(0xFFCDDBE5),
-                        ),
-                        title: Text(
-                          section.label,
-                          style: TextStyle(
-                            color: _page == section.id
-                                ? Colors.white
-                                : const Color(0xFFCDDBE5),
-                            fontSize: 14,
-                          ),
-                        ),
-                        onTap: () => _selectPage(section.id),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          const Divider(color: Color(0xFF2A405C)),
-          ListTile(
-            leading: const Icon(Icons.person_outline, color: Color(0xFFCDDBE5)),
-            title: Text(
-              widget.store.currentUser?.name ?? '',
-              style: const TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              widget.store.currentUser == null
-                  ? ''
-                  : staffRoleLabel(widget.store.currentUser!.role),
-              style: const TextStyle(color: Color(0xFFCDDBE5), fontSize: 12),
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => _leaveFor(widget.store.signOut),
-            icon: const Icon(Icons.logout, color: Color(0xFFCDDBE5)),
+        ),
+      if (widget.store.canAssess)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: FilledButton.icon(
+            key: const Key('open-cairo-attendance'),
+            onPressed: () => _selectPage('cairo'),
+            icon: const Icon(Icons.school_outlined),
             label: const Text(
-              'تبديل الموظف',
-              style: TextStyle(color: Color(0xFFCDDBE5)),
+              'حضور مجموعات القاهرة',
+              textAlign: TextAlign.center,
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: _page == 'cairo'
+                  ? const Color(0xFF087F8C)
+                  : const Color(0xFF183A59),
+              foregroundColor: Colors.white,
             ),
           ),
-          const SizedBox(height: 14),
-        ],
+        ),
+    ],
+    userName: widget.store.currentUser?.name ?? '',
+    userSubtitle: widget.store.currentUser == null
+        ? ''
+        : staffRoleLabel(widget.store.currentUser!.role),
+    footerAction: TextButton.icon(
+      onPressed: () => _leaveFor(widget.store.signOut),
+      icon: const Icon(Icons.logout, color: Color(0xFFCDDBE5)),
+      label: const Text(
+        'تبديل الموظف',
+        style: TextStyle(color: Color(0xFFCDDBE5)),
       ),
     ),
   );

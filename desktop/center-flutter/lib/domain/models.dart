@@ -144,6 +144,7 @@ enum CorrectionAction {
   paymentMethod,
   paymentCanceled,
   packageRefund,
+  packageOnlineAllocation,
   closingReopened,
 }
 
@@ -160,6 +161,7 @@ class CorrectionRecord {
     this.closingId,
     this.oldMethod,
     this.newMethod,
+    this.onlineAmount,
     this.voidsPayment = false,
     this.voidsPackage = false,
     required this.reason,
@@ -178,6 +180,9 @@ class CorrectionRecord {
       oldMethod,
       newMethod;
   final bool voidsPayment, voidsPackage;
+
+  /// Part of an existing receipt assigned to online; never a new cash movement.
+  final int? onlineAmount;
   final DateTime createdAt;
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -191,6 +196,7 @@ class CorrectionRecord {
     'closingId': closingId,
     'oldMethod': oldMethod,
     'newMethod': newMethod,
+    if (onlineAmount != null) 'onlineAmount': onlineAmount,
     'voidsPayment': voidsPayment,
     'voidsPackage': voidsPackage,
     'reason': reason,
@@ -209,6 +215,7 @@ class CorrectionRecord {
     closingId: j['closingId'] as String?,
     oldMethod: j['oldMethod'] as String?,
     newMethod: j['newMethod'] as String?,
+    onlineAmount: j['onlineAmount'] as int?,
     voidsPayment: j['voidsPayment'] as bool,
     voidsPackage: j['voidsPackage'] as bool,
     reason: j['reason'] as String,
@@ -1265,7 +1272,7 @@ class PaymentRecord {
 
 /// Shared definitions belong to a prepared lesson; legacy ones keep a session.
 class AcademicActivity {
-  const AcademicActivity({
+  AcademicActivity({
     this.id = '',
     this.sessionId = '',
     this.preparedLessonId,
@@ -1273,12 +1280,16 @@ class AcademicActivity {
     required this.name,
     this.maxScore = 10,
     this.maxScoreKnown = true,
+    List<int>? allowedMaxScores,
     required this.createdAt,
-  });
+  }) : allowedMaxScores = List.unmodifiable(allowedMaxScores ?? [maxScore]);
   final String id, sessionId, name;
   final String? preparedLessonId;
   final AcademicActivityKind kind;
   final int maxScore;
+  final List<int> allowedMaxScores;
+  bool acceptsMaxScore(num score) =>
+      maxScoreKnown && allowedMaxScores.contains(score);
   final bool maxScoreKnown;
   final DateTime createdAt;
   Map<String, dynamic> toJson() => {
@@ -1288,6 +1299,8 @@ class AcademicActivity {
     'kind': kind.name,
     'name': name,
     'maxScore': maxScore,
+    if (allowedMaxScores.length != 1 || allowedMaxScores.single != maxScore)
+      'allowedMaxScores': allowedMaxScores,
     if (!maxScoreKnown) 'maxScoreKnown': false,
     'createdAt': createdAt.toIso8601String(),
   };
@@ -1300,6 +1313,9 @@ class AcademicActivity {
         name: value['name'] as String,
         maxScore: value['maxScore'] as int? ?? 10,
         maxScoreKnown: value['maxScoreKnown'] as bool? ?? true,
+        allowedMaxScores: value['allowedMaxScores'] == null
+            ? null
+            : List<int>.from(value['allowedMaxScores'] as List),
         createdAt: DateTime.parse(value['createdAt'] as String),
       );
   AcademicActivity copyWith({
@@ -1309,6 +1325,7 @@ class AcademicActivity {
     AcademicActivityKind? kind,
     String? name,
     int? maxScore,
+    List<int>? allowedMaxScores,
     bool? maxScoreKnown,
     DateTime? createdAt,
   }) => AcademicActivity(
@@ -1319,6 +1336,11 @@ class AcademicActivity {
     name: name ?? this.name,
     maxScore: maxScore ?? this.maxScore,
     maxScoreKnown: maxScoreKnown ?? this.maxScoreKnown,
+    allowedMaxScores:
+        allowedMaxScores ??
+        (maxScore != null && maxScore != this.maxScore
+            ? [maxScore]
+            : this.allowedMaxScores),
     createdAt: createdAt ?? this.createdAt,
   );
 

@@ -23,6 +23,7 @@ flutter:
     - assets/admin_account.json
     - assets/installation_seed.json
     - assets/data_repair_fixture.json
+    - assets/grade_results_repair_20261015.json
   fonts:
     - family: Tajawal
       fonts:

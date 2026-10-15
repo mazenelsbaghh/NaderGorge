@@ -9,6 +9,7 @@ class _RemoteCenterStore extends CenterStore {
   final File _pendingFile;
   String? _staffSession;
   bool _connected = false;
+  Map<String, String> _remoteExamMonitorTimes = {};
   bool _supportsLiveRefresh = false;
   @override
   bool get supportsLiveRefresh => _supportsLiveRefresh;
@@ -104,12 +105,18 @@ class _RemoteCenterStore extends CenterStore {
       _remoteSupportStatus,
       nextSupport,
     );
+    final nextHeartbeats = Map<String, String>.from(
+      response['examMonitorHeartbeats'] as Map? ?? const {},
+    );
+    final monitorChanged = !mapEquals(_remoteExamMonitorTimes, nextHeartbeats);
+    final parsedHeartbeats = _localExamHeartbeats(response, nextHeartbeats);
     final nextUser = StaffUser.fromJson(
       response['currentUser'] as Map<String, dynamic>,
     );
     final changed =
         !_connected ||
         supportChanged ||
+        monitorChanged ||
         stateChanged ||
         _currentUser?.id != nextUser.id ||
         _currentUser?.role != nextUser.role ||
@@ -130,6 +137,10 @@ class _RemoteCenterStore extends CenterStore {
       _supportsLiveRefresh = response['stateWatch'] == true;
     }
     _remoteSupportStatus = nextSupport;
+    _remoteExamMonitorTimes = nextHeartbeats;
+    _examMonitorHeartbeats
+      ..clear()
+      ..addAll(parsedHeartbeats);
     _currentUser = nextUser;
     _canConfigureCards = response['canConfigureCards'] == true;
     _connected = true;
@@ -139,6 +150,28 @@ class _RemoteCenterStore extends CenterStore {
     trace.counts[delta != null ? 'delta' : 'full'] = stateChanged ? 1 : 0;
     trace.finish();
     if (changed && !_closed) notifyListeners();
+  }
+
+  Map<String, DateTime> _localExamHeartbeats(
+    Map<String, dynamic> response,
+    Map<String, String> timestamps,
+  ) {
+    if (timestamps.isEmpty) return {};
+    final serverNow = DateTime.parse(
+      response['examMonitorObservedAt'] as String,
+    );
+    final localNow = DateTime.now();
+    return timestamps.map((key, timestamp) {
+      final existing = _examMonitorHeartbeats[key];
+      if (_remoteExamMonitorTimes[key] == timestamp && existing != null) {
+        return MapEntry(key, existing);
+      }
+      final age = serverNow.difference(DateTime.parse(timestamp));
+      return MapEntry(
+        key,
+        localNow.subtract(age.isNegative ? Duration.zero : age),
+      );
+    });
   }
 
   Future<void> _applyResponse(
@@ -300,6 +333,8 @@ class _RemoteCenterStore extends CenterStore {
     _snapshotFingerprint = null;
     _snapshotVersion = null;
     _remoteSupportStatus = const {'configured': false};
+    _examMonitorHeartbeats.clear();
+    _remoteExamMonitorTimes.clear();
     _state = CenterState();
     super.signOut();
     if (session != null) {
@@ -683,6 +718,77 @@ class _RemoteCenterStore extends CenterStore {
       _send('importAcademicGrades', command.toJson());
 
   @override
+  Future<void> publishStandaloneExamPage(StandaloneExamPage page) async {
+    final session = _staffSession;
+    if (!canAssess || !_connected || session == null) {
+      throw const CenterException(
+        'اتصل بالرئيسي وسجل دخول الموظف لنقل نتائج الامتحان.',
+      );
+    }
+    try {
+      final response = await transport.post(
+        '/api/standalone-exam-results',
+        page.toJson(),
+        staffSession: session,
+      );
+      if (_staffSession != session ||
+          response['accepted'] != true ||
+          response['sourceId'] != page.sourceId ||
+          response['examId'] != page.examId ||
+          response['exportRevision'] != page.exportRevision ||
+          response['nextCursor'] != page.nextCursor) {
+        throw const CenterException('لم يؤكد الهوست نفس دفعة نتائج الامتحان.');
+      }
+    } on LanAuthorizationException {
+      if (_staffSession == session) signOut();
+      rethrow;
+    } on LanConnectionException {
+      if (_staffSession == session) {
+        _connected = false;
+        if (!_closed) notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> publishIntegratedExamSnapshot(
+    ExamMonitorSnapshot snapshot,
+  ) async {
+    final session = _staffSession;
+    if (!canAssess || !_connected || session == null) {
+      throw const CenterException(
+        'اتصل بالرئيسي وسجّل الدخول لتحديث متابعة الامتحان.',
+      );
+    }
+    try {
+      final response = await transport.post(
+        '/api/exam-monitor',
+        snapshot.toJson(),
+        staffSession: session,
+      );
+      if (_staffSession != session ||
+          response['accepted'] != true ||
+          response['sourceId'] != snapshot.sourceId ||
+          response['examId'] != snapshot.examId ||
+          response['version'] != snapshot.version) {
+        throw const CenterException(
+          'لم يؤكد الرئيسي نفس كشف دخول الامتحان؛ ستعاد المحاولة.',
+        );
+      }
+    } on LanAuthorizationException {
+      if (_staffSession == session) signOut();
+      rethrow;
+    } on LanConnectionException {
+      if (_staffSession == session) {
+        _connected = false;
+        if (!_closed) notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  @override
   Future<IntegratedExamReceipt> recordIntegratedExamResult(
     IntegratedExamResult result,
   ) async => IntegratedExamReceipt.fromJson(
@@ -690,6 +796,17 @@ class _RemoteCenterStore extends CenterStore {
       (await _command('recordIntegratedExamResult', result.toJson())) as Map,
     ),
   );
+
+  @override
+  Future<void> completeExamResultImport({
+    required String roomId,
+    required String requestId,
+    required Map<String, String> problems,
+  }) => _send('completeExamResultImport', {
+    'roomId': roomId,
+    'requestId': requestId,
+    'problems': problems,
+  });
   @override
   Future<void> saveCardSettings(CenterCardSettings value) =>
       _send('saveCardSettings', value.toJson());
@@ -906,6 +1023,18 @@ class _RemoteCenterStore extends CenterStore {
   }) => _send('correctPaymentMethod', {
     'paymentId': paymentId,
     'method': method,
+    'reason': reason,
+  });
+  @override
+  Future<void> allocatePackageToOnline({
+    required String paymentId,
+    required int amount,
+    required int expectedOnlineAmount,
+    required String reason,
+  }) => _send('allocatePackageToOnline', {
+    'paymentId': paymentId,
+    'amount': amount,
+    'expectedOnlineAmount': expectedOnlineAmount,
     'reason': reason,
   });
   @override

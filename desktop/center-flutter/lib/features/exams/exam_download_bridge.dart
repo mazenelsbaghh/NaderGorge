@@ -90,7 +90,7 @@ class ExamDownloadBridge {
     final generation = controller.authorizationGeneration;
     bool authorized() =>
         !_disposed &&
-        controller.canSync &&
+        controller.canAdmin &&
         generation == controller.authorizationGeneration;
     if (!authorized() || engine is! WindowsExamEngine) {
       throw const CenterException(

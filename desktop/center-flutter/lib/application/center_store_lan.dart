@@ -8,6 +8,7 @@ final _lanActorKey = Object();
 final _lanExecutionKey = Object();
 final _lanTransactionKey = Object();
 final _lanAuthorizationKey = Object();
+final _lanDeviceKey = Object();
 const _lanCommandsSchema = '''CREATE TABLE IF NOT EXISTS lan_commands (
  device_id TEXT NOT NULL, request_id TEXT NOT NULL, user_id TEXT NOT NULL,
  operation TEXT NOT NULL, request_hash TEXT NOT NULL, result_json TEXT NOT NULL,
@@ -63,9 +64,41 @@ extension CenterStoreLanHost on CenterStore {
         'currentUser': user.toJson(),
         'canConfigureCards': canConfigureCards,
         'supportStatus': supportStatus,
+        if (_examMonitorHeartbeats.isNotEmpty)
+          'examMonitorObservedAt': DateTime.now().toIso8601String(),
+        'examMonitorHeartbeats': {
+          for (final entry in _examMonitorHeartbeats.entries)
+            entry.key: entry.value.toIso8601String(),
+        },
       };
     }, zoneValues: {_lanActorKey: user});
   }
+
+  Future<void> publishExamMonitorLan({
+    required String deviceId,
+    required String staffId,
+    required ExamMonitorSnapshot snapshot,
+    required bool Function() authorize,
+  }) => runZoned(
+    () => _publishExamMonitor(snapshot, 'lan:$deviceId'),
+    zoneValues: {
+      _lanActorKey: _lanUser(staffId),
+      _lanAuthorizationKey: authorize,
+    },
+  );
+
+  Future<void> publishStandaloneExamPageLan({
+    required String deviceId,
+    required String staffId,
+    required StandaloneExamPage page,
+    required bool Function() authorize,
+  }) => runZoned(
+    () => _publishStandaloneExamPage(page, 'lan:$deviceId'),
+    zoneValues: {
+      _lanActorKey: _lanUser(staffId),
+      _lanAuthorizationKey: authorize,
+    },
+  );
 
   Future<Map<String, dynamic>> snapshotLan(
     String staffId, {
@@ -188,6 +221,7 @@ extension CenterStoreLanHost on CenterStore {
               () => _dispatchLan(operation, arguments!),
               zoneValues: {
                 _lanActorKey: actor,
+                _lanDeviceKey: deviceId,
                 _lanExecutionKey: this,
                 _lanTransactionKey: tx,
                 _lanAuthorizationKey: authorize,
@@ -353,6 +387,13 @@ extension CenterStoreLanHost on CenterStore {
         return (await recordIntegratedExamResult(
           IntegratedExamResult.fromJson(a),
         )).toJson();
+      case 'completeExamResultImport':
+        await completeExamResultImport(
+          roomId: a['roomId'] as String,
+          requestId: a['requestId'] as String,
+          problems: Map<String, String>.from(a['problems'] as Map),
+        );
+        return null;
       case 'saveCardSettings':
         await saveCardSettings(CenterCardSettings.fromJson(a));
       case 'collectStudentCard':
@@ -494,6 +535,13 @@ extension CenterStoreLanHost on CenterStore {
           refundMethod: a['refundMethod'] as String,
           reopenFinancialClosings:
               a['reopenFinancialClosings'] as bool? ?? false,
+        );
+      case 'allocatePackageToOnline':
+        await allocatePackageToOnline(
+          paymentId: a['paymentId'] as String,
+          amount: a['amount'] as int,
+          expectedOnlineAmount: a['expectedOnlineAmount'] as int,
+          reason: a['reason'] as String,
         );
       case 'cancelAttendance':
         await cancelAttendance(

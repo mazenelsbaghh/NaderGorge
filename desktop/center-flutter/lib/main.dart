@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'application/admin_configuration.dart';
 import 'application/center_store.dart';
+import 'application/center_reports.dart';
 import 'cloud/cloud_support_controller.dart';
 import 'cloud/app_update_controller.dart';
 import 'features/attendance/attendance_workspace.dart';
@@ -16,6 +17,9 @@ import 'features/auth/auth_screen.dart';
 import 'features/management/management_workspace.dart';
 import 'features/management/lan_settings_page.dart';
 import 'features/exams/exam_workspace.dart';
+import 'features/exams/exam_network_page.dart';
+import 'features/exams/exam_attendance_alert.dart';
+import 'features/exams/exam_admin_view.dart';
 import 'exams/exam_engine.dart';
 import 'exams/exam_room_controller.dart';
 import 'lan/lan_controller.dart';
@@ -244,6 +248,13 @@ class _CenterAppState extends State<CenterApp> {
     _lan = LanController(
       localStore: widget.store,
       clientOnly: widget.clientOnly || widget.store.isClientWorkspace,
+      homeworkHotspot: (command) async {
+        final exams = _exams;
+        if (exams == null) {
+          throw const CenterException('هوتسبوت الواجب متاح على ويندوز.');
+        }
+        return exams.network(command);
+      },
     )..addListener(_lanChanged);
     final dataDirectory = File(widget.store.databasePath).parent;
     if (Platform.isWindows) {
@@ -252,6 +263,7 @@ class _CenterAppState extends State<CenterApp> {
           directory: Directory(p.join(dataDirectory.path, 'exam-room')),
         ),
         store: _lan.activeStore,
+        clientOnly: widget.clientOnly || widget.store.isClientWorkspace,
       );
       unawaited(_exams!.initialize());
     }
@@ -416,14 +428,108 @@ class _CenterAppState extends State<CenterApp> {
 
   Future<void> _openExams(BuildContext context) async {
     final controller = _exams;
-    if (controller == null || _examRouteOpen || !controller.store.canAssess) {
+    if (controller == null ||
+        _examRouteOpen ||
+        (!controller.canAdmin && !controller.clientOnly)) {
       return;
     }
     _examRouteOpen = true;
     try {
+      if (controller.clientOnly) await controller.enterLocalExamMode();
+      if (!context.mounted) return;
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => ExamWorkspace(controller: controller),
+        ),
+      );
+    } catch (error, stack) {
+      reportProblem(error, stack, operation: 'exam.open_workspace');
+      if (context.mounted) {
+        await showMassarNotice(
+          context,
+          error is CenterException
+              ? error.message
+              : 'تعذر تشغيل الامتحان. أعد فتح الشاشة أو راجع سجل المشاكل.',
+          kind: NoticeKind.error,
+        );
+      }
+    } finally {
+      _examRouteOpen = false;
+    }
+  }
+
+  Future<void> _openExamNetwork(BuildContext context) async {
+    final controller = _exams;
+    if (controller == null || _examRouteOpen) return;
+    _examRouteOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(title: const Text('تجهيز الشبكة والـOmada')),
+            body: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) => ExamNetworkPage(
+                controller: controller,
+                isHost: !widget.clientOnly && !widget.store.isClientWorkspace,
+              ),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      _examRouteOpen = false;
+    }
+  }
+
+  Future<void> _openReportWhatsApp(
+    BuildContext context,
+    CenterReportData report,
+  ) async {
+    final controller = _exams;
+    if (controller == null || !controller.canSync || _examRouteOpen) {
+      throw const CenterException(
+        'افتح واتساب التقارير من حساب الموظف في نسخة ويندوز المتصلة بالهوست.',
+      );
+    }
+    final actor = controller.store.currentUser?.id;
+    final generation = controller.authorizationGeneration;
+    bool authorized() =>
+        mounted &&
+        controller.canSync &&
+        controller.store.currentUser?.id == actor &&
+        controller.authorizationGeneration == generation;
+    _examRouteOpen = true;
+    try {
+      await controller.openAdmin();
+      if (!authorized()) {
+        throw const CenterException('تغيّرت جلسة الموظف. أعد فتح التقرير.');
+      }
+      final batch = await controller.engine
+          .request('/api/whatsapp/center/batches', {
+            'title': report.title,
+            'records': report.whatsAppRecords,
+            'messageKind': report.whatsAppMessageKind,
+          });
+      if (!authorized() || !context.mounted) {
+        throw const CenterException('تغيّرت جلسة الموظف. أعد فتح التقرير.');
+      }
+      final batchId = batch['batchId'];
+      if (batchId is! String ||
+          !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(batchId)) {
+        throw const CenterException(
+          'لم يتأكد تجهيز دفعة واتساب. أعد فتح التقرير.',
+        );
+      }
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(title: const Text('واتساب التقارير')),
+            body: ExamAdminView(
+              controller: controller,
+              whatsAppBatchId: batchId,
+            ),
+          ),
         ),
       );
     } finally {
@@ -433,7 +539,7 @@ class _CenterAppState extends State<CenterApp> {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: Listenable.merge([_appearance, _lan]),
+    animation: Listenable.merge([_appearance, _lan, ?_exams]),
     builder: (context, _) => AppearanceScope(
       settings: _appearance,
       child: MaterialApp(
@@ -453,9 +559,21 @@ class _CenterAppState extends State<CenterApp> {
               final store = _lan.activeStore;
               if (_lan.isClientOnly && !store.isRemote) {
                 return Scaffold(
-                  body: LanSettingsPage(
-                    key: const Key('client-first-pairing'),
-                    controller: _lan,
+                  body: Column(
+                    children: [
+                      if (_exams != null)
+                        FilledButton.icon(
+                          onPressed: () => _openExams(context),
+                          icon: const Icon(Icons.quiz_outlined),
+                          label: const Text('فتح امتحان الساكند'),
+                        ),
+                      Expanded(
+                        child: LanSettingsPage(
+                          key: const Key('client-first-pairing'),
+                          controller: _lan,
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -529,6 +647,7 @@ class _CenterAppState extends State<CenterApp> {
                         ),
                       ),
                     ),
+                  if (store.canAssess) ExamAttendanceAlert(store: store),
                   Expanded(child: child),
                 ],
               );
@@ -542,7 +661,14 @@ class _CenterAppState extends State<CenterApp> {
                     key: ValueKey(store),
                     store: store,
                     onOpenLan: () => _openLan(context),
+                    onOpenNetwork: _exams == null
+                        ? null
+                        : () => _openExamNetwork(context),
                     examWorkspaceAvailable: _exams != null,
+                    onOpenPreparedExams:
+                        _exams?.clientOnly == true || _exams?.canAdmin == true
+                        ? () => _openExams(context)
+                        : null,
                     onSignedIn: (exams) {
                       if (exams) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -578,6 +704,9 @@ class _CenterAppState extends State<CenterApp> {
                     lanController: _lan,
                     cloudController: _cloud,
                     updateController: _updates,
+                    onWhatsApp: _exams == null
+                        ? null
+                        : (report) => _openReportWhatsApp(context, report),
                     onOpenAttendance: () => setState(() {
                       _initialSessionId = null;
                       _focusMode = true;

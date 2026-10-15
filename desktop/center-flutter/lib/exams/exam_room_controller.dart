@@ -5,23 +5,44 @@ import 'package:flutter/foundation.dart';
 
 import '../application/center_store.dart';
 import '../domain/center_exam_integration.dart';
+import '../domain/models.dart';
+import '../domain/center_exam_monitor.dart';
+import '../domain/standalone_exam_results.dart';
 import '../shared/performance_trace.dart';
 import '../shared/problem_reporting.dart';
 import 'exam_engine.dart';
+import 'exam_network_maintenance.dart';
 
 class ExamRoomController extends ChangeNotifier {
   ExamRoomController({
     required this.engine,
     required CenterStore store,
     this.pollInterval = const Duration(seconds: 3),
+    this.clientOnly = false,
   }) : _store = store {
     _store.addListener(_storeChanged);
     _actor = store.currentUser?.id;
-    _authorized = canSync;
+    _authorized = canAdmin;
+    _syncAuthorized = canSync;
   }
 
   final ExamEngine engine;
   final Duration pollInterval;
+  final bool clientOnly;
+  bool _localExamMode = false;
+  bool get localExamMode => _localExamMode;
+  DateTime? _offlineUntil;
+  String? _offlineStaffId;
+  bool get offlinePrepared => _offlineUntil?.isAfter(DateTime.now()) == true;
+  bool get canAdmin =>
+      canSync ||
+      clientOnly && _localExamMode ||
+      clientOnly &&
+          offlinePrepared &&
+          (_store.currentUser == null ||
+              _store.currentUser!.id == _offlineStaffId) &&
+          (_store.isClientWorkspace ||
+              _store.isRemote && !_store.remoteConnected);
   CenterStore _store;
   CenterStore get store => _store;
   Timer? _timer;
@@ -30,12 +51,14 @@ class ExamRoomController extends ChangeNotifier {
   int get authorizationGeneration => _authGeneration;
   Future<void> _adminAccessTail = Future<void>.value();
   bool _authorized = false;
+  bool _syncAuthorized = false;
   bool _disposed = false, _busy = false, starting = false;
   bool get running => engine.running;
   String? error;
   Map<String, dynamic> state = const {};
   final Map<String, String> resultProblems = {};
   final Map<String, String> _rosterFingerprints = {};
+  String? _academicCatalogFingerprint;
   final Map<String, Object> _rejectedRevision = {};
   final Map<String, DateTime> _retryAfter = {};
   List<Map<String, dynamic>> get exams => _rows(state['exams']);
@@ -57,8 +80,14 @@ class ExamRoomController extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      if (await engine.reconnect()) {
+      final reconnected = await engine.reconnect();
+      if (!reconnected && clientOnly) await engine.start();
+      if (reconnected || clientOnly) {
         await _setAdminAccess(false);
+        final snapshot = await engine.request('/api/center/state');
+        _readOfflineAccess(snapshot);
+        _authorized = canAdmin;
+        if (canAdmin) state = snapshot;
         _beginPolling();
         await refresh();
       }
@@ -75,20 +104,33 @@ class ExamRoomController extends ChangeNotifier {
     _store = value;
     _store.addListener(_storeChanged);
     _rosterFingerprints.clear();
+    _academicCatalogFingerprint = null;
     _rejectedRevision.clear();
     _storeChanged(force: true);
   }
 
   void _storeChanged({bool force = false}) {
     final actor = _store.currentUser?.id;
-    if (!force && _actor == actor && _authorized == canSync) return;
-    _authorized = canSync;
+    if (!force &&
+        _actor == actor &&
+        _authorized == canAdmin &&
+        _syncAuthorized == canSync) {
+      return;
+    }
+    final changedEmployee = _actor != null && _actor != actor;
+    if (changedEmployee) {
+      _offlineUntil = null;
+      _offlineStaffId = null;
+    }
+    final remainsOffline = !changedEmployee && !canSync && canAdmin;
+    _authorized = canAdmin;
+    _syncAuthorized = canSync;
     _authGeneration++;
     _actor = actor;
     _rosterFingerprints.clear();
     _rejectedRevision.clear();
     resultProblems.clear();
-    if (engine.running) {
+    if (engine.running && !remainsOffline) {
       // Revoke web credentials on every employee change; student service stays up.
       unawaited(
         _setAdminAccess(false).catchError((Object failure, StackTrace stack) {
@@ -97,7 +139,8 @@ class ExamRoomController extends ChangeNotifier {
         }),
       );
     }
-    if (actor == null) state = const {};
+    if (actor == null && !canAdmin) state = const {};
+    if (engine.running && changedEmployee) unawaited(_revokeOfflineAccess());
     if (!_disposed) notifyListeners();
   }
 
@@ -108,13 +151,17 @@ class ExamRoomController extends ChangeNotifier {
   Future<Map<String, dynamic>> _setAdminAccess(
     bool enabled, {
     int? generation,
-  }) {
-    final request = _adminAccessTail.then((_) {
-      if (enabled && (_disposed || !canSync || generation != _authGeneration)) {
-        throw const CenterException('تغيّرت جلسة الموظف؛ افتح الإدارة مجددًا.');
-      }
-      return engine.request('/api/center/admin-access', {'enabled': enabled});
-    });
+  }) => _accessWrite(() {
+    if (enabled && (_disposed || !canAdmin || generation != _authGeneration)) {
+      throw const CenterException('تغيّرت جلسة الموظف؛ افتح الإدارة مجددًا.');
+    }
+    return engine.request('/api/center/admin-access', {'enabled': enabled});
+  });
+
+  Future<Map<String, dynamic>> _accessWrite(
+    Future<Map<String, dynamic>> Function() write,
+  ) {
+    final request = _adminAccessTail.then((_) => write());
     // Keep later revocations runnable even if an earlier local request failed.
     _adminAccessTail = request.then<void>(
       (_) {},
@@ -123,9 +170,20 @@ class ExamRoomController extends ChangeNotifier {
     return request;
   }
 
+  Future<void> enterLocalExamMode() async {
+    if (!clientOnly) {
+      throw const CenterException('افتح امتحانات الهوست من حساب الموظف.');
+    }
+    if (!_localExamMode) {
+      _localExamMode = true;
+      _storeChanged(force: true);
+    }
+    await start();
+  }
+
   Future<void> start() async {
     if (starting) return;
-    if (!canSync) {
+    if (!canAdmin) {
       throw const CenterException('اتصل بالهوست وسجّل دخول الموظف أولًا.');
     }
     starting = true;
@@ -151,14 +209,14 @@ class ExamRoomController extends ChangeNotifier {
     await start();
     final actor = _store.currentUser?.id;
     final generation = _authGeneration;
-    if (!canSync) {
+    if (!canAdmin) {
       throw const CenterException('سجّل دخول الموظف قبل فتح إدارة الامتحان.');
     }
     final result = await _setAdminAccess(true, generation: generation);
     if (_disposed ||
         _store.currentUser?.id != actor ||
         generation != _authGeneration ||
-        !canSync) {
+        !canAdmin) {
       throw const CenterException('تغيّر الموظف. افتح إدارة الامتحان من جديد.');
     }
     final address = result['adminUrl'];
@@ -285,8 +343,153 @@ class ExamRoomController extends ChangeNotifier {
     return examId;
   }
 
+  Future<void> _publishAcademicCatalog(
+    CenterStore source,
+    bool Function() stillAuthorized,
+  ) async {
+    final contexts = <Map<String, dynamic>>[];
+    for (final session in source.sessions) {
+      if (session.status == SessionStatus.canceled) {
+        continue;
+      }
+      for (final activity in source.academicActivitiesFor(session.id)) {
+        if (activity.kind != AcademicActivityKind.exam ||
+            !activity.maxScoreKnown) {
+          continue;
+        }
+        contexts.add({
+          'groupId': session.groupId,
+          'sessionId': session.id,
+          'activityId': activity.id,
+          'groupLabel': source.groupLabel(session.groupId),
+          'sessionLabel':
+              'الشهر ${session.monthNumber} • الحصة ${session.number}',
+          'activityName': activity.name,
+          'maxScore': activity.maxScore,
+          'allowedMaxScores': activity.allowedMaxScores,
+        });
+      }
+    }
+    final catalog = {
+      'hostId': source.academicCatalogHostId,
+      'contexts': contexts,
+    };
+    final encoded = jsonEncode(catalog);
+    if (_academicCatalogFingerprint == encoded) return;
+    if (contexts.length > 1000 || utf8.encode(encoded).length > 1024 * 1024) {
+      throw const CenterException(
+        'كشف الحصص والامتحانات أكبر من حد النقل إلى جهاز الامتحان.',
+      );
+    }
+    final saved = await engine.request('/api/center/catalog', catalog);
+    if (saved['saved'] != true || saved['contextCount'] != contexts.length) {
+      throw const CenterException(
+        'لم يؤكد جهاز الامتحان حفظ كشف الحصص والامتحانات.',
+      );
+    }
+    if (stillAuthorized() && canSync) _academicCatalogFingerprint = encoded;
+  }
+
+  Future<void> _publishStandaloneRooms(
+    CenterStore destination,
+    bool Function() stillAuthorized,
+  ) async {
+    String? cursor;
+    final seenRooms = <String>{};
+    do {
+      final catalog = await engine.request('/api/center/standalone-rooms', {
+        'afterExamId': ?cursor,
+      });
+      if (!stillAuthorized() || !canSync) return;
+      if (catalog['protocol'] != 1 ||
+          catalog['sourceId'] is! String ||
+          catalog['hasMore'] != (catalog['nextCursor'] != null)) {
+        throw const CenterException('كشف امتحانات الجهاز غير صالح.');
+      }
+      final rooms = _rows(catalog['rooms']);
+      if (rooms.length > 200 || seenRooms.length + rooms.length > 1000) {
+        throw const CenterException('عدد امتحانات الجهاز أكبر من حد التنزيل.');
+      }
+      for (final room in rooms) {
+        final examId = room['examId'] as String;
+        if (!seenRooms.add(examId)) {
+          throw const CenterException('كشف امتحانات الجهاز مكرر.');
+        }
+        final pages = <StandaloneExamPage>[];
+        String? afterAttempt;
+        do {
+          final exported = await engine
+              .request('/api/center/standalone-results', {
+                'examId': examId,
+                'afterAttemptId': ?afterAttempt,
+                if (pages.isNotEmpty)
+                  'exportRevision': pages.first.exportRevision,
+              });
+          if (!stillAuthorized() || !canSync) return;
+          final page = StandaloneExamPage.fromJson({
+            ...exported,
+            'afterAttemptId': afterAttempt,
+          });
+          if (page.sourceId != catalog['sourceId'] ||
+              page.examId != examId ||
+              (pages.isNotEmpty &&
+                  page.exportRevision != pages.first.exportRevision)) {
+            throw const CenterException(
+              'تغيّر مصدر أو إصدار الامتحان أثناء التنزيل.',
+            );
+          }
+          if (pages.isEmpty &&
+              destination.standaloneExamRooms.any(
+                (saved) =>
+                    saved.id == page.id &&
+                    saved.complete &&
+                    saved.exportRevision == page.exportRevision,
+              )) {
+            break;
+          }
+          pages.add(page);
+          if (pages.length > 50 ||
+              page.nextCursor == afterAttempt && page.nextCursor != null) {
+            throw const CenterException('دفعات نتائج الامتحان غير متسلسلة.');
+          }
+          afterAttempt = page.nextCursor;
+        } while (afterAttempt != null);
+        if (pages.isEmpty) continue;
+        final verified = await engine.request(
+          '/api/center/standalone-results',
+          {'examId': examId, 'exportRevision': pages.first.exportRevision},
+        );
+        if (!stillAuthorized() || !canSync) return;
+        if (verified['exportRevision'] != pages.first.exportRevision) {
+          throw const CenterException(
+            'تغيّرت النتائج قبل اعتماد التنزيل. أعد المحاولة.',
+          );
+        }
+        for (final page in pages) {
+          if (!stillAuthorized() || !canSync) return;
+          if (utf8.encode(jsonEncode(page.toJson())).length > 256 * 1024) {
+            throw const CenterException(
+              'دفعة نتائج الامتحان أكبر من حد النقل.',
+            );
+          }
+          await destination.publishStandaloneExamPage(page);
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
+      final nextCursor = catalog['nextCursor'] as String?;
+      if (nextCursor != null &&
+          (rooms.isEmpty ||
+              nextCursor != rooms.last['examId'] ||
+              nextCursor == cursor)) {
+        throw const CenterException('صفحات كشف الامتحانات غير متسلسلة.');
+      }
+      cursor = nextCursor;
+    } while (cursor != null);
+  }
+
   Future<void> refresh() async {
-    if (_disposed || _busy || !engine.running || !canSync) return;
+    if (_authorized && !canAdmin) _storeChanged();
+    if (_disposed || _busy || !engine.running || !canAdmin) return;
     _busy = true;
     final activeStore = _store;
     final actor = activeStore.currentUser?.id;
@@ -296,7 +499,7 @@ class ExamRoomController extends ChangeNotifier {
         identical(activeStore, _store) &&
         actor == _store.currentUser?.id &&
         generation == _authGeneration &&
-        canSync;
+        canAdmin;
     final trace = PerformanceTrace('exam.synchronize', budgetMs: 250);
     try {
       final next = await engine.request('/api/center/state');
@@ -305,7 +508,22 @@ class ExamRoomController extends ChangeNotifier {
         throw const CenterException('إصدار ربط الامتحان غير متوافق.');
       }
       state = next;
+      _readOfflineAccess(next);
+      if (!canAdmin) {
+        await _setAdminAccess(false);
+        _storeChanged();
+        return;
+      }
       error = null;
+      if (!canSync) return;
+      if (next['standaloneExportProtocol'] == 1) {
+        await _publishStandaloneRooms(activeStore, stillAuthorized);
+        if (!stillAuthorized() || !canSync) return;
+      }
+      if (next['academicCatalogProtocol'] == 1) {
+        await _publishAcademicCatalog(activeStore, stillAuthorized);
+        if (!stillAuthorized() || !canSync) return;
+      }
       final currentResults = _rows(next['results']);
       final keys = currentResults
           .map((row) => '${row['attemptId']}:${row['version']}')
@@ -336,10 +554,36 @@ class ExamRoomController extends ChangeNotifier {
         }
       }
       trace.stage('roster');
+      for (final row in _rows(next['monitors'])) {
+        if (!stillAuthorized()) return;
+        try {
+          final snapshot = ExamMonitorSnapshot.fromJson(row);
+          if (snapshot.sourceId != next['sourceId']) {
+            throw const CenterException(
+              'مصدر متابعة الحضور لا يطابق جهاز الامتحان.',
+            );
+          }
+          await activeStore.publishIntegratedExamSnapshot(snapshot);
+          if (!stillAuthorized()) return;
+        } on CenterException catch (failure) {
+          error = failure.message;
+        }
+        await Future<void>.delayed(Duration.zero);
+      }
+      trace.stage('attendance_monitor');
       // Yield between receipts: reception commands can join the host's normal queue.
       var sent = 0;
+      final requestedRooms = {
+        for (final room in activeStore.integratedExamRooms)
+          if (room.snapshot.sourceId == next['sourceId'] && room.importPending)
+            room.snapshot.examId: room,
+      };
       for (final row in currentResults) {
         if (!stillAuthorized()) return;
+        if (activeStore.isRemote &&
+            !requestedRooms.containsKey(row['examId'])) {
+          continue;
+        }
         final key = '${row['attemptId']}:${row['version']}';
         if (row['status'] == 'revoked') {
           resultProblems[key] =
@@ -383,6 +627,24 @@ class ExamRoomController extends ChangeNotifier {
         }
         await Future<void>.delayed(Duration.zero);
       }
+      if (activeStore.isRemote && sent < 20 && stillAuthorized()) {
+        for (final room in requestedRooms.values) {
+          if (!stillAuthorized()) return;
+          final problems = <String, String>{};
+          for (final row in currentResults.where(
+            (row) => row['examId'] == room.snapshot.examId,
+          )) {
+            final message =
+                resultProblems['${row['attemptId']}:${row['version']}'];
+            if (message != null) problems[row['studentId'] as String] = message;
+          }
+          await activeStore.completeExamResultImport(
+            roomId: room.id,
+            requestId: room.importRequestId!,
+            problems: problems,
+          );
+        }
+      }
       trace.stage('results');
     } catch (failure, stack) {
       error = failure is CenterException
@@ -393,6 +655,101 @@ class ExamRoomController extends ChangeNotifier {
       trace.finish(failed: error != null);
       _busy = false;
       if (!_disposed) notifyListeners();
+    }
+  }
+
+  void _readOfflineAccess(Map<String, dynamic> snapshot) {
+    final access = snapshot['offlineAccess'];
+    if (access is! Map || access['allowed'] != true) {
+      _offlineUntil = null;
+      _offlineStaffId = null;
+      return;
+    }
+    final seconds = access['remainingSeconds'];
+    final staffId = access['staffId'];
+    if (seconds is! int ||
+        seconds <= 0 ||
+        seconds > 43200 ||
+        staffId is! String) {
+      throw const CenterException(
+        'تجهيز الساكند للقاعة غير صالح. جهّزه أثناء الاتصال.',
+      );
+    }
+    _offlineUntil = DateTime.now().add(Duration(seconds: seconds));
+    _offlineStaffId = staffId;
+  }
+
+  Future<void> _revokeOfflineAccess() async {
+    try {
+      await _accessWrite(
+        () => engine.request('/api/center/offline-access', {'revoke': true}),
+      );
+    } catch (failure, stack) {
+      reportProblem(failure, stack, operation: 'exam.offline_revoke');
+    }
+  }
+
+  Future<void> prepareHallContext({
+    required String groupId,
+    required String sessionId,
+    required String activityId,
+  }) async {
+    if (!canSync || !clientOnly) {
+      throw const CenterException(
+        'وصّل الساكند بالهوست وسجّل الدخول قبل تجهيز القاعة.',
+      );
+    }
+    await start();
+    final generation = _authGeneration;
+    final staffId = _store.currentUser?.id;
+    _requireHallPreparationAccess(generation, staffId);
+    final context = _bindingContext(
+      groupId: groupId,
+      sessionId: sessionId,
+      activityId: activityId,
+    );
+    final activity = _store.academicActivities.firstWhere(
+      (row) => row.id == activityId,
+    );
+    final session = _store.sessionById(sessionId)!;
+    final prepared = await engine.request('/api/center/context', {
+      ...context,
+      'groupLabel': _store.groupLabel(groupId),
+      'sessionLabel': 'حصة ${session.number} • ${session.name}',
+      'activityName': activity.name,
+    });
+    _requireHallPreparationAccess(generation, staffId);
+    final access = await _accessWrite(() {
+      _requireHallPreparationAccess(generation, staffId);
+      return engine.request('/api/center/offline-access', {
+        'staffId': staffId,
+        'contextId': prepared['contextId'],
+      });
+    });
+    _requireHallPreparationAccess(generation, staffId);
+    _readOfflineAccess({'offlineAccess': access});
+    if (!offlinePrepared || _offlineStaffId != staffId) {
+      _offlineUntil = null;
+      _offlineStaffId = null;
+      throw const CenterException(
+        'لم يتأكد حفظ تجهيز الساكند. أبقِ الجهازين متصلين وأعد التجهيز قبل الفصل.',
+      );
+    }
+    _authorized = canAdmin;
+    notifyListeners();
+  }
+
+  void _requireHallPreparationAccess(int generation, String? staffId) {
+    if (_disposed || staffId == null || _store.currentUser?.id != staffId) {
+      throw const CenterException('تغيّر حساب الموظف. أعد تجهيز القاعة.');
+    }
+    if (!canSync) {
+      throw const CenterException(
+        'انقطع الاتصال بالهوست أثناء التجهيز. أعد توصيل الجهازين وانتظر تأكيد جاهزية الساكند قبل الفصل.',
+      );
+    }
+    if (generation != _authGeneration) {
+      throw const CenterException('تغيّرت جلسة الموظف. أعد تجهيز القاعة.');
     }
   }
 
@@ -418,34 +775,82 @@ class ExamRoomController extends ChangeNotifier {
     };
   }
 
+  Future<void> prepareNetworkEngine() async {
+    if (_disposed) throw const CenterException('أعد فتح شاشة تجهيز الشبكة.');
+    if (!running) await engine.start();
+    if (!canAdmin) await _setAdminAccess(false);
+    _beginPolling();
+  }
+
   Future<Map<String, dynamic>> network(Map<String, dynamic> command) async {
-    if (!canSync) {
-      throw const CenterException('سجّل الدخول قبل تغيير إعداد الشبكة.');
-    }
-    final generation = _authGeneration;
     final action = command['action'];
+    const localActions = {
+      'status',
+      'list-adapters',
+      'hotspot-status',
+      'hotspot-start',
+      'hotspot-stop',
+      'tethering-status',
+      'tethering-start',
+      'tethering-stop',
+      'configure',
+      'restore',
+      'portal-configure',
+    };
+    if (_disposed || !localActions.contains(action)) {
+      throw const CenterException('طلب تجهيز الشبكة غير معروف.');
+    }
+    if (action == 'hotspot-start' ||
+        action == 'hotspot-stop' ||
+        action == 'tethering-start' ||
+        action == 'tethering-stop') {
+      return _changeHotspot(command);
+    }
     if (action == 'portal-configure' ||
         action == 'configure' ||
-        action == 'restore' ||
-        action == 'hotspot-stop') {
-      if (running) {
-        await refresh();
-        if (error != null) {
-          throw const CenterException(
-            'تعذر التأكد من حالة القاعات؛ أعد الفحص قبل تغيير الشبكة.',
-          );
-        }
-      }
-      if (hasLiveExam) {
-        throw const CenterException(
-          'أغلق قاعات الامتحان قبل تغيير إعداد الشبكة.',
-        );
-      }
-    }
-    if (!canSync || generation != _authGeneration) {
-      throw const CenterException('تغيّرت جلسة الموظف؛ لم يُرسل طلب التهيئة.');
+        action == 'restore') {
+      // The native helper acquires a durable lease that checks actual rooms.
+      // Network setup before login never enables the exam administration UI.
+      await prepareNetworkEngine();
     }
     return engine.network(command);
+  }
+
+  Future<Map<String, dynamic>> _changeHotspot(
+    Map<String, dynamic> command,
+  ) async {
+    await prepareNetworkEngine();
+    final maintenance = ExamNetworkMaintenance(engine);
+    Map<String, dynamic> result;
+    try {
+      result = await maintenance.run((beforeWrite) async {
+        if (_disposed) {
+          throw const CenterException('أعد فتح شاشة تجهيز الشبكة.');
+        }
+        await beforeWrite();
+        return engine.network(command);
+      });
+    } catch (failure, stack) {
+      if (maintenance.releaseWarning == null) rethrow;
+      throw CenterException(
+        '${failure is CenterException ? failure.message : 'تعذر إكمال طلب الشبكة.'} '
+        '${maintenance.releaseWarning}',
+        cause: failure,
+        stackTrace: stack,
+      );
+    } finally {
+      if (maintenance.releaseWarning != null) {
+        error = maintenance.releaseWarning;
+        if (!_disposed) notifyListeners();
+      }
+    }
+    final warning = maintenance.releaseWarning;
+    if (warning == null) return result;
+    return {
+      ...result,
+      'warning': warning,
+      'message': '${result['message'] ?? 'راجع حالة الشبكة.'} $warning',
+    };
   }
 
   @override

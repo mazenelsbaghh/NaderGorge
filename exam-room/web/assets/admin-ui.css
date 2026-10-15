@@ -216,3 +216,226 @@
 
 .student-qr { margin:0; text-align:center; min-width:0; }
 .student-qr figcaption { margin-top:8px; font-family:monospace; font-size:14px; overflow-wrap:anywhere; color:var(--ink); }
+
+/* Embedded exam controls use the center application's semantic palette and
+   density. These rules deliberately never apply to the student portal. */
+.center-embedded-root { background:var(--canvas); }
+body.center-embedded { display:block; font-size:15px; line-height:1.65; }
+.center-embedded .sidebar { position:static; width:100%; padding:0 16px; background:var(--canvas); color:var(--ink); border-bottom:1px solid var(--line); }
+.center-embedded .sidebar>.brand,
+.center-embedded .sidebar-label,
+.center-embedded .sidebar-bottom,
+.center-embedded .sidebar>.notice,
+.center-embedded .topbar { display:none; }
+.center-embedded .sidebar nav { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; padding:8px 0; }
+.center-embedded .nav-item { flex:0 0 auto; min-height:42px; padding:8px 14px; font-size:14px; font-weight:500; border:1px solid transparent; border-radius:8px; color:var(--muted); background:transparent; gap:8px; }
+.center-embedded .nav-item span { font-size:17px; color:inherit; }
+.center-embedded .nav-item.active { color:var(--teal); background:var(--teal-soft); border-color:var(--line); font-weight:700; }
+.center-embedded .nav-item.active::after { display:none; }
+.center-embedded .nav-item:hover:not(.active) { color:var(--ink); background:var(--subtle); }
+.center-embedded .workspace { margin:0; width:100%; }
+.center-embedded .workspace main { max-width:none; margin:0; padding:16px 16px 32px; }
+.center-embedded .page-heading { margin-bottom:16px; align-items:center; gap:12px; flex-wrap:wrap; }
+.center-embedded .page-heading h1 { font-size:24px; line-height:1.4; font-weight:500; }
+.center-embedded .page-heading h2,
+.center-embedded h2 { font-size:20px; font-weight:700; }
+.center-embedded h3 { font-size:17px; }
+.center-embedded .page-heading p { margin-top:4px; font-size:14px; }
+.center-embedded .page-heading>.actions { padding:0; }
+.center-embedded .context-label { display:none; }
+.center-embedded .panel,
+.center-embedded .join-panel,
+.center-embedded .question-editor,
+.center-embedded dialog,
+.center-embedded .send-dialog { background:var(--paper); border:1px solid var(--line); color:var(--ink); border-radius:12px; box-shadow:none; }
+.center-embedded .panel .panel { border:0; border-radius:0; }
+.center-embedded .button { min-height:44px; padding:11px 20px; font-size:15px; font-weight:700; border-radius:8px; box-shadow:none; }
+.center-embedded .button:not(.secondary):not(.ghost):not(.danger) { background:var(--teal); color:var(--on-primary); }
+.center-embedded .button:not(.secondary):not(.ghost):not(.danger):hover:not(:disabled) { background:var(--teal); filter:brightness(.92); }
+.center-embedded .button.secondary { background:var(--paper); color:var(--ink); border-color:var(--line); }
+.center-embedded .button.secondary:hover:not(:disabled) { background:var(--subtle); border-color:var(--muted); }
+.center-embedded .button.ghost { background:transparent; color:var(--teal); }
+.center-embedded .button.danger { background:var(--danger); color:var(--paper); }
+.center-embedded .button.danger:hover:not(:disabled) { background:var(--danger); filter:brightness(.9); }
+.center-embedded .button.small { min-height:40px; padding:8px 14px; font-size:14px; }
+.center-embedded input,
+.center-embedded select,
+.center-embedded textarea { color:var(--ink); background:var(--paper); border-color:var(--line); border-radius:8px; padding:12px 14px; min-height:46px; }
+.center-embedded input::placeholder,
+.center-embedded textarea::placeholder { color:var(--muted); opacity:1; }
+.center-embedded input[type=checkbox],
+.center-embedded input[type=radio] { min-height:19px; padding:0; }
+.center-embedded label { font-size:14px; font-weight:500; }
+.center-embedded :is(input,select,textarea):focus-visible { border-color:var(--teal); outline:2px solid var(--teal); outline-offset:2px; }
+.center-embedded :is(button,a,summary):focus-visible { outline:2px solid var(--teal); outline-offset:3px; }
+.center-embedded .launcher-panel,
+.center-embedded .editor-basics,
+.center-embedded .question-editor,
+.center-embedded .whatsapp-settings,
+.center-embedded .storage-main,
+.center-embedded .gemini-settings { padding:20px; margin-bottom:16px; }
+.center-embedded .launcher-grid,
+.center-embedded .form-grid { gap:16px; margin-block:16px; }
+.center-embedded .launcher-actions { padding-top:16px; }
+.center-embedded .library-summary { gap:12px 24px; margin-bottom:16px; padding-bottom:16px; }
+.center-embedded .library-summary b { font-size:20px; }
+.center-embedded .library-toolbar { padding:16px; gap:12px; }
+.center-embedded .exam-list-row { padding:16px; color:var(--ink); gap:16px; }
+.center-embedded .exam-list-row:hover { background:var(--subtle); }
+.center-embedded .exam-list-row strong { font-size:17px; }
+.center-embedded .exam-list-row small { margin-top:4px; }
+.center-embedded .room-current-heading { padding-top:20px; }
+.center-embedded .room-overview { gap:16px; margin-bottom:16px; }
+.center-embedded .join-panel { padding:20px; border-inline-start:1px solid var(--line); gap:16px; }
+.center-embedded .link-field input { background:var(--subtle); }
+.center-embedded .attendance-summary { gap:8px; }
+.center-embedded .attendance-summary strong { font-size:24px; color:var(--ink); }
+.center-embedded .exam-steps { margin-bottom:16px; padding-bottom:16px; }
+.center-embedded .exam-steps li span { background:var(--subtle); color:var(--ink); }
+.center-embedded .exam-steps li.current span { background:var(--teal); color:var(--on-primary); }
+.center-embedded .panel-toolbar { padding-inline:16px; }
+.center-embedded .tabs button { min-height:48px; font-size:14px; }
+.center-embedded .roster-tools { padding:16px; gap:12px; }
+.center-embedded .roster-card-area { padding:0 16px 16px; }
+.center-embedded .roster-card-heading { margin-bottom:8px; }
+.center-embedded .roster-card-selection { margin-top:8px; font-size:13px; }
+.center-embedded .roster-status-cards { display:flex; flex-wrap:wrap; gap:8px; }
+.center-embedded .roster-status-card { display:inline-flex; flex-direction:row; align-items:center; justify-content:flex-start; width:auto; min-height:44px; padding:8px 12px; background:var(--paper); color:var(--ink); gap:10px; }
+.center-embedded .roster-card-label { font-size:14px; font-weight:500; }
+.center-embedded .roster-card-bottom { display:inline-flex; gap:0; }
+.center-embedded .roster-card-bottom>span { display:none; }
+.center-embedded .roster-status-card:hover { background:var(--subtle); border-color:var(--muted); }
+.center-embedded .roster-status-card.selected { color:var(--teal); background:var(--teal-soft); border-color:var(--teal); }
+.center-embedded .roster-card-bottom strong { font-size:14px; line-height:1.5; font-weight:700; }
+.center-embedded .filter-chip { background:var(--paper); color:var(--muted); border-radius:8px; }
+.center-embedded .filter-chip.active { color:var(--teal); background:var(--teal-soft); border-color:var(--teal); }
+.center-embedded table { font-size:15px; }
+.center-embedded thead { background:color-mix(in srgb,var(--teal) 18%,var(--paper)); color:var(--ink); font-size:15px; }
+.center-embedded th { padding:10px 16px; font-weight:700; height:42px; }
+.center-embedded td { padding:10px 16px; border-color:var(--line); background:color-mix(in srgb,var(--teal) 3.5%,var(--paper)); }
+.center-embedded tbody tr:hover>td { background:var(--subtle); }
+.center-embedded .roster-problem-row>td { background:var(--warning-soft); border-inline-start:0; }
+.center-embedded .roster-problem-note { color:var(--warning); }
+.center-embedded .code-button { color:var(--ink); background:var(--subtle); }
+.center-embedded .badge.quiet,
+.center-embedded .badge.draft,
+.center-embedded .badge.closed { color:var(--muted); background:var(--subtle); }
+.center-embedded .badge.waiting,
+.center-embedded .badge.complete,
+.center-embedded .badge.running { color:var(--success); background:var(--teal-soft); }
+.center-embedded .badge.disconnected { color:var(--warning); background:var(--warning-soft); }
+.center-embedded .notice,
+.center-embedded .storage-tip { background:var(--warning-soft); color:var(--warning); border:1px solid var(--line); border-radius:8px; }
+.center-embedded .storage-tip :is(strong,p) { color:inherit; }
+.center-embedded .essay-batch-panel,
+.center-embedded .model-answer-preview,
+.center-embedded .whatsapp-message,
+.center-embedded .selected-time { background:var(--teal-soft); color:var(--ink); border-color:var(--line); }
+.center-embedded #ai-grade-setup { background:var(--paper); border-color:var(--line); }
+.center-embedded .essay-batch-panel #essay-batch-status { color:var(--muted); border-color:var(--line); }
+.center-embedded .review-heading,
+.center-embedded .network-setup-steps li,
+.center-embedded .network-setup-status span { background:var(--subtle); color:var(--ink); border-color:var(--line); }
+.center-embedded .file-path { color:var(--ink); background:var(--subtle); }
+.center-embedded .catalog-item { color:var(--ink); background:var(--paper); }
+.center-embedded .catalog-item.selected { background:var(--teal-soft); }
+.center-embedded .whatsapp-template { border-color:var(--line); border-radius:12px; }
+.center-embedded .send-overlay { background:#0A102099; }
+.center-embedded .toast { background:var(--ink); color:var(--paper); box-shadow:none; }
+.center-embedded .toast.error { background:var(--danger); color:var(--paper); }
+.center-embedded .skip-link { color:var(--ink); background:var(--paper); }
+.center-embedded .center-whatsapp-report { min-width:0; }
+.center-embedded.center-native-shell .sidebar { display:none; }
+@media(max-width:760px) {
+  .center-embedded .sidebar { padding-inline:12px; }
+  .center-embedded .sidebar nav { display:flex; flex-wrap:wrap; gap:4px; overflow:visible; }
+  .center-embedded .nav-item { min-height:42px; padding:8px 10px; font-size:13px; }
+  .center-embedded .workspace main { padding:16px 12px 24px; }
+  .center-embedded .page-heading h1 { font-size:22px; }
+  .center-embedded .launcher-panel,
+  .center-embedded .editor-basics,
+  .center-embedded .question-editor { padding:16px; }
+  .center-embedded .launcher-grid { grid-template-columns:1fr; }
+  .center-embedded .page-heading>.actions { width:100%; }
+  .center-embedded .roster-tools .button { font-size:14px; }
+  .center-embedded .roster-order { flex-basis:100%; }
+  .center-embedded .grade-form { grid-template-columns:1fr; }
+  .center-embedded .grade-form button { grid-column:auto; }
+}
+/* Native appearance changes are immediate, including foregrounds and fills. */
+.center-embedded :is(button,input,select,textarea) { transition:none; }
+.center-embedded .room-launcher-drawer { margin-bottom:16px; }
+.center-embedded .room-launcher-drawer>summary { min-height:44px; padding:10px 0; color:var(--teal); font-weight:700; cursor:pointer; }
+.center-embedded .room-launcher-drawer[open]>summary { margin-bottom:12px; }
+.center-embedded .room-launcher-drawer+.room-current-heading { border:0; padding-top:0; }
+.center-embedded .room-monitoring-settings { margin-bottom:16px; }
+.center-embedded .room-monitoring-settings>summary { min-height:44px; padding:10px 0; color:var(--muted); cursor:pointer; }
+.center-embedded .room-monitoring-settings[open]>summary { margin-bottom:8px; }
+.center-embedded td>.text-button+.text-button { margin-inline-start:12px; }
+
+/* The embedded exam follows the same task sequence as center registration. */
+.center-exam-flow { min-width:0; }
+.center-embedded .center-exam-stages { display:flex; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:20px; }
+.center-exam-stages button { min-height:44px; padding:8px 16px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--muted); font-weight:500; }
+.center-exam-stages button[aria-pressed=true] { background:var(--teal-soft); color:var(--teal); border-color:var(--line); font-weight:700; }
+.center-exam-stages button:hover:not(:disabled) { background:var(--subtle); }
+.center-exam-setup>.page-heading { display:none; }
+.center-embedded .center-exam-setup .launcher-panel { border:0; border-radius:0; padding:0; background:transparent; max-width:900px; }
+.center-embedded .center-exam-setup .launcher-panel>.section-top { margin-bottom:16px; }
+.center-exam-setup .launcher-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.center-room-options { margin:8px 0 16px; }
+.center-room-options>summary,
+.center-room-disclosures>details>summary,
+.center-room-settings>details>summary,
+.center-result-exports>summary { min-height:44px; padding:9px 0; cursor:pointer; color:var(--teal); font-weight:500; }
+.center-room-options .multiple-rooms-option { margin:8px 0 0; }
+.center-room-context { display:flex; align-items:center; gap:16px; padding:14px 16px; margin-bottom:16px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+.center-room-context>div { flex:1; min-width:0; }
+.center-room-context strong { font-size:17px; font-weight:700; overflow-wrap:anywhere; }
+.center-room-context p { font-size:13px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
+.center-room-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px 20px; margin-bottom:12px; }
+.center-room-summary { display:flex; flex-wrap:wrap; gap:12px 20px; font-size:14px; color:var(--muted); }
+.center-room-summary strong { color:var(--ink); font-weight:700; margin-inline-end:4px; }
+.center-room-disclosures { display:flex; flex-wrap:wrap; gap:8px 24px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+.center-room-disclosures>details[open] { flex-basis:100%; }
+.center-room-disclosures .join-panel { margin-block:4px 16px; max-width:950px; }
+.center-room-settings>details { margin-bottom:12px; }
+.center-recording-note { color:var(--muted); font-size:14px; margin-bottom:16px; max-width:90ch; }
+.center-room-roster { border-block:1px solid var(--line); }
+.center-room-roster .roster-tools { padding:16px 0 12px; }
+.center-room-roster .roster-tools .search-field { width:320px; }
+.center-roster-filters { margin-bottom:14px; }
+.center-roster-filters>div { display:flex; flex-wrap:wrap; align-items:flex-start; gap:8px; }
+.center-roster-filters .filter-chip { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; padding:8px 12px; }
+.center-roster-filters .filter-chip strong { font-size:14px; }
+.center-roster-filters>p { margin-top:8px; font-size:13px; }
+.center-extra-filters>summary { min-height:44px; padding:8px 12px; cursor:pointer; color:var(--muted); }
+.center-extra-filters[open] { flex-basis:100%; }
+.center-extra-filters>div { display:flex; flex-wrap:wrap; gap:8px; padding-block:8px; }
+.center-room-roster .essay-batch-panel { margin:0 0 16px; }
+.center-room-roster .results-note { padding:12px 0; }
+.center-result-exports { margin-bottom:16px; }
+.center-result-exports .whatsapp-send-row { padding:8px 0; }
+.center-exam-flow .live-timer { position:static; padding:12px 16px; margin-bottom:12px; }
+.center-exam-flow .live-timer strong { font-size:24px; }
+.center-embedded.center-whatsapp-view #main>.panel { padding:20px; margin-block:0 16px; }
+@media(max-width:760px) {
+ .center-exam-stages { gap:4px; }
+ .center-exam-stages button { flex:1; padding-inline:8px; font-size:14px; }
+ .center-exam-setup .launcher-grid { grid-template-columns:1fr; }
+ .center-room-context { flex-wrap:wrap; gap:12px; }
+ .center-room-context>div { flex-basis:100%; }
+ .center-room-toolbar>.actions { width:100%; }
+ .center-room-roster .roster-tools .search-field { width:100%; }
+ .center-room-roster .roster-order { flex-basis:55%; }
+ .center-roster-filters .filter-chip { padding-inline:10px; }
+ .center-embedded.center-whatsapp-view #main>.panel { padding:16px; }
+}
+.center-room-history { margin-top:20px; border-top:1px solid var(--line); }
+.center-room-history>summary,
+.center-batch-grading>summary { min-height:44px; padding:10px 0; color:var(--teal); cursor:pointer; }
+.center-room-history .history-panel { margin-block:8px 16px; }
+.center-batch-grading { margin-bottom:12px; }
+.center-student-actions>summary { min-height:44px; padding:10px 0; cursor:pointer; color:var(--teal); }
+.center-student-actions>div { display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding-bottom:8px; }
+.center-student-actions>div>.text-button { margin:0; }

@@ -185,6 +185,23 @@ void main() {
       expect(zero.rows.single[0], first.code);
       expect(zero.rows.single[7], 20);
       expect(zero.summary['درجات مرصودة'], '1');
+      expect(zero.whatsAppRecords.single['studentId'], first.id);
+      expect(zero.whatsAppRecords.single['activityId'], examA.id);
+      expect(zero.whatsAppRecords.single['score'], 0);
+      expect(zero.whatsAppRecords.single['maximum'], 20);
+      expect(
+        all.whatsAppRecords
+            .where(
+              (row) =>
+                  row['activityId'] == examB.id && row['studentId'] == first.id,
+            )
+            .single['maximum'],
+        40,
+      );
+      expect(
+        all.whatsAppRecords.any((row) => row['studentId'] == lateStudent.id),
+        isFalse,
+      );
       final missing = report(
         CenterReportKind.exams,
         CenterReportFilter(

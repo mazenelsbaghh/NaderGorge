@@ -334,7 +334,10 @@ void main() {
             );
             await tester.binding.setSurfaceSize(Size(width, 900));
             await tester.pumpAndSettle();
-            await tester.ensureVisible(find.text('تقفيلة الحسابات'));
+            await tester.ensureVisible(
+              find.widgetWithText(ListTile, 'تقفيلة الحسابات'),
+            );
+            await tester.pumpAndSettle();
             await tester.tap(find.text('تقفيلة الحسابات'));
             await tester.pumpAndSettle();
             final dropdown = find.widgetWithText(

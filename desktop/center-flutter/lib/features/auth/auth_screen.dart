@@ -11,11 +11,15 @@ class AuthScreen extends StatefulWidget {
     super.key,
     required this.store,
     this.onOpenLan,
+    this.onOpenNetwork,
+    this.onOpenPreparedExams,
     this.onSignedIn,
     this.examWorkspaceAvailable = false,
   });
   final CenterStore store;
   final VoidCallback? onOpenLan;
+  final VoidCallback? onOpenNetwork;
+  final VoidCallback? onOpenPreparedExams;
   final ValueChanged<bool>? onSignedIn;
   final bool examWorkspaceAvailable;
   @override
@@ -115,12 +119,26 @@ class _AuthScreenState extends State<AuthScreen> {
                   child: AppearanceToggle(),
                 ),
                 const SizedBox(height: 20),
+                if (widget.onOpenNetwork != null)
+                  OutlinedButton.icon(
+                    key: const Key('auth-network-setup'),
+                    onPressed: _busy ? null : widget.onOpenNetwork,
+                    icon: const Icon(Icons.settings_ethernet),
+                    label: const Text('تجهيز الشبكة والـOmada'),
+                  ),
                 if (widget.onOpenLan != null)
                   TextButton.icon(
                     key: const Key('auth-lan-settings'),
                     onPressed: _busy ? null : widget.onOpenLan,
                     icon: const Icon(Icons.router_outlined),
                     label: const Text('ربط الجهازين على الشبكة المحلية'),
+                  ),
+                if (widget.onOpenPreparedExams != null)
+                  FilledButton.icon(
+                    key: const Key('auth-prepared-exam'),
+                    onPressed: _busy ? null : widget.onOpenPreparedExams,
+                    icon: const Icon(Icons.quiz_outlined),
+                    label: const Text('فتح امتحان الساكند'),
                   ),
                 Text(
                   firstRun ? 'نبدأ بإعداد السنتر' : 'أهلًا بعودتك',
@@ -144,7 +162,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   firstRun
                       ? 'أنشئ حسابك الأول لإدارة الطلاب والمجموعات والحسابات.'
                       : widget.examWorkspaceAvailable
-                      ? 'ادخل بحساب الموظف للسنتر أو الامتحانات.'
+                      ? widget.onOpenPreparedExams != null
+                            ? 'دخول الموظف خاص بتسجيل السنتر ويحتاج اتصال الهوست. افتح «فتح امتحان الساكند» مباشرةً للعمل داخل القاعة.'
+                            : 'ادخل بحساب الموظف للسنتر أو الامتحانات.'
                       : 'استخدم حسابك لمتابعة الطلاب والمراجعة وتقفيلة الحسابات.',
                   style: TextStyle(
                     color: MassarPalette.of(context).muted,
@@ -152,7 +172,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                if (widget.examWorkspaceAvailable && !firstRun) ...[
+                if (widget.examWorkspaceAvailable &&
+                    !firstRun &&
+                    widget.onOpenPreparedExams == null) ...[
                   SegmentedButton<bool>(
                     key: const Key('auth-workspace-choice'),
                     segments: const [

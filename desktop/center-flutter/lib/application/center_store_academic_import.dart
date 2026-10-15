@@ -23,7 +23,7 @@ extension _AcademicImportStore on CenterStore {
       }
       if (!activity.maxScoreKnown ||
           command.maxScore <= 0 ||
-          command.maxScore != activity.maxScore) {
+          !activity.acceptsMaxScore(command.maxScore)) {
         throw const CenterException(
           'تغيّرت الدرجة النهائية أو لم تُحدد؛ راجع الامتحان ومعاينة الاستيراد.',
         );
@@ -40,7 +40,12 @@ extension _AcademicImportStore on CenterStore {
       final selected = <String>{};
       final sourceAttempts = <(String?, String, String?)>{};
       for (final row in command.rows) {
-        _validateAcademicImportRow(command, row, existing[row.studentId]);
+        _validateAcademicImportRow(
+          command,
+          row,
+          existing[row.studentId],
+          activity,
+        );
         if (!selected.add(row.studentId)) {
           throw const CenterException('الطالب مكرر في الدرجات المختارة.');
         }
@@ -63,7 +68,7 @@ extension _AcademicImportStore on CenterStore {
             sessionId: command.sessionId,
             activityId: command.activityId,
             score: row.score,
-            maxScore: command.maxScore,
+            maxScore: row.maxScore,
             notes: _academicImportNotes(existing[row.studentId]?.notes, source),
             updatedAt: DateTime.now(),
           ),
@@ -76,11 +81,12 @@ extension _AcademicImportStore on CenterStore {
     AcademicImportCommand command,
     AcademicImportRow row,
     AcademicRecord? current,
+    AcademicActivity activity,
   ) {
     if (!row.score.isFinite ||
         row.score < 0 ||
-        row.maxScore != command.maxScore ||
-        row.score > command.maxScore) {
+        !activity.acceptsMaxScore(row.maxScore) ||
+        row.score > row.maxScore) {
       throw const CenterException(
         'كل درجة يجب أن تكون بين صفر والدرجة النهائية المحددة للامتحان.',
       );

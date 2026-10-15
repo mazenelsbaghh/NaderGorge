@@ -645,7 +645,12 @@ func (d *DB) dashboard(eid string) (M, error) {
 			a["screen"] = v
 		}
 	}
-	return M{"exam": examMap(x), "attempts": as, "serverTime": now()}, nil
+	screenRows.Close()
+	target, err := dashboardCenterTarget(d.sql, eid)
+	if err != nil {
+		return nil, err
+	}
+	return M{"exam": examMap(x), "attempts": as, "serverTime": now(), "centerTarget": target}, nil
 }
 func examMap(x Exam) M {
 	return M{"id": x.ID, "config": x.Config, "state": x.State, "created_at": x.Created, "started_at": nullableFloat(x.Started), "ended_at": nullableFloat(x.Ended), "templateId": nullableString(x.TemplateID), "lessonId": nullableString(x.LessonID)}

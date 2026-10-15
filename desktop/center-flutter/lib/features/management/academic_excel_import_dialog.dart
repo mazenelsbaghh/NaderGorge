@@ -76,8 +76,8 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
   int _sheet = 0, _revision = 0, _actorRevision = 0;
   bool _busy = false, _saving = false, _stale = false, _unknown = false;
   bool _reviewOnly = false;
-  bool _sheetContextReviewed = false;
-  bool _uniformContext = false, _previewCairo = false;
+  bool _previewCairo = false;
+  _ImportCompletion? _completion;
   AcademicActivity? _previewActivity;
   String? _previewGroupName;
   late String _observedScope;
@@ -136,9 +136,9 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       _revision++;
       _stale = true;
       _rows = [];
+      _completion = null;
       _students = {};
       _existing = {};
-      _sheetContextReviewed = false;
       _scopeReadRevision = null;
       _observedReferences = null;
       _observedActor = widget.store.currentUser?.id;
@@ -184,10 +184,10 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     if (changedActor) {
       _actorRevision++;
       _rows = [];
+      _completion = null;
       _students = {};
       _existing = {};
       _present = {};
-      _sheetContextReviewed = false;
       if (mounted) {
         final importRoute = ModalRoute.of(context);
         if (importRoute?.isActive == true && !importRoute!.isCurrent) {
@@ -276,7 +276,6 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
       _fileName = file.name;
       _sheet = 0;
       _rows = [];
-      _sheetContextReviewed = false;
       await _refreshRows();
     } catch (error, stackTrace) {
       reportProblem(error, stackTrace, operation: 'academic.import.read');
@@ -354,19 +353,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
           chosenManually: before?.chosenManually ?? false,
         );
       }).toList();
-      _uniformContext =
-          _rows
-              .map(
-                (row) => (
-                  row.match.row.metadata['group']?.trim(),
-                  row.match.row.metadata['exam']?.trim(),
-                ),
-              )
-              .toSet()
-              .length ==
-          1;
       _stale = revision != _revision;
-      _sheetContextReviewed = false;
       _unknown = false;
     } catch (error) {
       if (mounted) _error = _errorText(error);
@@ -376,11 +363,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
   }
 
   List<String> _warnings(_ReviewedRow reviewed) {
-    return [
-      ...reviewed.match.row.warnings,
-      if (!_sheetContextReviewed || !_uniformContext)
-        ..._contextWarnings(reviewed),
-    ];
+    return [...reviewed.match.row.warnings, ..._contextWarnings(reviewed)];
   }
 
   List<String> _contextWarnings(_ReviewedRow reviewed) {
@@ -414,10 +397,11 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     if (!row.eligible) {
       return _RowState(_RowKind.invalid, row.errors.join(' · '));
     }
-    if (row.maxScore != _previewActivity?.maxScore) {
+    if (row.maxScore == null ||
+        _previewActivity?.acceptsMaxScore(row.maxScore!) != true) {
       return _RowState(
         _RowKind.invalid,
-        'النهاية ${row.maxScore ?? '—'} لا تطابق الامتحان ${_previewActivity?.maxScore ?? '—'}.',
+        'النهاية ${row.maxScore ?? '—'} ليست ضمن نهايات الامتحان: ${_previewActivity?.allowedMaxScores.join('، ') ?? '—'}.',
       );
     }
     final student = _students[reviewed.studentId];
@@ -478,6 +462,25 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     return const _RowState(_RowKind.ready, 'جاهز للحفظ');
   }
 
+  _RowState _confirmedStateOf(_ReviewedRow reviewed, Set<String> duplicates) {
+    final matched = reviewed.match.student;
+    if (matched == null ||
+        matched.id != reviewed.studentId ||
+        reviewed.match.issues.isNotEmpty) {
+      return _stateOf(reviewed, duplicates);
+    }
+    final confirmed =
+        _ReviewedRow(
+            reviewed.match,
+            studentId: reviewed.studentId,
+            ignored: reviewed.ignored,
+            chosenManually: reviewed.chosenManually,
+          )
+          ..replace = true
+          ..sourceReviewed = true;
+    return _stateOf(confirmed, duplicates);
+  }
+
   Future<void> _review(_ReviewedRow row) async {
     final updated = await showDialog<_RowDecision>(
       context: context,
@@ -502,15 +505,23 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
   Future<void> _save() async {
     if (_locked || _stale || _unknown || _scopeProblem != null) return;
     final duplicates = _duplicates;
-    final ready = _rows
-        .where((row) => _stateOf(row, duplicates).kind == _RowKind.ready)
+    final approved = {
+      for (final row in _rows) row: _confirmedStateOf(row, duplicates),
+    };
+    final ready = approved.keys
+        .where((row) => approved[row]!.kind == _RowKind.ready)
         .toList();
-    if (ready.isEmpty || ready.length > 1000) return;
+    if (ready.length > 1000) return;
+    final completion = _ImportCompletion(approved.values);
+    if (ready.isEmpty) {
+      setState(() => _completion = completion);
+      return;
+    }
     final command = AcademicImportCommand(
       groupId: widget.groupId,
       sessionId: widget.sessionId,
       activityId: widget.activityId,
-      maxScore: _activity!.maxScore,
+      maxScore: ready.first.match.row.maxScore!,
       rows: ready.map((reviewed) {
         final row = reviewed.match.row;
         final metadata = row.metadata;
@@ -561,7 +572,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
             _error = 'تغيّر الحساب أثناء الحفظ؛ راجع النتيجة بعد تسجيل الدخول.';
           });
         } else {
-          Navigator.pop(context, ready.length);
+          setState(() => _completion = completion);
         }
       }
     } catch (error) {
@@ -579,16 +590,56 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
     }
   }
 
+  Widget _completionDialog(
+    _ImportCompletion completion,
+  ) => ScrollableMassarDialog(
+    width: 720,
+    title: const Text('نتيجة استيراد الدرجات'),
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('الوجهة: $_previewGroupName · ${_previewActivity?.name}'),
+        Text(
+          'تم رصد: ${completion.recorded} · محفوظ كما هو: ${completion.unchanged} · متبقي: ${completion.remaining}',
+          key: const Key('import-completion-counts'),
+        ),
+        for (final reason in completion.reasons.entries)
+          Text('${reason.value} صف: ${reason.key}'),
+      ],
+    ),
+    actions: [
+      FilledButton(
+        key: const Key('import-completion-close'),
+        onPressed: () => Navigator.pop(context, completion.recorded),
+        child: const Text('تم'),
+      ),
+    ],
+  );
+
   String _errorText(Object error) =>
       error is FormatException ? error.message : error.toString();
 
   @override
   Widget build(BuildContext context) {
+    if (_completion case final completion?) {
+      return _completionDialog(completion);
+    }
     final duplicates = _duplicates;
-    final states = {for (final row in _rows) row: _stateOf(row, duplicates)};
+    final approved = {
+      for (final row in _rows) row: _confirmedStateOf(row, duplicates),
+    };
+    final matched = approved.keys
+        .where((row) => approved[row]!.kind == _RowKind.ready)
+        .toList();
+    final replacements = matched
+        .where((row) => _existing.containsKey(row.studentId))
+        .length;
+    final warningCount = matched
+        .where((row) => _warnings(row).isNotEmpty)
+        .length;
     int count(_RowKind kind) =>
-        states.values.where((state) => state.kind == kind).length;
-    final ready = count(_RowKind.ready);
+        approved.values.where((state) => state.kind == kind).length;
+    final ready = matched.length;
     final visible = _rows
         .where(
           (row) =>
@@ -597,7 +648,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
                 _RowKind.review,
                 _RowKind.unmatched,
                 _RowKind.invalid,
-              ].contains(states[row]!.kind),
+              ].contains(approved[row]!.kind),
         )
         .toList();
     final scopeProblem = _scopeProblem;
@@ -622,7 +673,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
                   child: ManagementBody(
                     header: [
                       Text(
-                        'الوجهة: ${_group?.name ?? '—'} · الحصة ${_session?.number ?? '—'} · ${_activity?.name ?? '—'} من ${_activity?.maxScore ?? '—'}',
+                        'الوجهة: ${_group?.name ?? '—'} · الشهر ${_session?.monthNumber ?? '—'} · الحصة ${_session?.number ?? '—'} · ${_activity?.name ?? '—'} من ${_activity?.maxScore ?? '—'}',
                         key: const Key('import-destination'),
                       ),
                       const Text(
@@ -731,30 +782,16 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
                         ),
                       if (_rows.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        if (_uniformContext &&
-                            _contextWarnings(_rows.first).isNotEmpty)
-                          CheckboxListTile(
-                            key: const Key('import-context-reviewed'),
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              '${_contextWarnings(_rows.first).join(' ')} أؤكد رصد هذه الورقة في الوجهة المختارة.',
-                            ),
-                            value: _sheetContextReviewed,
-                            onChanged: _locked
-                                ? null
-                                : (value) => setState(
-                                    () =>
-                                        _sheetContextReviewed = value ?? false,
-                                  ),
-                          ),
+                        for (final warning in _rows.expand(_warnings).toSet())
+                          Text(warning),
                         for (final warning in _workbook?.warnings ?? <String>[])
                           Text(warning),
                         Text(
                           'جاهز: $ready · يحتاج مراجعة: ${count(_RowKind.review)} · غير مطابق: ${count(_RowKind.unmatched)} · غير صالح: ${count(_RowKind.invalid)} · محفوظ كما هو: ${count(_RowKind.unchanged)} · متجاهل: ${count(_RowKind.ignored)}',
                           key: const Key('import-counts'),
                         ),
-                        const Text(
-                          'سيُحفظ الجاهز فقط. الصفوف التي تحتاج مراجعة أو غير الصالحة لن تُرسل.',
+                        Text(
+                          'بضغط تأكيد توافق على رصد $ready درجة في الوجهة الموضحة، منها $replacements استبدال لدرجة سابقة و$warningCount صف بتحذيرات مصدر. المتعارض والمكرر وغير الصالح سيبقى للمراجعة.',
                         ),
                         FilterChip(
                           label: const Text('تحتاج مراجعة فقط'),
@@ -787,7 +824,7 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
                               final row = reviewed.match.row;
                               final student = _students[reviewed.studentId];
                               final previous = _existing[reviewed.studentId];
-                              final state = states[reviewed]!;
+                              final state = approved[reviewed]!;
                               return DataRow(
                                 cells: [
                                   DataCell(
@@ -917,13 +954,15 @@ class _AcademicExcelImportDialogState extends State<AcademicExcelImportDialog> {
                               _stale ||
                               _unknown ||
                               scopeProblem != null ||
-                              ready == 0 ||
+                              (ready == 0 && count(_RowKind.unchanged) == 0) ||
                               ready > 1000
                           ? null
                           : _save,
                       icon: const Icon(Icons.save_outlined),
                       label: Text(
-                        _saving ? 'جارٍ حفظ الدفعة…' : 'حفظ $ready درجة جاهزة',
+                        _saving
+                            ? 'جارٍ رصد الدفعة…'
+                            : 'تأكيد ورصد $ready درجة مطابقة',
                       ),
                     ),
                   ],
@@ -963,3 +1002,25 @@ typedef _RowDecision = ({
   bool replace,
   bool sourceReviewed,
 });
+
+class _ImportCompletion {
+  _ImportCompletion(Iterable<_RowState> states) {
+    for (final state in states) {
+      switch (state.kind) {
+        case _RowKind.ready:
+          recorded++;
+        case _RowKind.unchanged:
+          unchanged++;
+        default:
+          remaining++;
+          reasons.update(
+            state.message,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+      }
+    }
+  }
+  int recorded = 0, unchanged = 0, remaining = 0;
+  final Map<String, int> reasons = {};
+}

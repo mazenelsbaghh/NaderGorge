@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/corrections_page.dart';
+import 'package:massar_center/features/attendance/student_history_panel.dart';
 import 'package:massar_center/features/management/closings_page.dart';
 import 'package:massar_center/features/management/management_workspace.dart';
 import 'package:massar_center/shared/theme.dart';
@@ -575,6 +576,163 @@ void main() {
         expect(store.allPackages.single.remaining, 2);
         expect(store.allPayments.single.id, payment.id);
         expect(store.attendances, isEmpty);
+        expect(tester.takeException(), isNull);
+      });
+    },
+  );
+
+  testWidgets(
+    'an externally canceled selected receipt clears unavailable payment and correction choices',
+    (tester) async {
+      await tester.runAsync(() async {
+        // A host commit may notify before the local confirmation clears its form.
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+        final payment = store.payments.single;
+        await open(
+          tester,
+          CorrectionsPage(
+            store: store,
+            initialStudentId: student.id,
+            initialSessionId: session.id,
+            initialPaymentId: payment.id,
+          ),
+        );
+        await chooseAction(tester, 'تصحيح وسيلة الدفع');
+        await store.cancelPayment(
+          paymentId: payment.id,
+          reason: 'إلغاء من جهاز آخر',
+        );
+        await tester.pumpAndSettle();
+        final paymentPicker = find.widgetWithText(
+          DropdownButtonFormField<String>,
+          'عملية الدفع المحددة',
+        );
+        expect(
+          tester
+              .widget<DropdownButtonFormField<String>>(paymentPicker)
+              .initialValue,
+          isNull,
+        );
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('apply-correction')))
+              .onPressed,
+          isNull,
+        );
+        expect(store.payments, isEmpty);
+        expect(store.attendances, hasLength(1));
+        expect(tester.takeException(), isNull);
+      });
+    },
+  );
+
+  testWidgets(
+    'used monthly receipt allocates online from a closed class without changing cash or credits',
+    (tester) async {
+      await tester.runAsync(() async {
+        await store.saveGroup(group.copyWith(packagePrice: 28000));
+        await store.collectAndAttend(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: session.id,
+            mode: EntryMode.package,
+          ),
+        );
+        final payment = store.payments.single;
+        expect(payment.collectedAmount, 21000);
+        final package = store.packages.single;
+        final attendance = store.attendances.single;
+        await store.closeSession(session.id);
+        await store.finalizeSession(sessionId: session.id, actualCash: 21000);
+        final closing = store.closings.single.toJson();
+        await open(
+          tester,
+          CorrectionsPage(
+            store: store,
+            initialStudentId: student.id,
+            initialSessionId: session.id,
+            initialPaymentId: payment.id,
+          ),
+        );
+        final centerAmount = find.byKey(const Key('correction-center-amount'));
+        await tester.ensureVisible(centerAmount);
+        await tester.enterText(centerAmount, '٢٥٠');
+        await tester.tap(find.byKey(const Key('apply-correction')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'اكتب مبلغًا أقل من نصيب السنتر الحالي لتحويل الفرق للأونلاين.',
+          ),
+          findsOneWidget,
+        );
+        expect(store.corrections, isEmpty);
+        await tester.enterText(centerAmount, '١٥٠');
+        final reason = find.byKey(const Key('correction-reason'));
+        await tester.ensureVisible(reason);
+        await tester.enterText(reason, 'تعويض الحصة الثانية أونلاين');
+        await tester.tap(find.byKey(const Key('apply-correction')));
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.textContaining(
+              '${money(15000)} للسنتر و${money(6000)} للأونلاين',
+            ),
+          ),
+          findsOneWidget,
+        );
+        await mutate(
+          tester,
+          () => tester.tap(find.widgetWithText(FilledButton, 'تأكيد التصحيح')),
+        );
+        expect(store.paymentCollectedFor(payment.id), 21000);
+        expect(store.centerAllocatedAmount(payment.id), 15000);
+        expect(store.onlineAllocatedAmount(payment.id), 6000);
+        expect(store.closings.single.toJson(), closing);
+        expect(store.packages.single.toJson(), package.toJson());
+        expect(store.attendances.single.toJson(), attendance.toJson());
+        expect(store.refunds, isEmpty);
+        expect(store.payments, hasLength(1));
+        expect(
+          store.corrections.single.action,
+          CorrectionAction.packageOnlineAllocation,
+        );
+        expect(store.corrections.single.reason, 'تعويض الحصة الثانية أونلاين');
+        await open(
+          tester,
+          StudentHistoryPanel(store: store, student: student, expanded: true),
+        );
+        expect(find.text('نصيب السنتر'), findsOneWidget);
+        expect(find.text('للأونلاين'), findsOneWidget);
+        expect(find.text(money(15000)), findsWidgets);
+        expect(find.text(money(6000)), findsWidgets);
+        expect(
+          tester
+              .widget<TextButton>(
+                find.byKey(ValueKey('cancel-payment-${payment.id}')),
+              )
+              .onPressed,
+          isNull,
+        );
+        final allocate = find.byKey(ValueKey('allocate-online-${payment.id}'));
+        await tester.ensureVisible(allocate);
+        await tester.tap(allocate);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextFormField>(
+                find.byKey(const Key('correction-center-amount')),
+              )
+              .controller!
+              .text,
+          '150.00',
+        );
         expect(tester.takeException(), isNull);
       });
     },

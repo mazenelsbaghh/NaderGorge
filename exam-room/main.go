@@ -35,6 +35,7 @@ type app struct {
 	whatsapp               *whatsappCloud
 	diagnostics            *diagnosticRecorder
 	centerIntegrated       bool
+	centerManualEntry      bool
 	centerAccess           centerBrowserAccess
 }
 
@@ -213,9 +214,20 @@ func (a *app) studentAPI(w http.ResponseWriter, r *http.Request) error {
 		v, e := a.db.lounge()
 		if e == nil && a.centerIntegrated {
 			v["centerIntegrated"] = true
+			if a.centerManualEntry {
+				v["centerEntryMode"] = "details"
+			}
 			rooms := []M{}
 			for _, room := range v["rooms"].([]M) {
 				if _, err := readCenterBinding(a.db.sql, str(room["id"])); err == nil {
+					rooms = append(rooms, room)
+					continue
+				}
+				standalone, err := isStandaloneCenterRoom(a.db.sql, str(room["id"]))
+				if err != nil {
+					return err
+				}
+				if standalone {
 					rooms = append(rooms, room)
 				}
 			}
@@ -269,11 +281,23 @@ func (a *app) studentAPI(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			if _, err = readCenterBinding(a.db.sql, eid); err != nil {
-				return fail("القاعة لم ترتبط بكشف السنتر بعد", 409)
+				standalone, standaloneErr := isStandaloneCenterRoom(a.db.sql, eid)
+				if standaloneErr != nil {
+					return standaloneErr
+				}
+				if !standalone {
+					return fail("القاعة لم ترتبط بكشف السنتر بعد", 409)
+				}
 			}
 			body["examId"] = eid
 		}
-		v, newToken, e := a.db.join(body, tok)
+		var v M
+		var newToken string
+		if a.centerIntegrated && a.centerManualEntry {
+			v, newToken, e = a.db.joinManual(body, tok)
+		} else {
+			v, newToken, e = a.db.join(body, tok)
+		}
 		if e == nil {
 			http.SetCookie(w, &http.Cookie{Name: "massar_student", Value: newToken, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 604800})
 			jsonOut(w, v)
@@ -337,6 +361,13 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 		if !controller {
 			return fail("هذه العملية متاحة لبرنامج السنتر فقط", 403)
 		}
+		if r.Method == "GET" && path == "/api/center/standalone-rooms" {
+			v, e := a.db.standaloneCenterRooms(M{})
+			if e == nil {
+				jsonOut(w, v)
+			}
+			return e
+		}
 		if r.Method == "GET" && path == "/api/center/state" {
 			v, e := a.db.centerState()
 			if e == nil {
@@ -352,6 +383,12 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 			}
 			var v M
 			switch path {
+			case "/api/center/catalog":
+				v, e = a.db.saveCenterCatalog(body)
+			case "/api/center/standalone-rooms":
+				v, e = a.db.standaloneCenterRooms(body)
+			case "/api/center/standalone-results":
+				v, e = a.db.standaloneCenterResults(body)
 			case "/api/center/open":
 				v, e = a.db.openCenterRoom(body)
 			case "/api/center/bind":
@@ -360,6 +397,10 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 				v, e = a.db.ackCenter(body)
 			case "/api/center/admin-access":
 				v, e = a.centerAdminAccess(body)
+			case "/api/center/offline-access":
+				v, e = a.db.prepareCenterOfflineAccess(body)
+			case "/api/center/context":
+				v, e = a.db.prepareCenterContext(body)
 			default:
 				return fail("الصفحة غير موجودة", 404)
 			}
@@ -372,9 +413,27 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 	}
 	if r.Method == "GET" {
 		switch {
+		case path == "/api/room/cached-catalog":
+			v, err := cachedCenterCatalog(a.db.sql)
+			if err == nil {
+				jsonOut(w, v)
+			}
+			return err
+		case path == "/api/room/center-choices":
+			v, err := a.db.centerRoomChoices()
+			if err == nil {
+				jsonOut(w, v)
+			}
+			return err
 		case path == "/api/diagnostics":
 			jsonOut(w, a.diagnostics.snapshot())
 			return nil
+		case strings.HasPrefix(path, "/api/whatsapp/center/batches/"):
+			v, e := a.whatsapp.centerBatch(strings.TrimPrefix(path, "/api/whatsapp/center/batches/"))
+			if e == nil {
+				jsonOut(w, v)
+			}
+			return e
 		case path == "/api/whatsapp/configuration":
 			v, e := a.whatsapp.settings()
 			if e == nil {
@@ -522,8 +581,12 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 	}
 	var v M
 	switch {
+	case path == "/api/whatsapp/center/batches":
+		v, e = a.whatsapp.saveCenterBatch(body)
 	case path == "/api/whatsapp/configuration":
 		v, e = a.whatsapp.saveConfig(body)
+	case path == "/api/whatsapp/template-bindings":
+		v, e = a.whatsapp.saveTemplateBindings(body)
 	case path == "/api/whatsapp/templates/sync":
 		v, e = a.whatsapp.syncTemplates(r.Context())
 	case path == "/api/whatsapp/reports/preview":
@@ -546,7 +609,13 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 	case len(parts) == 5 && parts[1] == "api" && parts[2] == "templates" && parts[4] == "save":
 		v, e = a.db.saveTemplate(parts[3], body)
 	case path == "/api/room/open":
-		v, e = a.db.openRoom(str(body["lessonId"]), str(body["templateId"]))
+		if a.centerIntegrated && a.centerManualEntry && body["standalone"] == true {
+			v, e = a.db.openStandaloneCenterRoom(body)
+		} else if a.centerIntegrated && a.centerManualEntry {
+			v, e = a.db.openPreparedCenterRoom(body)
+		} else {
+			v, e = a.db.openRoom(str(body["lessonId"]), str(body["templateId"]))
+		}
 	case path == "/api/network/maintenance/acquire":
 		v, e = a.db.acquireNetworkMaintenance()
 	case path == "/api/network/maintenance/release":
@@ -692,6 +761,7 @@ func serveWeb(w http.ResponseWriter, r *http.Request, admin bool) error {
 func main() {
 	port := flag.Int("port", 8765, "student LAN port")
 	integrated := flag.Bool("center-integrated", false, "managed center integration")
+	manualEntry := flag.Bool("center-manual-entry", true, "student enters name, phone and center code")
 	studentAddress := flag.String("student-address", "0.0.0.0", "student listener IPv4")
 	adminPort := flag.Int("admin-port", 8766, "local admin port")
 	dataDir := flag.String("data-dir", "", "data directory")
@@ -733,7 +803,7 @@ func main() {
 	defer stopSleepProtection()
 	_, _ = db.sql.Exec(`UPDATE essay_grade_jobs SET state='interrupted',message='توقف البرنامج قبل اكتمال التصحيح',updated_at=? WHERE state='running'`, now())
 	g := &grader{db: db, envPath: filepath.Join(*dataDir, ".env")}
-	a := &app{db: db, grader: g, adminToken: token(), studentPort: *port, adminPort: *adminPort, addresses: localAddresses, pdfHelper: *pdfHelper, diagnostics: diagnostics, centerIntegrated: *integrated}
+	a := &app{db: db, grader: g, adminToken: token(), studentPort: *port, adminPort: *adminPort, addresses: localAddresses, pdfHelper: *pdfHelper, diagnostics: diagnostics, centerIntegrated: *integrated, centerManualEntry: *manualEntry}
 	a.whatsapp = newWhatsAppCloud(a)
 	if e = a.whatsapp.recoverSends(); e != nil {
 		log.Fatal("backend startup failed: ", diagnostics.startupFailed(e))

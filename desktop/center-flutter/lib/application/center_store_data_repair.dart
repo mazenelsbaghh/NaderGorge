@@ -75,6 +75,7 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/attendance_payment_repair_20261011.json',
     'assets/gec_month1_repair_20261013.json',
     'assets/gec_first_secondary_attendance_repair_20261013.json',
+    'assets/grade_results_repair_20261015.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,

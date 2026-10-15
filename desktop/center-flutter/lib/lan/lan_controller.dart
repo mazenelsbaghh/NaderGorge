@@ -27,6 +27,7 @@ class LanController extends ChangeNotifier {
     LanHostProcess? hostProcess,
     Future<List<LanEndpoint>> Function()? searchHosts,
     this.clientOnly = false,
+    this.homeworkHotspot,
   }) : _settings =
            settings ?? LanSettings(File(localStore.databasePath).parent),
        _hostProcess = hostProcess ?? LanHostProcess(),
@@ -35,6 +36,66 @@ class LanController extends ChangeNotifier {
 
   final CenterStore localStore;
   final bool clientOnly;
+  final Future<Map<String, dynamic>> Function(Map<String, dynamic>)?
+  homeworkHotspot;
+  Set<String> _homeworkHotspotAddresses = {};
+
+  bool isHomeworkHotspotUrl(String url) =>
+      _homeworkHotspotAddresses.contains(Uri.parse(url).host);
+
+  String? preferredMobileHomeworkUrl(List<String> urls) =>
+      urls.where(isHomeworkHotspotUrl).firstOrNull ?? urls.firstOrNull;
+
+  Future<Map<String, dynamic>> startHomeworkHotspot() async {
+    if (!isHost ||
+        clientOnly ||
+        !identical(activeStore, localStore) ||
+        !localStore.canAssess) {
+      throw const CenterException(
+        'شغّل هوتسبوت الواجب من حساب الموظف على الهوست.',
+      );
+    }
+    final configure = homeworkHotspot;
+    if (configure == null) {
+      throw const CenterException(
+        'هوتسبوت الواجب متاح في حزمة ويندوز الكاملة.',
+      );
+    }
+    _homeworkHotspotAddresses = {};
+    final response = await configure({'action': 'tethering-start'});
+    if (response['ok'] != true || response['active'] != true) {
+      throw CenterException(
+        response['message'] as String? ??
+            'لم يؤكد ويندوز تشغيل هوتسبوت الواجب.',
+      );
+    }
+    _homeworkHotspotAddresses = (response['addresses'] as List? ?? const [])
+        .cast<String>()
+        .toSet();
+    return response;
+  }
+
+  Future<void> _refreshHomeworkHotspot() async {
+    _homeworkHotspotAddresses = {};
+    final readStatus = homeworkHotspot;
+    if (readStatus == null) return;
+    final status = await readStatus({'action': 'tethering-status'});
+    if (status['ok'] != true || status['active'] != true) {
+      throw CenterException(
+        status['message'] as String? ??
+            'هوتسبوت الهوست غير جاهز. شغّله أولًا ثم وصّل موبايل الموظف.',
+      );
+    }
+    _homeworkHotspotAddresses = (status['addresses'] as List? ?? const [])
+        .cast<String>()
+        .toSet();
+    if (_homeworkHotspotAddresses.isEmpty) {
+      throw const CenterException(
+        'الهوتسبوت يعمل لكن عنوان اتصال الموبايل لم يظهر بعد. وصّل الموبايل بشبكة الهوست ثم جهّز الرابط مجددًا.',
+      );
+    }
+  }
+
   bool get isClientOnly => clientOnly;
   final LanSettings _settings;
   final LanHostProcess _hostProcess;
@@ -54,6 +115,14 @@ class LanController extends ChangeNotifier {
   String? _pairingCode;
   DateTime? _pairingExpiresAt;
   LanConnectionStatus _status = LanConnectionStatus.standalone;
+  Map<String, String> _mobileHomeworkNetworks = {};
+
+  String mobileHomeworkNetwork(String url) {
+    final uri = Uri.parse(url);
+    if (isHomeworkHotspotUrl(url)) return 'هوتسبوت الهوست • ${uri.host}';
+    return _mobileHomeworkNetworks[uri.replace(fragment: '').toString()] ??
+        uri.host;
+  }
 
   Future<List<String>> openMobileHomework(
     String sessionId,
@@ -65,20 +134,34 @@ class LanController extends ChangeNotifier {
         'افتح هذه الميزة على الهوست بعد تشغيل الربط المحلي.',
       );
     }
+    await _refreshHomeworkHotspot();
     bridge.mobileHomework.revoke();
     final response = await _hostProcess.startMobileHomework();
     final urls = (response['urls'] as List).cast<String>();
-    if (urls.isEmpty) {
+    _mobileHomeworkNetworks = {
+      for (final link
+          in (response['links'] as List? ?? const []).whereType<Map>())
+        if (link['url'] is String && link['network'] is String)
+          link['url'] as String:
+              '${link['network']} • ${link['address'] ?? ''}',
+    };
+    if (urls.isEmpty ||
+        (_homeworkHotspotAddresses.isNotEmpty &&
+            !urls.any(isHomeworkHotspotUrl))) {
       await _hostProcess.stopMobileHomework();
       throw const CenterException(
-        'وصّل كابل الشبكة أو شغّل الهوت سبوت، ثم افتح الصفحة من جديد.',
+        'شغّل هوتسبوت الواجب على الهوست، ثم جهّز الرابط مجددًا.',
       );
     }
     if (!identical(_bridge, bridge)) {
       throw const CenterException('تغير اتصال الهوست. افتح الصفحة من جديد.');
     }
     final grant = await bridge.mobileHomework.open(sessionId, activityId);
-    return urls.map((url) => '$url#${grant.token}').toList();
+    final preferred = [
+      ...urls.where(isHomeworkHotspotUrl),
+      ...urls.where((url) => !isHomeworkHotspotUrl(url)),
+    ];
+    return preferred.map((url) => '$url#${grant.token}').toList();
   }
 
   Future<void> closeMobileHomework() async {

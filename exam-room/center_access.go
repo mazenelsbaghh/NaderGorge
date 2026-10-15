@@ -25,7 +25,7 @@ func (a *app) browserTokenValid(value string) bool {
 	return time.Now().Before(a.centerAccess.leaseExpires) && sameSecret(value, a.centerAccess.token)
 }
 
-// Only the signed-in center controller may keep an existing browser session alive.
+// Only the private desktop controller may keep an existing browser session alive.
 // A reconnect must explicitly open a new session; polling cannot revive a stale one.
 func (a *app) renewCenterBrowserLease() {
 	a.centerAccess.mu.Lock()
@@ -66,7 +66,7 @@ func (a *app) centerBrowserLogin(w http.ResponseWriter, r *http.Request) error {
 	a.centerAccess.mu.Lock()
 	defer a.centerAccess.mu.Unlock()
 	if !time.Now().Before(a.centerAccess.expires) || !time.Now().Before(a.centerAccess.leaseExpires) || !sameSecret(str(p["capability"]), a.centerAccess.capability) {
-		return fail("افتح شاشة الامتحانات من برنامج السنتر بعد تسجيل الدخول", 401)
+		return fail("افتح إدارة الامتحان من برنامج السنتر على هذا الجهاز", 401)
 	}
 	a.centerAccess.capability = ""
 	http.SetCookie(w, &http.Cookie{Name: "massar_admin", Value: a.centerAccess.token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})

@@ -120,7 +120,12 @@ class CenterReportData {
     required List<List<Object?>> rows,
     required Map<String, String> summary,
     this.caption,
-  }) : columns = List.unmodifiable(columns),
+    this.whatsAppMessageKind = 'followup',
+    List<Map<String, dynamic>> whatsAppRecords = const [],
+  }) : whatsAppRecords = List.unmodifiable(
+         whatsAppRecords.map((row) => Map<String, dynamic>.unmodifiable(row)),
+       ),
+       columns = List.unmodifiable(columns),
        rows = List.unmodifiable(
          rows.map((row) => List<Object?>.unmodifiable(row)),
        ),
@@ -130,6 +135,8 @@ class CenterReportData {
   final List<List<Object?>> rows;
   final Map<String, String> summary;
   final String? caption;
+  final List<Map<String, dynamic>> whatsAppRecords;
+  final String whatsAppMessageKind;
 }
 
 abstract final class CenterReports {
@@ -177,6 +184,7 @@ abstract final class CenterReports {
     CorrectionAction.paymentMethod => 'تصحيح طريقة الدفع',
     CorrectionAction.paymentCanceled => 'إلغاء الدفع',
     CorrectionAction.packageRefund => 'استرداد باقة',
+    CorrectionAction.packageOnlineAllocation => 'تحويل من دفعة الشهر للأونلاين',
     CorrectionAction.closingReopened => 'إعادة فتح التقفيلة',
   };
 
@@ -977,6 +985,68 @@ class _ReportContext {
               .join('؛ ');
   }
 
+  Map<String, dynamic> _messageRecord(
+    Student student,
+    LessonSession session, {
+    AcademicActivity? activity,
+    AcademicRecord? academic,
+    AttendanceStatus? presence,
+    AcademicActivityKind? kind,
+  }) {
+    AcademicRecord? related(AcademicActivityKind kind) {
+      final candidates = <AcademicRecord>[
+        ?academicByPair[(student.id, session.id)],
+        for (final candidate
+            in activitiesBySession[(session.id, kind)] ??
+                const <AcademicActivity>[])
+          ?academicByActivity[(student.id, session.id, candidate.id)],
+      ];
+      return candidates.length == 1 ? candidates.single : null;
+    }
+
+    final exam = (kind ?? activity?.kind) == AcademicActivityKind.exam
+        ? academic
+        : related(AcademicActivityKind.exam);
+    final homework = (kind ?? activity?.kind) == AcademicActivityKind.homework
+        ? academic
+        : related(AcademicActivityKind.homework);
+    final examActivity = (kind ?? activity?.kind) == AcademicActivityKind.exam
+        ? activity
+        : activities[exam?.activityId];
+    final group = groups[session.groupId]!;
+    return {
+      'id': '${student.id}:${session.id}:${activity?.id ?? "lesson"}',
+      'studentId': student.id,
+      'sessionId': session.id,
+      if (activity != null) 'activityId': activity.id,
+      'name': student.name,
+      'code': student.code,
+      'phone': student.phone,
+      'guardianPhone': student.guardianPhone,
+      'group': group.name,
+      'center': catalogs[group.centerId]?.name ?? 'غير معروف',
+      'lesson': session.name.isEmpty ? 'الحصة ${session.number}' : session.name,
+      'month': session.preparedLessonId == null
+          ? 'الشهر ${session.monthNumber}'
+          : store.studyMonthForLesson(session.preparedLessonId!)?.name ??
+                'الشهر ${session.monthNumber}',
+      'time': _sessionTimeLabel(session),
+      'exam':
+          examActivity?.name ??
+          (exam == null ? 'لم يحدد' : 'رصد سابق بدون اسم'),
+      'score': exam?.examAbsent == true ? null : exam?.score,
+      'maximum': (exam?.maxScoreKnown ?? examActivity?.maxScoreKnown ?? false)
+          ? exam?.maxScore ?? examActivity?.maxScore
+          : null,
+      'homework': _homeworkLabel(
+        homework?.homework ?? HomeworkStatus.notReviewed,
+      ),
+      'attendance': presence == null
+          ? 'راجع تقرير الحضور'
+          : _attendanceStatus(presence),
+    };
+  }
+
   CenterReportData attendanceReport() {
     if (filter.attendanceCorrections) return _attendanceCorrectionReport();
     final records = _filteredAttendance
@@ -997,6 +1067,15 @@ class _ReportContext {
         .length;
     return CenterReportData(
       title: 'الحضور والغياب',
+      whatsAppRecords: records
+          .map(
+            (record) => _messageRecord(
+              students[record.studentId]!,
+              sessions[record.sessionId]!,
+              presence: record.status,
+            ),
+          )
+          .toList(),
       columns: const [
         'الكود',
         'الطالب',
@@ -1175,6 +1254,10 @@ class _ReportContext {
           'المتبقي حاليًا (جنيه مصري)',
         ],
         'اسم الشهر وقت الشراء',
+        if (store.canCollect) ...[
+          'المخصص حاليًا للسنتر (جنيه مصري)',
+          'المحوّل للأونلاين (جنيه مصري)',
+        ],
       ],
       rows: matches.map((package) {
         final payment = paymentsById[package.paymentId]!;
@@ -1194,6 +1277,12 @@ class _ReportContext {
             reportAmount(store.paymentDebtFor(payment.id)),
           ],
           package.monthPlanName ?? 'باقة قديمة — ${package.totalSessions} حصص',
+          if (store.canCollect) ...[
+            activePackageIds.contains(package.id)
+                ? reportAmount(store.centerAllocatedAmount(payment.id))
+                : null,
+            reportAmount(store.onlineAllocatedAmount(payment.id)),
+          ],
         ];
       }).toList(),
       summary: {
@@ -1206,7 +1295,7 @@ class _ReportContext {
             '${matches.where((package) => !activePackageIds.contains(package.id)).length}',
       },
       caption:
-          'الفترة حسب تاريخ شراء الشهر أو الباقة. اسم الشهر وعدد الحصص محفوظان وقت الشراء، حتى بعد إعادة تسمية الشهر أو حذفه من المجموعة؛ الباقات السابقة دون اسم لا تُنسب إلى شهر جديد. المستحق هو سعر الشراء بعد الخصم، وليس مبلغًا محصلًا. المحصل والمتبقي يعكسان الوضع الحالي؛ رصيد الحصص لا يثبت سداد ثمن الباقة كاملًا. الباقات الملغاة مستبعدة من الرصيد والمديونية؛ التحصيل والاسترداد الفعليان يظهران كتاريخ حركة في تقرير المدفوعات. فلتر الحصة يعرض الباقات المشتراة أو المستخدمة فيها.',
+          'الفترة حسب تاريخ شراء الشهر أو الباقة. اسم الشهر وعدد الحصص محفوظان وقت الشراء، حتى بعد إعادة تسمية الشهر أو حذفه من المجموعة؛ الباقات السابقة دون اسم لا تُنسب إلى شهر جديد. المستحق هو سعر الشراء بعد الخصم، وليس مبلغًا محصلًا. المحصل والمتبقي يعكسان الوضع الحالي؛ رصيد الحصص لا يثبت سداد ثمن الباقة كاملًا. توزيع المقبوض بين السنتر والأونلاين لا يضيف تحصيلًا أو استردادًا ولا يغير التقفيلات أو رصيد الحصص. الباقات الملغاة مستبعدة من الرصيد والمديونية؛ التحصيل والاسترداد الفعليان يظهران كتاريخ حركة في تقرير المدفوعات. فلتر الحصة يعرض الباقات المشتراة أو المستخدمة فيها.',
     );
   }
 
@@ -1229,7 +1318,12 @@ class _ReportContext {
   String _paymentCurrentStatus(PaymentRecord payment) {
     if (!activePaymentIds.contains(payment.id)) return 'ملغاة — أُلغي الالتزام';
     if (payment.netAmount == 0) return 'إعفاء كامل';
-    if (store.paymentDebtFor(payment.id) == 0) return 'مسددة بالكامل';
+    if (store.paymentDebtFor(payment.id) == 0) {
+      final online = store.onlineAllocatedAmount(payment.id);
+      return online == 0
+          ? 'مسددة بالكامل'
+          : 'مسددة بالكامل — سنتر ${reportAmount(store.centerAllocatedAmount(payment.id))}، أونلاين ${reportAmount(online)}';
+    }
     return store.paymentCollectedFor(payment.id) == 0
         ? 'لم يُحصل مبلغ'
         : 'دفع جزئي';
@@ -1708,6 +1802,17 @@ class _ReportContext {
       title: filter.activityId == null
           ? 'الامتحانات'
           : 'الامتحانات · ${activities[filter.activityId]!.name}',
+      whatsAppRecords: matches
+          .map(
+            (row) => _messageRecord(
+              row.student,
+              row.session,
+              activity: row.activity,
+              academic: row.academic,
+              kind: AcademicActivityKind.exam,
+            ),
+          )
+          .toList(),
       columns: const [
         'الكود',
         'الطالب',
@@ -1770,6 +1875,17 @@ class _ReportContext {
       title: filter.activityId == null
           ? 'الواجبات'
           : 'الواجبات · ${activities[filter.activityId]!.name}',
+      whatsAppRecords: matches
+          .map(
+            (row) => _messageRecord(
+              row.student,
+              row.session,
+              activity: row.activity,
+              academic: row.academic,
+              kind: AcademicActivityKind.homework,
+            ),
+          )
+          .toList(),
       columns: const [
         'الكود',
         'الطالب',

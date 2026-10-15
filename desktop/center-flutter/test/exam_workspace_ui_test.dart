@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ import 'package:massar_center/exams/exam_engine.dart';
 import 'package:massar_center/exams/exam_room_controller.dart';
 import 'package:massar_center/features/auth/auth_screen.dart';
 import 'package:massar_center/features/exams/exam_network_page.dart';
+import 'package:massar_center/features/exams/exam_admin_view.dart';
+import 'package:massar_center/shared/workspace_navigation.dart';
 import 'package:massar_center/features/exams/exam_workspace.dart';
 import 'package:massar_center/shared/theme.dart';
 
@@ -33,10 +36,17 @@ class _UIEngine implements ExamEngine {
     'results': <Map<String, dynamic>>[],
   };
   int starts = 0;
+  Completer<void>? startDelay;
+  final contexts = <Map<String, dynamic>>[];
   @override
   bool running = true;
   @override
-  Future<void> start() async => starts++;
+  Future<void> start() async {
+    starts++;
+    await startDelay?.future;
+    running = true;
+  }
+
   @override
   Future<bool> reconnect() async => running;
   @override
@@ -46,6 +56,24 @@ class _UIEngine implements ExamEngine {
     String route, [
     Map<String, dynamic>? body,
   ]) async {
+    if (route == '/api/center/admin-access') {
+      return {'adminUrl': 'http://127.0.0.1:8766/'};
+    }
+    if (route == '/api/center/context') {
+      contexts.add(Map.of(body!));
+      return {'contextId': 'prepared-ui-context'};
+    }
+    if (route == '/api/center/offline-access') {
+      final access = body!['revoke'] == true
+          ? <String, dynamic>{'allowed': false}
+          : <String, dynamic>{
+              'allowed': true,
+              'remainingSeconds': 43200,
+              'staffId': body['staffId'],
+            };
+      snapshot['offlineAccess'] = access;
+      return access;
+    }
     if (route == '/api/center/open') {
       openedRooms.add(Map.of(body!));
       (snapshot['exams'] as List).add({
@@ -92,6 +120,7 @@ class _UIEngine implements ExamEngine {
           },
         ],
       },
+      'tethering-status' => {'ok': true, 'active': false},
       'hotspot-status' => {'active': true, 'message': 'شبكة الجهازين متاحة'},
       'hotspot-start' => {'ok': true, 'message': 'تم تشغيل شبكة الجهازين'},
       'configure' || 'portal-configure' => {'ok': true},
@@ -114,10 +143,26 @@ class _Fixture {
     StaffRole role = StaffRole.admin,
   }) async {
     final directory = await Directory.systemTemp.createTemp('exam-ui-');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async {
+            if (call.method != 'getApplicationSupportDirectory') {
+              throw StateError(
+                'Unexpected path provider request ${call.method}',
+              );
+            }
+            return '${directory.path}/support';
+          },
+        );
     final store = await CenterStore.open(directory: directory.path);
     await store.setupAdmin('موظف التجربة', password);
     final engine = _UIEngine();
-    final controller = ExamRoomController(engine: engine, store: store);
+    final controller = ExamRoomController(
+      engine: engine,
+      store: store,
+      pollInterval: const Duration(days: 1),
+    );
     final fixture = _Fixture(directory, store, engine, controller);
     if (roster) await fixture.seedRoster();
     if (role != StaffRole.admin) {
@@ -275,10 +320,32 @@ class _Fixture {
   }
 
   Future<void> close() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
     disposeController();
     await store.close();
     await directory.delete(recursive: true);
   }
+}
+
+/// Profile discovery uses actual filesystem I/O. Let that I/O complete before
+/// waiting for the spinner animation; advancing fake frames alone cannot do it.
+Future<void> _settleLocalProfile(WidgetTester tester) async {
+  await tester.runAsync(() async {
+    await tester.pump();
+    await waitForUiCondition(
+      tester,
+      () => find
+          .byType(LinearProgressIndicator, skipOffstage: false)
+          .evaluate()
+          .isEmpty,
+      reason:
+          'Local network inspection and Omada profile loading have finished.',
+    );
+  });
 }
 
 Future<void> _show(WidgetTester tester, Widget page, Size size) async {
@@ -298,7 +365,7 @@ Future<void> _show(WidgetTester tester, Widget page, Size size) async {
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  await _settleLocalProfile(tester);
   expect(tester.takeException(), isNull);
 }
 
@@ -362,18 +429,18 @@ void main() {
         expect(find.text('إدارة الامتحان'), findsOneWidget);
         expect(find.text('التهيئة والبورتال'), findsOneWidget);
         expect(fixture.engine.commands, isEmpty);
-        await tester.tap(find.text('الربط والرصد التلقائي').first);
+        await tester.tap(find.text('تجهيز الحصة وكشف الطلاب').first);
         await tester.pumpAndSettle();
         expect(find.text('إنشاء قاعة مرتبطة'), findsOneWidget);
         await tester.tap(find.text('التهيئة والبورتال'));
-        await tester.pumpAndSettle();
+        await _settleLocalProfile(tester);
         expect(find.text('منفذ كابل الـOmada'), findsOneWidget);
-        expect(find.text('شبكة الهوست الخاصة (اختياري)'), findsOneWidget);
+        expect(find.text('شبكة الهوست الخاصة (اختياري)'), findsNothing);
         fixture.store.signOut();
         await tester.pumpAndSettle();
         expect(
           find.text(
-            'سجّل دخول الموظف لعرض إدارة الامتحان. خدمة الطلاب تستمر في الخلفية.',
+            'سجّل دخول الموظف لفتح الإدارة. خدمة الطلاب تستمر في الخلفية.',
           ),
           findsOneWidget,
         );
@@ -382,6 +449,251 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'native exam navigation keeps the web editor alive and waits for confirmed leave and destination',
+    (tester) async {
+      late _Fixture fixture;
+      await tester.runAsync(() async {
+        fixture = await _Fixture.open();
+      });
+      addTearDown(() => tester.runAsync(fixture.close));
+      await _show(
+        tester,
+        ExamWorkspace(controller: fixture.controller),
+        const Size(1280, 800),
+      );
+      expect(find.byType(MassarWorkspaceNavigation), findsOneWidget);
+      expect(find.byType(SegmentedButton<int>), findsNothing);
+      expect(find.byType(ExamAdminView, skipOffstage: false), findsNothing);
+      expect(fixture.engine.commands, isEmpty);
+      await tester.tap(find.text('إدارة الامتحان'));
+      await tester.pumpAndSettle();
+      final admin = tester.widget<ExamAdminView>(find.byType(ExamAdminView));
+      final adminState = tester.state(find.byType(ExamAdminView));
+      final navigation = admin.navigation!;
+      bool selected(String id) => tester
+          .widget<ListTile>(find.byKey(ValueKey('workspace-navigation-$id')))
+          .selected;
+      expect(selected('web:room'), isTrue);
+      await tester.tap(find.text('مكتبة الامتحانات'));
+      await tester.pumpAndSettle();
+      expect(selected('web:room'), isTrue);
+      expect(selected('web:exams'), isFalse);
+      navigation.accept('exams');
+      await tester.pumpAndSettle();
+      expect(selected('web:exams'), isTrue);
+      final owner = Object();
+      final leave = Completer<bool>();
+      navigation.bindLeaveGuard(owner, () => leave.future);
+      await tester.tap(find.text('التهيئة والبورتال'));
+      await tester.pump();
+      expect(find.byType(ExamNetworkPage), findsNothing);
+      expect(find.byType(ExamAdminView), findsOneWidget);
+      expect(fixture.engine.commands, isEmpty);
+      leave.complete(false);
+      await tester.pumpAndSettle();
+      expect(selected('web:exams'), isTrue);
+      navigation.bindLeaveGuard(owner, () async => true);
+      await tester.tap(find.text('التهيئة والبورتال'));
+      await _settleLocalProfile(tester);
+      expect(find.byType(ExamNetworkPage), findsOneWidget);
+      expect(
+        tester.state(find.byType(ExamAdminView, skipOffstage: false)),
+        same(adminState),
+      );
+      // A hidden editor must never open an invisible leave confirmation.
+      navigation.bindLeaveGuard(owner, () => Completer<bool>().future);
+      await tester.tap(find.text('تحميل درجات الساكند').first);
+      await tester.pumpAndSettle();
+      expect(selected('import'), isTrue);
+      await tester.tap(find.text('مكتبة الامتحانات'));
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(ExamAdminView)), same(adminState));
+      navigation.unbindLeaveGuard(owner);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'return to registration respects the visible editor leave decision',
+    (tester) async {
+      late _Fixture fixture;
+      await tester.runAsync(() async {
+        fixture = await _Fixture.open();
+      });
+      addTearDown(() => tester.runAsync(fixture.close));
+      await _show(
+        tester,
+        Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ExamWorkspace(controller: fixture.controller),
+                ),
+              ),
+              child: const Text('افتح الامتحانات'),
+            ),
+          ),
+        ),
+        const Size(1280, 800),
+      );
+      await tester.tap(find.text('افتح الامتحانات'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('إدارة الامتحان'));
+      await tester.pumpAndSettle();
+      final navigation = tester
+          .widget<ExamAdminView>(find.byType(ExamAdminView))
+          .navigation!;
+      final owner = Object();
+      navigation.bindLeaveGuard(owner, () async => false);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(ExamWorkspace), findsOneWidget);
+      await tester.tap(find.byKey(const Key('exam-return-registration')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExamWorkspace), findsOneWidget);
+      navigation.bindLeaveGuard(owner, () async => true);
+      await tester.tap(find.byKey(const Key('exam-return-registration')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExamWorkspace), findsNothing);
+      expect(find.text('افتح الامتحانات'), findsOneWidget);
+      expect(fixture.store.currentUser, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'fresh secondary opens local exam without host, staff login or hall preparation',
+    (tester) async {
+      late _Fixture fixture;
+      await tester.runAsync(() async {
+        fixture = await _Fixture.open();
+      });
+      addTearDown(() => tester.runAsync(fixture.close));
+      final client = CenterStore.clientWorkspace(
+        directory: '${fixture.directory.path}/local-exam',
+      );
+      final engine = _UIEngine();
+      final controller = ExamRoomController(
+        engine: engine,
+        store: client,
+        clientOnly: true,
+        pollInterval: const Duration(days: 1),
+      );
+      bool controllerDisposed = false;
+      addTearDown(() async {
+        if (!controllerDisposed) controller.dispose();
+        await client.close();
+      });
+      await controller.initialize();
+      expect(controller.canAdmin, isFalse);
+      await _show(
+        tester,
+        AuthScreen(
+          store: client,
+          examWorkspaceAvailable: true,
+          onOpenPreparedExams: () async {
+            final navigator = Navigator.of(
+              tester.element(find.byType(AuthScreen)),
+            );
+            await controller.enterLocalExamMode();
+            await navigator.push<void>(
+              MaterialPageRoute(
+                builder: (_) => ExamWorkspace(controller: controller),
+              ),
+            );
+          },
+        ),
+        const Size(720, 800),
+      );
+      expect(find.byKey(const Key('auth-workspace-choice')), findsNothing);
+      final open = find.byKey(const Key('auth-prepared-exam'));
+      await tester.ensureVisible(open);
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      expect(controller.canAdmin, isTrue);
+      expect(controller.canSync, isFalse);
+      expect(controller.offlinePrepared, isFalse);
+      expect(client.currentUser, isNull);
+      expect(find.text('القاعة والتصحيح'), findsOneWidget);
+      expect(find.text('الشبكة والـOmada'), findsOneWidget);
+      expect(find.text('تجهيز الساكند للقاعة'), findsNothing);
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      expect(find.byKey(const Key('auth-submit')), findsNothing);
+      expect(await controller.openAdmin(), 'http://127.0.0.1:8766/');
+      await _capture(tester, 'secondary-local-exam');
+      await tester.tap(find.text('الشبكة والـOmada'));
+      await _settleLocalProfile(tester);
+      expect(
+        tester.widget<ExamNetworkPage>(find.byType(ExamNetworkPage)).isHost,
+        isFalse,
+      );
+      expect(find.text('تشغيل شبكة الهوست'), findsNothing);
+      expect(
+        await tester.runAsync(
+          () => File(
+            '${fixture.directory.path}/local-exam/center.sqlite',
+          ).exists(),
+        ),
+        isFalse,
+      );
+      expect(engine.contexts, isEmpty);
+      expect(tester.takeException(), isNull);
+      controller.dispose();
+      controllerDisposed = true;
+    },
+  );
+
+  testWidgets(
+    'secondary local exam entry is explicit and does not request employee sign in',
+    (tester) async {
+      late _Fixture fixture;
+      await tester.runAsync(() async {
+        fixture = await _Fixture.open();
+      });
+      addTearDown(() => tester.runAsync(fixture.close));
+      final client = CenterStore.clientWorkspace(
+        directory: '${fixture.directory.path}/explicit-exam',
+      );
+      final controller = ExamRoomController(
+        engine: fixture.engine,
+        store: client,
+        clientOnly: true,
+        pollInterval: const Duration(days: 1),
+      );
+      bool controllerDisposed = false;
+      addTearDown(() async {
+        if (!controllerDisposed) controller.dispose();
+        await client.close();
+      });
+      fixture.engine.running = false;
+      fixture.engine.startDelay = Completer<void>();
+      await _show(
+        tester,
+        ExamWorkspace(controller: controller),
+        const Size(720, 650),
+      );
+      expect(controller.canAdmin, isFalse);
+      expect(find.text('افتح الامتحان على الساكند'), findsOneWidget);
+      expect(find.text('افتح الامتحانات من حساب الموظف'), findsNothing);
+      await tester.tap(find.text('فتح امتحان الساكند'));
+      await tester.pump();
+      expect(find.text('جارٍ فتح الامتحان…'), findsOneWidget);
+      expect(find.text('القاعة والتصحيح'), findsNothing);
+      fixture.engine.startDelay!.complete();
+      await tester.pumpAndSettle();
+      expect(controller.localExamMode, isTrue);
+      expect(controller.canAdmin, isTrue);
+      expect(controller.canSync, isFalse);
+      expect(find.text('القاعة والتصحيح'), findsOneWidget);
+      expect(find.text('تجهيز الساكند للقاعة'), findsNothing);
+      expect(tester.takeException(), isNull);
+      controller.dispose();
+      controllerDisposed = true;
+    },
+  );
 
   for (final width in [720.0, 1280.0]) {
     testWidgets(
@@ -444,10 +756,7 @@ void main() {
         );
         expect(request['roster'], hasLength(5));
         expect(find.text('الامتحان الجديد • تجهيز'), findsOneWidget);
-        expect(
-          find.text('مرتبط • الرصد التلقائي يعمل عند اكتمال التصحيح'),
-          findsOneWidget,
-        );
+        expect(find.text('مرتبط بالحصة وكشف الطلاب'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
@@ -564,6 +873,7 @@ void main() {
             );
           });
           addTearDown(() => tester.runAsync(fixture.close));
+          fixture.engine.running = false;
           final previousHitTestPolicy =
               WidgetController.hitTestWarningShouldBeFatal;
           WidgetController.hitTestWarningShouldBeFatal = true;
@@ -581,7 +891,7 @@ void main() {
               tester.element(finder),
               alignment: 0.5,
             );
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
           }
 
           try {
@@ -598,35 +908,46 @@ void main() {
             expect(fixture.engine.starts, 0);
             expect(
               fixture.engine.commands.map((command) => command['action']),
-              ['status', 'list-adapters', 'hotspot-status'],
+              ['status', 'list-adapters', if (host) 'tethering-status'],
             );
             expect(fixture.store.canManage, isFalse);
             expect(
-              find.text('شبكة الهوست الخاصة (اختياري)'),
+              find.text('تشغيل شبكة الهوست'),
               host ? findsOneWidget : findsNothing,
             );
+            expect(find.text('شبكة الهوست الخاصة (اختياري)'), findsNothing);
             expect(find.text('منفذ كابل الـOmada'), findsOneWidget);
             await tester.tap(
               find.byType(DropdownButtonFormField<String>).first,
             );
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
             expect(find.textContaining('Host Wi-Fi'), findsNothing);
             await tester.tap(find.text('Omada Ethernet • Up').last);
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
+            await reveal(find.text('http://10.77.0.1/'));
             expect(find.text('http://10.77.0.1/'), findsOneWidget);
             await reveal(find.text('تجهيز وصلة الامتحان'));
-            await tester.tap(find.text('تجهيز وصلة الامتحان'));
-            await tester.pumpAndSettle();
-            expect(fixture.engine.starts, 1);
+            if (!host) await tester.tap(find.text('تجهيز وصلة الامتحان'));
+            await _settleLocalProfile(tester);
+            expect(fixture.engine.starts, host ? 0 : 1);
             expect(
               fixture.engine.commands,
-              contains(
-                equals({'action': 'configure', 'adapterId': 'ethernet'}),
-              ),
+              host
+                  ? isNot(
+                      contains(
+                        equals({
+                          'action': 'configure',
+                          'adapterId': 'ethernet',
+                        }),
+                      ),
+                    )
+                  : contains(
+                      equals({'action': 'configure', 'adapterId': 'ethernet'}),
+                    ),
             );
             await reveal(find.text('تطبيق إعداد البورتال'));
             await tester.tap(find.text('تطبيق إعداد البورتال'));
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
             expect(
               fixture.engine.commands,
               contains(
@@ -639,9 +960,9 @@ void main() {
             );
             await reveal(find.text('طريقة البوابة'));
             await tester.tap(find.byKey(const ValueKey('portal-legacy')));
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
             await tester.tap(find.text('HTTPS بشهادة موثوقة').last);
-            await tester.pumpAndSettle();
+            await _settleLocalProfile(tester);
             await reveal(find.text('اختيار المفتاح الخاص'));
             expect(find.text('اسم النطاق الموجود في الشهادة'), findsOneWidget);
             expect(find.text('اختيار الشهادة'), findsOneWidget);
@@ -649,19 +970,6 @@ void main() {
               tester,
               'network-https-${host ? 'host' : 'secondary'}-${width.toInt()}',
             );
-            if (host) {
-              await tester.scrollUntilVisible(
-                find.text('شبكة الهوست الخاصة (اختياري)'),
-                -300,
-                scrollable: find.byType(Scrollable).first,
-              );
-              await reveal(find.text('شبكة الهوست الخاصة (اختياري)'));
-              await tester.tap(find.text('شبكة الهوست الخاصة (اختياري)'));
-              await tester.pumpAndSettle();
-              await reveal(find.text('تشغيل شبكة الهوست'));
-              expect(find.text('شبكة الربط اللاسلكي'), findsOneWidget);
-              expect(find.text('تشغيل شبكة الهوست'), findsOneWidget);
-            }
             expect(tester.takeException(), isNull);
           } finally {
             await tester.pumpWidget(const SizedBox.shrink());

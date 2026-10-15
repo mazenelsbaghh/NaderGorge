@@ -198,6 +198,12 @@ func TestWhatsAppCredentialsStayOutsidePublicResponsesAndBackup(t *testing.T) {
 	if err != nil || (runtime.GOOS != "windows" && file.Mode().Perm() != 0600) {
 		t.Fatal("private configuration permissions", err)
 	}
+	if runtime.GOOS == "windows" {
+		raw, readErr := os.ReadFile(cloud.path)
+		if readErr != nil || strings.Contains(string(raw), "test-token-") {
+			t.Fatal("Windows credentials were not protected", readErr)
+		}
+	}
 	var leaked int
 	if err = cloud.app.db.sql.QueryRow(`SELECT COUNT(*) FROM app_settings WHERE value LIKE '%test-token-%'`).Scan(&leaked); err != nil || leaked != 0 {
 		t.Fatal("token stored in database", err)
@@ -222,7 +228,7 @@ func TestWhatsAppSyncVerifiesAccountAndDocumentTemplatePolicy(t *testing.T) {
 	cases := []struct {
 		name, status, header, text string
 		allowed                    bool
-	}{{"document", "APPROVED", "DOCUMENT", "أهلا {{1}}", true}, {"pending", "PENDING", "DOCUMENT", "أهلا {{1}}", false}, {"image", "APPROVED", "IMAGE", "أهلا {{1}}", false}, {"named", "APPROVED", "DOCUMENT", "أهلا {{name}}", false}, {"gap", "APPROVED", "DOCUMENT", "أهلا {{2}}", false}}
+	}{{"document", "APPROVED", "DOCUMENT", "أهلا {{1}}", true}, {"pending", "PENDING", "DOCUMENT", "أهلا {{1}}", false}, {"image", "APPROVED", "IMAGE", "أهلا {{1}}", false}, {"named", "APPROVED", "DOCUMENT", "أهلا {{name}}", true}, {"gap", "APPROVED", "DOCUMENT", "أهلا {{2}}", false}}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, reason := reportTemplateFields(M{"status": tc.status, "category": "UTILITY", "components": []any{M{"type": "HEADER", "format": tc.header}, M{"type": "BODY", "text": tc.text}}})

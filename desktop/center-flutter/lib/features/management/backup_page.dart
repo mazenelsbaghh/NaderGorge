@@ -303,6 +303,7 @@ class _BackupPageState extends State<BackupPage> {
     'absence_present' => 'تصحيح غياب إلى حضور',
     'payment_method_correct' => 'تصحيح وسيلة الدفع',
     'package_refund' => 'استرداد باقة',
+    'package_online_allocate' => 'تحويل من دفعة الشهر للأونلاين',
     'closing_reopen' => 'إعادة فتح تقفيلة',
     'backup_restore' => 'استعادة نسخة',
     _ => 'عملية مسجلة',

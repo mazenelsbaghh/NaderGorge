@@ -7,6 +7,8 @@ import 'package:massar_center/application/academic_import_command.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/domain/center_exam_integration.dart';
+import 'package:massar_center/domain/center_exam_monitor.dart';
+import 'package:massar_center/domain/standalone_exam_results.dart';
 import 'package:massar_center/lan/center_store_host_bridge.dart';
 import 'package:massar_center/lan/lan_host_process.dart';
 import 'package:massar_center/lan/lan_transport.dart';
@@ -28,6 +30,8 @@ class _Harness {
   late StreamSubscription<HttpRequest> subscription;
   final http = HttpClient();
   bool loseNextCommandReply = false;
+  bool loseNextMonitorReply = false;
+  bool shiftMonitorClock = false;
   bool legacySnapshots = false;
   bool corruptNextCommandDelta = false;
   bool failNextFullState = false;
@@ -163,6 +167,26 @@ class _Harness {
         fullStateArrived = null;
         releaseFullState = null;
       }
+      if (shiftMonitorClock &&
+          request.uri.path == '/api/state' &&
+          response.statusCode == 200) {
+        final snapshot = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+        final timestamps = Map<String, dynamic>.from(
+          snapshot['examMonitorHeartbeats'] as Map,
+        );
+        snapshot['examMonitorHeartbeats'] = timestamps.map(
+          (key, value) => MapEntry(
+            key,
+            DateTime.parse(
+              value as String,
+            ).add(const Duration(days: 3)).toIso8601String(),
+          ),
+        );
+        snapshot['examMonitorObservedAt'] = DateTime.parse(
+          snapshot['examMonitorObservedAt'] as String,
+        ).add(const Duration(days: 3)).toIso8601String();
+        bytes = utf8.encode(jsonEncode(snapshot));
+      }
       if (request.uri.path == '/api/state') {
         lastStateResponse =
             jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
@@ -171,6 +195,11 @@ class _Harness {
         failNextFullState = false;
         request.response.statusCode = 502;
         request.response.write('{"error":"full_state_unavailable"}');
+      } else if (loseNextMonitorReply &&
+          request.uri.path == '/api/exam-monitor') {
+        loseNextMonitorReply = false;
+        request.response.statusCode = 502;
+        request.response.write('{"error":"monitor_reply_lost"}');
       } else if (loseNextCommandReply && isCommand) {
         loseNextCommandReply = false;
         request.response.statusCode = 502;
@@ -312,6 +341,206 @@ void main() {
   });
   tearDown(() async => h.close());
 
+  test(
+    'paired secondary publishes standalone pages without changing host finances and only host can approve',
+    () async {
+      final month = await h.host.saveStudyMonth(
+        StudyMonth(
+          name: 'شهر النتائج المستقلة',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      final session = await h.host.startPreparedLesson(
+        groupId: h.group.id,
+        preparedLessonId: month.lessons.single.id,
+      );
+      final exam = await h.host.saveAcademicActivity(
+        AcademicActivity(
+          name: 'امتحان مختار على الهوست',
+          preparedLessonId: month.lessons.single.id,
+          kind: AcademicActivityKind.exam,
+          maxScore: 10,
+          createdAt: DateTime.now(),
+        ),
+      );
+      await h.host.recordAttendance(
+        EntryRequest(
+          studentId: h.student.id,
+          sessionId: session.id,
+          mode: EntryMode.single,
+        ),
+      );
+      final financial = h.host.payments.map((row) => row.toJson()).toList();
+      final raw = StandaloneExamPage(
+        sourceId: 'offline-secondary',
+        examId: 'room-raw',
+        title: 'امتحان بلا تحضير',
+        roomState: 'closed',
+        maxScore: 10,
+        totalAttempts: 1,
+        exportRevision: '1'.padLeft(64, '0'),
+        attempts: [
+          StandaloneExamAttempt(
+            attemptId: 'attempt-offline',
+            name: h.student.name,
+            code: h.student.code,
+            phone: '',
+            status: 'final',
+            score: 0,
+            maxScore: 10,
+            pending: 0,
+            resultVersion: 1,
+          ),
+        ],
+      );
+      await h.remote.refreshRemote();
+      await h.remote.publishStandaloneExamPage(raw);
+      expect(h.host.standaloneExamRooms.single.deviceId, 'lan:client-one');
+      expect(h.host.academics, isEmpty);
+      expect(h.host.payments.map((row) => row.toJson()).toList(), financial);
+      await h.remote.refreshRemote();
+      expect(
+        () => h.remote.previewStandaloneExamImport(
+          roomId: raw.id,
+          groupId: h.group.id,
+          sessionId: session.id,
+          activityId: exam.id,
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      final plan = h.host.previewStandaloneExamImport(
+        roomId: raw.id,
+        groupId: h.group.id,
+        sessionId: session.id,
+        activityId: exam.id,
+      );
+      expect((await h.host.importStandaloneExamGrades(plan)).recorded, 1);
+      expect(h.host.academics.single.score, 0);
+      await h.remote.publishStandaloneExamPage(raw);
+      expect(h.host.academics.single.score, 0);
+      expect(h.host.payments.map((row) => row.toJson()).toList(), financial);
+      final before = h.host.standaloneExamRooms.single.toJson();
+      await h.rawLogin();
+      await expectLater(
+        h.wire.post(
+          '/api/standalone-exam-results',
+          raw.toJson(),
+          staffSession: 'untrusted-staff-session',
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      expect(h.host.standaloneExamRooms.single.toJson(), before);
+      h.remote.signOut();
+      await expectLater(
+        h.remote.publishStandaloneExamPage(raw),
+        throwsA(isA<CenterException>()),
+      );
+    },
+  );
+
+  test(
+    'live exam entries reach host over authenticated LAN and retry independently of reception',
+    () async {
+      final month = await h.host.saveStudyMonth(
+        StudyMonth(
+          name: 'Live monitor month',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      final session = await h.host.startPreparedLesson(
+        groupId: h.group.id,
+        preparedLessonId: month.lessons.single.id,
+      );
+      final exam = await h.host.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: session.preparedLessonId,
+          name: 'Live named exam',
+          kind: AcademicActivityKind.exam,
+          createdAt: DateTime.now(),
+        ),
+      );
+      await h.remote.refreshRemote();
+      final snapshot = ExamMonitorSnapshot(
+        sourceId: 'secondary-engine',
+        examId: 'room',
+        groupId: h.group.id,
+        sessionId: session.id,
+        activityId: exam.id,
+        version: 1,
+        roomState: 'running',
+        attempts: [
+          ExamMonitorAttempt(
+            attemptId: 'attempt',
+            studentId: h.student.id,
+            status: 'not_submitted',
+          ),
+        ],
+      );
+      await expectLater(
+        h.wire.post('/api/exam-monitor', snapshot.toJson()),
+        throwsA(isA<LanAuthorizationException>()),
+      );
+      h.loseNextMonitorReply = true;
+      await expectLater(
+        h.remote.publishIntegratedExamSnapshot(snapshot),
+        throwsA(isA<LanConnectionException>()),
+      );
+      expect(h.host.integratedExamAttendanceAlerts.single.code, h.student.code);
+      expect(
+        await h.pendingFile.exists(),
+        isFalse,
+        reason: 'monitor failure cannot occupy financial pending command',
+      );
+      final audits = h.host.audit.length;
+      await h.remote.refreshRemote();
+      await h.remote.publishIntegratedExamSnapshot(snapshot);
+      h.shiftMonitorClock = true;
+      await h.remote.refreshRemote();
+      expect(
+        h.host.audit.length,
+        audits,
+        reason: 'lost reply retry is idempotent',
+      );
+      expect(
+        h.remote.integratedExamAttendanceAlerts.single.studentId,
+        h.student.id,
+      );
+      expect(h.remote.integratedExamMonitorStatuses.single.stale, isFalse);
+      expect(
+        h.remote.integratedExamMonitorStatuses.single.lastSeenAt!.isAfter(
+          DateTime.now(),
+        ),
+        isFalse,
+        reason:
+            'host clock skew cannot make the live timestamp lie in the client future',
+      );
+      await expectLater(
+        h.host.publishIntegratedExamSnapshot(snapshot),
+        throwsA(isA<CenterException>()),
+        reason: 'local engine cannot claim secondary source',
+      );
+      await Future.wait([
+        h.remote.publishIntegratedExamSnapshot(snapshot),
+        h.remote.recordAttendance(
+          EntryRequest(
+            studentId: h.student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        ),
+      ]);
+      await h.remote.refreshRemote();
+      expect(h.host.integratedExamAttendanceAlerts, isEmpty);
+      expect(h.remote.integratedExamAttendanceAlerts, isEmpty);
+      expect(h.host.payments, isEmpty);
+      expect(h.host.academics, isEmpty);
+      expect(
+        await File('${h.clientDirectory.path}/center.sqlite').exists(),
+        isFalse,
+      );
+    },
+  );
+
   for (final role in [StaffRole.cashier, StaffRole.assistant]) {
     test(
       '${role.name} exam result from secondary survives lost reply without a local database',
@@ -364,6 +593,28 @@ void main() {
           maxScore: 10,
         );
         final actor = h.remote.currentUser!.id;
+        await h.remote.publishIntegratedExamSnapshot(
+          ExamMonitorSnapshot(
+            sourceId: examResult.sourceId,
+            examId: examResult.examId,
+            groupId: h.group.id,
+            sessionId: session.id,
+            activityId: exam.id,
+            version: 1,
+            roomState: 'closed',
+            attempts: [
+              ExamMonitorAttempt(
+                attemptId: examResult.attemptId,
+                studentId: h.student.id,
+                status: 'final',
+              ),
+            ],
+          ),
+        );
+        await h.host.requestExamResultImport(
+          h.host.integratedExamRooms.single.id,
+        );
+        await h.remote.refreshRemote();
         h.loseNextCommandReply = true;
         await expectLater(
           h.remote.recordIntegratedExamResult(examResult),

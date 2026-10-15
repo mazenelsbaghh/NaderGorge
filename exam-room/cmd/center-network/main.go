@@ -80,7 +80,7 @@ func dispatch(request input) output {
 			response["maintenanceWarning"] = "تعذر إنهاء حجز التهيئة؛ انتظر عشر دقائق قبل فتح قاعة."
 		}
 		return response
-	case "hotspot-status", "hotspot-start", "hotspot-stop":
+	case "hotspot-status", "hotspot-start", "hotspot-stop", "tethering-status", "tethering-start", "tethering-stop":
 		return hotspot(request)
 	default:
 		return output{"ok": false, "message": "أمر الشبكة غير معروف."}

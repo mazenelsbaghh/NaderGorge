@@ -664,6 +664,8 @@ void main() {
           );
           await tester.binding.setSurfaceSize(Size(width, 900));
           await tester.pumpAndSettle();
+          await tester.ensureVisible(find.widgetWithText(ListTile, 'مراجعة'));
+          await tester.pumpAndSettle();
           await tester.tap(find.text('مراجعة'));
           await tester.pumpAndSettle();
           await tester.tap(find.text('مقارنة مبلغ الورق'));
@@ -684,6 +686,10 @@ void main() {
           expect(actionRect.top, greaterThanOrEqualTo(0));
           expect(actionRect.bottom, lessThanOrEqualTo(900));
           await capture(tester, 'payment-review-shell-${width.toInt()}');
+          await tester.ensureVisible(
+            find.widgetWithText(ListTile, 'تقفيلة الحسابات'),
+          );
+          await tester.pumpAndSettle();
           await tester.tap(find.text('تقفيلة الحسابات'));
           await tester.pumpAndSettle();
           await tester.enterText(

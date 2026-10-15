@@ -82,7 +82,10 @@ void main() {
     () => binding.runAsync(() => buildDirectory.delete(recursive: true)),
   );
 
-  Future<void> setUpFixture({bool clientOnly = false}) async {
+  Future<void> setUpFixture({
+    bool clientOnly = false,
+    Future<Map<String, dynamic>> Function(Map<String, dynamic>)? hotspot,
+  }) async {
     directory = await Directory.systemTemp.createTemp('massar-lan-controller-');
     hostStore = await CenterStore.open(directory: '${directory.path}/host');
     localStore = clientOnly
@@ -133,6 +136,7 @@ void main() {
     secondHostStore = null;
     host = LanController(
       localStore: hostStore,
+      homeworkHotspot: hotspot,
       hostProcess: _TestHostProcess(binary),
       searchHosts: () async => [],
     );
@@ -541,6 +545,213 @@ void main() {
   );
 
   testLanWidgets(
+    'homework hotspot is host only and unconfirmed Windows startup cannot produce a ready link',
+    (tester) async {
+      await realAsync(tester, () async {
+        var started = false;
+        await setUpFixture(
+          hotspot: (_) async => {
+            'ok': started,
+            'active': started,
+            'message': 'Windows could not start the hotspot',
+            'ssid': 'Host homework',
+            'addresses': ['192.168.137.1'],
+          },
+        );
+        await startFixture();
+        await expectLater(
+          client.startHomeworkHotspot(),
+          throwsA(isA<CenterException>()),
+        );
+        await expectLater(
+          host.startHomeworkHotspot(),
+          throwsA(isA<CenterException>()),
+        );
+        expect(
+          host.isHomeworkHotspotUrl('https://192.168.137.1:43875/mobile/'),
+          isFalse,
+        );
+        started = true;
+        final status = await host.startHomeworkHotspot();
+        expect(status['ssid'], 'Host homework');
+        expect(
+          host.isHomeworkHotspotUrl(
+            'https://192.168.137.1:43875/mobile/#token',
+          ),
+          isTrue,
+        );
+        expect(
+          host.isHomeworkHotspotUrl('https://10.77.0.1:43875/mobile/'),
+          isFalse,
+        );
+        hostStore.signOut();
+        await expectLater(
+          host.startHomeworkHotspot(),
+          throwsA(isA<CenterException>()),
+        );
+      });
+    },
+  );
+  testLanWidgets(
+    'homework link refreshes a prelogin hotspot and the real TLS gateway persists phone exceptions',
+    (tester) async {
+      await realAsync(tester, () async {
+        final adapters = await NetworkInterface.list(
+          type: InternetAddressType.IPv4,
+        );
+        final addresses = adapters
+            .expand((adapter) => adapter.addresses)
+            .where((address) {
+              final octets = address.rawAddress;
+              return octets[0] == 10 ||
+                  (octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31) ||
+                  (octets[0] == 192 && octets[1] == 168);
+            })
+            .map((address) => address.address)
+            .toList();
+        expect(
+          addresses,
+          isNotEmpty,
+          reason: 'The real gateway test needs a local private adapter.',
+        );
+        var observedAddresses = <String>[];
+        var active = true;
+        var supported = true;
+        await setUpFixture(
+          hotspot: (command) async {
+            expect(command['action'], 'tethering-status');
+            return {
+              'ok': supported,
+              'supported': supported,
+              'active': active,
+              'addresses': observedAddresses,
+            };
+          },
+        );
+        await startFixture();
+        final group = hostStore.groups.single;
+        final month = await hostStore.saveStudyMonth(
+          StudyMonth(
+            name: 'شهر الواجب',
+            lessons: [const PreparedLesson(number: 1)],
+          ),
+        );
+        final session = await hostStore.startPreparedLesson(
+          groupId: group.id,
+          preparedLessonId: month.lessons.single.id,
+        );
+        final homework = await hostStore.saveAcademicActivity(
+          AcademicActivity(
+            preparedLessonId: month.lessons.single.id,
+            kind: AcademicActivityKind.homework,
+            name: 'واجب الموبايل',
+            createdAt: DateTime.now(),
+          ),
+        );
+        final student = hostStore.students.single;
+        await hostStore.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: session.id,
+            mode: EntryMode.single,
+          ),
+        );
+        await expectLater(
+          host.openMobileHomework(session.id, homework.id),
+          throwsA(isA<CenterException>()),
+        );
+        expect(hostStore.academics, isEmpty);
+        // The phone joins after prelogin setup; its adapter appears only now.
+        observedAddresses = [addresses.last];
+        final urls = await host.openMobileHomework(session.id, homework.id);
+        final selected = host.preferredMobileHomeworkUrl([
+          'https://10.77.0.2:43875/mobile/',
+          ...urls,
+        ])!;
+        expect(Uri.parse(selected).host, addresses.last);
+        expect(host.isHomeworkHotspotUrl(selected), isTrue);
+        expect(
+          host.mobileHomeworkNetwork(selected),
+          contains('هوتسبوت الهوست'),
+        );
+        final authority =
+            jsonDecode(
+                  await File(
+                    '${File(hostStore.databasePath).parent.path}/mobile-authority.json',
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final trust = SecurityContext(withTrustedRoots: false)
+          ..setTrustedCertificatesBytes(
+            utf8.encode(authority['certificate'] as String),
+          );
+        final phone = HttpClient(context: trust);
+        final link = Uri.parse(selected);
+        Future<(int, Map<String, dynamic>)> phoneRequest(
+          String path, {
+          Map<String, dynamic>? body,
+        }) async {
+          final request = await phone.openUrl(
+            body == null ? 'GET' : 'POST',
+            link.resolve(path),
+          );
+          request.headers.set('X-Massar-Mobile-Token', link.fragment);
+          if (body != null) {
+            request.headers.contentType = ContentType.json;
+            request.write(jsonEncode(body));
+          }
+          final response = await request.close();
+          return (
+            response.statusCode,
+            jsonDecode(await utf8.decoder.bind(response).join())
+                as Map<String, dynamic>,
+          );
+        }
+
+        try {
+          expect((await phoneRequest('context')).$1, 200);
+          final preview = await phoneRequest(
+            'lookup',
+            body: {'code': student.code},
+          );
+          expect(preview.$1, 200);
+          expect(preview.$2['present'], isTrue);
+          expect(
+            (await phoneRequest(
+              'confirm',
+              body: {
+                'studentId': student.id,
+                'requestId': '00000000-0000-4000-8000-000000000123',
+              },
+            )).$1,
+            200,
+          );
+          expect(hostStore.academics.single.homework, HomeworkStatus.missing);
+          final saved = hostStore.academics.single.toJson();
+          for (final unavailable in ['unsupported', 'inactive', 'no address']) {
+            supported = unavailable != 'unsupported';
+            active = unavailable != 'inactive';
+            observedAddresses = unavailable == 'no address'
+                ? []
+                : [addresses.last];
+            await expectLater(
+              host.openMobileHomework(session.id, homework.id),
+              throwsA(isA<CenterException>()),
+            );
+            expect(host.isHomeworkHotspotUrl(selected), isFalse);
+            expect(hostStore.academics.single.toJson(), saved);
+            expect((await phoneRequest('context')).$1, 200);
+          }
+          hostStore.signOut();
+          expect((await phoneRequest('context')).$1, 400);
+        } finally {
+          phone.close(force: true);
+        }
+      });
+    },
+  );
+
+  testLanWidgets(
     'address recovery pins the saved identity and revoked devices cannot read host data',
     (tester) async {
       await realAsync(tester, () async {
@@ -580,8 +791,15 @@ void main() {
         );
         await host.revokeDevice(client.configuration!.deviceId);
         expect(host.pairedDevices.single['revoked'], isTrue);
+        // A poll may have read the snapshot before revocation. Drain it before
+        // asserting that a new request cannot access the revoked device.
+        try {
+          await client.activeStore.refreshRemote();
+        } on CenterException {
+          // Revocation already reached this request.
+        }
         await expectLater(
-          client.activeStore.refreshRemote(),
+          client.activeStore.signIn('host-owner', 'host-password-123'),
           throwsA(isA<CenterException>()),
         );
         expect(localStore.students.single.code, 'LOCAL');

@@ -136,6 +136,52 @@ void main() {
   );
 
   test(
+    'one named exam retains paper and electronic maxima in the same atomic import',
+    () async {
+      exam = await store.saveAcademicActivity(
+        exam.copyWith(allowedMaxScores: [10, 12]),
+      );
+      await store.importAcademicGrades(
+        command([
+          row(0, score: 9),
+          AcademicImportRow(
+            studentId: students[1].id,
+            score: 11.5,
+            maxScore: 12,
+            expected: null,
+          ),
+        ]),
+      );
+      expect(
+        store.academics.map((row) => (row.score, row.maxScore)),
+        containsAll([(9, 10), (11.5, 12)]),
+      );
+      expect(store.payments, isEmpty);
+      await reopen();
+      final restored = store.academicActivities.single;
+      expect(restored.allowedMaxScores, [10, 12]);
+      expect(
+        store.academics
+            .firstWhere((row) => row.studentId == students[1].id)
+            .maxScore,
+        12,
+      );
+      final before = await durablePayload();
+      await expectLater(
+        store.saveAcademicActivity(restored.copyWith(allowedMaxScores: [10])),
+        throwsA(isA<CenterException>()),
+      );
+      expect(await durablePayload(), before);
+      expect(
+        AcademicActivity.fromJson(
+          {...restored.toJson()}..remove('allowedMaxScores'),
+        ).allowedMaxScores,
+        [10],
+      );
+    },
+  );
+
+  test(
     'Cairo batch commits once, preserves notes and fractional grades, and creates no money',
     () async {
       await store.saveAcademic(grade(notes: 'Existing reviewed note'));

@@ -14,8 +14,9 @@ import 'management_widgets.dart';
 import '../../shared/performance_trace.dart';
 
 class ReportsPage extends StatefulWidget {
-  const ReportsPage({super.key, required this.store});
+  const ReportsPage({super.key, required this.store, this.onWhatsApp});
   final CenterStore store;
+  final Future<void> Function(CenterReportData report)? onWhatsApp;
 
   @override
   State<ReportsPage> createState() => _ReportsPageState();
@@ -1005,6 +1006,42 @@ class _ReportsPageState extends State<ReportsPage> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const SizedBox(height: 16),
+      if (widget.onWhatsApp != null && report.whatsAppRecords.isNotEmpty)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: OutlinedButton.icon(
+            key: const Key('report-whatsapp'),
+            onPressed: _busy
+                ? null
+                : () async {
+                    setState(() => _busy = true);
+                    try {
+                      await widget.onWhatsApp!(report);
+                    } catch (error, stack) {
+                      reportProblem(
+                        error,
+                        stack,
+                        operation: 'reports.whatsapp',
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              error is CenterException
+                                  ? error.message
+                                  : 'تعذر فتح إرسال واتساب. راجع سجل المشاكل.',
+                            ),
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => _busy = false);
+                    }
+                  },
+            icon: const Icon(Icons.message_outlined),
+            label: const Text('إرسال واتساب للنتائج المعروضة'),
+          ),
+        ),
       Text(report.title, style: Theme.of(context).textTheme.titleLarge),
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),

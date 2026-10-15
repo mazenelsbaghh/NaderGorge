@@ -385,7 +385,7 @@ async function joinRoom(identity, button) {
 function renderJoin(lounge = null) {
   if (joining) return;
   const rooms = lounge ? lounge.rooms || (lounge.exam ? [lounge.exam] : []) : [];
-  const key = JSON.stringify(lounge ? [rooms,lounge.centerIntegrated] : null);
+  const key = JSON.stringify(lounge ? [rooms,lounge.centerIntegrated,lounge.centerEntryMode] : null);
   if (renderedState === 'join' && lastLounge === key) return;
   const firstRender = renderedState !== 'join';
   if (!$('#join-form')) main.innerHTML = joinMarkup;
@@ -407,7 +407,16 @@ function renderJoin(lounge = null) {
   notice.hidden = canJoin && !lateBlocked;
   notice.textContent = lateBlocked ? 'الدخول للطلاب الجدد مقفول. لو المشرف استعاد دخولك، استخدم نفس الكود والرقم.' : 'المدرس لم يفتح القاعة بعد. الصفحة تتحدث تلقائيًا.';
   if (firstRender) renderDraftDownloads();
-  if (lounge?.centerIntegrated) { renderCenterEntry(canJoin); return; }
+  if (lounge?.centerIntegrated && lounge.centerEntryMode !== 'details') { renderCenterEntry(canJoin); return; }
+  const entryForm = $('#join-form');
+  entryForm.oninput=null;entryForm.onchange=null;
+  const oldConfirmation=$('#center-identity');if(oldConfirmation)oldConfirmation.hidden=true;
+  const entryPhone=$('[name=phone]',entryForm);
+  entryPhone.minLength=11;entryPhone.maxLength=11;entryPhone.pattern='[0-9٠-٩۰-۹]{11}';
+  for (const fieldName of ['name','phone','code']) {
+    const field = $('[name='+fieldName+']',entryForm);
+    field.required=true;field.disabled=false;field.parentElement.hidden=false;
+  }
   shortcut.render($('#join-form [name=name]').parentElement);
   $('#join-form button[type=submit]').disabled = !canJoin;
   $('#join-form').onsubmit = async event => {

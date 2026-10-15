@@ -6,7 +6,8 @@ $BackupPath = Join-Path $Root 'adapter-backup.json'
 $TaskName = 'MassarExamDirectNetwork'
 $FirewallGroup = 'Massar Exam Direct Network'
 $SetupLock=Join-Path $Root 'setup.lock'
-$LockOwned=$false
+# The stdin loader invokes a child scriptblock; match the scope used by Take-SetupLock.
+$script:LockOwned=$false
 $RollbackConfirmed=$false
 
 function Reply($Content) {
@@ -226,4 +227,4 @@ try {
 }
 catch { Reply @{ ok=$false; ready=$false; message=$_.Exception.Message } }
 
-finally { if ($LockOwned -and $RollbackConfirmed) { Remove-Item -LiteralPath $SetupLock -Force -ErrorAction Stop } }
+finally { if ($script:LockOwned -and $RollbackConfirmed) { Remove-Item -LiteralPath $SetupLock -Force -ErrorAction Stop } }

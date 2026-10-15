@@ -7,6 +7,8 @@ const _removableStateFields = {
   'studyMonths',
   'centerFees',
   'debtSettlements',
+  'examMonitors',
+  'standaloneExamRooms',
 };
 
 extension CenterStatePublicPatch on CenterState {

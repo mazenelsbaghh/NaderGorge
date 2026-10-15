@@ -59,9 +59,11 @@ jobs:
           }
           $env:MASSAR_PRIVATE_ASSET_ZIP = $Zip
           @'
-          import os, pathlib, zipfile
+          import os, pathlib, sys, zipfile
+          sys.path.insert(0, str(pathlib.Path("desktop/center-flutter/scripts").resolve()))
+          from windows_package_assets import PRIVATE_INSTALLER_ASSETS
           root = pathlib.Path('desktop/center-flutter/assets')
-          expected = {'admin_account.json', 'installation_seed.json', 'data_repair_20261002.json', 'data_repair_20261004.json', 'academic_import_20261004.json', 'cairo_academic_import_20261004.json', 'cairo_codes_20261004.json', 'gec_codes_20261004.json', 'gec_duplicate_codes_20261004.json', 'attendance_payment_repair_20261011.json', 'gec_month1_repair_20261013.json', 'gec_first_secondary_attendance_repair_20261013.json'}
+          expected = PRIVATE_INSTALLER_ASSETS
           with zipfile.ZipFile(os.environ['MASSAR_PRIVATE_ASSET_ZIP']) as archive:
               names = archive.namelist()
               if len(names) != len(expected) or set(names) != expected or archive.testzip() is not None:

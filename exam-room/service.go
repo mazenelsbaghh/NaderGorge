@@ -69,7 +69,11 @@ func (d *DB) changeStateForCenter(eid, action string, integrated bool) (M, error
 		}
 		switch action {
 		case "publish", "start":
-			if integrated {
+			standalone, standaloneErr := isStandaloneCenterRoom(q, eid)
+			if standaloneErr != nil {
+				return standaloneErr
+			}
+			if integrated && !standalone {
 				binding, err := readCenterBinding(q, eid)
 				if errors.Is(err, sql.ErrNoRows) {
 					return fail("اربط القاعة بامتحان وكشف السنتر قبل فتحها للطلاب", 409)
@@ -277,6 +281,14 @@ func (d *DB) session(tok string) (M, error) {
 	return out, e
 }
 func (d *DB) join(p M, current string) (M, string, error) {
+	return d.joinWithCenterIdentity(p, current, lookupCenterStudent)
+}
+
+func (d *DB) joinManual(p M, current string) (M, string, error) {
+	return d.joinWithCenterIdentity(p, current, lookupCenterStudentByCode)
+}
+
+func (d *DB) joinWithCenterIdentity(p M, current string, lookup func(Q, string, M) (centerStudent, error)) (M, string, error) {
 	var code, name, phone, centerStudentID string
 	var out M
 	newToken := ""
@@ -306,7 +318,7 @@ func (d *DB) join(p M, current string) (M, string, error) {
 		}
 
 		if _, bindingError := readCenterBinding(q, eid); bindingError == nil {
-			official, lookupError := lookupCenterStudent(q, eid, p)
+			official, lookupError := lookup(q, eid, p)
 			if lookupError != nil {
 				return lookupError
 			}

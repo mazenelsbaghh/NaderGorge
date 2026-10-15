@@ -1,4 +1,6 @@
 import '../domain/models.dart';
+import '../domain/center_exam_monitor.dart';
+import '../domain/standalone_exam_results.dart';
 import 'copy_on_write_list.dart';
 
 part 'center_state_patch.dart';
@@ -16,6 +18,8 @@ const centerStateImmutableRecordSections = {
   'debtSettlements',
   'academics',
   'academicActivities',
+  'examMonitors',
+  'standaloneExamRooms',
   'audit',
   'staff',
   'reviews',
@@ -53,6 +57,8 @@ class CenterState {
   List<PaymentRecord> payments = [];
   List<CenterFeeRecord> centerFees = [];
   List<DebtSettlement> debtSettlements = [];
+  List<ExamMonitorRecord> examMonitors = [];
+  List<StandaloneExamRoom> standaloneExamRooms = [];
   List<AcademicRecord> academics = [];
   List<AcademicActivity> academicActivities = [];
   List<AuditRecord> audit = [];
@@ -75,7 +81,26 @@ class CenterState {
     StateRecordEncoder encodeRecords, {
     bool includeEmptyFields = false,
   }) => {
-    'schemaVersion': paymentChecks.any((check) => check.amount != null)
+    'schemaVersion':
+        corrections.any(
+          (record) =>
+              record.onlineAmount != null ||
+              record.action == CorrectionAction.packageOnlineAllocation,
+        )
+        ? 16
+        : academicActivities.any(
+            (activity) =>
+                activity.allowedMaxScores.length != 1 ||
+                activity.allowedMaxScores.single != activity.maxScore,
+          )
+        ? 15
+        : standaloneExamRooms.isNotEmpty
+        ? 14
+        : examMonitors.any((record) => record.importRequestId != null)
+        ? 13
+        : examMonitors.isNotEmpty
+        ? 12
+        : paymentChecks.any((check) => check.amount != null)
         ? 11
         : studyMonths.isNotEmpty ||
               sessions.any((e) => e.preparedLessonId != null) ||
@@ -139,6 +164,18 @@ class CenterState {
         debtSettlements,
         (e) => e.toJson(),
       ),
+    if (includeEmptyFields || examMonitors.isNotEmpty)
+      'examMonitors': encodeRecords(
+        'examMonitors',
+        examMonitors,
+        (e) => e.toJson(),
+      ),
+    if (includeEmptyFields || standaloneExamRooms.isNotEmpty)
+      'standaloneExamRooms': encodeRecords(
+        'standaloneExamRooms',
+        standaloneExamRooms,
+        (row) => row.toJson(),
+      ),
     'academics': encodeRecords('academics', academics, (e) => e.toJson()),
     'academicActivities': encodeRecords(
       'academicActivities',
@@ -185,7 +222,12 @@ class CenterState {
         json['schemaVersion'] != 8 &&
         json['schemaVersion'] != 9 &&
         json['schemaVersion'] != 10 &&
-        json['schemaVersion'] != 11) {
+        json['schemaVersion'] != 11 &&
+        json['schemaVersion'] != 12 &&
+        json['schemaVersion'] != 13 &&
+        json['schemaVersion'] != 14 &&
+        json['schemaVersion'] != 15 &&
+        json['schemaVersion'] != 16) {
       throw const CenterException(
         'إصدار ملف البيانات غير مدعوم. لم تتغير بياناتك.',
       );
@@ -212,6 +254,11 @@ class CenterState {
       null => false,
       _ => throw const FormatException('Invalid state section'),
     };
+    if ((json['schemaVersion'] as int) < 14 && hasRows('standaloneExamRooms')) {
+      throw const CenterException(
+        'إصدار الملف لا يحفظ نتائج الامتحانات المستقلة.',
+      );
+    }
     if (json['schemaVersion'] == 1 &&
         [
           'reviews',
@@ -235,6 +282,21 @@ class CenterState {
           .toList();
     }
 
+    final corrections =
+        json['schemaVersion'] == 1 || json['corrections'] == null
+        ? <CorrectionRecord>[]
+        : rows('corrections', CorrectionRecord.fromJson);
+    if ((json['schemaVersion'] as int) < 16 &&
+        corrections.any(
+          (record) =>
+              record.onlineAmount != null ||
+              record.action == CorrectionAction.packageOnlineAllocation,
+        )) {
+      throw const CenterException(
+        'توزيع دفعة الأونلاين يحتاج إصدار البيانات الأحدث.',
+      );
+    }
+
     return CenterState()
       ..installationSeedId = json['installationSeedId'] as String?
       ..appliedDataRepairs = appliedDataRepairs
@@ -255,6 +317,12 @@ class CenterState {
       ..debtSettlements = json['debtSettlements'] == null
           ? []
           : rows('debtSettlements', DebtSettlement.fromJson)
+      ..examMonitors = json['examMonitors'] == null
+          ? []
+          : rows('examMonitors', ExamMonitorRecord.fromJson)
+      ..standaloneExamRooms = json['standaloneExamRooms'] == null
+          ? []
+          : rows('standaloneExamRooms', StandaloneExamRoom.fromJson)
       ..academics = rows('academics', AcademicRecord.fromJson)
       ..academicActivities = json['academicActivities'] == null
           ? []
@@ -271,9 +339,7 @@ class CenterState {
           json['schemaVersion'] == 1 || json['paymentChecks'] == null
           ? []
           : rows('paymentChecks', PaymentCheck.fromJson)
-      ..corrections = json['schemaVersion'] == 1 || json['corrections'] == null
-          ? []
-          : rows('corrections', CorrectionRecord.fromJson)
+      ..corrections = corrections
       ..refunds = json['schemaVersion'] == 1 || json['refunds'] == null
           ? []
           : rows('refunds', RefundRecord.fromJson)
@@ -317,6 +383,8 @@ class CenterState {
     ..payments = forkRows(payments)
     ..centerFees = forkRows(centerFees)
     ..debtSettlements = forkRows(debtSettlements)
+    ..examMonitors = forkRows(examMonitors)
+    ..standaloneExamRooms = forkRows(standaloneExamRooms)
     ..academics = forkRows(academics)
     ..academicActivities = forkRows(academicActivities)
     ..audit = forkRows(audit)

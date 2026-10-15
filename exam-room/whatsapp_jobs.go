@@ -45,7 +45,7 @@ func (c *whatsappCloud) enqueueReports(ctx context.Context, body M) (M, error) {
 		if !ok {
 			return nil, fail("قائمة التقارير غير صالحة", 400)
 		}
-		report, err := c.prepare(M{"attemptId": item["attemptId"], "templateId": body["templateId"], "mappings": body["mappings"]})
+		report, err := c.prepare(M{"attemptId": item["attemptId"], "templateId": body["templateId"], "bindingSchema": body["bindingSchema"], "mappings": body["mappings"], "centerBatchId": body["centerBatchId"], "recipientKind": body["recipientKind"]})
 		if err != nil {
 			return nil, err
 		}
@@ -174,10 +174,11 @@ func (c *whatsappCloud) jobStopped(id string) bool {
 }
 
 type reportOutcome struct {
-	item      any
-	record    M
-	retryable bool
-	err       error
+	item       any
+	record     M
+	retryable  bool
+	retryAfter time.Duration
+	err        error
 }
 
 func (c *whatsappCloud) sendJobBatch(body M, items []any) <-chan reportOutcome {
@@ -187,11 +188,12 @@ func (c *whatsappCloud) sendJobBatch(body M, items []any) <-chan reportOutcome {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
 			defer cancel()
-			reply, err := c.sendReport(ctx, M{"attemptId": item["attemptId"], "fingerprint": item["fingerprint"], "templateId": body["templateId"], "mappings": body["mappings"], "retry": true})
+			reply, err := c.sendReport(ctx, M{"attemptId": item["attemptId"], "fingerprint": item["fingerprint"], "templateId": body["templateId"], "bindingSchema": body["bindingSchema"], "mappings": body["mappings"], "retry": true, "centerBatchId": body["centerBatchId"], "recipientKind": body["recipientKind"]})
 			outcome := reportOutcome{item: item, err: err, retryable: retryableWhatsAppError(err)}
 			if reply != nil {
 				outcome.record, _ = reply["record"].(M)
 				outcome.retryable = reply["retryable"] == true
+				outcome.retryAfter = time.Duration(intv(reply["retryAfterSeconds"])) * time.Second
 			}
 			outcomes <- outcome
 		}()
@@ -199,8 +201,9 @@ func (c *whatsappCloud) sendJobBatch(body M, items []any) <-chan reportOutcome {
 	return outcomes
 }
 
-func (c *whatsappCloud) waitJobGap(id string) bool {
-	until := time.Now().Add(c.batchGap)
+func (c *whatsappCloud) waitJobGap(id string) bool { return c.waitJobDelay(id, c.batchGap) }
+func (c *whatsappCloud) waitJobDelay(id string, delay time.Duration) bool {
+	until := time.Now().Add(delay)
 	for time.Now().Before(until) {
 		if c.jobStopped(id) {
 			return false
@@ -215,6 +218,7 @@ func (c *whatsappCloud) runReportJob(id string, body M) {
 	state, message := "completed", ""
 	for offset := 0; offset < len(items); offset += 5 {
 		pending := items[offset:min(offset+5, len(items))]
+		retries := 0
 		for len(pending) > 0 {
 			if c.jobStopped(id) {
 				state = "stopped"
@@ -222,9 +226,11 @@ func (c *whatsappCloud) runReportJob(id string, body M) {
 			}
 			outcomes := c.sendJobBatch(body, pending)
 			retry := []any{}
+			retryDelay := min(60*time.Second, c.batchGap*time.Duration(1<<min(retries, 8)))
 			for range pending {
 				outcome := <-outcomes
-				if outcome.retryable {
+				if outcome.retryable && retries < 6 {
+					retryDelay = max(retryDelay, outcome.retryAfter)
 					retry = append(retry, outcome.item)
 					continue
 				}
@@ -256,7 +262,8 @@ func (c *whatsappCloud) runReportJob(id string, body M) {
 					message = "تقدم الإرسال لم يُحفظ"
 					break
 				}
-				if !c.waitJobGap(id) {
+				retries++
+				if !c.waitJobDelay(id, retryDelay) {
 					state = "stopped"
 					break
 				}

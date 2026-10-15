@@ -18,6 +18,8 @@ import '../domain/models.dart';
 import '../domain/discount_calculation.dart';
 import '../domain/student_lookup.dart';
 import '../domain/center_exam_integration.dart';
+import '../domain/center_exam_monitor.dart';
+import '../domain/standalone_exam_results.dart';
 import 'session_finance.dart';
 import 'historical_academic_import.dart';
 import 'academic_import_command.dart';
@@ -42,6 +44,9 @@ part 'center_store_center_fees.dart';
 part 'center_store_study_months.dart';
 part 'center_store_academic_import.dart';
 part 'center_store_exam_integration.dart';
+part 'center_store_exam_monitor.dart';
+part 'center_store_exam_import.dart';
+part 'center_store_standalone_exams.dart';
 
 class _EntryReversalOptions {
   const _EntryReversalOptions({
@@ -73,6 +78,7 @@ class CenterStore extends ChangeNotifier {
   final Database? _database;
   final String databasePath;
   CenterState _state;
+  final Map<String, DateTime> _examMonitorHeartbeats = {};
   CenterState? _lanVersionState;
   String? _lanStateVersion;
   final _stateEncoder = CenterStateEncoder();
@@ -2774,20 +2780,31 @@ class CenterStore extends ChangeNotifier {
         final maxScore = activity.kind == AcademicActivityKind.exam
             ? activity.maxScore
             : 10;
+        final allowedMaxScores = activity.kind == AcademicActivityKind.exam
+            ? activity.allowedMaxScores
+            : const [10];
         if (!activity.maxScoreKnown) {
           throw const CenterException('حدد الدرجة النهائية للامتحان قبل حفظه.');
         }
-        if (maxScore <= 0) {
+        if (maxScore <= 0 ||
+            allowedMaxScores.isEmpty ||
+            allowedMaxScores.length > 20 ||
+            allowedMaxScores.toSet().length != allowedMaxScores.length ||
+            !allowedMaxScores.contains(maxScore) ||
+            allowedMaxScores.any((score) => score <= 0 || score > 1000000)) {
           throw const CenterException(
             'الدرجة النهائية للامتحان يجب أن تكون أكبر من صفر.',
           );
         }
         if (old != null &&
             old.maxScoreKnown &&
-            old.maxScore != maxScore &&
-            _state.academics.any((e) => e.activityId == old.id)) {
+            _state.academics.any(
+              (record) =>
+                  record.activityId == old.id &&
+                  !allowedMaxScores.contains(record.maxScore),
+            )) {
           throw const CenterException(
-            'لا يمكن تغيير الدرجة النهائية بعد تسجيل نتائج للامتحان.',
+            'لا يمكن حذف نهاية سبق استخدامها في نتائج الامتحان.',
           );
         }
         if (_state.academicActivities.any(
@@ -2802,10 +2819,24 @@ class CenterStore extends ChangeNotifier {
             'يوجد نشاط من نفس النوع بهذا الاسم في الحصة؛ اختر اسمًا آخر.',
           );
         }
+        if (allowedMaxScores.length > 1 &&
+            !_state.academicActivities.any(
+              (row) => row.allowedMaxScores.length > 1,
+            )) {
+          await _writeBackup(
+            p.join(
+              p.dirname(databasePath),
+              'backups',
+              'before-exam-maxima-v15-${CenterStore._uuid.v4()}.json',
+            ),
+            _state.copyForBackup(),
+          );
+        }
         saved = activity.copyWith(
           id: old?.id ?? _uuid.v4(),
           name: name,
           maxScore: maxScore,
+          allowedMaxScores: allowedMaxScores,
           maxScoreKnown: true,
           createdAt: old?.createdAt ?? activity.createdAt,
         );
@@ -2910,6 +2941,48 @@ class CenterStore extends ChangeNotifier {
   Future<void> importAcademicGrades(AcademicImportCommand command) =>
       _importAcademicGrades(command);
 
+  String get academicCatalogHostId {
+    _require(canAssess);
+    return crypto.sha256.convert(utf8.encode(_state.staff.first.id)).toString();
+  }
+
+  List<StandaloneExamRoom> get standaloneExamRooms =>
+      canAssess ? List.unmodifiable(_state.standaloneExamRooms) : const [];
+
+  Future<void> publishStandaloneExamPage(StandaloneExamPage page) =>
+      _publishStandaloneExamPage(page, 'local');
+
+  StandaloneExamImportPlan previewStandaloneExamImport({
+    required String roomId,
+    required String groupId,
+    required String sessionId,
+    required String activityId,
+  }) => _previewStandaloneImport(roomId, groupId, sessionId, activityId);
+
+  Future<StandaloneExamImportResult> importStandaloneExamGrades(
+    StandaloneExamImportPlan plan,
+  ) => _importStandaloneExamGrades(plan);
+
+  Future<void> publishIntegratedExamSnapshot(ExamMonitorSnapshot snapshot) =>
+      _publishExamMonitor(snapshot, 'local');
+
+  List<IntegratedExamAttendanceAlert> get integratedExamAttendanceAlerts =>
+      _examAttendanceAlerts();
+  List<IntegratedExamMonitorStatus> get integratedExamMonitorStatuses =>
+      _examMonitorStatuses();
+
+  List<ExamMonitorRecord> get integratedExamRooms =>
+      canAssess ? List.unmodifiable(_state.examMonitors) : const [];
+
+  Future<void> requestExamResultImport(String roomId) =>
+      _requestExamResultImport(roomId);
+
+  Future<void> completeExamResultImport({
+    required String roomId,
+    required String requestId,
+    required Map<String, String> problems,
+  }) => _completeExamResultImport(roomId, requestId, problems);
+
   Future<IntegratedExamReceipt> recordIntegratedExamResult(
     IntegratedExamResult result,
   ) => _recordIntegratedExamResult(result);
@@ -2984,7 +3057,7 @@ class CenterStore extends ChangeNotifier {
             'هذا النشاط امتحان؛ لا تسجل فيه حالة واجب.',
           );
         }
-        if (record.maxScore != activity.maxScore) {
+        if (!activity.acceptsMaxScore(record.maxScore)) {
           throw const CenterException(
             'الدرجة النهائية لا تطابق إعداد الامتحان.',
           );
@@ -3013,7 +3086,7 @@ class CenterStore extends ChangeNotifier {
       activityId: record.activityId,
       homework: record.homework,
       score: record.score,
-      maxScore: activity?.maxScore ?? record.maxScore,
+      maxScore: record.maxScore,
       maxScoreKnown: true,
       examAbsent: record.examAbsent,
       notes: record.notes,
@@ -3087,6 +3160,7 @@ class CenterStore extends ChangeNotifier {
     String reason,
     String method,
   ) {
+    _requireNoOnlineAllocation(payment.id);
     if (method.trim().isEmpty) {
       throw const CenterException('حدد وسيلة رد المبلغ فعليًا.');
     }
@@ -3370,6 +3444,81 @@ class CenterStore extends ChangeNotifier {
       ),
     );
   }, auditDescription: _correctionAudit);
+
+  int onlineAllocatedAmount(String paymentId) => _state.corrections
+      .where(
+        (record) =>
+            record.action == CorrectionAction.packageOnlineAllocation &&
+            record.paymentId == paymentId,
+      )
+      .fold<int>(0, (total, record) => total + record.onlineAmount!);
+
+  int centerAllocatedAmount(String paymentId) =>
+      paymentCollectedFor(paymentId) - onlineAllocatedAmount(paymentId);
+
+  void _requireNoOnlineAllocation(String paymentId) {
+    if (onlineAllocatedAmount(paymentId) > 0) {
+      throw const CenterException(
+        'جزء من دفعة الشهر محوّل للأونلاين؛ لا يمكن إلغاء الدفعة أو ردها كاملة.',
+      );
+    }
+  }
+
+  Future<void> allocatePackageToOnline({
+    required String paymentId,
+    required int amount,
+    required int expectedOnlineAmount,
+    required String reason,
+  }) => _change(
+    'package_online_allocate',
+    'تحويل من دفعة الشهر للأونلاين',
+    () async {
+      _correctionReason(reason);
+      final payment = _activePayment(paymentId);
+      _find(
+        _activePackages,
+        (package) =>
+            package.id == payment.packageId && package.paymentId == payment.id,
+        'اختر دفعة شهر سارية للتحويل للأونلاين.',
+      );
+      final allocated = onlineAllocatedAmount(paymentId);
+      if (allocated != expectedOnlineAmount) {
+        throw const CenterException(
+          'تغيّر توزيع هذه الدفعة؛ راجع المبالغ قبل التأكيد.',
+        );
+      }
+      if (paymentDebtFor(paymentId) != 0 || payment.netAmount <= 0) {
+        throw const CenterException(
+          'التحويل للأونلاين متاح لدفعة شهر مسددة بالكامل فقط.',
+        );
+      }
+      if (amount <= 0 || amount > paymentCollectedFor(paymentId) - allocated) {
+        throw const CenterException(
+          'اكتب مبلغ تحويل أكبر من صفر ولا يتجاوز المتبقي للسنتر.',
+        );
+      }
+      // A classification of the original receipt can follow a saved cash closing.
+      // Attendance, purchased sessions and actual collection remain unchanged.
+      _state.corrections.add(
+        CorrectionRecord(
+          id: _uuid.v4(),
+          action: CorrectionAction.packageOnlineAllocation,
+          studentId: payment.studentId,
+          sessionId: payment.sessionId,
+          paymentId: payment.id,
+          packageId: payment.packageId,
+          onlineAmount: amount,
+          reason: reason.trim(),
+          staffId: currentUser!.id,
+          createdAt: DateTime.now(),
+        ),
+      );
+    },
+    auditDescription: () {
+      final record = _state.corrections.last;
+      return 'كود ${_student(record.studentId!).code} — محصل ${_auditAmount(paymentCollectedFor(paymentId))} — سنتر ${_auditAmount(centerAllocatedAmount(paymentId))} — أونلاين ${_auditAmount(onlineAllocatedAmount(paymentId))} — السبب ${record.reason} — سجل ${record.id}';
+    },
+  );
   Future<void> refundPackage({
     required String packageId,
     required String reason,
@@ -4432,6 +4581,7 @@ class CenterStore extends ChangeNotifier {
       }
     });
     _state = restored;
+    _examMonitorHeartbeats.clear();
     _storedFields = restoredFields;
     _storedFieldsState = restored;
     _stateEncoder.clearPublicHistory();
@@ -4605,6 +4755,8 @@ int _sessionReviewCollections(
 /// Validates both foreign keys and financial invariants before every disk commit
 /// and before accepting an imported backup. No partially valid snapshot is used.
 void validateState(CenterState state) {
+  _validateExamMonitorRecords(state);
+  _validateStandaloneExamRooms(state);
   void check(bool condition, String message) {
     if (!condition) throw CenterException(message);
   }
@@ -4759,6 +4911,11 @@ void validateState(CenterState state) {
   }
   for (final e in state.corrections) {
     check(
+      e.action == CorrectionAction.packageOnlineAllocation ||
+          e.onlineAmount == null,
+      'مبلغ الأونلاين يجب أن يرتبط بتحويل دفعة الشهر فقط.',
+    );
+    check(
       e.reason.trim().isNotEmpty && collectors.contains(e.staffId),
       'سبب التصحيح أو الموظف غير صالح.',
     );
@@ -4836,6 +4993,29 @@ void validateState(CenterState state) {
         'سجل تغيير وسيلة الدفع غير متسلسل أو لا يطابق العملية.',
       );
       effectiveMethods[e.paymentId!] = e.newMethod!;
+    } else if (e.action == CorrectionAction.packageOnlineAllocation) {
+      final payment = payments[e.paymentId];
+      final package = packages[e.packageId];
+      check(
+        payment != null &&
+            package != null &&
+            payment.packageId == package.id &&
+            package.paymentId == payment.id &&
+            payment.studentId == e.studentId &&
+            package.studentId == e.studentId &&
+            payment.sessionId == e.sessionId &&
+            package.groupId == payment.groupId &&
+            (e.onlineAmount ?? 0) > 0 &&
+            !e.createdAt.isBefore(payment.createdAt) &&
+            !e.voidsPayment &&
+            !e.voidsPackage &&
+            e.attendanceId == null &&
+            e.replacementAttendanceId == null &&
+            e.closingId == null &&
+            e.oldMethod == null &&
+            e.newMethod == null,
+        'تحويل الأونلاين لا يطابق دفعة الشهر أو يحتوي مبلغًا غير صالح.',
+      );
     } else if (e.action == CorrectionAction.closingReopened) {
       final closing = closingById[e.closingId];
       check(
@@ -4957,6 +5137,32 @@ void validateState(CenterState state) {
     settlementsByPayment[key] = total;
   }
   final refundedPayments = <String>{};
+  final onlineByPayment = <String, int>{};
+  for (final allocation in state.corrections.where(
+    (record) => record.action == CorrectionAction.packageOnlineAllocation,
+  )) {
+    final payment = payments[allocation.paymentId]!;
+    final received =
+        payment.collectedAmount +
+        state.debtSettlements
+            .where(
+              (settlement) =>
+                  settlement.kind == DebtKind.lesson &&
+                  settlement.paymentId == payment.id &&
+                  !settlement.createdAt.isAfter(allocation.createdAt),
+            )
+            .fold<int>(0, (total, settlement) => total + settlement.amount);
+    final online =
+        (onlineByPayment[payment.id] ?? 0) + allocation.onlineAmount!;
+    check(
+      !voidPayments.contains(payment.id) &&
+          !voidPackages.contains(payment.packageId) &&
+          received == payment.netAmount &&
+          online <= received,
+      'تحويلات الأونلاين تتجاوز المقبوض أو ترتبط بدفعة غير مسددة أو ملغاة.',
+    );
+    onlineByPayment[payment.id] = online;
+  }
   for (final r in state.refunds) {
     final payment = payments[r.paymentId];
     final correction = correctionById[r.correctionId];
@@ -5496,8 +5702,17 @@ void validateState(CenterState state) {
             activity.name.toLowerCase(),
           )) &&
           (activity.kind == AcademicActivityKind.exam
-              ? activity.maxScore > 0
-              : activity.maxScore == 10),
+              ? activity.maxScore > 0 &&
+                    activity.allowedMaxScores.isNotEmpty &&
+                    activity.allowedMaxScores.length <= 20 &&
+                    activity.allowedMaxScores.toSet().length ==
+                        activity.allowedMaxScores.length &&
+                    activity.allowedMaxScores.contains(activity.maxScore) &&
+                    activity.allowedMaxScores.every(
+                      (score) => score > 0 && score <= 1000000,
+                    )
+              : activity.maxScore == 10 &&
+                    listEquals(activity.allowedMaxScores, const [10])),
       'تعريف النشاط غير صالح أو اسمه مكرر في الحصة.',
     );
   }
@@ -5523,7 +5738,8 @@ void validateState(CenterState state) {
             result.studentId == academic.studentId &&
             result.sessionId == academic.sessionId &&
             result.activityId == academic.activityId &&
-            result.maxScore == academic.maxScore &&
+            (ownership.manuallyEdited ||
+                result.maxScore == academic.maxScore) &&
             activities[academic.activityId]?.kind ==
                 AcademicActivityKind.exam &&
             integratedAttempts.add((result.sourceId, result.attemptId)) &&
@@ -5550,7 +5766,9 @@ void validateState(CenterState state) {
       check(
         activity != null &&
             activity.appliesToSession(sessions[academic.sessionId]!) &&
-            academic.maxScore == activity.maxScore &&
+            (activity.maxScoreKnown
+                ? activity.acceptsMaxScore(academic.maxScore)
+                : academic.maxScore == activity.maxScore) &&
             academic.maxScoreKnown == activity.maxScoreKnown &&
             (activity.kind == AcademicActivityKind.exam
                 ? academic.homework == HomeworkStatus.notReviewed

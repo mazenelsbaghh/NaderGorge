@@ -411,7 +411,7 @@ void main() {
   );
 
   importWidgetTest(
-    'unchanged grades skip and changed grades need explicit replacement',
+    'one confirmation replaces exact matches and leaves identical grades untouched',
     (tester) async {
       await tester.runAsync(() async {
         await existing(first, 18);
@@ -421,15 +421,16 @@ void main() {
         'النتائج': [source(first), source(second, score: '7')],
       });
       expect(find.textContaining('محفوظ كما هو: 1'), findsOneWidget);
-      expect(saveEnabled(tester), isFalse);
+      expect(saveEnabled(tester), isTrue);
+      expect(find.textContaining('1 استبدال لدرجة سابقة'), findsOneWidget);
       final unchanged = store.academics.firstWhere(
         (record) => record.studentId == first.id,
       );
-      await review(tester, 3);
-      await tap(tester, find.byKey(const Key('import-replace-existing')));
-      await applyReview(tester);
-      expect(saveEnabled(tester), isTrue);
       await save(tester);
+      expect(
+        find.text('تم رصد: 1 · محفوظ كما هو: 1 · متبقي: 0'),
+        findsOneWidget,
+      );
       expect(
         store.academics
             .firstWhere((record) => record.studentId == first.id)
@@ -450,6 +451,24 @@ void main() {
       );
     },
   );
+
+  importWidgetTest('confirming an already recorded sheet reports zero writes', (
+    tester,
+  ) async {
+    await tester.runAsync(() => existing(first, 18));
+    final before = store.academics.single.toJson();
+    await open(tester, {
+      'النتائج': [source(first)],
+    });
+    expect(saveEnabled(tester), isTrue);
+    await save(tester);
+    expect(find.text('تم رصد: 0 · محفوظ كما هو: 1 · متبقي: 0'), findsOneWidget);
+    expect(store.academics.single.toJson(), before);
+    expect(
+      store.audit.where((record) => record.action == 'academic_import'),
+      isEmpty,
+    );
+  });
 
   importWidgetTest(
     'unknown status and duplicate manual choices require review before any grade is saved',
@@ -498,7 +517,7 @@ void main() {
       expect(saveEnabled(tester), isFalse);
       await refresh(tester);
       expect(find.byKey(const Key('import-stale')), findsNothing);
-      expect(saveEnabled(tester), isFalse);
+      expect(saveEnabled(tester), isTrue);
       await review(tester, 2);
       await tap(tester, find.byKey(const Key('import-replace-existing')));
       await applyReview(tester);
@@ -514,7 +533,7 @@ void main() {
   );
 
   importWidgetTest(
-    'uniform source mismatch needs one explicit sheet confirmation at a small window',
+    'one confirmation accepts source context warnings at a small window',
     (tester) async {
       await open(tester, {
         'النتائج': [
@@ -522,12 +541,75 @@ void main() {
           source(second, sourceExam: 'اختبار خارجي'),
         ],
       }, size: const Size(720, 600));
-      expect(saveEnabled(tester), isFalse);
-      await tap(tester, find.byKey(const Key('import-context-reviewed')));
       expect(saveEnabled(tester), isTrue);
+      expect(find.textContaining('2 صف بتحذيرات مصدر'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await save(tester);
       expect(store.academics, hasLength(2));
+    },
+  );
+
+  importWidgetTest(
+    'collective confirmation records zero with warnings and reports unresolved identities without money',
+    (tester) async {
+      await tester.runAsync(() async {
+        await existing(first, 9);
+        await existing(second, 18);
+      });
+      final conflict = source(outsider);
+      conflict[1] = second.phone;
+      conflict[2] = first.code;
+      await open(tester, {
+        'النتائج': [
+          source(first, score: '0', status: 'unknown-status'),
+          source(second),
+          conflict,
+        ],
+      });
+      expect(saveEnabled(tester), isTrue);
+      expect(find.textContaining('1 استبدال لدرجة سابقة'), findsOneWidget);
+      await save(tester);
+      expect(
+        find.text('تم رصد: 1 · محفوظ كما هو: 1 · متبقي: 1'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('مطابقة الكود والهاتف غير متفقة'),
+        findsOneWidget,
+      );
+      expect(store.academics, hasLength(2));
+      expect(
+        store.academics.firstWhere((row) => row.studentId == first.id).score,
+        0,
+      );
+      expect(
+        store.academics.firstWhere((row) => row.studentId == second.id).score,
+        18,
+      );
+      expect(store.payments, isEmpty);
+      expect(store.packages, isEmpty);
+      await tap(tester, find.byKey(const Key('import-completion-close')));
+      expect(find.text('نتيجة استيراد الدرجات'), findsNothing);
+    },
+  );
+
+  importWidgetTest(
+    'collective confirmation never adds attendance for an absent regular student',
+    (tester) async {
+      await tester.runAsync(() async {
+        final center = store.catalogs.firstWhere(
+          (entry) => entry.id == group.centerId,
+        );
+        await store.saveCatalog(center.copyWith(region: 'alexandria'));
+      });
+      await open(tester, {
+        'النتائج': [source(first)],
+      });
+      expect(find.textContaining('غير صالح: 1'), findsOneWidget);
+      expect(saveEnabled(tester), isFalse);
+      expect(store.academics, isEmpty);
+      expect(store.attendances, isEmpty);
+      expect(store.payments, isEmpty);
     },
   );
 

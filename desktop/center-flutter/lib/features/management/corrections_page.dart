@@ -18,6 +18,7 @@ enum _CorrectionAction {
   absentPresent,
   paymentMethod,
   refundPackage,
+  packageOnlineAllocation,
   reopenClosing,
 }
 
@@ -28,15 +29,18 @@ class CorrectionsPage extends StatefulWidget {
     required this.store,
     this.initialStudentId,
     this.initialSessionId,
+    this.initialPaymentId,
   });
   final CenterStore store;
-  final String? initialStudentId, initialSessionId;
+  final String? initialStudentId, initialSessionId, initialPaymentId;
   @override
   State<CorrectionsPage> createState() => _CorrectionsPageState();
 }
 
 class _CorrectionsPageState extends State<CorrectionsPage> {
-  final _code = TextEditingController(), _reason = TextEditingController();
+  final _code = TextEditingController(),
+      _reason = TextEditingController(),
+      _centerAmount = TextEditingController();
   final _codeFocus = FocusNode();
   final _form = GlobalKey<FormState>();
   String? _studentId, _sessionId, _paymentId, _originalId, _error, _notice;
@@ -45,7 +49,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
   String? _monthPlanId;
   String _method = 'نقدي';
   bool _busy = false, _confirming = false, _queryChanged = false;
-  int _contextRevision = 0;
+  int _contextRevision = 0, _expectedOnlineAmount = 0;
   bool get _dirty => _action != null || _reason.text.trim().isNotEmpty;
   CenterStore get store => widget.store;
   bool get _locked => _busy || _confirming;
@@ -90,6 +94,11 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
           )
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  String? get _availablePaymentId =>
+      _payments.any((payment) => payment.id == _paymentId) ? _paymentId : null;
+  _CorrectionAction? get _availableAction =>
+      _actions.contains(_action) ? _action : null;
+
   List<LessonSession> get _sessions =>
       store.sessions
           .where(
@@ -109,6 +118,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
   void initState() {
     super.initState();
     _reason.addListener(_draftChanged);
+    _centerAmount.addListener(_draftChanged);
     final initial = store.students
         .where((s) => s.id == widget.initialStudentId)
         .firstOrNull;
@@ -117,6 +127,16 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
       _code.text = initial.code;
       if (_sessions.any((s) => s.id == widget.initialSessionId)) {
         _sessionId = widget.initialSessionId;
+      }
+      final payment = store.payments
+          .where(
+            (p) => p.id == widget.initialPaymentId && p.studentId == initial.id,
+          )
+          .firstOrNull;
+      if (payment != null) {
+        _paymentId = payment.id;
+        _sessionId = payment.sessionId;
+        if (_canAllocateOnline) _selectOnlineAllocation();
       }
     }
   }
@@ -150,6 +170,8 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     _code.dispose();
     _reason.removeListener(_draftChanged);
     _reason.dispose();
+    _centerAmount.removeListener(_draftChanged);
+    _centerAmount.dispose();
     _codeFocus.dispose();
     super.dispose();
   }
@@ -160,6 +182,8 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     _action = null;
     _originalId = null;
     _reason.clear();
+    _centerAmount.clear();
+    _expectedOnlineAmount = 0;
     _error = null;
     _notice = null;
   }
@@ -229,11 +253,18 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     _CorrectionAction.absentPresent => 'تصحيح غياب إلى حضور',
     _CorrectionAction.paymentMethod => 'تصحيح وسيلة الدفع',
     _CorrectionAction.refundPackage => 'استرداد باقة لم تُستخدم',
+    _CorrectionAction.packageOnlineAllocation =>
+      'تحويل جزء من دفعة الشهر للأونلاين',
     _CorrectionAction.reopenClosing => 'إعادة فتح التقفيلة المالية',
   };
   List<_CorrectionAction> get _actions {
     final values = <_CorrectionAction>[];
-    if (_closing != null) return [_CorrectionAction.reopenClosing];
+    if (_canAllocateOnline) {
+      values.add(_CorrectionAction.packageOnlineAllocation);
+    }
+    if (_closing != null) {
+      return [...values, _CorrectionAction.reopenClosing];
+    }
     final attendance = _attendance;
     if (attendance != null) {
       if (attendance.status == AttendanceStatus.absent &&
@@ -249,6 +280,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     if (_payment != null) {
       values.add(_CorrectionAction.paymentMethod);
       if (_payment!.packageId != null &&
+          store.onlineAllocatedAmount(_payment!.id) == 0 &&
           store.packages.any(
             (p) =>
                 p.id == _payment!.packageId && p.remaining == p.totalSessions,
@@ -258,6 +290,42 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
       }
     }
     return values;
+  }
+
+  bool get _canAllocateOnline {
+    final payment = _payment;
+    return payment != null &&
+        payment.packageId != null &&
+        store.packages.any(
+          (p) => p.id == payment.packageId && p.paymentId == payment.id,
+        ) &&
+        payment.netAmount > 0 &&
+        store.paymentDebtFor(payment.id) == 0 &&
+        store.centerAllocatedAmount(payment.id) > 0;
+  }
+
+  void _selectOnlineAllocation() {
+    _action = _CorrectionAction.packageOnlineAllocation;
+    _expectedOnlineAmount = store.onlineAllocatedAmount(_payment!.id);
+    _centerAmount.text = priceText(store.centerAllocatedAmount(_payment!.id));
+  }
+
+  int? get _targetCenterAmount => piastresFromText(_centerAmount.text);
+
+  String? _validateCenterAmount(String? value) {
+    final payment = _payment;
+    if (payment == null || !_canAllocateOnline) {
+      return 'الدفعة لم تعد متاحة للتحويل؛ اختر دفعة شهر مسددة بالكامل.';
+    }
+    if (store.onlineAllocatedAmount(payment.id) != _expectedOnlineAmount) {
+      return 'توزيع الدفعة اتغيّر؛ اختر التصحيح من جديد لمراجعة أحدث مبلغ.';
+    }
+    final amount = piastresFromText(value ?? '');
+    if (amount == null) return 'اكتب المبلغ بالجنيه، حتى رقمين بعد الفاصلة.';
+    if (amount >= store.centerAllocatedAmount(payment.id)) {
+      return 'اكتب مبلغًا أقل من نصيب السنتر الحالي لتحويل الفرق للأونلاين.';
+    }
+    return null;
   }
 
   int get _entryRefund => store.payments
@@ -353,16 +421,32 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
         'تغيير وسيلة دفع ${money(payment == null ? 0 : store.paymentCollectedFor(payment.id))} من ${payment?.method ?? '—'} إلى $_method، مع حفظ العملية الأصلية.',
       _CorrectionAction.refundPackage =>
         'رد مبلغ شراء الباقة ${money(payment == null ? 0 : store.paymentCollectedFor(payment.id))} بطريقة $_method. يتاح فقط إذا لم تُستخدم أي حصة من الباقة.',
+      _CorrectionAction.packageOnlineAllocation => _onlineAllocationPreview,
       _CorrectionAction.reopenClosing =>
         'إعادة فتح تقفيلة الحصة للتصحيح. تبقى التقفيلة الأصلية في السجل؛ يجب تسجيل تقفيلة جديدة بعد التصحيح.',
     };
+  }
+
+  String get _onlineAllocationPreview {
+    final payment = _payment, targetCenter = _targetCenterAmount;
+    if (payment == null ||
+        targetCenter == null ||
+        _validateCenterAmount(_centerAmount.text) != null) {
+      return 'اكتب نصيب السنتر بعد التحويل؛ الفرق من الدفعة المحصّلة يتحوّل للأونلاين.';
+    }
+    final collected = store.paymentCollectedFor(payment.id);
+    final totalOnline = collected - targetCenter;
+    final additionalOnline = totalOnline - _expectedOnlineAmount;
+    return 'سيُحوّل الآن ${money(additionalOnline)} للأونلاين. '
+        'المحصّل الأصلي ${money(collected)}، منه ${money(targetCenter)} للسنتر و${money(totalOnline)} للأونلاين. '
+        'توزيع من نفس الدفعة؛ بدون تحصيل أو استرداد جديد. التقفيلة الأصلية ورصيد حصص الباقة محفوظان.';
   }
 
   Future<void> _apply() async {
     if (_locked ||
         _queryChanged ||
         !store.canCollect ||
-        _action == null ||
+        _availableAction == null ||
         !_form.currentState!.validate()) {
       return;
     }
@@ -378,7 +462,13 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
         mode = _mode,
         packageSessions = selectedMonth?.sessions ?? 4,
         monthPlanId = selectedMonth?.id,
-        originalId = _originalId;
+        originalId = _originalId,
+        expectedOnlineAmount = _expectedOnlineAmount,
+        onlineAmount = action == _CorrectionAction.packageOnlineAllocation
+            ? store.paymentCollectedFor(payment!.id) -
+                  _expectedOnlineAmount -
+                  _targetCenterAmount!
+            : 0;
     setState(() {
       _confirming = true;
       _error = null;
@@ -436,6 +526,13 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
             reason: reason,
             refundMethod: method,
           );
+        case _CorrectionAction.packageOnlineAllocation:
+          await store.allocatePackageToOnline(
+            paymentId: payment!.id,
+            amount: onlineAmount,
+            expectedOnlineAmount: expectedOnlineAmount,
+            reason: reason,
+          );
         case _CorrectionAction.reopenClosing:
           await store.reopenFinancialClosing(
             closingId: closing!.id,
@@ -448,6 +545,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
         _paymentId = null;
         _originalId = null;
         _reason.clear();
+        _centerAmount.clear();
         _notice =
             'حُفظ التصحيح محليًا مع السبب واسم الموظف. السجل الأصلي محفوظ.';
       });
@@ -637,9 +735,9 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
                       key: ValueKey(
-                        'correction-payment-$_paymentId-$_sessionId-$_contextRevision',
+                        'correction-payment-$_availablePaymentId-$_sessionId-$_contextRevision',
                       ),
-                      initialValue: _paymentId,
+                      initialValue: _availablePaymentId,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'عملية الدفع المحددة',
@@ -671,6 +769,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                               }
                               _action = null;
                               _reason.clear();
+                              _centerAmount.clear();
                               _error = null;
                               _notice = null;
                             }),
@@ -695,7 +794,12 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                             ),
                           if (_payment != null)
                             OutlinedButton(
-                              onPressed: _locked
+                              onPressed:
+                                  _locked ||
+                                      store.onlineAllocatedAmount(
+                                            _payment!.id,
+                                          ) >
+                                          0
                                   ? null
                                   : () => _cancelRecord(payment: true),
                               child: const Text('إلغاء الدفع أو حضوره المرتبط'),
@@ -707,7 +811,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                       Padding(
                         padding: const EdgeInsets.only(top: 14),
                         child: Text(
-                          'الحصة مقفلة ماليًا. للإلغاء اختر إعادة فتح التقفيلات المتأثرة داخل نافذة الإلغاء؛ وللتصحيحات الأخرى أعد فتح التقفيلة أولًا.',
+                          'الحصة مقفلة ماليًا. تحويل جزء من دفعة الشهر للأونلاين متاح دون تغيير التقفيلة؛ للتصحيحات المالية الأخرى أعد فتح التقفيلة أولًا.',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
@@ -716,9 +820,9 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                     const SizedBox(height: 18),
                     DropdownButtonFormField<_CorrectionAction>(
                       key: ValueKey(
-                        'correction-action-$_studentId-$_sessionId-$_paymentId-$_action',
+                        'correction-action-$_studentId-$_sessionId-$_availablePaymentId-$_availableAction',
                       ),
-                      initialValue: _actions.contains(_action) ? _action : null,
+                      initialValue: _availableAction,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'التصحيح المطلوب',
@@ -727,7 +831,11 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                           .map(
                             (a) => DropdownMenuItem(
                               value: a,
-                              child: Text(_label(a)),
+                              child: Text(
+                                _label(a),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           )
                           .toList(),
@@ -735,6 +843,12 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                           ? null
                           : (a) => setState(() {
                               _action = a;
+                              if (a ==
+                                  _CorrectionAction.packageOnlineAllocation) {
+                                _selectOnlineAllocation();
+                              } else {
+                                _centerAmount.clear();
+                              }
                               _mode =
                                   _attendance?.status ==
                                           AttendanceStatus.makeup &&
@@ -859,7 +973,26 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
                                 : (id) => setState(() => _originalId = id),
                           ),
                       ],
-                      if (_action != _CorrectionAction.reopenClosing)
+                      if (_action ==
+                          _CorrectionAction.packageOnlineAllocation) ...[
+                        TextFormField(
+                          key: const Key('correction-center-amount'),
+                          controller: _centerAmount,
+                          enabled: !_locked,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'نصيب السنتر بعد التحويل (جنيه)',
+                            helperText:
+                                'مثال: اكتب ١٥٠ من دفعة ٢١٠؛ الفرق ٦٠ للأونلاين.',
+                          ),
+                          validator: _validateCenterAmount,
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (_action != _CorrectionAction.reopenClosing &&
+                          _action != _CorrectionAction.packageOnlineAllocation)
                         DropdownButtonFormField<String>(
                           key: ValueKey('correction-method-$_action'),
                           initialValue: _method,
@@ -910,7 +1043,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
             const Divider(height: 24),
             FilledButton.icon(
               key: const Key('apply-correction'),
-              onPressed: _locked || _action == null ? null : _apply,
+              onPressed: _locked || _availableAction == null ? null : _apply,
               icon: const Icon(Icons.fact_check_outlined),
               label: Text(
                 _busy ? 'جارٍ حفظ التصحيح…' : 'مراجعة وتأكيد التصحيح',
@@ -952,10 +1085,19 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
           Text(
             'المبلغ المدفوع: ${money(store.paymentCollectedFor(payment.id))} · ${payment.method}',
           ),
+          if (store.onlineAllocatedAmount(payment.id) > 0)
+            Text(
+              'توزيع الدفعة: ${money(store.centerAllocatedAmount(payment.id))} للسنتر · ${money(store.onlineAllocatedAmount(payment.id))} للأونلاين',
+            ),
           Text(
             'وقت الدفع: ${shortDate(payment.createdAt)} · ${TimeOfDay.fromDateTime(payment.createdAt).format(context)}',
           ),
+          if (store.onlineAllocatedAmount(payment.id) > 0)
+            const Text(
+              'هذه الدفعة موزعة للسنتر والأونلاين؛ لا تُلغى ولا تُسترد كدفعة كاملة.',
+            ),
           if (payment.packageId != null &&
+              store.onlineAllocatedAmount(payment.id) == 0 &&
               !_actions.contains(_CorrectionAction.refundPackage) &&
               _closing == null)
             const Text(
@@ -973,6 +1115,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     CorrectionAction.paymentMethod => 'تصحيح وسيلة الدفع',
     CorrectionAction.paymentCanceled => 'إلغاء الدفع',
     CorrectionAction.packageRefund => 'استرداد باقة',
+    CorrectionAction.packageOnlineAllocation => 'تحويل من دفعة الشهر للأونلاين',
     CorrectionAction.closingReopened => 'إعادة فتح تقفيلة مالية',
   };
 
@@ -1001,45 +1144,45 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
         'المبلغ الأصلي: ${money(store.paymentCollectedFor(payment.id))} · خصم ${percentText(payment.discountPercent)}%',
       if (record.oldMethod != null)
         'وسيلة الدفع: ${record.oldMethod} ← ${record.newMethod ?? '—'}',
+      if (record.action == CorrectionAction.packageOnlineAllocation)
+        'حُوّل للأونلاين: ${money(record.onlineAmount ?? 0)} من نفس الدفعة؛ بدون حركة نقدية جديدة',
       ...refunds.map((r) => 'مبلغ مسترد: ${money(r.amount)} · ${r.method}'),
       'السبب: ${record.reason}',
     ].join('\n');
   }
 
   Widget _history() {
-    final original =
-        <({DateTime at, String label, String amount, String state})>[
-          ...store.allPayments
-              .where((p) => p.studentId == _studentId)
-              .map(
-                (p) => (
-                  at: p.createdAt,
-                  label: '${p.description}\n${p.method}',
-                  amount: money(store.paymentCollectedFor(p.id)),
-                  state: store.payments.any((active) => active.id == p.id)
-                      ? 'حالية'
-                      : store.refunds.any((r) => r.paymentId == p.id)
-                      ? 'مستردة'
-                      : 'مصَحّحة',
-                ),
-              ),
-          ...store.allAttendances.where((a) => a.studentId == _studentId).map((
-            a,
-          ) {
-            final session = store.sessions
-                .where((s) => s.id == a.sessionId)
-                .firstOrNull;
-            return (
-              at: a.recordedAt,
-              label:
-                  'حصة ${session?.number ?? '—'} · ${attendanceLabel(a.status)}',
-              amount: a.packageId != null ? 'من الباقة' : '—',
-              state: store.attendances.any((current) => current.id == a.id)
-                  ? 'حالي'
-                  : 'مصَحّح',
-            );
-          }),
-        ]..sort((a, b) => b.at.compareTo(a.at));
+    final original = <({DateTime at, String label, String amount, String state})>[
+      ...store.allPayments
+          .where((p) => p.studentId == _studentId)
+          .map(
+            (p) => (
+              at: p.createdAt,
+              label: '${p.description}\n${p.method}',
+              amount: money(store.paymentCollectedFor(p.id)),
+              state: store.payments.any((active) => active.id == p.id)
+                  ? store.onlineAllocatedAmount(p.id) > 0
+                        ? 'سنتر ${money(store.centerAllocatedAmount(p.id))} · أونلاين ${money(store.onlineAllocatedAmount(p.id))}'
+                        : 'حالية'
+                  : store.refunds.any((r) => r.paymentId == p.id)
+                  ? 'مستردة'
+                  : 'مصَحّحة',
+            ),
+          ),
+      ...store.allAttendances.where((a) => a.studentId == _studentId).map((a) {
+        final session = store.sessions
+            .where((s) => s.id == a.sessionId)
+            .firstOrNull;
+        return (
+          at: a.recordedAt,
+          label: 'حصة ${session?.number ?? '—'} · ${attendanceLabel(a.status)}',
+          amount: a.packageId != null ? 'من الباقة' : '—',
+          state: store.attendances.any((current) => current.id == a.id)
+              ? 'حالي'
+              : 'مصَحّح',
+        );
+      }),
+    ]..sort((a, b) => b.at.compareTo(a.at));
     final audit = store.corrections.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return Column(

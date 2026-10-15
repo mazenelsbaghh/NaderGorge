@@ -21,6 +21,19 @@ CLIENT_ASSETS = frozenset({
 })
 
 
+HISTORICAL_PRIVATE_ASSETS = frozenset({
+    "admin_account.json", "installation_seed.json",
+    "data_repair_20261002.json", "data_repair_20261004.json",
+    "academic_import_20261004.json", "cairo_academic_import_20261004.json",
+    "cairo_codes_20261004.json", "gec_codes_20261004.json",
+    "gec_duplicate_codes_20261004.json", "attendance_payment_repair_20261011.json",
+    "gec_month1_repair_20261013.json",
+    "gec_first_secondary_attendance_repair_20261013.json",
+})
+GRADE_REPAIR_ASSET = "grade_results_repair_20261015.json"
+PRIVATE_INSTALLER_ASSETS = HISTORICAL_PRIVATE_ASSETS | {GRADE_REPAIR_ASSET}
+
+
 def digest(content):
     return hashlib.sha256(content).hexdigest()
 

@@ -52,7 +52,7 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
     for (final phone in [
       student.phone,
       student.guardianPhone,
-    ].map(_normalizedPhone)) {
+    ].map(normalizeStudentPhone)) {
       if (phone.isNotEmpty) byPhone.putIfAbsent(phone, () => {}).add(student);
     }
   }
@@ -65,7 +65,7 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
   }
   for (final row in rows) {
     final code = normalizeStudentIdentifier(row.code);
-    final phone = _normalizedPhone(row.phone);
+    final phone = normalizeStudentPhone(row.phone);
     final codeMatches = byCode[code] ?? const <Student>{};
     final phoneMatches = byPhone[phone] ?? const <Student>{};
     final issues = <String>[];
@@ -92,7 +92,7 @@ List<AcademicExcelMatch> matchAcademicExcelRows(
         matchReason = 'مطابق بالكود';
       } else if (phoneMatches.length == 1) {
         selected = phoneMatches.single;
-        matchReason = _normalizedPhone(selected.phone) == phone
+        matchReason = normalizeStudentPhone(selected.phone) == phone
             ? 'مطابق بهاتف الطالب'
             : 'مطابق بهاتف ولي الأمر';
       }
@@ -159,20 +159,6 @@ String? _attemptKey(AcademicExcelRow row) {
   ]);
 }
 
-String _normalizedPhone(String value) {
-  var phone = normalizeStudentIdentifier(
-    value,
-  ).replaceAll(RegExp(r'[\s()\-\u200e\u200f]'), '');
-  if (phone.startsWith('+')) phone = phone.substring(1);
-  if (!RegExp(r'^\d+$').hasMatch(phone)) return '';
-  if (RegExp(r'^00201[0125]\d{8}$').hasMatch(phone)) phone = phone.substring(4);
-  if (RegExp(r'^201[0125]\d{8}$').hasMatch(phone)) phone = phone.substring(2);
-  // Excel often stores an Egyptian mobile as a number and drops its leading 0.
-  // This is restricted to the four Egyptian mobile prefixes, never arbitrary IDs.
-  if (RegExp(r'^1[0125]\d{8}$').hasMatch(phone)) phone = '0$phone';
-  return phone;
-}
-
 Set<String> _nameTokens(String value) => _normalizedWords(
   value,
 ).replaceAll('ة', 'ه').split(' ').where((s) => s.isNotEmpty).toSet();
@@ -187,7 +173,7 @@ List<AcademicExcelSuggestion> _suggestions(
   final rowTokens = _nameTokens(row.name);
   final result = <AcademicExcelSuggestion>[];
   final code = normalizeStudentIdentifier(row.code);
-  final phone = _normalizedPhone(row.phone);
+  final phone = normalizeStudentPhone(row.phone);
   for (final student in roster) {
     final fields = normalized[student.id]!;
     final tokens = fields.tokens;
@@ -268,8 +254,8 @@ class _NormalizedStudentMatch {
       codes = studentIdentifiers(
         student,
       ).map(normalizeStudentIdentifier).toList(),
-      phone = _normalizedPhone(student.phone),
-      guardianPhone = _normalizedPhone(student.guardianPhone);
+      phone = normalizeStudentPhone(student.phone),
+      guardianPhone = normalizeStudentPhone(student.guardianPhone);
   final Set<String> tokens;
   final List<String> codes;
   final String phone, guardianPhone;

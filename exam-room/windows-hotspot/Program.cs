@@ -31,6 +31,11 @@ internal static class Program
             var line = await Console.In.ReadLineAsync();
             if (line is null || line.Length > 4096) throw new InvalidDataException();
             var request = JsonSerializer.Deserialize<HotspotRequest>(line, JsonOptions) ?? throw new InvalidDataException();
+            if (request.Action.StartsWith("tethering-", StringComparison.Ordinal))
+            {
+                Print(await HomeworkHotspot.Execute(request.Action));
+                return 0;
+            }
             if (arguments is ["serve"]) return await Serve(request);
             var existing = await PipeRequest(request);
             if (existing is not null) { Print(existing); return 0; }

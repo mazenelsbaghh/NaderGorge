@@ -57,7 +57,11 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
   bool _enterCancels = false, _enterDetails = false;
   bool _leaving = false;
   String _initialScore = '', _saveError = '';
-  bool get _dirty => !_completed && _exam && _score.text != _initialScore;
+  late int _maximum, _initialMaximum;
+  bool get _dirty =>
+      !_completed &&
+      _exam &&
+      (_score.text != _initialScore || _maximum != _initialMaximum);
 
   bool get _exam => widget.activity.kind == AcademicActivityKind.exam;
   (String, String, String) get _context =>
@@ -118,6 +122,8 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
       widget.session.id,
       widget.activity.id,
     );
+    _maximum = record?.maxScore ?? widget.activity.maxScore;
+    _initialMaximum = _maximum;
     _score.text = record?.score?.toString() ?? '';
     _initialScore = _score.text;
     _scoreError = null;
@@ -245,11 +251,15 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
       setState(() => _scoreError = 'حدد الدرجة النهائية للامتحان أولًا.');
       return;
     }
-    final score = parseAcademicScore(_score.text);
-    if (score == null || score < 0 || score > widget.activity.maxScore) {
+    if (!widget.activity.acceptsMaxScore(_maximum)) {
       setState(
-        () => _scoreError = 'أدخل درجة من صفر إلى ${widget.activity.maxScore}',
+        () => _scoreError = 'اختر نهاية من النهايات المتاحة لهذا الامتحان.',
       );
+      return;
+    }
+    final score = parseAcademicScore(_score.text);
+    if (score == null || score < 0 || score > _maximum) {
+      setState(() => _scoreError = 'أدخل درجة من صفر إلى $_maximum');
       _scoreFocus.requestFocus();
       return;
     }
@@ -277,9 +287,7 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
           sessionId: target.$2,
           activityId: target.$3,
           score: score,
-          maxScore: activity.kind == AcademicActivityKind.exam
-              ? activity.maxScore
-              : 10,
+          maxScore: activity.kind == AcademicActivityKind.exam ? _maximum : 10,
           maxScoreKnown: activity.maxScoreKnown,
           homework: homework,
           examAbsent: false,
@@ -379,7 +387,7 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     decoration: InputDecoration(
       labelText: widget.activity.maxScoreKnown
-          ? 'درجة الطالب (من ${widget.activity.maxScore})'
+          ? 'درجة الطالب (من $_maximum)'
           : 'درجة الطالب · الدرجة النهائية غير معروفة',
       errorText: _scoreError,
       helperText:
@@ -492,6 +500,41 @@ class _AcademicQuickEntryState extends State<AcademicQuickEntry> {
                         ),
                       ),
                     if (_exam) ...[
+                      if (widget.activity.allowedMaxScores.length > 1) ...[
+                        DropdownButtonFormField<int>(
+                          key: ValueKey(
+                            'academic-maximum-${widget.student.id}:$_maximum',
+                          ),
+                          initialValue:
+                              widget.activity.allowedMaxScores.contains(
+                                _maximum,
+                              )
+                              ? _maximum
+                              : null,
+                          decoration: const InputDecoration(
+                            labelText: 'الامتحان من كام؟',
+                          ),
+                          items: widget.activity.allowedMaxScores
+                              .map(
+                                (maximum) => DropdownMenuItem(
+                                  value: maximum,
+                                  child: Text('من $maximum'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _available
+                              ? (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _maximum = value;
+                                      _scoreError = null;
+                                    });
+                                  }
+                                }
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       _scoreField(),
                       if (!widget.activity.maxScoreKnown)
                         const Padding(

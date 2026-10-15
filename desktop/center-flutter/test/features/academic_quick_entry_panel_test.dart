@@ -310,6 +310,37 @@ void main() {
   );
 
   testWidgets(
+    'one exam retains the existing electronic maximum during a score edit',
+    (tester) async {
+      await storeChange(tester, () async {
+        exam = await store.saveAcademicActivity(
+          exam.copyWith(allowedMaxScores: [20, 12]),
+        );
+        final previous = record(first.id, exam.id);
+        await store.saveAcademic(previous.copyWith(score: 11.5, maxScore: 12));
+      });
+      await open(tester, exam);
+      expect(find.text('درجة الطالب (من 12)'), findsOneWidget);
+      expect(
+        tester
+            .widget<DropdownButtonFormField<int>>(
+              find.byType(DropdownButtonFormField<int>),
+            )
+            .initialValue,
+        12,
+      );
+      await enterScore(tester, '10.5');
+      await saveMutation(
+        tester,
+        () => tester.tap(save),
+        () => record(first.id, exam.id).score == 10.5,
+      );
+      expect(record(first.id, exam.id).maxScore, 12);
+      expectNoFinance();
+    },
+  );
+
+  testWidgets(
     'three homework choices preserve latest notes and focused choice Enter never writes a default',
     (tester) async {
       await open(tester, homework);
