@@ -195,7 +195,7 @@ export function UnifiedAssessmentBuilder({
               {isExam && (
                 <div className="space-y-4">
                   <NumberField
-                    minValue={1}
+                    minValue={0}
                     value={durationMinutes}
                     onChange={setDurationMinutes}
                   >
@@ -208,10 +208,11 @@ export function UnifiedAssessmentBuilder({
                       />
                       <NumberField.IncrementButton className="shrink-0" />
                     </NumberField.Group>
+                    <p className="text-xs text-[var(--admin-muted)]">صفر يعني بدون وقت محدد.</p>
                   </NumberField>
 
                   <NumberField
-                    minValue={1}
+                    minValue={0}
                     value={displayQuestionCount}
                     onChange={setDisplayQuestionCount}
                   >
@@ -224,6 +225,7 @@ export function UnifiedAssessmentBuilder({
                       />
                       <NumberField.IncrementButton className="shrink-0" />
                     </NumberField.Group>
+                    <p className="text-xs text-[var(--admin-muted)]">صفر يعني عرض كل الأسئلة.</p>
                   </NumberField>
                 </div>
               )}

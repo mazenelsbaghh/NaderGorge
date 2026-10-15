@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Users } from "lucide-react";
 import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, ContentSubscribersTab } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
+import { TeacherVideoExamsTab } from "@/components/teacher/TeacherVideoExamsTab";
 import { adminService, type LessonCockpitDto } from "@/services/admin-service";
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
-type ActiveTab = "overview" | "videos" | "resources" | "homework" | "exam" | "comments" | "subscribers";
+type ActiveTab = "overview" | "videos" | "video-exams" | "resources" | "homework" | "exam" | "comments" | "subscribers";
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "videos", label: "الفيديوهات", icon: PlaySquare },
+  { key: "video-exams", label: "امتحانات البارتات", icon: BookCheck },
   { key: "comments", label: "التعليقات", icon: MessageSquareText },
   { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
   { key: "resources", label: "المذكرات والملفات", icon: FileText },
@@ -130,6 +132,10 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
             />
           </div>
         </div>
+      )}
+
+      {activeTab === "video-exams" && (
+        <TeacherVideoExamsTab lessonId={lesson.lessonId} videos={lesson.videos || []} onRefresh={loadData} />
       )}
 
       {activeTab === "comments" && (
