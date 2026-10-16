@@ -65,6 +65,12 @@ import {
   createBunnyBridgeReadinessWatchdog,
   type BunnyBridgeReadinessWatchdog,
 } from '@/lib/bunny-bridge-readiness';
+import {
+  createYouTubeStartupRecovery,
+  YOUTUBE_BOOTSTRAP_DEADLINE_MS,
+  type YouTubeStartupFailurePhase,
+  type YouTubeStartupRecovery,
+} from '@/lib/youtube-startup-recovery';
 
 const SUPPORTED_PLAYBACK_RATES = new Set(VIDEO_PLAYBACK_RATES);
 export type VideoQualityLevel = { id: string; label: string; height?: number; bitrate?: number };
@@ -294,6 +300,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shadowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const embedReadinessWatchdogRef = useRef<BunnyBridgeReadinessWatchdog | null>(null);
+  const youtubeStartupRecoveryRef = useRef<YouTubeStartupRecovery | null>(null);
   const playFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bunnyRecoveryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const bunnyRecoveryAttemptsRef = useRef(0);
@@ -561,6 +568,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     setNativeProviderSurfaceLoaded(false);
 
     const iframe = createVideoEmbedIframe(sessionId);
+    if (providerRef.current === 'youtube' && youtubeStartupRecoveryRef.current?.isRecoveryAttempt()) {
+      iframe.src += '&youtubeRecovery=1';
+    }
     if (isLocalHlsPreview) iframe.src = `${localHlsPreviewEndpoint}?player=1`;
     qualityPreviewStartedRef.current = false;
     setQualityPreviewStarted(false);
@@ -578,10 +588,59 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     iframeRef.current = iframe;
     playerContainer.appendChild(iframe);
     domShieldsCleanupRef.current = applyDomShields(playerContainer, () => {
+      securitySuspendedRef.current = true;
+      youtubeStartupRecoveryRef.current?.cancel();
       setStatus('error');
       setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
     });
   }, [isLocalHlsPreview, isLocalQualityPreview, localHlsPreviewEndpoint, youtubeQualityEnabled]);
+
+  const recoverYouTubeStartup = useCallback((failure: {
+    phase: YouTubeStartupFailurePhase;
+    code?: number;
+    elapsedMs?: number;
+    online?: boolean;
+    visibility?: 'hidden' | 'visible';
+  }) => {
+    if (securitySuspendedRef.current) return false;
+    const recovery = youtubeStartupRecoveryRef.current;
+    const decision = recovery?.failAttempt() ?? 'ignored';
+
+    const sessionId = activeSessionIdRef.current;
+    if (sessionId) {
+      const statusCode = Number(failure.code ?? 0);
+      void videoSessionService.reportClientEvent(sessionId, {
+        provider: 'youtube', event: 'playback-error', phase: failure.phase,
+        statusCode: Number.isInteger(statusCode) && statusCode >= 0 && statusCode <= 599 ? statusCode : 0,
+        elapsedMs: Number.isInteger(failure.elapsedMs) ? failure.elapsedMs : undefined,
+        online: typeof failure.online === 'boolean' ? failure.online : navigator.onLine,
+        visibility: failure.visibility === 'hidden' ? 'hidden' : 'visible',
+      }).catch(() => {
+        // Diagnostics are best-effort; recovery cannot depend on delivery.
+      });
+    }
+    if (decision === 'ignored') return false;
+
+    const failedIframe = iframeRef.current;
+    iframeRef.current = null;
+    domShieldsCleanupRef.current?.();
+    domShieldsCleanupRef.current = null;
+    if (failedIframe) {
+      failedIframe.src = 'about:blank';
+      failedIframe.remove();
+    }
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    setIsBuffering(decision === 'retry');
+    if (decision === 'retry') {
+      setErrorMessage('');
+      reloadActiveEmbedRef.current?.();
+    } else {
+      setStatus('error');
+      setErrorMessage('تعذر اتصال المتصفح بمشغل الفيديو بعد إعادة المحاولة تلقائيًا. افتح الحصة في نافذة Chrome خاصة أو في Microsoft Edge، ثم سجّل الدخول.');
+    }
+    return true;
+  }, []);
 
   const scheduleBunnyPlaybackRecovery = useCallback(() => {
     if (bunnyRecoveryTimerRef.current) return true;
@@ -639,6 +698,22 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (signal.aborted || sessionId !== activeSessionIdRef.current || securitySuspendedRef.current) return;
     embedReadinessWatchdogRef.current?.cancel();
     embedReadinessWatchdogRef.current = null;
+    if (providerRef.current === 'youtube') {
+      youtubeStartupRecoveryRef.current ??= createYouTubeStartupRecovery({
+        schedule: (callback, delayMs) => window.setTimeout(callback, delayMs),
+        cancelScheduled: (handle) => window.clearTimeout(handle),
+        onTimeout: () => {
+          if (sessionId !== activeSessionIdRef.current) return;
+          recoverYouTubeStartup({
+            phase: 'bootstrap_timeout', elapsedMs: YOUTUBE_BOOTSTRAP_DEADLINE_MS,
+            online: navigator.onLine, visibility: document.visibilityState === 'hidden' ? 'hidden' : 'visible',
+          });
+        },
+      });
+      if (!youtubeStartupRecoveryRef.current.startAttempt()) return;
+      mountVideoEmbed(sessionId);
+      return;
+    }
     // HLS owns its media deadlines; it cannot answer Player.js bridge probes.
     if (providerRef.current !== 'bunny') {
       mountVideoEmbed(sessionId);
@@ -674,12 +749,39 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     embedReadinessWatchdogRef.current = watchdog;
     watchdog.start();
     mountVideoEmbed(sessionId);
-  }, [isLocalPreview, mountVideoEmbed, scheduleBunnyPlaybackRecovery]);
+  }, [isLocalPreview, mountVideoEmbed, recoverYouTubeStartup, scheduleBunnyPlaybackRecovery]);
 
   useEffect(() => () => {
+    youtubeStartupRecoveryRef.current?.cancel();
     embedReadinessWatchdogRef.current?.cancel();
     embedReadinessWatchdogRef.current = null;
     if (bunnyRecoveryTimerRef.current) clearTimeout(bunnyRecoveryTimerRef.current);
+  }, [lessonVideoId]);
+
+  useEffect(() => {
+    let suspendedSessionId: string | null = null;
+    const suspendStartup = (event: PageTransitionEvent) => {
+      suspendedSessionId = event.persisted ? activeSessionIdRef.current : null;
+      if (event.persisted) youtubeStartupRecoveryRef.current?.suspend();
+      else youtubeStartupRecoveryRef.current?.cancel();
+    };
+    const resumeStartup = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      const sessionExpired = sessionExpiresAtRef.current > 0 && sessionExpiresAtRef.current <= Date.now();
+      if (suspendedSessionId && suspendedSessionId === activeSessionIdRef.current
+        && !securitySuspendedRef.current && !sessionExpired) {
+        youtubeStartupRecoveryRef.current?.resume();
+      } else {
+        youtubeStartupRecoveryRef.current?.cancel();
+      }
+      suspendedSessionId = null;
+    };
+    window.addEventListener('pagehide', suspendStartup);
+    window.addEventListener('pageshow', resumeStartup);
+    return () => {
+      window.removeEventListener('pagehide', suspendStartup);
+      window.removeEventListener('pageshow', resumeStartup);
+    };
   }, []);
 
   const formatTime = formatPlayerTime;
@@ -775,6 +877,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           break;
         case 'bootstrapError': {
           const statusCode = Number(msg.data?.status) || 0;
+          if (providerRef.current === 'youtube' && !isLocalPreview) {
+            if (statusCode !== 403 && recoverYouTubeStartup({ phase: 'bootstrap_timeout', code: statusCode })) break;
+            youtubeStartupRecoveryRef.current?.cancel();
+            setStatus('error');
+            setErrorMessage('تعذر التحقق من جلسة المشاهدة. أعد المحاولة.');
+            break;
+          }
           if (statusCode !== 403 && embedSessionRefreshCountRef.current < 1) {
             embedSessionRefreshCountRef.current += 1;
             reloadActiveEmbedRef.current?.();
@@ -825,6 +934,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           break;
         case 'securityViolation': {
           securitySuspendedRef.current = true;
+          youtubeStartupRecoveryRef.current?.cancel();
           domShieldsCleanupRef.current?.();
           domShieldsCleanupRef.current = null;
           trackingEnabledRef.current = false;
@@ -876,6 +986,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           break;
         }
         case 'ready':
+          youtubeStartupRecoveryRef.current?.markReady();
           embedSessionRefreshCountRef.current = 0;
           embedReadinessWatchdogRef.current?.markReady();
           embedReadinessWatchdogRef.current = null;
@@ -1072,6 +1183,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'error':
           embedReadinessWatchdogRef.current?.cancel();
           embedReadinessWatchdogRef.current = null;
+          if (msg.data?.provider === 'youtube' && !isLocalPreview
+            && recoverYouTubeStartup({ ...msg.data, phase: msg.data.phase || 'provider_error' })) break;
           if (msg.data?.provider === 'bunny-hls' && activeSessionIdRef.current) {
             const phase = String(msg.data?.phase || 'unknown').slice(0, 80);
             const statusCode = Number(msg.data?.code || 0);
@@ -1126,7 +1239,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLocalHlsPreview, localHlsPreviewEndpoint, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
+  }, [isLocalPreview, isLocalHlsPreview, localHlsPreviewEndpoint, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, recoverYouTubeStartup, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
@@ -1688,6 +1801,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
     if (loadingSessionRef.current) return;
     loadingSessionRef.current = true;
+    youtubeStartupRecoveryRef.current?.cancel();
+    youtubeStartupRecoveryRef.current = null;
     try {
       setStatus('loading');
       durationRef.current = 0;

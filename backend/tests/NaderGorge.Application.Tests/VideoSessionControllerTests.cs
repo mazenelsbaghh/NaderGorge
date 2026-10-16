@@ -257,8 +257,65 @@ public sealed partial class VideoSessionControllerTests
         Assert.Contains("readiness_deadline", diagnostic, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task Incident20260903_DifferentStudentHlsSession_IsNotDisclosedOrLogged()
+    [Theory]
+    [InlineData("sdk_load", 0)]
+    [InlineData("sdk_timeout", 0)]
+    [InlineData("iframe_timeout", 0)]
+    [InlineData("provider_error", 153)]
+    [InlineData("bootstrap_timeout", 0)]
+    public async Task OwnedYouTubeStartupFailure_IsAcceptedWithoutConsumingSession(string phase, int statusCode)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var session = ActiveSession();
+        db.VideoPlaybackSessions.Add(session);
+        await db.SaveChangesAsync();
+        var controller = StudentController(session.UserId, db, NullLogger<VideoSessionController>.Instance);
+
+        var response = await controller.ReportClientEvent(session.Id,
+            new VideoPlaybackClientEventRequest
+            {
+                Provider = "youtube", Event = "playback-error", Phase = phase,
+                StatusCode = statusCode, ElapsedMs = 120000, Online = true, Visibility = "visible"
+            }, CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(response);
+        Assert.False((await db.VideoPlaybackSessions.FindAsync(session.Id))!.IsConsumed);
+    }
+
+    [Theory]
+    [InlineData("unexpected_phase", 0, null, null)]
+    [InlineData("https://youtube.com/embed/private-video", 0, null, null)]
+    [InlineData("sdk_timeout\nprivate-data", 0, null, null)]
+    [InlineData("sdk_timeout", -1, null, null)]
+    [InlineData("sdk_timeout", 600, null, null)]
+    [InlineData("sdk_timeout", 0, -1, null)]
+    [InlineData("sdk_timeout", 0, 120001, null)]
+    [InlineData("sdk_timeout", 0, null, "unknown")]
+    public async Task YouTubeStartupFailure_RejectsUnboundedDiagnosticWithoutLogging(
+        string phase, int statusCode, int? elapsedMs, string? visibility)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var session = ActiveSession();
+        db.VideoPlaybackSessions.Add(session);
+        await db.SaveChangesAsync();
+        var logger = new CapturingLogger();
+        var controller = StudentController(session.UserId, db, logger);
+
+        var response = await controller.ReportClientEvent(session.Id,
+            new VideoPlaybackClientEventRequest
+            {
+                Provider = "youtube", Event = "playback-error", Phase = phase,
+                StatusCode = statusCode, ElapsedMs = elapsedMs, Visibility = visibility
+            }, CancellationToken.None);
+
+        Assert.IsType<BadRequestResult>(response);
+        Assert.Empty(logger.Messages);
+    }
+
+    [Theory]
+    [InlineData("bunny-hls", "fragLoadError")]
+    [InlineData("youtube", "sdk_timeout")]
+    public async Task Incident20260903_DifferentStudentPlaybackSession_IsNotDisclosedOrLogged(string provider, string phase)
     {
         await using var db = TestAppDbContextFactory.Create();
         var session = ActiveSession();
@@ -271,9 +328,9 @@ public sealed partial class VideoSessionControllerTests
             session.Id,
             new VideoPlaybackClientEventRequest
             {
-                Provider = "bunny-hls",
+                Provider = provider,
                 Event = "playback-error",
-                Phase = "fragLoadError",
+                Phase = phase,
                 StatusCode = 0
             },
             CancellationToken.None);

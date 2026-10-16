@@ -329,7 +329,10 @@ public sealed partial class VideoPlaybackClientEventRequest
         ((string.Equals(Provider, "bunny-hls", StringComparison.Ordinal)
           && string.Equals(Event, "playback-error", StringComparison.Ordinal))
          || (string.Equals(Provider, "bunny", StringComparison.Ordinal)
-          && string.Equals(Event, "bridge-timeout", StringComparison.Ordinal)))
+          && string.Equals(Event, "bridge-timeout", StringComparison.Ordinal))
+         || (string.Equals(Provider, "youtube", StringComparison.Ordinal)
+          && string.Equals(Event, "playback-error", StringComparison.Ordinal)
+          && Phase is "sdk_load" or "sdk_timeout" or "iframe_timeout" or "provider_error" or "bootstrap_timeout"))
         && StatusCode is >= 0 and <= 599
         && (ElapsedMs is null or >= 0 and <= 120000)
         && (Visibility is null or "visible" or "hidden")
