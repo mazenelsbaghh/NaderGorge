@@ -16,7 +16,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows:
@@ -94,11 +94,12 @@ jobs:
           $Parameters = @{ SkipTests = $true; OutputTag = "run-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" }
           if ($env:PACKAGE_ROLE -eq 'client') { $Parameters.ClientOnly = $true }
           & ./desktop/center-flutter/scripts/build-windows.ps1 @Parameters
-      - uses: actions/upload-artifact@v7
-        with:
-          name: massar-windows-${{ matrix.role }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            desktop/center-flutter/dist/*.zip
-            desktop/center-flutter/dist/*.sha256
-          if-no-files-found: error
-          retention-days: 7
+      - name: Deliver native packages to the private exact-run release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PACKAGE_ROLE: ${{ matrix.role }}
+          MASSAR_WINDOWS_DELIVERY: github-release-assets-v1
+        run: |
+          python desktop/center-flutter/scripts/windows_private_delivery.py --dist desktop/center-flutter/dist
+          if ($LASTEXITCODE -ne 0) { throw 'Private native package delivery failed.' }

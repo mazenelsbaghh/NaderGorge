@@ -9,16 +9,161 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-from windows_trial import REPO, api, digest, git, save_json, selected_run
+from windows_trial import REPO, WORKFLOW, api, digest, git, save_json, selected_run
 
 PUBLIC_ASSETS = {"logo.svg", "logo-light.svg", "fonts/Tajawal-Regular.ttf", "fonts/Tajawal-Medium.ttf", "fonts/Tajawal-Bold.ttf"}
 NATIVE_EXECUTABLES = {"massar-exam-room.exe", "massar-exam-portal-proxy.exe", "massar-exam-network.exe", "hotspot/Massar.Hotspot.exe", "report-pdf/massar-report-pdf.exe"}
 RUNTIME_NAMES = {"network.json", "leases.json", "heartbeat.json", "adapter-backup.json", "identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "data-repair-status.json", "portal-mode.json", "capport-public.json", "center.sqlite.lock", "omada-controller.enc", ".env"}
+RELEASE_DELIVERY_MARKER = "github-release-assets-v1"
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, response, code, message, headers, url):
         return None
+
+
+def delivery_transport(document):
+    workflow = git("show", document["commit"] + ":.github/workflows/center-windows-private.yml").decode("utf-8")
+    markers = re.findall(r"(?m)^[ \t]*MASSAR_WINDOWS_DELIVERY:[ \t]*([a-z0-9-]+)[ \t]*$", workflow)
+    if "MASSAR_WINDOWS_DELIVERY" not in workflow:
+        return "actions-artifact"
+    if markers != [RELEASE_DELIVERY_MARKER]:
+        raise RuntimeError("Unknown or ambiguous sealed Windows delivery transport.")
+    return "release-assets"
+
+
+def _verified_run(document, run, token):
+    if api("", token).get("private") is not True:
+        raise RuntimeError("Native Windows delivery must remain in the private repository.")
+    actual = api(f"/actions/runs/{run['id']}", token)
+    keys = ("id", "run_attempt", "workflow_id", "head_sha", "head_branch", "event", "name", "status", "conclusion")
+    if (any(actual.get(key) != run.get(key) for key in keys)
+            or actual.get("head_sha") != document["commit"] or actual.get("head_branch") != document["branch"]
+            or actual.get("event") != "workflow_dispatch" or actual.get("name") != WORKFLOW
+            or actual.get("status") != "completed" or actual.get("conclusion") != "success"):
+        raise RuntimeError("The exact native Windows run attempt has not succeeded or changed.")
+    jobs = api(f"/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100", token)["jobs"]
+    if (len(jobs) != 2 or {job["name"] for job in jobs} != {"windows (host)", "windows (client)"}
+            or any(job["status"] != "completed" or job["conclusion"] != "success" for job in jobs)):
+        raise RuntimeError("Both Windows roles must pass in the same build attempt.")
+
+
+def _actions_delivery(run, role, token):
+    artifacts = api(f"/actions/runs/{run['id']}/artifacts?per_page=100", token)["artifacts"]
+    name = f"massar-windows-{role}-{run['id']}-{run['run_attempt']}"
+    matches = [artifact for artifact in artifacts if artifact["name"] == name and not artifact["expired"]]
+    if len(matches) != 1:
+        raise RuntimeError("Missing or ambiguous exact-attempt trial artifact.")
+    return matches[0]
+
+
+def _release_delivery(document, run, role, token):
+    tag = f"windows-native-{run['id']}-{run['run_attempt']}-{role}"
+    release = api("/releases/tags/" + tag, token)
+    reference = api("/git/ref/tags/" + tag, token)
+    if (type(release.get("id")) is not int or release["id"] < 1 or release.get("tag_name") != tag
+            or release.get("target_commitish") != document["commit"] or release.get("draft") is not False
+            or release.get("prerelease") is not True
+            or reference.get("ref") != "refs/tags/" + tag
+            or reference.get("object", {}).get("type") != "commit"
+            or reference["object"].get("sha") != document["commit"]):
+        raise RuntimeError("Native release tag or target differs from the exact source commit.")
+    receipt = json.loads(release.get("body") or "null")
+    expected = {"schemaVersion": 1, "transport": "github-release-assets", "repository": REPO,
+                "runId": run["id"], "runAttempt": run["run_attempt"], "role": role,
+                "sourceCommit": document["commit"]}
+    if (not isinstance(receipt, dict) or set(receipt) != set(expected) | {"assets"}
+            or any(type(receipt.get(key)) is not int for key in ("schemaVersion", "runId", "runAttempt"))
+            or any(receipt.get(key) != value for key, value in expected.items())):
+        raise RuntimeError("Native release receipt differs from the exact successful run and role.")
+    declared = receipt["assets"]
+    if not isinstance(declared, list) or len(declared) != 2 or any(not isinstance(a, dict) for a in declared):
+        raise RuntimeError("Native release must declare exactly one ZIP and checksum sidecar.")
+    prefix = f"massar-center-windows-{role}-run-{run['id']}-{run['run_attempt']}-"
+    archives = [a for a in declared if re.fullmatch(re.escape(prefix) + r"[a-f0-9]{16}\.zip", str(a.get("name", "")))]
+    if len(archives) != 1:
+        raise RuntimeError("Native release ZIP name differs from this exact role and run attempt.")
+    archive = archives[0]
+    sidecars = [a for a in declared if a.get("name") == archive["name"] + ".sha256"]
+    if len(sidecars) != 1:
+        raise RuntimeError("Native release checksum sidecar name differs from the ZIP.")
+    assets = release.get("assets", [])
+    if (not isinstance(assets, list) or len(assets) != 2
+            or {a.get("name") for a in assets} != {a["name"] for a in declared}
+            or len({a.get("id") for a in assets}) != 2):
+        raise RuntimeError("Native release contains unexpected or ambiguous assets.")
+    selected = []
+    for metadata in (archive, sidecars[0]):
+        limit = 512 * 1024 * 1024 if metadata is archive else 4096
+        if (set(metadata) != {"name", "size", "sha256"} or type(metadata.get("size")) is not int
+                or not 0 < metadata["size"] <= limit
+                or re.fullmatch(r"[a-f0-9]{64}", str(metadata.get("sha256", ""))) is None):
+            raise RuntimeError("Native release asset declaration is invalid.")
+        asset = next(a for a in assets if a["name"] == metadata["name"])
+        if (type(asset.get("id")) is not int or asset["id"] < 1 or asset.get("state") != "uploaded"
+                or asset.get("size") != metadata["size"] or asset.get("digest") != "sha256:" + metadata["sha256"]):
+            raise RuntimeError("Native release asset identity, upload state or digest differs from its receipt.")
+        selected.append(asset)
+    return {"release": release, "zip": selected[0], "sidecar": selected[1]}
+
+
+def verify_delivery_binding(document, run, evidence, token):
+    """Recheck retained delivery evidence before promoting the exact native bytes."""
+    _verified_run(document, run, token)
+    transport = delivery_transport(document)
+    role = evidence.get("role")
+    if role not in ("host", "client"):
+        raise RuntimeError("Unexpected native delivery role.")
+    if transport == "actions-artifact":
+        artifact = _actions_delivery(run, role, token)
+        if (evidence.get("transport", transport) != transport or artifact["id"] != evidence.get("artifactId")
+                or artifact.get("digest") != "sha256:" + evidence["outerSha256"]):
+            raise RuntimeError("Actions artifact differs from the retained exact-attempt evidence.")
+        return
+    delivery = _release_delivery(document, run, role, token)
+    release, archive, sidecar = delivery["release"], delivery["zip"], delivery["sidecar"]
+    expected = {"transport": transport, "sourceCommit": document["commit"], "version": document["version"],
+                "releaseId": release["id"], "releaseTag": release["tag_name"],
+                "artifactId": archive["id"], "assetName": archive["name"], "size": archive["size"],
+                "sha256": archive["digest"][7:], "assetSha256": archive["digest"][7:],
+                "outerSha256": archive["digest"][7:], "sidecarAssetId": sidecar["id"],
+                "sidecarSize": sidecar["size"], "sidecarSha256": sidecar["digest"][7:]}
+    if any(evidence.get(key) != value for key, value in expected.items()):
+        raise RuntimeError("Release asset differs from the retained exact-attempt evidence.")
+    if archive["name"] != f"massar-center-windows-{role}-run-{run['id']}-{run['run_attempt']}-{evidence.get('buildId')}.zip":
+        raise RuntimeError("Retained native build identity differs from its release asset name.")
+
+
+def download_release_asset(asset, token, *, maximum_bytes):
+    request = urllib.request.Request(f"https://api.github.com/repos/{REPO}/releases/assets/{asset['id']}",
+        headers={"Authorization": "Bearer " + token, "Accept": "application/octet-stream", "User-Agent": "Massar-Windows-Trial"})
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        response = opener.open(request, timeout=45)
+    except urllib.error.HTTPError as error:
+        if error.code not in (302, 303, 307, 308):
+            raise
+        location = error.headers.get("Location", "")
+        error.close()
+        parsed = urllib.parse.urlsplit(location)
+        if (parsed.scheme != "https" or parsed.hostname not in ("release-assets.githubusercontent.com", "objects.githubusercontent.com")
+                or parsed.username or parsed.password or parsed.port not in (None, 443) or parsed.fragment):
+            raise RuntimeError("Unsafe native release asset redirect.")
+        response = opener.open(urllib.request.Request(location, headers={"User-Agent": "Massar-Windows-Trial"}), timeout=120)
+    with response:
+        content = response.read(maximum_bytes + 1)
+    if len(content) > maximum_bytes or len(content) != asset["size"] or asset["digest"] != "sha256:" + digest(content):
+        raise RuntimeError("Native release asset bytes differ from the exact declared size or digest.")
+    return content
+
+
+def verify_release_sidecar(content, payload, name):
+    text = content.decode("utf-8-sig").strip()
+    if re.fullmatch(r"[a-fA-F0-9]{64}(?:[ \t]+\*?[^\r\n]+)?", text) is None:
+        raise RuntimeError("Native release checksum sidecar must contain one checksum line.")
+    parts = text.split(maxsplit=1)
+    if parts[0].lower() != digest(payload) or (len(parts) > 1 and parts[1].removeprefix("*") != name):
+        raise RuntimeError("Native release checksum sidecar does not match the exact ZIP.")
 
 
 def download_artifact(artifact, token):
@@ -164,22 +309,32 @@ def download_trial(document, output, token):
     run = selected_run(document, output, token)
     if run is None or run["status"] != "completed" or run["conclusion"] != "success":
         raise RuntimeError("The exact trial build has not succeeded.")
-    jobs = api(f"/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100", token)["jobs"]
-    if {job["name"] for job in jobs} != {"windows (host)", "windows (client)"} or any(job["status"] != "completed" or job["conclusion"] != "success" for job in jobs):
-        raise RuntimeError("Both Windows roles must pass in the same run attempt.")
-    artifacts = api(f"/actions/runs/{run['id']}/artifacts?per_page=100", token)["artifacts"]
+    _verified_run(document, run, token)
+    transport = delivery_transport(document)
     releases = []
     for role in ("host", "client"):
-        name = f"massar-windows-{role}-{run['id']}-{run['run_attempt']}"
-        matches = [artifact for artifact in artifacts if artifact["name"] == name and not artifact["expired"]]
-        if len(matches) != 1:
-            raise RuntimeError("Missing or ambiguous exact-attempt trial artifact.")
-        outer = download_artifact(matches[0], token)
-        payload = unwrap_artifact(outer)
+        if transport == "release-assets":
+            delivery = _release_delivery(document, run, role, token)
+            release, archive, sidecar = delivery["release"], delivery["zip"], delivery["sidecar"]
+            payload = download_release_asset(archive, token, maximum_bytes=512 * 1024 * 1024)
+            checksum = download_release_asset(sidecar, token, maximum_bytes=4096)
+            verify_release_sidecar(checksum, payload, archive["name"])
+            identity = {"transport": transport, "releaseId": release["id"], "releaseTag": release["tag_name"],
+                        "artifactId": archive["id"], "assetName": archive["name"], "assetSha256": digest(payload),
+                        "outerSha256": digest(payload), "sidecarAssetId": sidecar["id"],
+                        "sidecarSize": len(checksum), "sidecarSha256": digest(checksum)}
+        else:
+            artifact = _actions_delivery(run, role, token)
+            outer = download_artifact(artifact, token)
+            payload = unwrap_artifact(outer)
+            identity = {"artifactId": artifact["id"], "outerSha256": digest(outer)}
         manifest = verify_archive(payload, document, role)
+        if transport == "release-assets" and archive["name"] != f"massar-center-windows-{role}-run-{run['id']}-{run['run_attempt']}-{manifest['buildId']}.zip":
+            raise RuntimeError("Native release asset name differs from its verified packaged build identity.")
         path = output / f"massar-windows-{role}-trial-{document['version'].replace('+', '-')}.zip"
         save_archive(path, payload)
-        evidence = {"role": role, "version": document["version"], "sourceCommit": document["commit"], "buildId": manifest["buildId"], "sha256": digest(payload), "size": len(payload), "path": str(path), "artifactId": matches[0]["id"], "outerSha256": digest(outer), "nativeChecksPassed": True, "physicalWindowsVerified": False}
+        evidence = {"role": role, "version": document["version"], "sourceCommit": document["commit"], "buildId": manifest["buildId"], "sha256": digest(payload), "size": len(payload), "path": str(path), **identity, "nativeChecksPassed": True, "physicalWindowsVerified": False}
+        verify_delivery_binding(document, run, evidence, token)
         save_json(output / (role + "-verification.json"), evidence)
         releases.append(evidence)
         print(role + " trial verified and saved", flush=True)
