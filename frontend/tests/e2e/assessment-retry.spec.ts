@@ -100,8 +100,6 @@ for (const { order, label } of [
 ]) {
   test(`exam preserves ${label} when navigating and reopening the attempt`, async ({ page }) => {
     await studentSession(page);
-    // Fix the randomness boundary so an unintended client shuffle cannot pass by chance.
-    await page.addInitScript(() => { Math.random = () => 0; });
     const attempt = { ...examAttempt('ordered-attempt'), totalScore: order.length };
     attempt.questions = order.map(number => ({
       ...attempt.questions[0], id: `question-${number}`, text: `نص السؤال رقم ${number}`,
@@ -111,9 +109,15 @@ for (const { order, label } of [
     await page.goto(`/student/exams/${assessmentId}`);
     for (let opening = 0; opening < 2; opening++) {
       if (opening > 0) await page.reload();
+      await expect(page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true })).toBeVisible();
+      // Control assessment shuffling after React and the router have initialized their identifiers.
+      await page.evaluate(() => { Math.random = () => 0; });
       await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
       for (const [index, number] of order.entries()) {
         await expect(page.getByText(`نص السؤال رقم ${number}`, { exact: true })).toBeVisible();
+        const choices = page.getByRole('radio', { name: /^الإجابة (الأولى|الثانية)$/ });
+        await expect(choices.nth(0)).toHaveAccessibleName('الإجابة الأولى');
+        await expect(choices.nth(1)).toHaveAccessibleName('الإجابة الثانية');
         if (index < order.length - 1)
           await page.getByRole('button', { name: 'التالي', exact: true }).click();
       }

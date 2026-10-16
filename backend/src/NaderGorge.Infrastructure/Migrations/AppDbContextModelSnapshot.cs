@@ -11934,6 +11934,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsRetired")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("QuestionBankItemId")
                         .HasColumnType("uuid");
 

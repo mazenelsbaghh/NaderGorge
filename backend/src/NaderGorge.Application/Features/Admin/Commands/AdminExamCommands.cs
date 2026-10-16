@@ -229,7 +229,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                     BaseText = q.BaseText ?? string.Empty,
                     MistakeStartIndex = q.MistakeStartIndex ?? 0,
                     MistakeEndIndex = q.MistakeEndIndex ?? 0,
-                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
+                    Options = q.Options?.Select((o, index) => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect, Order = index + 1 }).ToList() ?? new List<QuestionOption>(),
                     CreatedByTeacherId = teacherId,
                     SubjectId = subjectId
                 };
@@ -274,11 +274,12 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
 
             if (qType == QuestionType.MCQ)
             {
-                foreach (var opt in q.Options ?? new List<InlineExamOptionDto>())
+                foreach (var (opt, index) in (q.Options ?? []).Select((option, index) => (option, index)))
                 {
                     _db.QuestionOptions.Add(new QuestionOption
                     {
                         Text = opt.Text,
+                        Order = index + 1,
                         IsCorrect = opt.IsCorrect,
                         QuestionBankItemId = qbItem.Id,
                         Question = qbItem
@@ -429,7 +430,7 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                     BaseText = q.BaseText ?? string.Empty,
                     MistakeStartIndex = q.MistakeStartIndex ?? 0,
                     MistakeEndIndex = q.MistakeEndIndex ?? 0,
-                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
+                    Options = q.Options?.Select((o, index) => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect, Order = index + 1 }).ToList() ?? new List<QuestionOption>(),
                     CreatedByTeacherId = teacherId,
                     SubjectId = subjectId
                 };
@@ -474,11 +475,12 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
 
             if (qType == QuestionType.MCQ)
             {
-                foreach (var opt in q.Options ?? new List<InlineExamOptionDto>())
+                foreach (var (opt, index) in (q.Options ?? []).Select((option, index) => (option, index)))
                 {
                     _db.QuestionOptions.Add(new QuestionOption
                     {
                         Text = opt.Text,
+                        Order = index + 1,
                         IsCorrect = opt.IsCorrect,
                         QuestionBankItemId = qbItem.Id,
                         Question = qbItem
@@ -675,11 +677,12 @@ public class UpdateExamQuestionCommandHandler : IRequestHandler<UpdateExamQuesti
         {
             if (request.Options != null)
             {
-                foreach (var opt in request.Options)
+                foreach (var (opt, index) in request.Options.Select((option, index) => (option, index)))
                 {
                     _db.QuestionOptions.Add(new QuestionOption
                     {
                         Text = opt.Text,
+                        Order = index + 1,
                         IsCorrect = opt.IsCorrect,
                         QuestionBankItemId = question.Id,
                         Question = question

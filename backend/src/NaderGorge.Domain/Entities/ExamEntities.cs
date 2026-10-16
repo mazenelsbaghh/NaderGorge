@@ -88,6 +88,7 @@ public class EssayQuestion : QuestionBankItem
 
 public class QuestionOption : BaseEntity
 {
+    public int Order { get; set; }
     public bool IsRetired { get; set; }
     public string Text { get; set; } = string.Empty;
     public bool IsCorrect { get; set; }

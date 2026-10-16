@@ -30,7 +30,6 @@ import {
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { PartialAssessmentResultSummary } from '@/components/assessment/PartialAssessmentResultSummary';
-import { shuffleArray } from '@/lib/utils';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
@@ -842,15 +841,10 @@ export function ExamViewer({
     }
   }, [attempt.totalScore, draftId]);
 
-  const [shuffledQuestions, setShuffledQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
+  const [orderedQuestions, setOrderedQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
   useEffect(() => {
     if (attempt.questions?.length > 0) {
-      // The API applies the exam's randomization setting; preserve its question order.
-      const qs = attempt.questions.map((q: ActiveExamAttemptDto['questions'][number]) => ({
-        ...q,
-        options: shuffleArray(q.options),
-      }));
-      setShuffledQuestions(qs);
+      setOrderedQuestions(attempt.questions);
     }
   }, [attempt.questions]);
 
@@ -884,9 +878,9 @@ export function ExamViewer({
       if (res.data.data) {
         setHasUsedSwap(true);
         setTotalScore(res.data.data.totalScore);
-        const newQuestion = { ...res.data.data.question, options: shuffleArray(res.data.data.question.options) } as ActiveExamAttemptDto['questions'][number];
+        const newQuestion = res.data.data.question;
         
-        setShuffledQuestions(prev => {
+        setOrderedQuestions(prev => {
            const next = [...prev];
            const idx = next.findIndex(x => x.id === qId);
            if (idx !== -1) next[idx] = newQuestion;
@@ -926,7 +920,7 @@ export function ExamViewer({
     setShowConfirm(false);
 
     const submissions: AnswerSubmissionDto[] = Object.keys(answers).map((qId) => {
-      const q = shuffledQuestions.find((x) => x.id === qId);
+      const q = orderedQuestions.find((x) => x.id === qId);
       if (q?.type === 'Essay') {
         return {
           examQuestionId: qId,
@@ -972,10 +966,10 @@ export function ExamViewer({
     );
   }
 
-  const totalQ = shuffledQuestions.length;
+  const totalQ = orderedQuestions.length;
   const answeredCount = Object.keys(answers).length;
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
-  const currentQ = shuffledQuestions[currentIdx];
+  const currentQ = orderedQuestions[currentIdx];
 
   const slideVariants = {
     initial: (d: number) => ({ x: d > 0 ? '40%' : '-40%', opacity: 0 }),
@@ -1059,7 +1053,7 @@ export function ExamViewer({
             <span>○ بدون إجابة</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {shuffledQuestions.map((q, idx) => {
+            {orderedQuestions.map((q, idx) => {
               const isCurrent = idx === currentIdx;
               const hasAns = !!answers[q.id];
               const isSkip = skipped.has(q.id) && !hasAns;

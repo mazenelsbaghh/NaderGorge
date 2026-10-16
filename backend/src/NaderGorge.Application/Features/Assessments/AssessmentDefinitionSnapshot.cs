@@ -1,4 +1,5 @@
 using System.Text.Json;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using HomeworkEntity = NaderGorge.Domain.Entities.Homework.Homework;
@@ -6,7 +7,7 @@ using HomeworkQuestion = NaderGorge.Domain.Entities.Homework.HomeworkQuestion;
 
 namespace NaderGorge.Application.Features.Assessments;
 
-public sealed record AssessmentOptionSnapshot(Guid Id, string Text, bool IsCorrect);
+public sealed record AssessmentOptionSnapshot(Guid Id, string Text, bool IsCorrect, int Order = 0);
 
 public sealed record AssessmentQuestionSnapshot(
     Guid Id, Guid BankQuestionId, int Order, int Type, string Text, decimal Points,
@@ -95,8 +96,9 @@ public sealed record AssessmentDefinitionSnapshot(
     public static IReadOnlyList<ExamQuestion> ResolveSwapCandidates(Exam current, string? snapshotJson)
     {
         if (snapshotJson is null) return current.ExamQuestions.Where(q => !q.IsRetired).ToList();
+        var optionOrders = CurrentOptionOrders(current);
         return Read(snapshotJson, "exam", current.Id).ReserveQuestions
-            .Select(q => ToExamQuestion(q, current.Id)).ToArray();
+            .Select(q => ToExamQuestion(q, current.Id, optionOrders)).ToArray();
     }
 
     public static string SwapAssignedQuestion(string snapshotJson, Guid examId, Guid previousId, Guid replacementId)
@@ -130,6 +132,7 @@ public sealed record AssessmentDefinitionSnapshot(
     {
         if (snapshotJson is null) return current;
         var snapshot = Read(snapshotJson, "exam", current.Id);
+        var optionOrders = CurrentOptionOrders(current);
         return new Exam
         {
             Id = current.Id, CreatedAt = current.CreatedAt, UpdatedAt = current.UpdatedAt,
@@ -142,7 +145,7 @@ public sealed record AssessmentDefinitionSnapshot(
             ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
-            ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id)).ToList()
+            ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id, optionOrders)).ToList()
         };
     }
 
@@ -179,7 +182,8 @@ public sealed record AssessmentDefinitionSnapshot(
         return new(question.Id, bank.Id, question.Order, (int)bank.Type, bank.Text, question.Points,
             bank.AudioUrl, bank.ImageUrl, bank.WrittenCorrection, bank.HintText,
             mistake?.BaseText, mistake?.MistakeStartIndex, mistake?.MistakeEndIndex,
-            bank.Options.Where(o => !o.IsRetired).OrderBy(o => o.Id).Select(o => new AssessmentOptionSnapshot(o.Id, o.Text, o.IsCorrect)).ToArray(), null);
+            QuestionOptionOrdering.InAuthoredOrder(bank.Options.Where(o => !o.IsRetired))
+                .Select((o, index) => new AssessmentOptionSnapshot(o.Id, o.Text, o.IsCorrect, index + 1)).ToArray(), null);
     }
 
     private static AssessmentQuestionSnapshot FromHomeworkQuestion(HomeworkQuestion question) => new(
@@ -189,7 +193,12 @@ public sealed record AssessmentDefinitionSnapshot(
         (question.PossibleAnswers ?? []).Select(text => new AssessmentOptionSnapshot(
             Guid.Empty, text, text == question.CorrectAnswerKey)).ToArray(), question.CorrectAnswerKey);
 
-    private static ExamQuestion ToExamQuestion(AssessmentQuestionSnapshot snapshot, Guid examId)
+    private static IReadOnlyDictionary<Guid, int> CurrentOptionOrders(Exam current) => current.ExamQuestions
+        .SelectMany(q => QuestionOptionOrdering.InAuthoredOrder(q.Question.Options)
+            .Select((option, index) => new { option.Id, Order = index + 1 }))
+        .ToDictionary(option => option.Id, option => option.Order);
+
+    private static ExamQuestion ToExamQuestion(AssessmentQuestionSnapshot snapshot, Guid examId, IReadOnlyDictionary<Guid, int> optionOrders)
     {
         QuestionBankItem bank = (QuestionType)snapshot.Type switch
         {
@@ -211,9 +220,10 @@ public sealed record AssessmentDefinitionSnapshot(
         bank.ImageUrl = snapshot.ImageUrl;
         bank.WrittenCorrection = snapshot.WrittenCorrection;
         bank.HintText = snapshot.HintText;
-        bank.Options = snapshot.Options.Select(o => new QuestionOption
+        bank.Options = snapshot.Options.Select((o, index) => new QuestionOption
         {
-            Id = o.Id, Text = o.Text, IsCorrect = o.IsCorrect, QuestionBankItemId = bank.Id
+            Id = o.Id, Text = o.Text, IsCorrect = o.IsCorrect, QuestionBankItemId = bank.Id,
+            Order = o.Order > 0 ? o.Order : optionOrders.GetValueOrDefault(o.Id, index + 1)
         }).ToList();
         return new ExamQuestion
         {

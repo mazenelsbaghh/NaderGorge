@@ -62,7 +62,7 @@ public class ListQuestionsQueryHandler : IRequestHandler<ListQuestionsQuery, Api
             q.DefaultPoints,
             q.Tags,
             q.ImageUrl,
-            q.Options.Select(o => new QuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList(),
+            QuestionOptionOrdering.InAuthoredOrder(q.Options).Select(o => new QuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList(),
             q.CreatedByTeacherId,
             q.SubjectId
         )).ToList();

@@ -195,7 +195,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                     eq.Question?.HintText,
                     eq.Question is FindTheMistakeQuestion ftm2 ? ftm2.MistakeStartIndex : null,
                     eq.Question is FindTheMistakeQuestion ftm3 ? ftm3.MistakeEndIndex : null,
-                    eq.Question?.Options?.Select(o => new ExamQuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList() ?? new List<ExamQuestionOptionDto>()
+                    eq.Question?.Options is { } options ? QuestionOptionOrdering.InAuthoredOrder(options).Select(o => new ExamQuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList() : new List<ExamQuestionOptionDto>()
                 );
             }).ToList();
 

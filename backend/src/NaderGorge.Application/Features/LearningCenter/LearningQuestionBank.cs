@@ -64,7 +64,7 @@ public sealed class LearningQuestionBank(IAppDbContext db)
             LearningConcept = request.Concept.Trim(), LearningDifficulty = request.Difficulty,
             SubjectId = lesson.ContentSection.Term.Package.SubjectId, CreatedByTeacherId = lesson.ContentSection.Term.Package.TeacherId,
             ImageUrl = previous?.ImageUrl, AudioUrl = previous?.AudioUrl, HintText = previous?.HintText,
-            Options = request.Options.Select(o => new QuestionOption { Text = o.Text.Trim(), IsCorrect = o.IsCorrect }).ToList()
+            Options = request.Options.Select((o, index) => new QuestionOption { Text = o.Text.Trim(), IsCorrect = o.IsCorrect, Order = index + 1 }).ToList()
         };
         db.QuestionBankItems.Add(question);
         // Referenced questions remain immutable; existing exam links and attempt snapshots keep their original version.
@@ -106,7 +106,7 @@ public sealed class LearningQuestionBank(IAppDbContext db)
 
     public static LearningQuestionDto ToDto(QuestionBankItem q) => new(q.Id, q.Text, (int)q.Type, q.DefaultPoints,
         q.Tags, q.CreatedByTeacherId, q.SubjectId, q.LearningLessonId, q.LearningConcept, q.LearningDifficulty,
-        q.WrittenCorrection, q.Options.Where(o => !o.IsRetired).Select(o => new LearningOptionDto(o.Id, o.Text, o.IsCorrect)).ToList());
+        q.WrittenCorrection, QuestionOptionOrdering.InAuthoredOrder(q.Options.Where(o => !o.IsRetired)).Select(o => new LearningOptionDto(o.Id, o.Text, o.IsCorrect)).ToList());
 
     private static void ValidateQuestion(SaveLearningQuestion request)
     {

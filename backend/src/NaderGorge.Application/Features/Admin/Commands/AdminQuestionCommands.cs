@@ -107,7 +107,7 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                 BaseText = request.BaseText ?? string.Empty,
                 MistakeStartIndex = request.MistakeStartIndex ?? 0,
                 MistakeEndIndex = request.MistakeEndIndex ?? 0,
-                Options = request.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
+                Options = request.Options?.Select((o, index) => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect, Order = index + 1 }).ToList() ?? new List<QuestionOption>(),
                 CreatedByTeacherId = teacherId,
                 SubjectId = subjectId
             };
@@ -126,9 +126,10 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                     ImageUrl = request.ImageUrl,
                     WrittenCorrection = request.WrittenCorrection,
                     HintText = request.HintText,
-                    Options = request.Options?.Select(o => new QuestionOption
+                    Options = request.Options?.Select((o, index) => new QuestionOption
                     {
                         Text = o.Text,
+                        Order = index + 1,
                         IsCorrect = o.IsCorrect
                     }).ToList() ?? new List<QuestionOption>(),
                     CreatedByTeacherId = teacherId,
@@ -147,9 +148,10 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                     ImageUrl = request.ImageUrl,
                     WrittenCorrection = request.WrittenCorrection,
                     HintText = request.HintText,
-                    Options = request.Options?.Select(o => new QuestionOption
+                    Options = request.Options?.Select((o, index) => new QuestionOption
                     {
                         Text = o.Text,
+                        Order = index + 1,
                         IsCorrect = o.IsCorrect
                     }).ToList() ?? new List<QuestionOption>(),
                     CreatedByTeacherId = teacherId,

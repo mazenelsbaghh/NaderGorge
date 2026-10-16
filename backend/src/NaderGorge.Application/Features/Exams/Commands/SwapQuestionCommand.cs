@@ -122,8 +122,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         await _db.SaveChangesAsync(cancellationToken);
 
         // Map to DTO
-        var options = newExamQuestion.Question.Options
-            .OrderBy(x => random.Next()) // Shuffle options
+        var options = QuestionOptionOrdering.InAuthoredOrder(newExamQuestion.Question.Options)
             .Select(o => new QuestionOptionViewDto(o.Id, o.Text))
             .ToList();
 

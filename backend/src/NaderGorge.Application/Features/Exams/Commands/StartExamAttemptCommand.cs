@@ -296,8 +296,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
         var questionDtos = baseQuery.Select(eq =>
         {
-            var options = eq.Question.Options
-                .OrderBy(x => random.Next()) // Shuffle options
+            var options = QuestionOptionOrdering.InAuthoredOrder(eq.Question.Options)
                 .Select(o => new QuestionOptionViewDto(o.Id, o.Text))
                 .ToList();
 

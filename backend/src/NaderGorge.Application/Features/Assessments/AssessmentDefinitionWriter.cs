@@ -196,7 +196,7 @@ public static class AssessmentDefinitionWriter
         }
         var included = proposed.Options.Select(o => o.Id).ToHashSet();
         foreach (var option in question.Options) option.IsRetired = !included.Contains(option.Id);
-        foreach (var proposedOption in proposed.Options)
+        foreach (var (proposedOption, index) in proposed.Options.Select((option, index) => (option, index)))
         {
             var option = question.Options.SingleOrDefault(o => o.Id == proposedOption.Id);
             if (option is null)
@@ -204,6 +204,7 @@ public static class AssessmentDefinitionWriter
                 option = new QuestionOption { Id = proposedOption.Id, QuestionBankItemId = question.Id };
                 question.Options.Add(option);
             }
+            option.Order = index + 1;
             option.Text = proposedOption.Text;
             option.IsCorrect = proposedOption.IsCorrect;
             option.IsRetired = false;
