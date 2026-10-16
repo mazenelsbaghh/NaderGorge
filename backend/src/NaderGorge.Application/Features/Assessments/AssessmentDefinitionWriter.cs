@@ -80,16 +80,19 @@ public static class AssessmentDefinitionWriter
             throw new ArgumentException("راجع الاسم والدرجات والمدة وعدد الأسئلة المعروضة.");
         if (definition.Questions.Select(q => q.Id).Distinct().Count() != definition.Questions.Length)
             throw new ArgumentException("لا يمكن تكرار نفس السؤال في التعريف.");
-        foreach (var question in definition.Questions) ValidateQuestion(question, kind);
+        for (var index = 0; index < definition.Questions.Length; index++)
+        {
+            try { ValidateQuestion(definition.Questions[index], kind); }
+            catch (ArgumentException error)
+            {
+                throw new ArgumentException($"السؤال {index + 1}: {error.Message}", error);
+            }
+        }
     }
 
     private static void ValidateQuestion(AssessmentQuestionSnapshot question, string kind)
     {
-        if (question.Id == Guid.Empty || string.IsNullOrWhiteSpace(question.Text) || question.Points < 0 || question.Points > int.MaxValue
-            || question.Points != decimal.Round(question.Points, 2)
-            || !Enum.IsDefined((QuestionType)question.Type) || question.Options.Length > 30
-            || (kind == "homework" && question.Points != decimal.Truncate(question.Points)))
-            throw new ArgumentException("راجع محتوى السؤال ونوعه ودرجته.");
+        ValidateQuestionFields(question, kind);
         if (question.Type == (int)QuestionType.MCQ
             && (question.Options.Length < 2 || question.Options.Count(o => o.IsCorrect) != 1
                 || question.Options.Any(o => string.IsNullOrWhiteSpace(o.Text))))
@@ -102,6 +105,24 @@ public static class AssessmentDefinitionWriter
                 || question.MistakeStartIndex < 0 || question.MistakeEndIndex > question.BaseText.Length
                 || question.MistakeEndIndex <= question.MistakeStartIndex))
             throw new ArgumentException("حدد موضع الخطأ داخل النص بشكل صحيح.");
+    }
+
+    private static void ValidateQuestionFields(AssessmentQuestionSnapshot question, string kind)
+    {
+        if (question.Id == Guid.Empty)
+            throw new ArgumentException("تعذر التعرف على السؤال. احتفظ بمحتواه ثم أعد إضافته.");
+        if (string.IsNullOrWhiteSpace(question.Text))
+            throw new ArgumentException("اكتب نص السؤال في خانة نص السؤال.");
+        if (!Enum.IsDefined((QuestionType)question.Type))
+            throw new ArgumentException("اختر نوع السؤال من القائمة.");
+        if (question.Points < 0 || question.Points > int.MaxValue)
+            throw new ArgumentException("أدخل درجة غير سالبة ضمن الحد المسموح.");
+        if (question.Points != decimal.Round(question.Points, 2))
+            throw new ArgumentException("درجة السؤال تقبل منزلتين عشريتين بحد أقصى.");
+        if (kind == "homework" && question.Points != decimal.Truncate(question.Points))
+            throw new ArgumentException("درجة سؤال الواجب يجب أن تكون عددًا صحيحًا بدون كسور.");
+        if (question.Options.Length > 30)
+            throw new ArgumentException("الحد الأقصى للاختيارات هو 30 اختيارًا.");
     }
 
     private static void ValidateQuestionTypes(AssessmentDefinitionSnapshot definition, IReadOnlyDictionary<Guid, int> previousTypes)
