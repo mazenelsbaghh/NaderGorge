@@ -1677,13 +1677,6 @@ class CenterStore extends ChangeNotifier {
     _replace(_state.sessions, saved.id, saved, (e) => e.id);
   }
 
-  bool _precedes(LessonSession first, LessonSession second) =>
-      first.startsAt.isBefore(second.startsAt) ||
-      (first.startsAt.isAtSameMomentAs(second.startsAt) &&
-          (first.monthNumber < second.monthNumber ||
-              (first.monthNumber == second.monthNumber &&
-                  first.number < second.number)));
-
   void _requirePreviousClosed(LessonSession session) {
     if (session.kind == SessionKind.counted &&
         _state.sessions.any(
@@ -1725,10 +1718,47 @@ class CenterStore extends ChangeNotifier {
           !package.purchasedAt.isAfter(forClosure.startsAt)) {
         return true;
       }
-      return _paymentsForStudent(
-        studentId,
-      ).any((e) => e.id == package.paymentId && e.sessionId == forClosure.id);
+      return _paymentsForStudent(studentId).any(
+        (payment) =>
+            payment.id == package.paymentId &&
+            (payment.sessionId == forClosure.id ||
+                _followsMakeupMonthPurchase(package, payment, forClosure)),
+      );
     });
+  }
+
+  bool _followsMakeupMonthPurchase(
+    PrepaidPackage package,
+    PaymentRecord payment,
+    LessonSession target,
+  ) {
+    final purchaseSession = sessionById(payment.sessionId);
+    if (!_followsMakeupPurchaseSession(package, purchaseSession, target)) {
+      return false;
+    }
+    final owner = _group(package.groupId);
+    final visited = _group(purchaseSession!.groupId);
+    final destination = _group(target.groupId);
+    if (visited.subjectId != owner.subjectId ||
+        visited.gradeId != owner.gradeId ||
+        destination.subjectId != owner.subjectId ||
+        destination.gradeId != owner.gradeId) {
+      return false;
+    }
+    // The receipt was collected during an explicitly linked makeup lesson.
+    // Its lesson anchors continuation; the actual cash timestamp stays intact.
+    final history =
+        _readIndex?.allAttendancesByStudent[package.studentId] ??
+        _state.attendances.where(
+          (entry) => entry.studentId == package.studentId,
+        );
+    return history.any(
+      (entry) =>
+          entry.sessionId == purchaseSession.id &&
+          entry.packageId == package.id &&
+          entry.status == AttendanceStatus.makeup &&
+          entry.makeupSourceGroupId == package.groupId,
+    );
   }
 
   List<PrepaidPackage> _available(
@@ -4752,6 +4782,24 @@ int _sessionReviewCollections(
           .fold<int>(0, (sum, s) => sum + s.amount);
 }
 
+bool _precedes(LessonSession first, LessonSession second) =>
+    first.startsAt.isBefore(second.startsAt) ||
+    (first.startsAt.isAtSameMomentAs(second.startsAt) &&
+        (first.monthNumber < second.monthNumber ||
+            (first.monthNumber == second.monthNumber &&
+                first.number < second.number)));
+
+bool _followsMakeupPurchaseSession(
+  PrepaidPackage package,
+  LessonSession? purchase,
+  LessonSession target,
+) =>
+    purchase != null &&
+    purchase.groupId != package.groupId &&
+    purchase.startsAtKnown &&
+    target.startsAtKnown &&
+    !_precedes(target, purchase);
+
 /// Validates both foreign keys and financial invariants before every disk commit
 /// and before accepting an imported backup. No partially valid snapshot is used.
 void validateState(CenterState state) {
@@ -5515,6 +5563,25 @@ void validateState(CenterState state) {
       .where((payment) => payment.packageId == null)
       .map((payment) => (payment.studentId, payment.sessionId, payment.groupId))
       .toSet();
+  bool followsMakeupPackagePurchase(
+    PrepaidPackage package,
+    LessonSession target,
+  ) {
+    final purchaseSessionId = payments[package.paymentId]?.sessionId;
+    if (purchaseSessionId == null) return false;
+    return _followsMakeupPurchaseSession(
+          package,
+          sessions[purchaseSessionId],
+          target,
+        ) &&
+        makeupPaymentLinks.contains((
+          package.studentId,
+          purchaseSessionId,
+          package.groupId,
+          package.id,
+        ));
+  }
+
   for (final record in state.attendances) {
     final session = sessions[record.sessionId];
     check(
@@ -5624,7 +5691,11 @@ void validateState(CenterState state) {
                               ) ||
                               payments[packages[record.packageId]!.paymentId]
                                       ?.sessionId ==
-                                  session.id)
+                                  session.id ||
+                              followsMakeupPackagePurchase(
+                                packages[record.packageId]!,
+                                session,
+                              ))
                     : singlePaymentSources.contains((
                             record.studentId,
                             record.sessionId,

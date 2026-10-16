@@ -1087,6 +1087,17 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
       }
       if (_readyForAttendanceWarning &&
           store.attendanceNeedsPayment(student!.id, session!.id)) {
+        final coverage = _existingPackageCoverageRequest(
+          EntryRequest(
+            studentId: student!.id,
+            sessionId: session!.id,
+            mode: EntryMode.package,
+          ),
+        );
+        if (coverage != null) {
+          await _collect();
+          return;
+        }
         await _feedback(
           'حضور الطالب مسجل بالفعل — غير مدفوع. استخدم L للحصة أو N للشهر لتسديده؛ لن نكرر الحضور.',
           kind: NoticeKind.warning,
@@ -1687,47 +1698,61 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     );
     await _run(() async {
       await store.recordAttendance(request);
-      if (currentStudent.packageMember ||
-          _isCenterOnly(currentStudent, currentSession)) {
-        return;
-      }
-      final sourceId = request.makeupSourceGroupId;
-      final remaining = sourceId == null
-          ? store.eligibleRemainingFor(currentStudent.id, currentSession.id)
-          : store.eligibleMakeupRemainingFor(
-              currentStudent.id,
-              currentSession.id,
-              sourceId,
-            );
-      if ((currentSession.kind == SessionKind.counted || sourceId != null) &&
-          store.attendanceNeedsPayment(currentStudent.id, currentSession.id) &&
-          remaining > 0) {
-        final coverageRequest = EntryRequest(
-          studentId: request.studentId,
-          sessionId: request.sessionId,
-          mode: sourceId == null ? EntryMode.package : EntryMode.makeup,
-          packageSessions: request.packageSessions,
-          monthPlanId: request.monthPlanId,
-          method: request.method,
-          makeupSourceGroupId: sourceId,
-          acknowledgedAttendanceIds: request.acknowledgedAttendanceIds,
-        );
-        final quote = store.entryConfirmationFor(coverageRequest);
-        await _settleRecordedAttendance(
-          EntryRequest(
-            studentId: request.studentId,
-            sessionId: request.sessionId,
-            mode: coverageRequest.mode,
-            packageSessions: request.packageSessions,
-            monthPlanId: request.monthPlanId,
-            method: request.method,
-            makeupSourceGroupId: sourceId,
-            acknowledgedAttendanceIds: request.acknowledgedAttendanceIds,
-            confirmation: quote,
-          ),
-        );
-      }
+      await _settleExistingPackageCoverage(request);
     }, 'تم حفظ الحضور. حالة الدفع ظاهرة في سجل الطالب.');
+  }
+
+  Future<bool> _settleExistingPackageCoverage(EntryRequest request) async {
+    final coverage = _existingPackageCoverageRequest(request);
+    if (coverage == null) return false;
+    return _settleRecordedAttendance(coverage);
+  }
+
+  EntryRequest? _existingPackageCoverageRequest(EntryRequest request) {
+    final selected = store.studentById(request.studentId);
+    final current = store.sessionById(request.sessionId);
+    final attendance = store
+        .attendancesForStudent(request.studentId)
+        .where((entry) => entry.sessionId == request.sessionId)
+        .firstOrNull;
+    if (selected == null ||
+        current == null ||
+        current.status != SessionStatus.open ||
+        attendance == null ||
+        selected.packageMember ||
+        attendance.packageMember ||
+        _isCenterOnly(selected, current) ||
+        attendance.centerFeeOnly ||
+        attendance.originalAttendanceId != null ||
+        request.originalAttendanceId != null ||
+        !store.attendanceNeedsPayment(selected.id, current.id)) {
+      return null;
+    }
+    final sourceId =
+        attendance.makeupSourceGroupId ?? request.makeupSourceGroupId;
+    if (current.kind != SessionKind.counted && sourceId == null) return null;
+    final remaining = sourceId == null
+        ? store.eligibleRemainingFor(selected.id, current.id)
+        : store.eligibleMakeupRemainingFor(selected.id, current.id, sourceId);
+    if (remaining <= 0) return null;
+    final coverage = EntryRequest(
+      studentId: request.studentId,
+      sessionId: request.sessionId,
+      mode: sourceId == null ? EntryMode.package : EntryMode.makeup,
+      method: request.method,
+      makeupSourceGroupId: sourceId,
+      acknowledgedAttendanceIds: request.acknowledgedAttendanceIds,
+    );
+    final quote = store.entryConfirmationFor(coverage);
+    if (quote.baseAmount != 0 ||
+        quote.netAmount != 0 ||
+        quote.collectedAmount != 0 ||
+        quote.centerFeeOnly ||
+        quote.eligibleRemaining <= 0) {
+      return null;
+    }
+    // The host rechecks this zero-cash quote before consuming the existing credit.
+    return _entryWithPayment(coverage, quote, null);
   }
 
   Future<bool> _recordAndSettleAttendance(EntryRequest request) async {
