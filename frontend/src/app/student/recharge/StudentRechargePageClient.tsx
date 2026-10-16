@@ -107,13 +107,16 @@ export default function StudentRechargePageClient() {
     setProofUploadError(null);
   }, []);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
-      setRequests(await rechargeService.getMyRequests());
+      const latestRequests = await rechargeService.getMyRequests();
+      setRequests(latestRequests);
+      return latestRequests;
     } catch {
-      setRequests([]);
+      // Keep the last known requests when the API cannot confirm their current status.
+      return null;
     }
-  };
+  }, []);
 
   const cancelRechargeRequest = async () => {
     if (!cancelRequestId || cancellationReason.trim().length < 3) {
@@ -135,6 +138,18 @@ export default function StudentRechargePageClient() {
 
   useEffect(() => {
     void fetchRequests();
+    const refreshVisibleRequests = () => {
+      if (document.visibilityState === 'visible') void fetchRequests();
+    };
+    window.addEventListener('focus', refreshVisibleRequests);
+    document.addEventListener('visibilitychange', refreshVisibleRequests);
+    return () => {
+      window.removeEventListener('focus', refreshVisibleRequests);
+      document.removeEventListener('visibilitychange', refreshVisibleRequests);
+    };
+  }, [fetchRequests]);
+
+  useEffect(() => {
     void studentService.getPublicTeachers().then(setTeachers).catch(() => setTeachers([]));
   }, []);
 
@@ -166,7 +181,7 @@ export default function StudentRechargePageClient() {
         clearInterval(timerRef.current);
       }
     };
-  }, [step, rechargeData, clearScreenshotSelection]);
+  }, [step, rechargeData, clearScreenshotSelection, fetchRequests]);
 
   useEffect(() => {
     if (step !== 3 || reviewState !== 'checking' || !rechargeData) return;
@@ -235,10 +250,7 @@ export default function StudentRechargePageClient() {
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pendingRequest) {
-      setShowPendingRequestDialog(true);
-      return;
-    }
+    if (loading) return;
     if (amount <= 0) {
       toast.error('قيمة الشحن يجب أن تكون أكبر من صفر.');
       return;
@@ -250,6 +262,13 @@ export default function StudentRechargePageClient() {
 
     try {
       setLoading(true);
+      const latestRequests = await fetchRequests();
+      if (!latestRequests) return;
+      if (latestRequests.some((request) => isPendingRechargeStatus(request.status))) {
+        setShowPendingRequestDialog(true);
+        return;
+      }
+      setShowPendingRequestDialog(false);
       const response = await rechargeService.initiate(amount, teacherId);
       if (response.success && response.data) {
         setRechargeData(response.data);
@@ -492,22 +511,45 @@ export default function StudentRechargePageClient() {
     }
   };
 
-  const resumePendingRecharge = () => {
-    if (!pendingRequest || pendingRequest.screenshotUrl || !pendingRequest.reservationExpiresAt) return;
+  const resumeRechargeReservation = (reservation: StudentRechargeRequestDto) => {
+    if (reservation.screenshotUrl) return;
+    if (!reservation.reservationExpiresAt || !reservation.walletPhoneNumber) {
+      toast.error('حجز المحفظة لم يعد متاحًا. ألغِ الطلب الحالي ثم ابدأ طلبًا جديدًا.');
+      return;
+    }
     setRechargeData({
-      rechargeRequestId: pendingRequest.id,
-      reviewCode: pendingRequest.reviewCode,
-      walletPhoneNumber: pendingRequest.walletPhoneNumber,
-      walletLabel: pendingRequest.walletLabel,
-      expirationTime: pendingRequest.reservationExpiresAt,
+      rechargeRequestId: reservation.id,
+      reviewCode: reservation.reviewCode,
+      walletPhoneNumber: reservation.walletPhoneNumber,
+      walletLabel: reservation.walletLabel,
+      expirationTime: reservation.reservationExpiresAt,
     });
-    setAmount(pendingRequest.amount);
-    setTeacherId(pendingRequest.teacherId ?? '');
-    setReviewCode(pendingRequest.reviewCode);
-    setSenderPhone(pendingRequest.senderPhoneNumber ?? '');
+    setAmount(reservation.amount);
+    setTeacherId(reservation.teacherId ?? '');
+    setReviewCode(reservation.reviewCode);
+    setSenderPhone(reservation.senderPhoneNumber ?? '');
     clearScreenshotSelection();
     setShowPendingRequestDialog(false);
     setStep(2);
+  };
+
+  const resumePendingRecharge = async () => {
+    if (!pendingRequest || loading || cancelling) return;
+    setLoading(true);
+    try {
+      const latestRequests = await fetchRequests();
+      if (!latestRequests) return;
+      const reservation = latestRequests.find((request) =>
+        request.id === pendingRequest.id && isPendingRechargeStatus(request.status));
+      if (!reservation) {
+        setShowPendingRequestDialog(false);
+        toast('اتحدثت حالة الطلب. يمكنك بدء طلب شحن جديد.');
+        return;
+      }
+      resumeRechargeReservation(reservation);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopyNumber = (num: string) => {
@@ -1015,15 +1057,15 @@ export default function StudentRechargePageClient() {
               <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">نوع الرصيد</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.teacherName ? `للأستاذ ${pendingRequest.teacherName}` : 'عام'}</dd></div>
             </dl>
             {!pendingRequest.screenshotUrl ? (
-              <button type="button" disabled={cancelling || !pendingRequest.walletPhoneNumber} onClick={resumePendingRecharge} className="min-h-11 w-full rounded-xl bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-[var(--admin-primary-contrast)] disabled:opacity-50">
-                استكمال الطلب ورفع الإثبات
+              <button type="button" disabled={loading || cancelling || !pendingRequest.walletPhoneNumber} onClick={() => void resumePendingRecharge()} className="min-h-11 w-full rounded-xl bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-[var(--admin-primary-contrast)] disabled:opacity-50">
+                {loading ? 'جارٍ تحديث حالة الطلب...' : 'استكمال الطلب ورفع الإثبات'}
               </button>
             ) : null}
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" disabled={cancelling} onClick={() => void cancelPendingRecharge()} className="min-h-11 rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+              <button type="button" disabled={loading || cancelling} onClick={() => void cancelPendingRecharge()} className="min-h-11 rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
                 {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب'}
               </button>
-              <button type="button" disabled={cancelling} onClick={() => setShowPendingRequestDialog(false)} className="min-h-11 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-black text-[var(--admin-text)] disabled:opacity-50">
+              <button type="button" disabled={loading || cancelling} onClick={() => setShowPendingRequestDialog(false)} className="min-h-11 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-black text-[var(--admin-text)] disabled:opacity-50">
                 رجوع
               </button>
             </div>
