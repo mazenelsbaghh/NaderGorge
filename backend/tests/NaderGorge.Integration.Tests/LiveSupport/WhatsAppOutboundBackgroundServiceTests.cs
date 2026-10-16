@@ -297,6 +297,45 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
     }
 
     [Fact]
+    public async Task ProductionRegression_20261016_StaffPdf_IsUploadedAndSentAsDocumentInsteadOfFilenameText()
+    {
+        const string fileName = "الدرس الأول والثاني.pdf";
+        const string pdfContent = "%PDF-1.4\n%%EOF";
+        var storedBytes = Encoding.ASCII.GetBytes(pdfContent);
+        var handler = new RecordingMediaMetaHandler();
+        await using var harness = await Harness.CreateAsync(handler,
+            new MemoryAttachmentStorage(storedBytes),
+            new WhatsAppOutboundMediaNormalizer(new RejectingAudioProcess()));
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var message = AddMediaDelivery(db, LiveSupportMessageType.Pdf,
+                fileName, "application/pdf", storedBytes.Length);
+            message.Content = fileName;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.EndsWith("/media", handler.Requests[0].Path);
+        Assert.Contains("Content-Type: application/pdf", handler.Requests[0].Body);
+        Assert.Contains(pdfContent, handler.Requests[0].Body);
+        Assert.EndsWith("/messages", handler.Requests[1].Path);
+        using var payload = JsonDocument.Parse(handler.Requests[1].Body);
+        Assert.Equal("document", payload.RootElement.GetProperty("type").GetString());
+        Assert.False(payload.RootElement.TryGetProperty("text", out _));
+        var document = payload.RootElement.GetProperty("document");
+        Assert.Equal(fileName, document.GetProperty("filename").GetString());
+        Assert.Equal("media-normalized", document.GetProperty("id").GetString());
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var delivery = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportWhatsAppMessages.SingleAsync();
+        Assert.Equal("Sent", delivery.Status);
+        Assert.Equal("wamid.normalized", delivery.MetaMessageId);
+    }
+
+    [Fact]
     public async Task ProductionRegression_20260825_StoredWebp_IsNormalizedBeforeProviderUpload()
     {
         await using var webp = new MemoryStream();

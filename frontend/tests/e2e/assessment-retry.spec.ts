@@ -93,6 +93,34 @@ function examAttempt(attemptId: string, remainingSeconds = 600): ActiveExamAttem
   return { attemptId, title: 'امتحان الإعادة', description: '', startedAt: new Date().toISOString(), durationMinutes: 10, remainingSeconds, totalScore: 1, questions: [{ id: 'question-1', text: 'سؤال المحاولة الجديدة', type: 'MCQ', points: 1, options: [{ id: 'option-1', text: 'الإجابة الأولى' }, { id: 'option-2', text: 'الإجابة الثانية' }] }] };
 }
 
+// 2026-10-16: Ashraf Bakr's first lesson shuffled questions despite randomization being disabled.
+for (const { order, label } of [
+  { order: [1, 2, 3], label: 'teacher order' },
+  { order: [3, 1, 2], label: 'server randomized order' },
+]) {
+  test(`exam preserves ${label} when navigating and reopening the attempt`, async ({ page }) => {
+    await studentSession(page);
+    // Fix the randomness boundary so an unintended client shuffle cannot pass by chance.
+    await page.addInitScript(() => { Math.random = () => 0; });
+    const attempt = { ...examAttempt('ordered-attempt'), totalScore: order.length };
+    attempt.questions = order.map(number => ({
+      ...attempt.questions[0], id: `question-${number}`, text: `نص السؤال رقم ${number}`,
+    }));
+    await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, null, 404));
+    await page.route(`**/api/exams/${assessmentId}/start`, route => reply(route, attempt));
+    await page.goto(`/student/exams/${assessmentId}`);
+    for (let opening = 0; opening < 2; opening++) {
+      if (opening > 0) await page.reload();
+      await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+      for (const [index, number] of order.entries()) {
+        await expect(page.getByText(`نص السؤال رقم ${number}`, { exact: true })).toBeVisible();
+        if (index < order.length - 1)
+          await page.getByRole('button', { name: 'التالي', exact: true }).click();
+      }
+    }
+  });
+}
+
 // 2026-09-10: restart reloaded the failed result, and clearing an expired result
 // before receiving a new attempt could resubmit the old timer automatically.
 for (const entry of ['saved-result', 'just-expired'] as const) {
@@ -158,7 +186,7 @@ for (const status of ['Graded', 'PendingReview'] as const) {
     await page.getByRole('button', { name: 'تسليم الواجب', exact: true }).click();
     const restart = page.getByRole('button', { name: 'إعادة حل الواجب', exact: true });
     if (status === 'PendingReview') {
-      await expect(page.getByText('بانتظار التصحيح', { exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'الواجب قيد التصحيح', exact: true })).toBeVisible();
       await expect(restart).toHaveCount(0);
       expect(starts).toBe(initialStarts);
     } else {

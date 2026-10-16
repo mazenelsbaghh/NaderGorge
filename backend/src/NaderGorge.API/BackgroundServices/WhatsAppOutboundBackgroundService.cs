@@ -207,7 +207,7 @@ public sealed class WhatsAppOutboundBackgroundService(
         if (delivery.MessageType == "template") return await SendTemplateAsync(context, delivery, phoneNumber, ct);
         var supportMessage = await context.Db.LiveSupportMessages.AsNoTracking()
             .SingleAsync(message => message.Id == delivery.LiveSupportMessageId, ct);
-        if (delivery.MessageType is "image" or "audio")
+        if (supportMessage.AttachmentId.HasValue)
             return await SendMediaAsync(context, supportMessage, phoneNumber, ct);
         return await context.Cloud.SendTextAsync(phoneNumber, supportMessage.Content, ct);
     }

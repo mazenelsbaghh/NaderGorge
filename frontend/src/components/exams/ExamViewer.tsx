@@ -845,7 +845,8 @@ export function ExamViewer({
   const [shuffledQuestions, setShuffledQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
   useEffect(() => {
     if (attempt.questions?.length > 0) {
-      const qs = shuffleArray(attempt.questions).map((q: ActiveExamAttemptDto['questions'][number]) => ({
+      // The API applies the exam's randomization setting; preserve its question order.
+      const qs = attempt.questions.map((q: ActiveExamAttemptDto['questions'][number]) => ({
         ...q,
         options: shuffleArray(q.options),
       }));
