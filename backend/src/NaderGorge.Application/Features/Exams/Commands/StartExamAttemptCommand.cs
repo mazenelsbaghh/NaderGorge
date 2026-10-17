@@ -284,7 +284,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         // Return the active subset
-        var baseQuery = exam.ExamQuestions.AsEnumerable();
+        var selectedQuestionIds = selectedQuestions.Select(question => question.Id).ToHashSet();
+        var baseQuery = exam.ExamQuestions.Where(question => selectedQuestionIds.Contains(question.Id));
         if (exam.IsRandomized)
         {
             baseQuery = baseQuery.OrderBy(x => random.Next());

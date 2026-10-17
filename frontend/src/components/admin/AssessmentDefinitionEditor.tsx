@@ -148,8 +148,9 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
         <fieldset disabled={busy} className="space-y-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
           <legend className="px-2 text-lg font-bold">تأثير التعديل على المحاولات السابقة</legend>
           <label className="block space-y-2"><span>تطبيق التعديل</span><select className="admin-input w-full" value={policy.previousAttempts} onChange={event => updatePolicy({ previousAttempts: event.target.value as RevisionPolicy['previousAttempts'] })}>
-            <option value="Preserve">المحاولات الجديدة فقط، الحفاظ على النتائج السابقة</option><option value="Regrade">إعادة تصحيح المحاولات السابقة</option>
+            <option value="Preserve">الحفاظ على الإجابات والدرجات السابقة</option><option value="Regrade">إعادة تصحيح المحاولات السابقة</option>
           </select></label>
+          {kind === 'exam' && policy.previousAttempts === 'Preserve' && <p className="text-sm leading-7 text-[var(--admin-muted)]">خفض نسبة النجاح يشمل المحاولات السابقة تلقائيًا، مع الحفاظ على درجاتها وإجاباتها وانتظار اكتمال أي تصحيح معلّق. رفع النسبة يخص المحاولات الجديدة فقط.</p>}
           {policy.previousAttempts === 'Regrade' && <>
             <label className="block space-y-2"><span>عند حذف سؤال أو تغيير نوعه</span><select className="admin-input w-full" value={policy.removedQuestions} onChange={event => updatePolicy({ removedQuestions: event.target.value as RevisionPolicy['removedQuestions'] })}>
               <option value="KeepPreviousGrade">احتفظ بدرجة السؤال القديمة</option><option value="Exclude">استبعد السؤال من حساب الدرجة</option><option value="AwardFullPoints">امنح درجته كاملة</option>

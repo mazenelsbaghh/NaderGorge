@@ -21,6 +21,61 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class AssessmentReviewPostgresTests
 {
+    [Theory]
+    [InlineData(35, true)]
+    [InlineData(70, false)]
+    public async Task Incident20261017_PreservedGradesUseReducedPassThresholdWithoutRegradingAnswers(
+        decimal threshold, bool expectedPass)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var attempt = await fixture.Db.StudentExamAttempts.Include(a => a.Answers)
+            .Include(a => a.Exam).ThenInclude(e => e.ExamQuestions).ThenInclude(q => q.Question).ThenInclude(q => q.Options)
+            .SingleAsync(a => a.Id == essay.StudentExamAttemptId);
+        attempt.Exam.TotalScore = 70;
+        attempt.Exam.PassingScore = 70;
+        attempt.Exam.ExamQuestions.Single().Points = 70;
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(attempt.Exam).ToJson();
+        attempt.ScoreAchieved = 60.75m;
+        attempt.Evaluation = "ضعيف";
+        essay.TeacherFinalScore = 60.75m;
+        essay.Status = EssaySubmissionStatus.TeacherGraded;
+        var answer = attempt.Answers.Single();
+        answer.PointsAwarded = 60.75m;
+        await fixture.Db.SaveChangesAsync();
+        var target = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, Guid.Empty, seed.Teacher.UserId);
+        var handler = new AssessmentRevisionCommandHandler(fixture.Db, new(fixture.Db));
+        var definition = AssessmentDefinitionSnapshot.FromExam(attempt.Exam) with
+        { PassingScore = threshold, Questions = [] };
+        fixture.Db.ChangeTracker.Clear();
+        var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, definition, new()), default);
+        Assert.True(preview.Success, preview.Message);
+        var command = new SaveAssessmentRevisionCommand(target, definition, new(), preview.Data!.RevisionToken, Guid.NewGuid());
+
+        var saved = await handler.Handle(command, default);
+        Assert.True(saved.Success, saved.Message);
+        Assert.True((await handler.Handle(command, default)).Success);
+        fixture.Db.ChangeTracker.Clear();
+
+        var historical = await fixture.Db.StudentExamAttempts.Include(a => a.Answers).SingleAsync(a => a.Id == attempt.Id);
+        var snapshot = AssessmentDefinitionSnapshot.Read(historical.DefinitionSnapshotJson!, "exam", attempt.ExamId);
+        Assert.Equal(threshold, snapshot.PassingScore);
+        Assert.Single(snapshot.Questions);
+        Assert.Equal(70, snapshot.TotalScore);
+        Assert.Equal(60.75m, historical.ScoreAchieved);
+        Assert.Equal(expectedPass, historical.IsPassed);
+        Assert.Equal(expectedPass ? "جيد جداً" : "ضعيف", historical.Evaluation);
+        var savedAnswer = Assert.Single(historical.Answers);
+        Assert.Equal(answer.Id, savedAnswer.Id);
+        Assert.Equal(60.75m, savedAnswer.PointsAwarded);
+        Assert.Equal("شرح", savedAnswer.SubmittedText);
+        Assert.Equal(expectedPass ? 1 : 0, await fixture.Db.AuditLogs.CountAsync(a => a.Action == "ExamPassingScoreReduced" && a.EntityId == attempt.Id));
+        Assert.Equal(expectedPass ? 1 : 0, await fixture.Db.OutboxEvents.CountAsync(e => e.Type == "ExamResultReady" && e.TargetUserId == historical.UserId.ToString()));
+        Assert.Empty(await fixture.Db.OutboxEvents.Where(e => e.Type == "ExamGraded").ToListAsync());
+    }
+
     [Fact]
     public async Task TeacherOptOutLeavesHomeworkUngradedAndSkipsAutomaticRecoveryAndLateAiResults()
     {

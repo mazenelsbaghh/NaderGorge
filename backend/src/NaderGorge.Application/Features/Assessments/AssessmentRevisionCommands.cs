@@ -138,6 +138,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
                 authoredDefinition.Questions.Single(q => q.Id == question.Id).Options))
             .Where(pair => pair.First.Id != pair.Second.Id).ToDictionary(pair => pair.First.Id, pair => pair.Second.Id);
         workspace.ApplyRevisions(revisions, new(workspace.Definition(), request.Policy, optionIds), request, db);
+        workspace.ApplyPassingScoreReduction(originalDefinition, request, db);
         db.AuditLogs.Add(new AuditLog
         {
             Id = request.OperationId, Action = "AssessmentDefinitionRevised", EntityType = request.Target.Kind.ToString(),
@@ -390,6 +391,18 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
                         Evidence.Essays.Where(e => e.StudentExamAttemptId == revision.AttemptId).ToArray(), write);
                 else persistence.ApplyHomework(Submissions.Single(s => s.Id == revision.AttemptId), write);
             }
+        }
+
+        public void ApplyPassingScoreReduction(AssessmentDefinitionSnapshot original,
+            SaveAssessmentRevisionCommand request, IAppDbContext db)
+        {
+            if (Exam is null || request.Policy.PreviousAttempts != PreviousAttemptsPolicy.Preserve
+                || original.TotalScore <= 0 || request.Definition.TotalScore <= 0
+                || (request.Definition.PassingScore ?? 0) / request.Definition.TotalScore
+                    >= (original.PassingScore ?? 0) / original.TotalScore) return;
+            var reduction = new ExamPassingScoreReduction(db);
+            foreach (var attempt in Attempts)
+                reduction.Apply(attempt, Evidence.Essays.Where(e => e.StudentExamAttemptId == attempt.Id).ToArray(), request);
         }
 
         private RecordedAssessmentAnswer ExamAnswer(StudentExamAttempt attempt, AssessmentQuestionSnapshot question)
