@@ -1079,6 +1079,8 @@ class _ReportContext {
       columns: const [
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'المجموعة',
         'الحصة',
         'موعد الحصة',
@@ -1093,6 +1095,8 @@ class _ReportContext {
         return <Object?>[
           students[record.studentId]!.code,
           students[record.studentId]!.name,
+          students[record.studentId]!.phone,
+          students[record.studentId]!.guardianPhone,
           _groupLabel(session.groupId),
           session.number,
           _sessionTimeLabel(session),
@@ -1816,6 +1820,8 @@ class _ReportContext {
       columns: const [
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'المجموعة',
         'الحصة',
         'موعد الحصة',
@@ -1833,6 +1839,8 @@ class _ReportContext {
         return <Object?>[
           row.student.code,
           row.student.name,
+          row.student.phone,
+          row.student.guardianPhone,
           _groupLabel(row.session.groupId),
           row.session.number,
           _sessionTimeLabel(row.session),

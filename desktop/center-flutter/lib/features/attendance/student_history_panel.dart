@@ -77,6 +77,39 @@ class StudentHistoryPanel extends StatelessWidget {
     return '${sessionLabel(session)}${group == null ? '' : ' · ${group.name}'}';
   }
 
+  String _historyLessonLabel(String sessionId) {
+    if (expanded) return _sessionLabel(sessionId);
+    final session = _session(sessionId);
+    return 'شهر ${session?.monthNumber ?? '—'} · حصة ${session?.number ?? '—'}';
+  }
+
+  List<({String sessionId, AttendanceRecord? record})> _lessonHistory(
+    StudentHistoryRecords history,
+  ) {
+    final selected = store.studentById(student.id) ?? student;
+    final recorded = history.allAttendances.map((row) => row.sessionId).toSet();
+    final rows = <({String sessionId, AttendanceRecord? record})>[
+      for (final record in history.attendances)
+        (sessionId: record.sessionId, record: record),
+      if (!selected.isSuspended)
+        for (final session in store.sessions)
+          if (session.status == SessionStatus.closed &&
+              !recorded.contains(session.id) &&
+              CenterReports.wasEnrolledForSession(store, selected, session))
+            (sessionId: session.id, record: null),
+    ];
+    rows.sort((a, b) {
+      final first = _session(a.sessionId), second = _session(b.sessionId);
+      if (first != null && second != null) {
+        return compareSessionsNewestFirst(first, second);
+      }
+      return (second?.startsAt ?? b.record!.recordedAt).compareTo(
+        first?.startsAt ?? a.record!.recordedAt,
+      );
+    });
+    return rows;
+  }
+
   String _scoreLabel(AcademicRecord? record) =>
       record == null || (!record.examAbsent && record.score == null)
       ? 'لم تُرصد'
@@ -742,11 +775,15 @@ class StudentHistoryPanel extends StatelessWidget {
         .reversed
         .map(_scoreLabel)
         .join('، ');
-    final recentAttendance = (expanded ? attendance : attendance.take(4))
-        .toList();
+    final lessons = _lessonHistory(history);
+    final recentAttendance = (expanded ? lessons : lessons.take(4)).toList();
     final attendancePayments = store.canCollect
         ? recentAttendance
-              .map((record) => _attendancePaymentView(record, links))
+              .map(
+                (row) => row.record == null
+                    ? null
+                    : _attendancePaymentView(row.record!, links),
+              )
               .toList()
         : const <_AttendancePaymentView>[];
     final attendanceColumn = expanded ? 3 : 1;
@@ -764,62 +801,82 @@ class StudentHistoryPanel extends StatelessWidget {
         if (store.canCollect) 'الحساب',
         if (expanded) 'التعويض',
       ],
-      recentAttendance
-          .asMap()
-          .entries
-          .map(
-            (row) => [
-              expanded
-                  ? _sessionLabel(row.value.sessionId)
-                  : 'شهر ${_session(row.value.sessionId)?.monthNumber ?? '—'} · حصة ${_session(row.value.sessionId)?.number ?? '—'}',
-              if (expanded)
-                _session(row.value.sessionId) == null
-                    ? shortDate(row.value.recordedAt)
-                    : sessionDateLabel(_session(row.value.sessionId)!),
-              if (expanded)
-                row.value.recordedAtKnown
-                    ? _paymentTime(row.value.recordedAt)
-                    : 'وقت الحضور غير موثق',
-              expanded
-                  ? _attendanceLabel(row.value)
-                  : switch (row.value.status) {
-                      AttendanceStatus.present => 'حاضر',
-                      AttendanceStatus.makeup => 'معوّض',
-                      AttendanceStatus.absent => 'غائب',
-                    },
-              if (store.canCollect) ...[
-                attendancePayments[row.key].dueLabel,
-                attendancePayments[row.key].collectedLabel,
-                attendancePayments[row.key].status,
-                attendancePayments[row.key].account,
-              ],
-              if (expanded) _makeupLabel(row.value, links),
-            ],
-          )
-          .toList(),
-      'سجل الحضور يظهر بعد تسجيل أول حصة.',
-      cell: (row, column) => store.canCollect && column == paymentStatusColumn
-          ? Tooltip(
-              message: attendancePayments[row].detail,
-              child: _stateCell(
-                context,
-                attendancePayments[row].status,
-                good: attendancePayments[row].settled,
-                warning: !attendancePayments[row].settled,
-              ),
-            )
-          : !expanded && column == 1
-          ? _stateCell(
+      recentAttendance.asMap().entries.map((indexed) {
+        final row = indexed.value;
+        final record = row.record;
+        final session = _session(row.sessionId);
+        final payment = store.canCollect
+            ? attendancePayments[indexed.key]
+            : null;
+        return [
+          _historyLessonLabel(row.sessionId),
+          if (expanded)
+            session == null
+                ? shortDate(record!.recordedAt)
+                : sessionDateLabel(session),
+          if (expanded)
+            record == null
+                ? '—'
+                : record.recordedAtKnown
+                ? _paymentTime(record.recordedAt)
+                : 'وقت الحضور غير موثق',
+          record == null ? 'غائب' : _attendanceLabel(record),
+          if (store.canCollect) ...[
+            payment?.dueLabel ?? '—',
+            payment?.collectedLabel ?? '—',
+            payment?.status ?? '—',
+            payment?.account ?? '—',
+          ],
+          if (expanded) record == null ? '—' : _makeupLabel(record, links),
+        ];
+      }).toList(),
+      'سجل الحضور يظهر بعد تسجيل أول حصة أو إغلاقها.',
+      cell: (row, column) {
+        final entry = recentAttendance[row];
+        final record = entry.record;
+        final absent =
+            record == null || record.status == AttendanceStatus.absent;
+        if (column == 0 && absent) {
+          return Tooltip(
+            key: ValueKey('history-absence-lesson-${entry.sessionId}'),
+            message: record == null
+                ? 'الحصة مغلقة ولا يوجد تسجيل حضور للطالب. عرض فقط دون تسجيل مديونية أو خصم رصيد.'
+                : 'غائب عن الحصة',
+            child: _stateCell(
               context,
-              _attendanceLabel(recentAttendance[row]),
-              good: recentAttendance[row].status == AttendanceStatus.present,
-            )
-          : null,
+              _historyLessonLabel(entry.sessionId),
+              good: false,
+            ),
+          );
+        }
+        if (store.canCollect && column == paymentStatusColumn) {
+          final payment = attendancePayments[row];
+          return payment == null
+              ? const Text('—')
+              : Tooltip(
+                  message: payment.detail,
+                  child: _stateCell(
+                    context,
+                    payment.status,
+                    good: payment.settled,
+                    warning: !payment.settled,
+                  ),
+                );
+        }
+        if (column == attendanceColumn) {
+          return _stateCell(
+            context,
+            record == null ? 'غائب' : _attendanceLabel(record),
+            good: record?.status == AttendanceStatus.present,
+          );
+        }
+        return null;
+      },
       action: !store.canCollect
           ? null
           : (index) {
-              final record = recentAttendance[index];
-              if (record.status == AttendanceStatus.absent) {
+              final record = recentAttendance[index].record;
+              if (record == null || record.status == AttendanceStatus.absent) {
                 return const Text('—');
               }
               return IconButton(
@@ -923,7 +980,7 @@ class StudentHistoryPanel extends StatelessWidget {
                   _summaryItem(
                     Icons.people_outline,
                     'الحضور',
-                    '$presence من ${attendance.length}',
+                    '$presence من ${lessons.length}',
                   ),
                   _summaryItem(
                     Icons.description_outlined,

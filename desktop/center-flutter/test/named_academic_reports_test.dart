@@ -170,11 +170,15 @@ void main() {
       expect(all.rows, hasLength(4));
       expect(all.columns.last, 'اسم الامتحان');
       expect(
-        all.rows.where((row) => row.last == examA.name).map((row) => row[6]),
+        all.rows
+            .where((row) => row.last == examA.name)
+            .map((row) => row[all.columns.indexOf('الدرجة')]),
         [0, null],
       );
       expect(
-        all.rows.where((row) => row.last == examB.name).map((row) => row[6]),
+        all.rows
+            .where((row) => row.last == examB.name)
+            .map((row) => row[all.columns.indexOf('الدرجة')]),
         [30, null],
       );
       expect(all.rows.any((row) => row[0] == lateStudent.code), isFalse);
@@ -183,7 +187,7 @@ void main() {
         CenterReportFilter(activityId: examA.id, exactScore: 0),
       );
       expect(zero.rows.single[0], first.code);
-      expect(zero.rows.single[7], 20);
+      expect(zero.rows.single[zero.columns.indexOf('الدرجة النهائية')], 20);
       expect(zero.summary['درجات مرصودة'], '1');
       expect(zero.whatsAppRecords.single['studentId'], first.id);
       expect(zero.whatsAppRecords.single['activityId'], examA.id);
@@ -210,8 +214,14 @@ void main() {
         ),
       );
       expect(missing.rows.single[0], second.code);
-      expect(missing.rows.single[5], 'لم تُرصد');
-      expect(missing.rows.single[7], 40);
+      expect(
+        missing.rows.single[missing.columns.indexOf('حالة الامتحان')],
+        'لم تُرصد',
+      );
+      expect(
+        missing.rows.single[missing.columns.indexOf('الدرجة النهائية')],
+        40,
+      );
       final absent = report(
         CenterReportKind.exams,
         CenterReportFilter(
@@ -219,12 +229,15 @@ void main() {
           examStatus: ExamReportStatus.absent,
         ),
       );
-      expect(absent.rows.single[5], 'غائب عن الامتحان');
+      expect(
+        absent.rows.single[absent.columns.indexOf('حالة الامتحان')],
+        'غائب عن الامتحان',
+      );
       final range = report(
         CenterReportKind.exams,
         CenterReportFilter(activityId: examB.id, minScore: 30, maxScore: 30),
       );
-      expect(range.rows.single[6], 30);
+      expect(range.rows.single[range.columns.indexOf('الدرجة')], 30);
       expect(
         report(
           CenterReportKind.exams,
@@ -291,13 +304,15 @@ void main() {
       final exams = report(CenterReportKind.exams);
       expect(exams.rows, hasLength(5));
       expect(
-        exams.rows.where((row) => row.last == 'رصد سابق بدون اسم').single[6],
+        exams.rows.where((row) => row.last == 'رصد سابق بدون اسم').single[exams
+            .columns
+            .indexOf('الدرجة')],
         7,
       );
       expect(
         exams.rows
             .where((row) => row.last == examA.name && row[0] == first.code)
-            .single[6],
+            .single[exams.columns.indexOf('الدرجة')],
         0,
       );
       await store.saveGroup(group.copyWith(id: '', name: 'مجموعة لاحقة'));

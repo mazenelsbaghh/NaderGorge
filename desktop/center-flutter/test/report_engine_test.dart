@@ -61,6 +61,8 @@ void main() {
           name: name,
           groupIds: [group.id],
           discountPercent: discount,
+          phone: code == '003' ? '' : '01000000$code',
+          guardianPhone: code == '003' ? '' : '01200000$code',
           notes: code == '001' ? '=SUM(1,2)\n"ملاحظة"' : '',
           createdAt: DateTime.now().subtract(const Duration(days: 20)),
         ),
@@ -189,6 +191,69 @@ void main() {
     final row = report.rows.firstWhere((row) => row[index] == code);
     return Map.fromIterables(report.columns, row);
   }
+
+  test(
+    'exam and attendance CSV include the correct student and guardian contacts without changing records',
+    () async {
+      final before = jsonEncode([
+        store.allAttendances,
+        store.allPayments,
+        store.academics,
+        store.allPackages,
+        store.closings,
+        store.audit,
+      ]);
+      for (final kind in [
+        CenterReportKind.exams,
+        CenterReportKind.attendance,
+      ]) {
+        final filter = CenterReportFilter(
+          groupId: firstGroup.id,
+          sessionId: firstSession.id,
+        );
+        final table = report(kind, filter);
+        expect(table.rows, hasLength(3));
+        final first = studentRow(table, ahmed.code);
+        expect(first['رقم الطالب'], '01000000001');
+        expect(first['رقم ولي الأمر'], '01200000001');
+        final missingContacts = studentRow(table, absent.code);
+        expect(missingContacts['رقم الطالب'], '');
+        expect(missingContacts['رقم ولي الأمر'], '');
+        if (kind == CenterReportKind.exams) {
+          expect(first['الدرجة'], 0);
+          expect(
+            studentRow(table, mina.code)['حالة الامتحان'],
+            'غائب عن الامتحان',
+          );
+        } else {
+          expect(missingContacts['الحالة'], 'غائب — تم التعويض');
+        }
+        final path = await CenterReports.exportCsv(
+          store: store,
+          kind: kind,
+          filter: filter,
+          destination: '${directory.path}/${kind.name}-contacts.csv',
+        );
+        final bytes = await File(path).readAsBytes();
+        expect(bytes.take(3), [0xef, 0xbb, 0xbf]);
+        final csv = utf8.decode(bytes.skip(3).toList());
+        expect(csv, contains('"رقم الطالب","رقم ولي الأمر"'));
+        expect(csv, contains('"أحمد","01000000001","01200000001"'));
+        expect(csv, contains('"يوسف","",""'));
+      }
+      expect(
+        jsonEncode([
+          store.allAttendances,
+          store.allPayments,
+          store.academics,
+          store.allPackages,
+          store.closings,
+          store.audit,
+        ]),
+        before,
+      );
+    },
+  );
 
   test(
     'all report types preserve inactive roster and actual financial and academic distinctions',

@@ -160,6 +160,8 @@ void main() {
           destination: '${directory.path}/backup.json',
         );
         backupBefore = await File(backupPath).readAsBytes();
+        // Setup may enqueue a slow-backup diagnostic; include it in the baseline.
+        await log.flush();
         originalLogs = {
           for (final file in Directory(
             log.directoryPath,
