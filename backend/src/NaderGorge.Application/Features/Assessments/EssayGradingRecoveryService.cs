@@ -130,7 +130,7 @@ public sealed class EssayGradingRecoveryService(IAppDbContext db)
         {
             var snapshot = AssessmentDefinitionSnapshot.Read(candidate.DefinitionSnapshotJson, "exam", candidate.ExamId);
             if (snapshot.Revision?.RequiresReview == true
-                || snapshot.EssayGradingMode != NaderGorge.Domain.Enums.ExamEssayGradingMode.Automatic) return false;
+                || !EssayCreditPolicy.IsAutomatic(snapshot.EssayGradingMode)) return false;
             var question = snapshot.Questions.SingleOrDefault(q => q.BankQuestionId == candidate.QuestionId);
             return question is not null
                 && !string.IsNullOrWhiteSpace(question.Text)

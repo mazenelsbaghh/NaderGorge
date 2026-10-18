@@ -42,10 +42,36 @@ for (const width of [390, 1280]) {
       });
       await page.goto(`http://admin.lvh.me:${port}/admin/content/exams/exam/add-question`);
       const mode = page.getByRole('combobox', { name: /تصحيح الأسئلة المقالية/ });
+      const creditOptions = [
+        ['AutomaticFullCredit', 'درجة كاملة أو صفر'],
+        ['AutomaticFullOrHalfCredit', 'درجة كاملة أو نصفها أو صفر'],
+        ['Automatic', 'درجات جزئية'],
+      ];
+      assert.equal(await page.getByRole('radio', { name: /^درجات جزئية/ }).isChecked(), true);
+      for (const [creditMode, label] of creditOptions) {
+        const choice = page.getByRole('radio', { name: new RegExp(`^${label}`) });
+        await choice.check();
+        assert.equal(await choice.isChecked(), true);
+        assert.equal(await mode.inputValue(), 'Automatic');
+        assert.equal(await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).count(), 0);
+        await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
+        await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).click();
+        await page.getByRole('alert').filter({ hasText: 'المعاينة التجريبية' }).waitFor();
+        assert.equal(saves.at(-1).definition.essayGradingMode, creditMode);
+        assert.equal(saves.at(-1).policy.previousAttempts, 'Preserve');
+      }
+      definition.essayGradingMode = 'AutomaticFullOrHalfCredit';
+      await page.reload();
+      assert.equal(await page.getByRole('radio', { name: /^درجة كاملة أو نصفها أو صفر/ }).isChecked(), true);
+      assert.equal(await mode.inputValue(), 'Automatic');
+      await mkdir('../artifacts/exam-essay-grading', { recursive: true });
+      await page.getByRole('group', { name: 'توزيع درجة المقالي', exact: true })
+        .screenshot({ path: `../artifacts/exam-essay-grading/credit-options-${width}.png` });
       const pendingSwitch = page.getByRole('switch', { name: /إظهار النتيجة أثناء تصحيح المقالي/ });
       assert.equal(await pendingSwitch.isChecked(), false);
       await pendingSwitch.check();
       await mode.selectOption('Manual');
+      assert.equal(await page.getByRole('radio').count(), 0);
       await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
       await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).waitFor();
       await mode.selectOption('ModelAnswerOnly');
@@ -53,10 +79,10 @@ for (const width of [390, 1280]) {
       await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
       await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).click();
       await page.getByRole('alert').filter({ hasText: 'المعاينة التجريبية' }).waitFor();
-      assert.equal(saves.length, 1);
-      assert.equal(saves[0].definition.essayGradingMode, 'ModelAnswerOnly');
-      assert.equal(saves[0].definition.showResultsWhileEssayPending, true);
-      assert.equal(saves[0].policy.previousAttempts, 'Preserve');
+      assert.equal(saves.length, 4);
+      assert.equal(saves.at(-1).definition.essayGradingMode, 'ModelAnswerOnly');
+      assert.equal(saves.at(-1).definition.showResultsWhileEssayPending, true);
+      assert.equal(saves.at(-1).policy.previousAttempts, 'Preserve');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await mkdir('../artifacts/exam-essay-grading', { recursive: true });
       await page.locator('fieldset').filter({ has: mode }).screenshot({ path: `../artifacts/exam-essay-grading/editor-${width}.png` });

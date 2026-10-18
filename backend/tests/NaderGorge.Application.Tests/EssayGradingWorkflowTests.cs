@@ -8,6 +8,7 @@ using NaderGorge.Application.Features.Webhooks.Commands;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Application.Tests;
@@ -177,17 +178,33 @@ public class EssayGradingWorkflowTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(0.5)]
-    [InlineData(0.33)]
-    [InlineData(0.75)]
-    [InlineData(1)]
-    public async Task EssayCallback_PreservesEarnedCreditAndExplainsDeductions(double scoreRatio)
+    [InlineData(ExamEssayGradingMode.Automatic, 0, 0)]
+    [InlineData(ExamEssayGradingMode.Automatic, 0.5, 4)]
+    [InlineData(ExamEssayGradingMode.Automatic, 0.33, 2.64)]
+    [InlineData(ExamEssayGradingMode.Automatic, 0.75, 6)]
+    [InlineData(ExamEssayGradingMode.Automatic, 1, 8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, 0, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, 0.5, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, 0.99, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, 1, 8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.01, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.33, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.5, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.75, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.99, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 1, 8)]
+    public async Task EssayCallback_PreservesEarnedCreditAndExplainsDeductions(
+        ExamEssayGradingMode mode, double scoreRatio, double awardedPoints)
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "503");
         var (exam, mcqExamQuestion, essayExamQuestion, _, _, correctOption, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        exam.EssayGradingMode = mode;
         var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        // The saved attempt policy must win even if the live exam changes while AI is running.
+        exam.EssayGradingMode = ExamEssayGradingMode.Manual;
+        await db.SaveChangesAsync();
 
         var submitHandler = new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer());
         await submitHandler.Handle(
@@ -204,7 +221,7 @@ public class EssayGradingWorkflowTests
         const string feedback = "شرحت الجزء الأول صح؛ ناقص شرح الجزء الثاني وفق الإجابة النموذجية.";
         var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, (decimal)scoreRatio, feedback), CancellationToken.None);
         Assert.True(aiResult.Success);
-        var expectedPoints = 8m * (decimal)scoreRatio;
+        var expectedPoints = (decimal)awardedPoints;
 
         var duplicate = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 0m, "Duplicate delivery"), CancellationToken.None);
         Assert.True(duplicate.Success);
@@ -213,7 +230,11 @@ public class EssayGradingWorkflowTests
         var persistedEssay = db.EssaySubmissions.AsNoTracking().Single(e => e.Id == essay.Id);
         Assert.Equal(EssaySubmissionStatus.TeacherGraded, persistedEssay.Status);
         Assert.Equal(expectedPoints, persistedEssay.TeacherFinalScore);
-        Assert.Equal(feedback, persistedEssay.TeacherFeedback);
+        Assert.Equal((decimal)scoreRatio, persistedEssay.AiInitialScore);
+        Assert.Equal(feedback, persistedEssay.AiFeedback);
+        Assert.StartsWith(feedback, persistedEssay.TeacherFeedback);
+        if (mode != ExamEssayGradingMode.Automatic)
+            Assert.Contains("إعداد تصحيح المقالي", persistedEssay.TeacherFeedback);
 
         var persistedAttempt = db.StudentExamAttempts.AsNoTracking().Single(a => a.Id == attempt.Id);
         Assert.Equal(2m + expectedPoints, persistedAttempt.ScoreAchieved);
@@ -232,7 +253,7 @@ public class EssayGradingWorkflowTests
         var review = result.Data!.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
         Assert.Equal(expectedPoints, review.PointsAwarded);
         Assert.Equal(8m, review.MaximumPoints);
-        Assert.Equal(feedback, review.GradingFeedback);
+        Assert.Equal(persistedEssay.TeacherFeedback, review.GradingFeedback);
         Assert.Equal(scoreRatio == 1, review.IsCorrect);
     }
 

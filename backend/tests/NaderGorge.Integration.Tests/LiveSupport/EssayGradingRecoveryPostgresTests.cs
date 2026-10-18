@@ -12,6 +12,7 @@ using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Features.Webhooks.Commands;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 
@@ -20,15 +21,23 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 public sealed class EssayGradingRecoveryPostgresTests
 {
     [Theory]
-    [InlineData("dispatch")]
-    [InlineData("callback")]
-    [InlineData("recovery")]
-    public async Task TeacherOptOutKeepsPendingEssaysForManualReviewEvenWhenAiWorkAlreadyExists(string stage)
+    [InlineData("dispatch", ExamEssayGradingMode.Automatic)]
+    [InlineData("callback", ExamEssayGradingMode.Automatic)]
+    [InlineData("recovery", ExamEssayGradingMode.Automatic)]
+    [InlineData("dispatch", ExamEssayGradingMode.AutomaticFullCredit)]
+    [InlineData("callback", ExamEssayGradingMode.AutomaticFullCredit)]
+    [InlineData("recovery", ExamEssayGradingMode.AutomaticFullCredit)]
+    [InlineData("dispatch", ExamEssayGradingMode.AutomaticFullOrHalfCredit)]
+    [InlineData("callback", ExamEssayGradingMode.AutomaticFullOrHalfCredit)]
+    [InlineData("recovery", ExamEssayGradingMode.AutomaticFullOrHalfCredit)]
+    public async Task TeacherOptOutKeepsPendingEssaysForManualReviewEvenWhenAiWorkAlreadyExists(
+        string stage, ExamEssayGradingMode mode)
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
         var essay = await Seed(fixture.Db);
         var other = await Seed(fixture.Db);
+        essay.Attempt.Exam.EssayGradingMode = mode;
         essay.CreatedAt = DateTime.UtcNow.AddHours(-1);
         essay.Question.WrittenCorrection = null;
         essay.Attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(essay.Attempt.Exam).ToJson();
@@ -172,13 +181,17 @@ public sealed class EssayGradingRecoveryPostgresTests
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("   ")]
-    public async Task LegacyKeylessTextAnswerWaitingForTeacherIsReturnedToAiQueue(string? writtenCorrection)
+    [InlineData(null, ExamEssayGradingMode.Automatic)]
+    [InlineData("   ", ExamEssayGradingMode.Automatic)]
+    [InlineData(null, ExamEssayGradingMode.AutomaticFullCredit)]
+    [InlineData(null, ExamEssayGradingMode.AutomaticFullOrHalfCredit)]
+    public async Task LegacyKeylessTextAnswerWaitingForTeacherIsReturnedToAiQueue(
+        string? writtenCorrection, ExamEssayGradingMode mode)
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
         var essay = await Seed(fixture.Db);
+        essay.Attempt.Exam.EssayGradingMode = mode;
         essay.CreatedAt = DateTime.UtcNow.AddHours(-1);
         essay.Status = EssaySubmissionStatus.WaitTeacher;
         essay.Question.WrittenCorrection = writtenCorrection;

@@ -14,6 +14,10 @@ public class ExamEssayGradingModeTests
     [Theory]
     [InlineData(ExamEssayGradingMode.Automatic, true, "Pending")]
     [InlineData(ExamEssayGradingMode.Automatic, false, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, true, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, false, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, true, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, false, "Pending")]
     [InlineData(ExamEssayGradingMode.Manual, true, "PartiallyGraded")]
     [InlineData(ExamEssayGradingMode.Manual, false, "PartiallyGraded")]
     [InlineData(ExamEssayGradingMode.ModelAnswerOnly, true, "Completed")]
@@ -66,7 +70,7 @@ public class ExamEssayGradingModeTests
             Assert.Equal(mode == ExamEssayGradingMode.Manual ? EssaySubmissionStatus.WaitTeacher
                 : EssaySubmissionStatus.WaitAI, essay.Status);
         }
-        Assert.Equal(mode == ExamEssayGradingMode.Automatic ? 1 : 0,
+        Assert.Equal(mode is not (ExamEssayGradingMode.Manual or ExamEssayGradingMode.ModelAnswerOnly) ? 1 : 0,
             await db.OutboxEvents.CountAsync(e => e.Type == "EssayEvaluationQueued"));
     }
 

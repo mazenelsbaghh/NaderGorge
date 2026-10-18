@@ -2,7 +2,7 @@ import type { PartialAssessmentResultDto } from './assessment-result';
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
 
-export type ExamEssayGradingMode = 'Automatic' | 'Manual' | 'ModelAnswerOnly';
+export type ExamEssayGradingMode = 'Automatic' | 'AutomaticFullCredit' | 'AutomaticFullOrHalfCredit' | 'Manual' | 'ModelAnswerOnly';
 
 export interface QuestionOptionDto {
   id: string;

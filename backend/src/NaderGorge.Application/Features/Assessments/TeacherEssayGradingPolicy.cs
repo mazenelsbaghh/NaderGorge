@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
-using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Assessments;
@@ -29,7 +28,7 @@ public static class TeacherEssayGradingPolicy
         if (submission is null) return false;
         var mode = submission.DefinitionSnapshotJson is null ? submission.EssayGradingMode
             : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "exam", submission.ExamId).EssayGradingMode;
-        return mode != ExamEssayGradingMode.Automatic
+        return !EssayCreditPolicy.IsAutomatic(mode)
             || await ManualTeacherIds(db).ContainsAsync(submission.CreatedByTeacherId, ct);
     }
 

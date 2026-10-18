@@ -95,7 +95,7 @@ public class WebhookEssayGradedCommandHandler
         }
 
         var isCorrect = request.AiScore >= 1m;
-        var awardedScore = Math.Round(examQuestion.Points * request.AiScore, 2, MidpointRounding.AwayFromZero);
+        var awardedScore = EssayCreditPolicy.AwardedPoints(exam.EssayGradingMode, examQuestion.Points, request.AiScore);
         if (attempt.DefinitionSnapshotJson is not null)
             attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
                 .WithGrades(new Dictionary<Guid, (decimal, bool)> { [examQuestion.Id] = (awardedScore, false) }).ToJson();
@@ -103,7 +103,7 @@ public class WebhookEssayGradedCommandHandler
         submission.AiInitialScore = request.AiScore;
         submission.AiFeedback = request.AiFeedback;
         submission.TeacherFinalScore = awardedScore;
-        submission.TeacherFeedback = request.AiFeedback;
+        submission.TeacherFeedback = EssayCreditPolicy.Explain(exam.EssayGradingMode, request.AiFeedback);
         submission.Status = EssaySubmissionStatus.TeacherGraded;
         submission.AiNextRetryAt = null;
 
