@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { publicExamManagementPath } from '@/lib/public-exam-navigation';
 import { ArrowRight, CheckCircle2, RefreshCcw, XCircle } from 'lucide-react';
 import { adminSalesService, type PublicExamResultsDto } from '@/services/admin-sales-service';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
 
 export default function AdminPublicExamResultsPageClient({ productId }: { productId: string }) {
+  const examsPath = publicExamManagementPath(usePathname());
   const [report, setReport] = useState<PublicExamResultsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +35,7 @@ export default function AdminPublicExamResultsPageClient({ productId }: { produc
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Link href="/admin/public-exams" className="mb-2 inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-950">
+            <Link href={examsPath} className="mb-2 inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-950">
               <ArrowRight className="h-4 w-4" />
               رجوع للامتحانات العامة
             </Link>

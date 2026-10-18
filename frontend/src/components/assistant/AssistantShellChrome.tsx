@@ -40,7 +40,7 @@ export type AssistantShellRoute =
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
   | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/recharge-conflicts' | '/assistant/students' | '/assistant/reports'
-  | '/assistant/codes' | '/assistant/refunds';
+  | '/assistant/codes' | '/assistant/refunds' | '/assistant/public-exams';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -76,6 +76,7 @@ const navItems: AssistantNavItem[] = [
   { href: '/assistant/codes', label: 'الأكواد', icon: KeyRound, group: 'operations', permission: 'codes.manage' },
   { href: '/assistant/community', label: 'إدارة مجتمع الطلاب', icon: MessageSquareText, group: 'learning', permission: 'community.manage' },
   { href: '/assistant/questions', label: 'الامتحانات والأسئلة', icon: Shield, group: 'learning', permission: 'exams.manage' },
+  { href: '/assistant/public-exams', label: 'الامتحانات العامة', icon: Shield, group: 'learning', permission: 'public_exams.manage' },
   { href: '/assistant/watch-requests', label: 'طلبات إعادة المشاهدة', icon: Star, group: 'learning', permission: 'watch_requests.manage' },
   { href: '/assistant/crm', label: 'الكول سنتر', icon: PhoneCall, group: 'communication', permission: 'crm.manage' },
   { href: '/assistant/live-support', label: 'الدعم المباشر', icon: Headphones, group: 'communication' },

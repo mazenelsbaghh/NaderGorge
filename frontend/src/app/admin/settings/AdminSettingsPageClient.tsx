@@ -136,7 +136,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/codes/templates'
   ],
   'public_exams.manage': [
-    '/admin/public-exams'
+    '/admin/public-exams',
+    '/assistant/public-exams'
   ],
   'watch_requests.manage': [
     '/admin/watch-requests',
@@ -292,6 +293,7 @@ const ADMIN_NAV_OPTIONS: NavOption[] = [
 ];
 
 const ASSISTANT_NAV_OPTIONS: NavOption[] = [
+  { key: '/assistant/public-exams', label: 'الامتحانات العامة' },
   {
     key: '/assistant/dashboard',
     label: 'الرئيسية',

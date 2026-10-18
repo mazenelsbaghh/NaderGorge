@@ -5,7 +5,8 @@ import { PublicExamShortLink } from '@/components/admin/PublicExamShortLink';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { publicExamManagementPath } from '@/lib/public-exam-navigation';
 import { BarChart3, BookOpen, FileQuestion, GraduationCap, RefreshCcw, Save, Shuffle, Timer } from 'lucide-react';
 import { AdminPage, ContentArchiveControl } from '@/components/admin';
 import { AcademicScopeSelector } from '@/components/admin/AcademicScopeSelector';
@@ -18,6 +19,7 @@ import { ExamEssayGradingSettings, type ExamEssayGradingMode } from '@/component
 
 export default function AdminPublicExamsPageClient() {
   const router = useRouter();
+  const examsPath = publicExamManagementPath(usePathname());
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [activationPendingId, setActivationPendingId] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function AdminPublicExamsPageClient() {
       setMessage('تم إنشاء الامتحان العام. افتحه الآن لإضافة الأسئلة.');
       setForm((current) => ({ ...current, title: '', description: '', slug: '' }));
       await load();
-      router.push(`/admin/public-exams/${created.id}`);
+      router.push(`${examsPath}/${created.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'فشل إنشاء الامتحان العام.');
     } finally {
@@ -273,11 +275,11 @@ export default function AdminPublicExamsPageClient() {
                       disabled={loading || activationPendingId !== null || (exam.archiveMode ?? 'None') !== 'None'}
                       onChange={enabled => void changeActivation(exam, enabled)} />
                     <ContentArchiveControl targetType="Exam" targetId={exam.examId} title={exam.examTitle} archiveMode={exam.archiveMode} onChanged={load} compact />
-                    <Link href={`/admin/public-exams/${exam.id}`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
+                    <Link href={`${examsPath}/${exam.id}`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
                       <FileQuestion className="h-4 w-4" />
                       فتح وإضافة أسئلة
                     </Link>
-                    <Link href={`/admin/public-exams/${exam.id}/results`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
+                    <Link href={`${examsPath}/${exam.id}/results`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
                       <BarChart3 className="h-4 w-4" />
                       النتائج
                     </Link>

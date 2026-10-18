@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { publicExamManagementPath } from '@/lib/public-exam-navigation';
 import { ArrowRight } from 'lucide-react';
 import { AdminPageSkeleton, AdminPage } from '@/components/admin';
 import ExamProfilePageClient from '../../content/exams/[id]/ExamProfilePageClient';
 import { adminSalesService, type PublicExamProductDto } from '@/services/admin-sales-service';
 
 export default function AdminPublicExamProfilePageClient({ productId }: { productId: string }) {
+  const examsPath = publicExamManagementPath(usePathname());
   const [product, setProduct] = useState<PublicExamProductDto | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +34,7 @@ export default function AdminPublicExamProfilePageClient({ productId }: { produc
         activePath="/admin/public-exams"
         sectionLabel="الامتحانات العامة"
         pageTitle="الامتحان غير موجود"
-        action={<Link href="/admin/public-exams" className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] px-3 py-2 text-sm font-bold"><ArrowRight className="h-4 w-4" />رجوع</Link>}
+        action={<Link href={examsPath} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] px-3 py-2 text-sm font-bold"><ArrowRight className="h-4 w-4" />رجوع</Link>}
       >
         <p className="rounded-lg border border-red-200 bg-red-50 p-4 font-bold text-red-700">لم يتم العثور على الامتحان العام.</p>
       </AdminPage>

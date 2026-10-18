@@ -912,10 +912,10 @@ export function AdminPage(
 
   // Detailed content routes are shared with the assistant surface. Keep their
   // page metadata while allowing the assistant layout to remain the frame owner.
-  if (pathname.startsWith('/assistant/content')) {
+  if (pathname.startsWith('/assistant/content') || pathname.startsWith('/assistant/public-exams')) {
     return (
       <AssistantShellChrome
-        activePath="/assistant/content"
+        activePath={pathname.startsWith('/assistant/public-exams') ? '/assistant/public-exams' : '/assistant/content'}
         sectionLabel={props.sectionLabel}
         pageTitle={props.pageTitle}
         subtitle={props.subtitle}
