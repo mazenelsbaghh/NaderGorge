@@ -21,6 +21,7 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
         if (teacherId is null) return new(teachers, [], []);
         var packages = await db.Packages.AsNoTracking().Where(p => p.TeacherId == teacherId)
             .OrderBy(p => p.Name).Select(p => new FollowUpPackage(p.Id, p.Name)).ToListAsync(ct);
+        packages = await WithPackageGradesAsync(packages, ct);
         var lessons = packageId is null ? [] : await db.Lessons.AsNoTracking()
             .Where(l => l.ContentSection.Term.PackageId == packageId
                 && l.ContentSection.Term.Package.TeacherId == teacherId && l.Videos.Any(v => v.IsActive))

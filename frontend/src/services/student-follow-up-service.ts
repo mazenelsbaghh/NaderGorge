@@ -9,7 +9,7 @@ export interface FollowUpFilter {
 }
 export interface FollowUpOptions {
   teachers: Array<{ id: string; name: string }>;
-  packages: Array<{ id: string; name: string }>;
+  packages: Array<{ id: string; name: string; grades?: Array<{ stage: number; grade: number }> }>;
   lessons: Array<{ id: string; title: string; termTitle: string; order: number }>;
 }
 export interface FollowUpRow {

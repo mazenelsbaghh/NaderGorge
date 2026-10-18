@@ -9,7 +9,11 @@ public sealed record StudentFollowUpFilter(
     int Page = 1, int PageSize = 20);
 
 public sealed record FollowUpTeacher(Guid Id, string Name);
-public sealed record FollowUpPackage(Guid Id, string Name);
+public sealed record FollowUpGrade(int Stage, int Grade);
+public sealed record FollowUpPackage(Guid Id, string Name)
+{
+    public IReadOnlyList<FollowUpGrade> Grades { get; init; } = [];
+}
 public sealed record FollowUpLesson(Guid Id, string Title, string TermTitle, int Order);
 public sealed record StudentFollowUpOptions(
     IReadOnlyList<FollowUpTeacher> Teachers, IReadOnlyList<FollowUpPackage> Packages,

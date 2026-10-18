@@ -148,6 +148,35 @@ public sealed class StudentFollowUpPostgresTests
     }
 
     [Fact]
+    public async Task TeacherCourseOptionsExposeOnlyTheirAcademicGradesAndPreserveMultipleScopes()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var foreign = await Seed(fixture.Db);
+        var scope = await fixture.Db.StudentFacingAcademicScopes.SingleAsync(s => s.OwnerId == seed.Package.Id);
+        scope.ScopeLevel = AcademicScopeLevel.GradeAllSubjects;
+        scope.EducationStage = EducationStage.Secondary;
+        scope.GradeLevel = GradeLevel.FirstSecondary;
+        var baccalaureate = new Package { Name = "بكالوريا", TeacherId = seed.Teacher.Id, SubjectId = seed.Package.SubjectId };
+        fixture.Db.AddRange(baccalaureate,
+            new StudentFacingAcademicScope { OwnerType = StudentFacingScopeOwnerType.Package, OwnerId = baccalaureate.Id,
+                ScopeLevel = AcademicScopeLevel.GradeAllSubjects, EducationStage = EducationStage.Baccalaureate, GradeLevel = GradeLevel.FirstBaccalaureate },
+            new StudentFacingAcademicScope { OwnerType = StudentFacingScopeOwnerType.Package, OwnerId = baccalaureate.Id,
+                ScopeLevel = AcademicScopeLevel.GradeAllSubjects, EducationStage = EducationStage.Baccalaureate, GradeLevel = GradeLevel.SecondBaccalaureate });
+        await fixture.Db.SaveChangesAsync();
+
+        var options = await Reader(fixture.Db).OptionsAsync(seed.Teacher.Id, null, false, default);
+
+        Assert.Empty(options.Teachers);
+        Assert.Equal(2, options.Packages.Count);
+        Assert.DoesNotContain(options.Packages, package => package.Id == foreign.Package.Id);
+        Assert.Equal(new FollowUpGrade(0, 0), Assert.Single(options.Packages.Single(p => p.Id == seed.Package.Id).Grades));
+        Assert.Equal(new[] { new FollowUpGrade(1, 2), new FollowUpGrade(1, 3) },
+            options.Packages.Single(p => p.Id == baccalaureate.Id).Grades);
+    }
+
+    [Fact]
     public async Task OpeningStampChangesOnlyOnPublicationAndReopeningNotMetadataEdits()
     {
         await using var fixture = new PostgresLiveSupportFixture();
