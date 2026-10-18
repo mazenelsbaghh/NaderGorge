@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import shlex
+import subprocess
 import tempfile
 import uuid
 from pathlib import Path
@@ -32,24 +33,32 @@ def verify_source(commit: str) -> None:
             raise RuntimeError("Local maintenance assets differ from the published source")
 
 
-def assets_for_node(inventory, node) -> dict[str, bytes]:
+def assets_for_node(inventory, node, source_files: dict[str, bytes]) -> dict[str, bytes]:
     builder = next(member for member in inventory.nodes if member.id == "node-3")
     configuration = {"nodeId": node.id,
                      "overlayAddresses": [member.overlay_address for member in inventory.nodes],
                      "repositoryPrefixes": ["massar", builder.overlay_address + ":5443/massar"]}
     hour = {"node-3": "04", "node-2": "05", "node-1": "06"}[node.id]
-    service = (ROOT / SERVICE).read_bytes()
+    service = source_files[SERVICE]
     return {
-        "/usr/local/sbin/massar-image-cleanup": (ROOT / SCRIPT).read_bytes(),
+        "/usr/local/sbin/massar-image-cleanup": source_files[SCRIPT],
         "/etc/massar/image-cleanup.json": (json.dumps(configuration, indent=2) + "\n").encode(),
         "/etc/systemd/system/massar-image-cleanup.service": service,
         "/etc/systemd/system/massar-image-cleanup-preview.service": service.replace(b"--yes", b"--dry-run"),
         "/etc/systemd/system/massar-image-cleanup.timer":
-            (ROOT / TIMER).read_text().replace("@HOUR@", hour).encode(),
+            source_files[TIMER].decode().replace("@HOUR@", hour).encode(),
     }
 
 
-def preview_node(transport, remote, assets: dict[str, bytes]) -> dict:
+def previous_assets(inventory, node, commit: str) -> dict[str, bytes]:
+    parent = git(ROOT, "rev-parse", commit + "^")
+    source_files = {relative: subprocess.check_output(
+        ["git", "-C", str(ROOT), "cat-file", "blob", parent + ":" + relative])
+        for relative in (SCRIPT, SERVICE, TIMER)}
+    return assets_for_node(inventory, node, source_files)
+
+
+def preview_node(transport, remote, assets: dict[str, bytes], approved_previous: dict[str, bytes]) -> dict:
     paths = list(assets)
     inspection = """import hashlib,json
 from pathlib import Path
@@ -66,7 +75,8 @@ print(json.dumps(report))
     existing = json.loads(transport.run(remote, ["python3", "-c", inspection]).stdout)
     for destination, previous in existing.items():
         expected = hashlib.sha256(assets[destination]).hexdigest()
-        if previous not in (None, expected):
+        approved = hashlib.sha256(approved_previous[destination]).hexdigest()
+        if previous not in (None, expected, approved):
             raise RuntimeError(f"Existing maintenance asset differs: {remote.node_id} {destination}")
     return existing
 
@@ -153,8 +163,9 @@ def main() -> None:
         for node in reversed(inventory.nodes):
             verify_source(arguments.source)
             remote = target(inventory, node)
-            assets = assets_for_node(inventory, node)
-            existing = preview_node(transport, remote, assets)
+            source_files = {relative: (ROOT / relative).read_bytes() for relative in (SCRIPT, SERVICE, TIMER)}
+            assets = assets_for_node(inventory, node, source_files)
+            existing = preview_node(transport, remote, assets, previous_assets(inventory, node, arguments.source))
             print(json.dumps({"node": node.id, "mode": "preview" if arguments.dry_run else "install",
                               "assets": {path: hashlib.sha256(content).hexdigest() for path, content in assets.items()}}), flush=True)
             if arguments.dry_run:
