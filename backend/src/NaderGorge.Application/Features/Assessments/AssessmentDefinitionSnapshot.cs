@@ -146,6 +146,7 @@ public sealed record AssessmentDefinitionSnapshot(
             // Visibility applies to existing pending attempts without regrading their saved answers.
             ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             SingleAttemptOnly = current.SingleAttemptOnly,
+            ShowAnswersToStudents = current.ShowAnswersToStudents,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
             ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id, optionOrders)).ToList()

@@ -50,6 +50,9 @@ export interface AnswerSubmissionDto {
 export type PartialExamResultDto = PartialAssessmentResultDto;
 
 export interface ExamResultDto {
+  essayScoreStatus?: 'NotApplicable' | 'Pending' | 'PartiallyIncluded' | 'Included' | 'Excluded';
+  answersVisible?: boolean;
+  examId?: string;
   allowRetake?: boolean;
   partialResult?: PartialExamResultDto | null;
   attemptId: string;

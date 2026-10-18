@@ -14,6 +14,7 @@ import { devConsole } from '@/utils/dev-console';
 const invalidateMany = (keys: readonly string[]) => invalidateCanonicalKeys(keys);
 
 export interface NotificationPayload {
+  actionUrl?: string | null;
   id: string;
   title: string;
   message: string;

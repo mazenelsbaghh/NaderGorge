@@ -109,10 +109,22 @@ internal static class ExamResultBuilder
             resultState ?? "Completed",
             lessonId,
             packageId,
-            questionReviews,
+            exam.ShowAnswersToStudents ? questionReviews : [],
             exam.ShowResultsWhileEssayPending && (resultState is "Pending" or "PartiallyGraded")
-                ? PartialResult(exam, attempt, questionReviews) : null
+                ? PartialResult(exam, attempt, questionReviews) : null,
+            AnswersVisible: exam.ShowAnswersToStudents,
+            ExamId: exam.Id,
+            EssayScoreStatus: EssayScoreStatus(exam, questionReviews)
         );
+    }
+
+    private static string EssayScoreStatus(Exam exam, IReadOnlyList<ExamQuestionReviewDto> reviews)
+    {
+        var essayIds = exam.ExamQuestions.Where(q => q.Question.Type == QuestionType.Essay).Select(q => q.Id).ToHashSet();
+        if (essayIds.Count == 0) return "NotApplicable";
+        if (exam.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly) return "Excluded";
+        var included = reviews.Count(q => essayIds.Contains(q.ExamQuestionId) && !q.IsPendingGrading);
+        return included == 0 ? "Pending" : included < essayIds.Count ? "PartiallyIncluded" : "Included";
     }
 
     private static PartialExamResultDto PartialResult(Exam exam, StudentExamAttempt attempt,

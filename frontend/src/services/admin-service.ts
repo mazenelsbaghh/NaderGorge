@@ -740,6 +740,7 @@ export interface ExamQuestionSummaryDto {
 }
 
 export interface ExamDashboardDto {
+  showAnswersToStudents?: boolean;
   examId: string;
   internalCode: string;
   title: string;
@@ -2221,6 +2222,12 @@ export const adminService = {
       `/admin/exams/${examId}/dashboard`
     );
     return res.data?.data;
+  },
+  setExamAnswerVisibility: async (examId: string, showAnswers: boolean) => {
+    const response = await apiClient.put<ApiResponse<{ showAnswersToStudents: boolean; notifiedStudents: number }>>(
+      `/admin/exams/${examId}/answer-visibility`, { showAnswers }
+    );
+    return response.data;
   },
   getHomeworkDashboard: async (homeworkId: string) => {
     const res = await apiClient.get<ApiResponse<HomeworkDashboardDto>>(

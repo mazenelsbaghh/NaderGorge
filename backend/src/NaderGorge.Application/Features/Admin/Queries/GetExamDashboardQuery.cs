@@ -61,7 +61,8 @@ public record ExamDashboardDto(
     List<StudentExamResultSummaryDto> Attempts,
     List<ExamQuestionSummaryDto> Questions,
     ContentArchiveMode ArchiveMode,
-    DateTime? ArchivedAt
+    DateTime? ArchivedAt,
+    bool ShowAnswersToStudents = true
 );
 
 public record GetExamDashboardQuery(Guid ExamId, Guid ActorId) : IRequest<ApiResponse<ExamDashboardDto>>;
@@ -212,7 +213,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             attemptsDto,
             questionsDto,
             exam.ArchiveMode,
-            exam.ArchivedAt
+            exam.ArchivedAt,
+            exam.ShowAnswersToStudents
         );
 
         return ApiResponse<ExamDashboardDto>.Ok(dto);

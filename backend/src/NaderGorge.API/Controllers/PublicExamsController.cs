@@ -111,6 +111,18 @@ public sealed class PublicExamsController : ControllerBase
         return Ok(ApiResponse<object>.Ok(data));
     }
 
+    [HttpGet("{slug}")]
+    [Authorize]
+    public async Task<IActionResult> ResolveSlug(string slug, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new GetPublicExamProductsQuery(
+            PublishedOnly: true, StudentId: User.RequireUserId(), Slug: slug), ct);
+        var product = response.Data?.SingleOrDefault();
+        return product == null
+            ? NotFound(ApiResponse<PublicExamProductDto>.Fail("الامتحان غير متاح لحسابك حالياً."))
+            : Ok(ApiResponse<PublicExamProductDto>.Ok(product));
+    }
+
     [HttpPost("redeem")]
     [Authorize]
     public async Task<IActionResult> Redeem([FromBody] RedeemPrintableCodeRequest request, CancellationToken ct)

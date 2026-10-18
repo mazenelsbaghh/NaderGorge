@@ -13,7 +13,7 @@ public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<A
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
-public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions, PartialExamResultDto? PartialResult = null, bool AllowRetake = true);
+public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions, PartialExamResultDto? PartialResult = null, bool AllowRetake = true, bool AnswersVisible = true, Guid? ExamId = null, string EssayScoreStatus = "NotApplicable");
 
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {

@@ -19,7 +19,8 @@ public record StudentNotificationDto(
     string Title,
     string Body,
     bool IsRead,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? ActionUrl = null
 );
 
 public class GetStudentNotificationsQueryHandler : IRequestHandler<GetStudentNotificationsQuery, ApiResponse<List<StudentNotificationDto>>>
@@ -57,7 +58,8 @@ public class GetStudentNotificationsQueryHandler : IRequestHandler<GetStudentNot
             n.Title,
             n.Body,
             n.ReadAt != null,
-            n.CreatedAt
+            n.CreatedAt,
+            n.ActionUrl
         )).ToList();
 
         return ApiResponse<List<StudentNotificationDto>>.Ok(notifications);

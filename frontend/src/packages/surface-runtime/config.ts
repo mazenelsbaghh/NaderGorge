@@ -102,7 +102,7 @@ export function getSurfaceOrigins(requestHost?: string): SurfaceOrigins {
   } else if (requestHost) {
     hostname = requestHost;
     protocol =
-      hostname.includes('localhost') || hostname.includes('127.0.0.1')
+      hostname.includes('localhost') || hostname.includes('127.0.0.1') || /(^|\.)lvh\.me(?::\d+)?$/.test(hostname)
         ? 'http:'
         : 'https:';
   } else {
@@ -200,6 +200,14 @@ export function getRouteBoundaryDecision(
 ): RouteBoundaryDecision {
   const { surface, pathname, search = '', host } = input;
   const origins = getSurfaceOrigins(host);
+
+  if (/^\/public-exams\/[^/]+\/?$/.test(pathname)) {
+    return {
+      action: 'redirect',
+      destination: createRedirectUrl(origins.student, `/student${pathname}`, search),
+      surface,
+    };
+  }
 
   if (surface === 'landing') {
     if (pathname.startsWith('/student')) {

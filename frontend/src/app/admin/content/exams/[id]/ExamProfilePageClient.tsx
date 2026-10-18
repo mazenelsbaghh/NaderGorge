@@ -32,6 +32,7 @@ import type { AdminShellRoute } from '@/components/admin/AdminShellChrome';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import { ExamAttemptReviewButton } from '@/components/admin/ExamAttemptReviewButton';
+import { ExamAnswerVisibilityControl } from '@/components/admin/ExamAnswerVisibilityControl';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { normalizeQuestionRichText } from '@/lib/question-text';
@@ -152,6 +153,8 @@ export default function ExamProfilePageClient({
   const content = (
       <div className="space-y-8">
         <ContentInternalCode code={data.internalCode} label="كود الامتحان الداخلي" />
+        <ExamAnswerVisibilityControl examId={id} visible={data.showAnswersToStudents !== false}
+          onChanged={visible => setData(current => current ? { ...current, showAnswersToStudents: visible } : current)} />
 
         {/* Statistics Cards */}
         <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

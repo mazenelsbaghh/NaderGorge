@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 
 import { AdminColumn, AdminDataTable, AdminStatCard } from "@/components/admin";
 import { AcademicScopeSelector } from "@/components/admin/AcademicScopeSelector";
+import { PublicExamShortLink } from "@/components/admin/PublicExamShortLink";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { getAcademicScopeLabel, type AcademicScopePayload } from "@/lib/academic-labels";
 import { registerCacheStore } from "@/lib/cache-invalidation";
@@ -120,9 +121,7 @@ export default function TeacherPublicExamsPageClient() {
       render: (exam) => (
         <div>
           <p className="font-black text-[var(--admin-text)]">{exam.examTitle}</p>
-          <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]" dir="ltr">
-            /public-exams/{exam.slug}
-          </p>
+          <PublicExamShortLink slug={exam.slug} />
         </div>
       ),
     },

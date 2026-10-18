@@ -11,4 +11,7 @@ export const publicExamsService = {
   async list() {
     return unwrap<PublicExamProductDto[]>(await apiClient.get('/public-exams'));
   },
+  async resolveSlug(slug: string) {
+    return unwrap<PublicExamProductDto>(await apiClient.get(`/public-exams/${encodeURIComponent(slug)}`));
+  },
 };

@@ -12,7 +12,7 @@ public sealed record GetSalesCouponByIdQuery(Guid Id) : IRequest<ApiResponse<Sal
 public sealed record GetStackingPoliciesQuery : IRequest<ApiResponse<IReadOnlyList<StackingPolicyDto>>>;
 public sealed record GetPrintableTemplatesQuery : IRequest<ApiResponse<IReadOnlyList<PrintableTemplateDto>>>;
 public sealed record GetPrintableBatchesQuery : IRequest<ApiResponse<IReadOnlyList<PrintableBatchDto>>>;
-public sealed record GetPublicExamProductsQuery(bool PublishedOnly, Guid? StudentId = null) : IRequest<ApiResponse<IReadOnlyList<PublicExamProductDto>>>;
+public sealed record GetPublicExamProductsQuery(bool PublishedOnly, Guid? StudentId = null, string? Slug = null) : IRequest<ApiResponse<IReadOnlyList<PublicExamProductDto>>>;
 
 public sealed class GetSalesRulesQueryHandler : IRequestHandler<GetSalesRulesQuery, ApiResponse<IReadOnlyList<SalesRuleDto>>>
 {
@@ -110,6 +110,10 @@ public sealed class GetPublicExamProductsQueryHandler : IRequestHandler<GetPubli
         if (request.PublishedOnly)
         {
             query = query.Where(x => x.Exam.IsActive && x.IsPublished && x.DisabledAt == null && (x.AvailableFrom == null || x.AvailableFrom <= now) && (x.AvailableUntil == null || x.AvailableUntil > now));
+        }
+        if (request.Slug != null)
+        {
+            query = query.Where(x => x.Slug == request.Slug);
         }
 
         var rows = await query.OrderByDescending(x => x.CreatedAt)

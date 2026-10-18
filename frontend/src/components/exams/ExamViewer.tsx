@@ -38,6 +38,14 @@ import { QuestionImage } from '@/components/assessment/QuestionImage';
 import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
+const essayScoreExplanations = {
+  NotApplicable: 'لا توجد أسئلة مقالية في هذا الامتحان.',
+  Pending: 'الدرجة بدون المقالي — ستُضاف درجته بعد اكتمال التصحيح.',
+  PartiallyIncluded: 'الدرجة تشمل المقالي الذي اكتمل تصحيحه فقط، وباقي المقالي قيد التصحيح.',
+  Included: 'الدرجة تشمل المقالي — اكتمل تصحيح الأسئلة المقالية.',
+  Excluded: 'الدرجة بدون المقالي — المقالي غير محتسب في درجة هذا الامتحان.',
+};
+
 function AnswerGradingFeedback({ feedback }: { feedback?: string }) {
   if (!feedback) return null;
   return (
@@ -68,7 +76,9 @@ export function ExamResultPanel({
   returnLabel?: string;
 }) {
   const router = useRouter();
-  const reviewedQuestions = result.questions ?? [];
+  const answersVisible = result.answersVisible !== false;
+  const scoreExplanation = result.essayScoreStatus ? essayScoreExplanations[result.essayScoreStatus] : undefined;
+  const reviewedQuestions = answersVisible ? result.questions ?? [] : [];
   const resolvedPackageId = packageId ?? result.packageId;
   const resolvedLessonId = lessonId ?? result.lessonId;
   const answeredCount = reviewedQuestions.filter((q) => q.isAnswered).length;
@@ -79,12 +89,29 @@ export function ExamResultPanel({
   const [gradingStatus, setGradingStatus] = useState<ExamAttemptGradingStatusDto | null>(null);
   const [gradingError, setGradingError] = useState('');
   const [gradingRefreshVersion, setGradingRefreshVersion] = useState(0);
+  const [answerRefreshVersion, setAnswerRefreshVersion] = useState(0);
   usePlatformEvents({
-    onExamResultReady: ({ attemptId }) => {
-      if (attemptId === result.attemptId && result.resultState !== 'Completed')
+    onExamResultReady: ({ attemptId, examId }) => {
+      if (attemptId !== result.attemptId && examId !== result.examId) return;
+      setAnswerRefreshVersion(version => version + 1);
+      if (result.resultState !== 'Completed')
         setGradingRefreshVersion(version => version + 1);
     },
   });
+
+  useEffect(() => {
+    if (answerRefreshVersion === 0) return;
+    let cancelled = false;
+    examService.getAttemptResult(result.attemptId).then(response => {
+      if (!cancelled) {
+        onResultRefresh?.(response.data.data);
+        setGradingError('');
+      }
+    }).catch(() => {
+      if (!cancelled) setGradingError('تعذر تحديث ظهور الإجابات. حاول تحديث النتيجة.');
+    });
+    return () => { cancelled = true; };
+  }, [answerRefreshVersion, onResultRefresh, result.attemptId]);
 
   useEffect(() => {
     if (result.resultState === 'Completed') {
@@ -186,6 +213,7 @@ export function ExamResultPanel({
     <div className="space-y-6 pb-16" dir="rtl">
       {result.partialResult && !isFinalResult ? (
         <PartialAssessmentResultSummary partial={result.partialResult} error={gradingError}
+          answersVisible={answersVisible} scoreExplanation={scoreExplanation}
           canContinue={!result.blocksNextLesson}
           returnHref={returnHref ?? (resolvedLessonId && resolvedPackageId
             ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}` : '/student')}
@@ -230,10 +258,11 @@ export function ExamResultPanel({
             </h2>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-              {result.isPassed
+              {!answersVisible ? 'درجتك محفوظة. سنقوم بإبلاغك عند ظهور الإجابات.' : result.isPassed
                 ? 'أجدت في هذا الامتحان. راجع ورقتك بالتفاصيل واعرف نقاط قوتك.'
                 : 'إجاباتك وأماكن الخطأ ظاهرة أدناه مع الإجابات الصحيحة.'}
             </p>
+            {scoreExplanation && <p className="text-sm font-bold leading-7 text-foreground">{scoreExplanation}</p>}
           </div>
 
           <div
@@ -402,7 +431,16 @@ export function ExamResultPanel({
       )}
 
       {/* ─── Full review ─── */}
-      {(isFinalResult || result.partialResult) && (
+      {!answersVisible && (
+        <section className="space-y-3 rounded-3xl border border-border bg-card p-6" aria-live="polite">
+          <h3 className="text-xl font-black text-foreground">الدرجة متاحة، والإجابات لم تُفتح بعد</h3>
+          <p className="text-sm leading-7 text-muted-foreground">سنقوم بإبلاغك عند ظهور الإجابات. ستتمكن من مراجعة إجاباتك والتصحيح من نفس النتيجة دون إعادة الامتحان.</p>
+          {gradingError && <p role="alert" className="text-sm text-destructive">{gradingError}</p>}
+          <button type="button" onClick={() => setAnswerRefreshVersion(version => version + 1)}
+            className="min-h-11 rounded-xl border border-border px-4 py-2 font-bold text-foreground">تحديث النتيجة</button>
+        </section>
+      )}
+      {answersVisible && (isFinalResult || result.partialResult) && (
         <motion.section
           initial={result.partialResult ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

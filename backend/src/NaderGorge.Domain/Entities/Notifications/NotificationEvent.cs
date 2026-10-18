@@ -27,6 +27,7 @@ public class NotificationEvent
     public NotificationChannelType ChannelType { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
+    public string? ActionUrl { get; set; }
     public StudentFacingScopeOwnerType? AcademicScopeOwnerType { get; set; }
     public Guid? AcademicScopeOwnerId { get; set; }
 

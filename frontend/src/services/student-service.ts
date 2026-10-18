@@ -289,6 +289,7 @@ export interface UpdateStudentProfileDto {
 }
 
 export interface StudentNotificationDto {
+  actionUrl?: string | null;
   id: string;
   title: string;
   body: string;

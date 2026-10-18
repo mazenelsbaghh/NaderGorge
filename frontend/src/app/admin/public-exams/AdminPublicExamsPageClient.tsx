@@ -1,6 +1,7 @@
 'use client';
 
 import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
+import { PublicExamShortLink } from '@/components/admin/PublicExamShortLink';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -252,6 +253,7 @@ export default function AdminPublicExamsPageClient() {
                 <div key={exam.id} className="flex flex-col gap-3 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h3 className="font-black text-[var(--admin-text)]">{exam.examTitle}</h3>
+                    <PublicExamShortLink slug={exam.slug} />
                     <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
                       {exam.isPaid ? `${exam.price} جنيه` : 'مجاني'} - {exam.isPublished ? 'منشور' : 'غير منشور'} - {exam.teacherId ? teacherNames[exam.teacherId] ?? exam.teacherId : 'بدون مدرس'} - {exam.subjectId ? subjectNames[exam.subjectId] ?? exam.subjectId : 'بدون مادة'}
                     </p>

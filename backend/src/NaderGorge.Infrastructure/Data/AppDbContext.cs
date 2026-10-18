@@ -1432,6 +1432,7 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<Exam>(e =>
         {
             e.ToTable("exams");
+            e.Property(x => x.ShowAnswersToStudents).HasDefaultValue(true);
             e.HasKey(x => x.Id);
             e.Property(x => x.InternalCode).HasMaxLength(40).IsRequired();
             e.HasIndex(x => x.InternalCode).IsUnique();
@@ -1620,6 +1621,8 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("notification_events");
             e.HasKey(n => n.Id);
+            e.Property(n => n.ActionUrl).HasMaxLength(500);
+            e.HasIndex(n => n.ActionUrl);
             e.HasIndex(n => new { n.AcademicScopeOwnerType, n.AcademicScopeOwnerId });
             e.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId);
         });
@@ -3723,6 +3726,7 @@ public class AppDbContext : DbContext, IAppDbContext
                     id = notification.Id,
                     title = notification.Title,
                     message = notification.Body,
+                    actionUrl = notification.ActionUrl,
                     createdAt = notification.CreatedAt
                 })
             };

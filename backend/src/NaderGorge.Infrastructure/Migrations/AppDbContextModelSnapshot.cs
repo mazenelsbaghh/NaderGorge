@@ -4725,6 +4725,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<decimal>("PassingScore")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("ShowAnswersToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("ShowResultsWhileEssayPending")
                         .HasColumnType("boolean");
 
@@ -10388,6 +10393,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int?>("AcademicScopeOwnerType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("text");
@@ -10412,6 +10421,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActionUrl");
 
                     b.HasIndex("UserId");
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from 'next/link';
 import { motion } from "framer-motion";
 import { Bell, Check, Clock, RefreshCw, Sparkles } from "lucide-react";
 import { AsyncRegionState } from "@/components/ui/AsyncRegionState";
@@ -155,6 +156,9 @@ export default function StudentNotificationsPageClient() {
                   <p className="text-xs text-[var(--admin-text)]/90 leading-relaxed font-medium">
                     {notif.body}
                   </p>
+                  {notif.actionUrl && /^\/student\/exams\/[0-9a-f-]{36}(?:\?attemptId=[0-9a-f-]{36})?$/i.test(notif.actionUrl) && (
+                    <Link href={notif.actionUrl} className="inline-flex min-h-11 items-center rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)]">مراجعة الإجابات</Link>
+                  )}
                   <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-1">
                     <Clock className="h-3.5 w-3.5" />
                     {new Date(notif.createdAt).toLocaleDateString("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo',

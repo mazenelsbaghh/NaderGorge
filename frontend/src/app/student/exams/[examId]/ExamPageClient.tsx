@@ -17,6 +17,7 @@ function ExamPageClientContent() {
   const router = useRouter();
   
   const examId = params.examId as string;
+  const requestedAttemptId = searchParams.get('attemptId');
   const packageId = searchParams.get('packageId') || undefined;
   const lessonId = searchParams.get('lessonId') || undefined;
   const fromPublicExams = searchParams.get('from') === 'public-exams';
@@ -50,13 +51,24 @@ function ExamPageClientContent() {
   useEffect(() => {
     let cancelled = false;
     const loadSavedResult = async () => {
+      setLoading(true);
+      setError('');
+      setPassedResult(null);
+      setExam(null);
+      setConfirmation(null);
       try {
-        const response = await examService.getLatestResult(examId);
+        const response = requestedAttemptId
+          ? await examService.getAttemptResult(requestedAttemptId)
+          : await examService.getLatestResult(examId);
+        if (response.data.data.examId && response.data.data.examId !== examId) {
+          if (!cancelled) setError('هذه النتيجة لا تخص الامتحان المطلوب.');
+          return;
+        }
         if (!cancelled) setPassedResult(response.data.data);
       } catch (err: unknown) {
         if (cancelled) return;
         const apiError = err as { response?: { status?: number; data?: { message?: string } } };
-        if (apiError.response?.status === 404) {
+        if (apiError.response?.status === 404 && !requestedAttemptId) {
           setConfirmation('entry');
         } else {
           setError(apiError.response?.data?.message || 'تعذر تحميل نتيجة الامتحان الحالية. حاول مرة أخرى.');
@@ -67,7 +79,7 @@ function ExamPageClientContent() {
     };
     void loadSavedResult();
     return () => { cancelled = true; };
-  }, [examId]);
+  }, [examId, requestedAttemptId]);
 
   const confirmationDialog = confirmation ? (
     <AssessmentStartConfirmation

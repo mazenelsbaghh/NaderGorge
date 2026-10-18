@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuthStore } from "@/stores/auth-store";
+import { parseSafeReturnUrl } from "@/lib/safe-return-url";
 
 function hasStudentAccess(roles: string[] | undefined) {
   return !!roles?.length && (roles.includes("Student") || roles.includes("Admin"));
@@ -24,7 +25,8 @@ export function StudentGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      router.replace("/login");
+      const returnUrl = parseSafeReturnUrl(window.location.pathname + window.location.search, 'student');
+      router.replace(returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login');
       return;
     }
 
