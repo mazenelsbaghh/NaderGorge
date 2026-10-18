@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Massar Docker image retention
+
+[Timer]
+OnCalendar=*-*-* @HOUR@:15:00 Africa/Cairo
+RandomizedDelaySec=5min
+Persistent=true
+Unit=massar-image-cleanup.service
+
+[Install]
+WantedBy=timers.target
