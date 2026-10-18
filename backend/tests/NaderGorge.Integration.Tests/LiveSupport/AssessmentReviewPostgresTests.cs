@@ -22,6 +22,58 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 public sealed class AssessmentReviewPostgresTests
 {
     [Theory]
+    [InlineData("StudentActivity", true)]
+    [InlineData("QuestionEdit", false)]
+    [InlineData("ConcurrentDefinitionChange", false)]
+    public async Task Incident20261018_FutureEssayPolicyPreservesActiveAttemptsWithoutAcceptingStaleQuestionEdits(
+        string change, bool expectedSave)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var attempt = await fixture.Db.StudentExamAttempts.Include(a => a.Answers)
+            .Include(a => a.Exam).ThenInclude(e => e.ExamQuestions).ThenInclude(q => q.Question).ThenInclude(q => q.Options)
+            .SingleAsync(a => a.Id == essay.StudentExamAttemptId);
+        var originalSnapshot = await fixture.Db.StudentExamAttempts.AsNoTracking().Where(a => a.Id == attempt.Id)
+            .Select(a => a.DefinitionSnapshotJson).SingleAsync();
+        var current = AssessmentDefinitionSnapshot.FromExam(attempt.Exam);
+        var proposed = current with { EssayGradingMode = ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent };
+        if (change == "QuestionEdit")
+            proposed = proposed with { Questions = [proposed.Questions.Single() with { Text = "Revised question" }] };
+        var target = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, Guid.Empty, seed.Teacher.UserId);
+        var handler = new AssessmentRevisionCommandHandler(fixture.Db, new(fixture.Db));
+        var policy = new AssessmentRevisionPolicy(PreviousAttemptsPolicy.Preserve);
+        var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, proposed, policy), default);
+        Assert.True(preview.Success, preview.Message);
+
+        // Real student activity between preview and save caused the production failure.
+        attempt.Answers.Single().PointsAwarded = 3;
+        attempt.ScoreAchieved = 7.5m;
+        if (change == "ConcurrentDefinitionChange") attempt.Exam.Title = "Another editor's change";
+        var startedBeforeSave = new StudentExamAttempt
+        { ExamId = attempt.ExamId, UserId = seed.Submission.StudentId, StartedAt = DateTime.UtcNow, DefinitionSnapshotJson = originalSnapshot };
+        fixture.Db.StudentExamAttempts.Add(startedBeforeSave);
+        await fixture.Db.SaveChangesAsync();
+        var operationId = Guid.NewGuid();
+        var saved = await handler.Handle(new SaveAssessmentRevisionCommand(target, proposed, policy,
+            preview.Data!.RevisionToken, operationId), default);
+
+        Assert.Equal(expectedSave, saved.Success);
+        fixture.Db.ChangeTracker.Clear();
+        var oldAttempt = await fixture.Db.StudentExamAttempts.Include(a => a.Answers).SingleAsync(a => a.Id == attempt.Id);
+        Assert.Equal(originalSnapshot, oldAttempt.DefinitionSnapshotJson);
+        Assert.Equal(7.5m, oldAttempt.ScoreAchieved);
+        Assert.Equal(3m, oldAttempt.Answers.Single().PointsAwarded);
+        Assert.Equal(originalSnapshot, await fixture.Db.StudentExamAttempts.Where(a => a.Id == startedBeforeSave.Id)
+            .Select(a => a.DefinitionSnapshotJson).SingleAsync());
+        Assert.Equal(expectedSave, await fixture.Db.AuditLogs.AnyAsync(a => a.Id == operationId));
+        var live = await fixture.Db.Exams.SingleAsync(e => e.Id == attempt.ExamId);
+        Assert.Equal(expectedSave ? proposed.EssayGradingMode : current.EssayGradingMode, live.EssayGradingMode);
+        Assert.Equal(change == "ConcurrentDefinitionChange" ? "Another editor's change" : current.Title, live.Title);
+    }
+
+    [Theory]
     [InlineData(35, true)]
     [InlineData(70, false)]
     public async Task Incident20261017_PreservedGradesUseReducedPassThresholdWithoutRegradingAnswers(

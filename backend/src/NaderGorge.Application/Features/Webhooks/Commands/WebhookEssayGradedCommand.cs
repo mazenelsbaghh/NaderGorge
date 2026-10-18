@@ -94,8 +94,8 @@ public class WebhookEssayGradedCommandHandler
             return ApiResponse<WebhookEssayGradedResultDto>.Fail("Essay question is not linked to this exam.");
         }
 
-        var isCorrect = request.AiScore >= 1m;
         var awardedScore = EssayCreditPolicy.AwardedPoints(exam.EssayGradingMode, examQuestion.Points, request.AiScore);
+        var isCorrect = EssayCreditPolicy.IsFullyCorrect(exam.EssayGradingMode, request.AiScore);
         if (attempt.DefinitionSnapshotJson is not null)
             attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
                 .WithGrades(new Dictionary<Guid, (decimal, bool)> { [examQuestion.Id] = (awardedScore, false) }).ToJson();

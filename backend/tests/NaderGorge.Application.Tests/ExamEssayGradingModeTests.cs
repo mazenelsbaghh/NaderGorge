@@ -18,6 +18,8 @@ public class ExamEssayGradingModeTests
     [InlineData(ExamEssayGradingMode.AutomaticFullCredit, false, "Pending")]
     [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, true, "Pending")]
     [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, false, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, true, "Pending")]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, false, "Pending")]
     [InlineData(ExamEssayGradingMode.Manual, true, "PartiallyGraded")]
     [InlineData(ExamEssayGradingMode.Manual, false, "PartiallyGraded")]
     [InlineData(ExamEssayGradingMode.ModelAnswerOnly, true, "Completed")]

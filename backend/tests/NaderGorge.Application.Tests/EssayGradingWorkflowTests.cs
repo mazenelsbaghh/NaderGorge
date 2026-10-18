@@ -194,6 +194,12 @@ public class EssayGradingWorkflowTests
     [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.75, 4)]
     [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.99, 4)]
     [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 1, 8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0.01, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0.69, 4)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0.7, 8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0.99, 8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 1, 8)]
     public async Task EssayCallback_PreservesEarnedCreditAndExplainsDeductions(
         ExamEssayGradingMode mode, double scoreRatio, double awardedPoints)
     {
@@ -241,7 +247,7 @@ public class EssayGradingWorkflowTests
         Assert.Equal(persistedAttempt.ScoreAchieved >= exam.PassingScore, persistedAttempt.IsPassed);
 
         var persistedAnswer = db.StudentAnswers.AsNoTracking().Single(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == essayExamQuestion.Id);
-        Assert.Equal(scoreRatio == 1, persistedAnswer.IsCorrect);
+        Assert.Equal(expectedPoints == 8m, persistedAnswer.IsCorrect);
         Assert.Equal(expectedPoints, persistedAnswer.PointsAwarded);
 
         var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
@@ -254,7 +260,7 @@ public class EssayGradingWorkflowTests
         Assert.Equal(expectedPoints, review.PointsAwarded);
         Assert.Equal(8m, review.MaximumPoints);
         Assert.Equal(persistedEssay.TeacherFeedback, review.GradingFeedback);
-        Assert.Equal(scoreRatio == 1, review.IsCorrect);
+        Assert.Equal(expectedPoints == 8m, review.IsCorrect);
     }
 
     [Theory]

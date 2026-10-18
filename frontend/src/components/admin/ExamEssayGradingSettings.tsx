@@ -14,6 +14,7 @@ const descriptions = {
 const creditChoices = [
   { mode: 'AutomaticFullCredit', label: 'درجة كاملة أو صفر', description: 'الكاملة للإجابة الصحيحة بالكامل، وصفر للناقصة أو الخاطئة.' },
   { mode: 'AutomaticFullOrHalfCredit', label: 'درجة كاملة أو نصفها أو صفر', description: 'الكاملة للصحيحة بالكامل، والنصف للصحيحة جزئيًا، وصفر للخاطئة.' },
+  { mode: 'AutomaticFullOrHalfCreditFrom70Percent', label: 'درجة كاملة من ٧٠٪، أو نصفها، أو صفر', description: '٧٠٪ فأكثر تاخد الكاملة؛ أي جزء صحيح أقل منها ياخد النصف؛ والغلط أو الفاضي صفر. مثال: ٧ من ١٠ تصبح ١٠ من ١٠.' },
   { mode: 'Automatic', label: 'درجات جزئية', description: 'درجة حسب الأجزاء الصحيحة؛ مثل ربع أو ثلاثة أرباع الدرجة.' },
 ] as const;
 
@@ -38,7 +39,7 @@ export function ExamEssayGradingSettings({ mode, onChange, showPendingResults, o
     </label>
     {automatic && <fieldset disabled={disabled} className="space-y-3">
       <legend className="text-sm font-bold text-[var(--admin-text)]">توزيع درجة المقالي</legend>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {creditChoices.map(choice => <label key={choice.mode}
           className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${mode === choice.mode
             ? 'border-[var(--admin-primary)] bg-[var(--admin-card-soft)]' : 'border-[var(--admin-border)]'}`}>

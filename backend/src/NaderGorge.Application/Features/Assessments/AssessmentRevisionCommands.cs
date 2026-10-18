@@ -45,7 +45,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
     {
         if (!await AssessmentAccess.Allowed(db, auth, request.Target, ct))
             return ApiResponse<AssessmentRevisionPreviewDto>.Fail("غير مصرح بتعديل هذا الواجب أو الامتحان.");
-        var workspace = await Load(request.Target, ct);
+        var workspace = await Load(request.Target, request.Definition, request.Policy, ct);
         if (workspace is null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail("الواجب أو الامتحان غير موجود.");
         var editor = workspace.Editor();
         var validation = ValidateDraft(request.Target, request.Definition, request.Policy);
@@ -86,7 +86,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         if (notificationError is not null) return ApiResponse<AssessmentEditorDto>.Fail(notificationError);
         if (request.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(request.RevisionToken))
             return ApiResponse<AssessmentEditorDto>.Fail("عاين تأثير التعديل قبل تأكيد الحفظ.");
-        var workspace = await Load(request.Target, ct);
+        var workspace = await Load(request.Target, request.Definition, request.Policy, ct);
         if (workspace is null) return ApiResponse<AssessmentEditorDto>.Fail("الواجب أو الامتحان غير موجود.");
         var notificationAccessError = await request.Definition.ParentNotification.AuthorizeChangeAsync(
             db, request.Target.ActorId, workspace.Editor().Definition.ParentNotification, ct);
@@ -115,7 +115,12 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         var previousOptionIds = workspace.Exam?.ExamQuestions.SelectMany(q => q.Question.Options)
             .Select(o => o.Id).ToHashSet() ?? [];
         var authoredDefinition = request.Definition;
-        if (workspace.Exam is not null)
+        if (workspace.PreservedAttemptCount is not null)
+        {
+            workspace.Exam!.EssayGradingMode = authoredDefinition.EssayGradingMode;
+            workspace.Exam.UpdatedAt = DateTime.UtcNow;
+        }
+        else if (workspace.Exam is not null)
         {
             var subjectId = workspace.Exam.ExamQuestions.FirstOrDefault()?.Question.SubjectId ?? request.SubjectId;
             if (authoredDefinition.Questions.Length > 0 && (subjectId is null
@@ -231,13 +236,20 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         return definition with { Questions = revised };
     }
 
-    private async Task<RevisionWorkspace?> Load(AssessmentTarget target, CancellationToken ct)
+    private async Task<RevisionWorkspace?> Load(AssessmentTarget target, AssessmentDefinitionSnapshot proposed,
+        AssessmentRevisionPolicy policy, CancellationToken ct)
     {
         if (target.Kind == AssessmentKind.Exam)
         {
             var exam = await db.Exams.Include(e => e.ExamQuestions).ThenInclude(q => q.Question).ThenInclude(q => q.Options)
                 .SingleOrDefaultAsync(e => e.Id == target.AssessmentId, ct);
             if (exam is null) return null;
+            if (IsFutureEssayPolicyChange(AssessmentDefinitionSnapshot.FromExam(exam), proposed, policy)
+                && !await db.StudentExamAttempts.AnyAsync(a => a.ExamId == exam.Id && a.DefinitionSnapshotJson == null, ct))
+            {
+                var preservedCount = await db.StudentExamAttempts.CountAsync(a => a.ExamId == exam.Id, ct);
+                return new(exam, null, [], [], new([], []), preservedCount);
+            }
             var attempts = await db.StudentExamAttempts.Include(a => a.Answers)
                 .Where(a => a.ExamId == exam.Id).OrderBy(a => a.Id).ToListAsync(ct);
             var attemptIds = attempts.Select(a => a.Id).ToArray();
@@ -256,6 +268,14 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
             .OrderBy(s => s.Id).ToListAsync(ct);
         return new(null, homework, [], submissions, new([], []));
     }
+
+    private static bool IsFutureEssayPolicyChange(AssessmentDefinitionSnapshot current,
+        AssessmentDefinitionSnapshot proposed, AssessmentRevisionPolicy policy) =>
+        policy.PreviousAttempts == PreviousAttemptsPolicy.Preserve
+        && current.EssayGradingMode != proposed.EssayGradingMode
+        && EssayCreditPolicy.IsAutomatic(current.EssayGradingMode)
+        && EssayCreditPolicy.IsAutomatic(proposed.EssayGradingMode)
+        && Hash((current with { EssayGradingMode = proposed.EssayGradingMode }).ToJson()) == Hash(proposed.ToJson());
 
     private async Task<AssessmentEditorDto?> LoadEditor(AssessmentTarget target, CancellationToken ct)
     {
@@ -329,7 +349,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
     }
 
     private sealed record RevisionWorkspace(Exam? Exam, HomeworkEntity? Homework,
-        List<StudentExamAttempt> Attempts, List<HomeworkSubmission> Submissions, GradingEvidence Evidence)
+        List<StudentExamAttempt> Attempts, List<HomeworkSubmission> Submissions, GradingEvidence Evidence,
+        int? PreservedAttemptCount = null)
     {
         public AssessmentDefinitionSnapshot Definition() => Exam is not null
             ? AssessmentDefinitionSnapshot.FromExam(Exam) : AssessmentDefinitionSnapshot.FromHomework(Homework!);
@@ -337,6 +358,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         public AssessmentEditorDto Editor()
         {
             var definition = Definition();
+            // Saved snapshots pin the old policy; student activity cannot invalidate this future-only change.
+            if (PreservedAttemptCount is int count) return new(definition, count, Hash(definition.ToJson()));
             var revision = JsonSerializer.Serialize(new
             {
                 Definition = definition,

@@ -45,6 +45,7 @@ for (const width of [390, 1280]) {
       const creditOptions = [
         ['AutomaticFullCredit', 'درجة كاملة أو صفر'],
         ['AutomaticFullOrHalfCredit', 'درجة كاملة أو نصفها أو صفر'],
+        ['AutomaticFullOrHalfCreditFrom70Percent', 'درجة كاملة من ٧٠٪'],
         ['Automatic', 'درجات جزئية'],
       ];
       assert.equal(await page.getByRole('radio', { name: /^درجات جزئية/ }).isChecked(), true);
@@ -60,9 +61,9 @@ for (const width of [390, 1280]) {
         assert.equal(saves.at(-1).definition.essayGradingMode, creditMode);
         assert.equal(saves.at(-1).policy.previousAttempts, 'Preserve');
       }
-      definition.essayGradingMode = 'AutomaticFullOrHalfCredit';
+      definition.essayGradingMode = 'AutomaticFullOrHalfCreditFrom70Percent';
       await page.reload();
-      assert.equal(await page.getByRole('radio', { name: /^درجة كاملة أو نصفها أو صفر/ }).isChecked(), true);
+      assert.equal(await page.getByRole('radio', { name: /^درجة كاملة من ٧٠٪/ }).isChecked(), true);
       assert.equal(await mode.inputValue(), 'Automatic');
       await mkdir('../artifacts/exam-essay-grading', { recursive: true });
       await page.getByRole('group', { name: 'توزيع درجة المقالي', exact: true })
@@ -79,7 +80,7 @@ for (const width of [390, 1280]) {
       await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
       await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).click();
       await page.getByRole('alert').filter({ hasText: 'المعاينة التجريبية' }).waitFor();
-      assert.equal(saves.length, 4);
+      assert.equal(saves.length, creditOptions.length + 1);
       assert.equal(saves.at(-1).definition.essayGradingMode, 'ModelAnswerOnly');
       assert.equal(saves.at(-1).definition.showResultsWhileEssayPending, true);
       assert.equal(saves.at(-1).policy.previousAttempts, 'Preserve');

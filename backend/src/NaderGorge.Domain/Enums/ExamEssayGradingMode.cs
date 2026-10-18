@@ -6,5 +6,6 @@ public enum ExamEssayGradingMode
     Manual = 1,
     ModelAnswerOnly = 2,
     AutomaticFullCredit = 3,
-    AutomaticFullOrHalfCredit = 4
+    AutomaticFullOrHalfCredit = 4,
+    AutomaticFullOrHalfCreditFrom70Percent = 5
 }
