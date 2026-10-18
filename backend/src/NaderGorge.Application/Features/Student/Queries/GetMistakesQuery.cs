@@ -84,7 +84,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
         request = request with { Skip = Math.Max(0, request.Skip), Take = Math.Clamp(request.Take, 1, 50) };
         var mistakeExamIds = await _db.StudentAnswers
             .AsNoTracking()
-            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect && !sa.IsExcludedFromScore)
+            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect && !sa.IsExcludedFromScore
+                && sa.Attempt.Exam.ShowAnswersToStudents)
             .Select(sa => sa.Attempt.ExamId)
             .Distinct()
             .ToListAsync(ct);
