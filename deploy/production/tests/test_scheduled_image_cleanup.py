@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -96,6 +98,16 @@ def test_symlinked_retained_manifest_cannot_redirect_retention(tmp_path, monkeyp
         cleanup.read_json(link)
 
 
+@pytest.mark.parametrize("permissions", [0o664, 0o666])
+def test_writable_by_other_users_evidence_cannot_authorize_cleanup(tmp_path, permissions):
+    evidence = tmp_path / "evidence.json"
+    evidence.write_text('{"status":"success"}')
+    evidence.chmod(permissions)
+
+    with pytest.raises(cleanup.CleanupError, match="Untrusted evidence"):
+        cleanup.read_json(evidence)
+
+
 def test_seven_day_boundary_keeps_images_exactly_at_cutoff():
     cutoff = dt.datetime(2026, 10, 1, tzinfo=dt.timezone.utc)
     candidate = image(1)
@@ -125,3 +137,36 @@ def test_active_build_prevents_image_mutation(tmp_path, monkeypatch):
 
     with pytest.raises(cleanup.CleanupBusy, match="build or deployment"):
         cleanup.apply_plan({"references": {"registry.test:5443/massar/backend:" + OLD: "unused"}}, CONFIGURATION)
+
+
+@pytest.mark.parametrize("local_status, marker_days, service_failed, allowed", [
+    ("success", 17, False, True), ("failed", 17, False, False),
+    ("success", 40, False, False), ("success", 17, True, False),
+])
+def test_monthly_restore_uses_cluster_success_and_still_refuses_failures(
+    tmp_path, monkeypatch, local_status, marker_days, service_failed, allowed,
+):
+    # 2026-10-18: node-3's 84-day-old copy must not invalidate node-1's recent drill.
+    restores = tmp_path / "restore"
+    restores.mkdir()
+    local = restores / "files-latest.json"
+    local.write_text(json.dumps({"status": local_status}))
+    now = dt.datetime.now().timestamp()
+    os.utime(local, (now - 84 * 86400, now - 84 * 86400))
+    shared = tmp_path / "shared"
+    (shared / ".cluster-health").mkdir(parents=True)
+    marker = shared / ".cluster-health/files-restore-test-last"
+    marker.touch()
+    os.utime(marker, (now - marker_days * 86400, now - marker_days * 86400))
+    monkeypatch.setattr(cleanup, "RESTORES", restores)
+    monkeypatch.setattr(cleanup, "SHARED", shared)
+
+    def systemctl(arguments, **options):
+        return subprocess.CompletedProcess(arguments, 0 if service_failed else 1)
+
+    monkeypatch.setattr(cleanup.subprocess, "run", systemctl)
+    if allowed:
+        cleanup.restore_check()
+    else:
+        with pytest.raises(cleanup.CleanupError):
+            cleanup.restore_check()

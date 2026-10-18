@@ -23,6 +23,7 @@ RELEASES = Path("/opt/massar/releases")
 CURRENT = Path("/opt/massar/current")
 BUILDS = Path("/var/lib/massar/builds")
 SHARED = Path("/srv/massar-shared")
+RESTORES = Path("/var/lib/massar/evidence/restore")
 DOCKER = "/usr/bin/docker"
 
 
@@ -45,7 +46,11 @@ def command(arguments: list[str], environment: dict[str, str] | None = None) -> 
 def read_json(path: Path) -> dict:
     if path.is_symlink() or not path.is_file():
         raise CleanupError(f"Missing or unsafe evidence: {path.name}")
-    return json.loads(path.read_text())
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "r") as evidence_file:
+        metadata = os.fstat(evidence_file.fileno())
+        if metadata.st_uid != os.geteuid() or metadata.st_mode & 0o022:
+            raise CleanupError(f"Untrusted evidence permissions: {path.name}")
+        return json.load(evidence_file)
 
 
 def fetch_json(url: str, context: ssl.SSLContext | None = None, host: str | None = None) -> dict:
@@ -81,10 +86,19 @@ def restore_check() -> None:
         failed = subprocess.run(["systemctl", "is-failed", "--quiet", name], timeout=10)
         if failed.returncode == 0:
             raise CleanupError("An isolated restore test failed")
+    # Restore evidence is producer-local: the primary owns DB drills and one
+    # elected node owns file drills. Other nodes legitimately retain older copies.
     for name in ("database-latest.json", "files-latest.json"):
-        path = Path("/var/lib/massar/evidence/restore") / name
-        if path.exists():
-            fresh_backup(path, 35 * 24)
+        path = RESTORES / name
+        if path.exists() and read_json(path).get("status") != "success":
+            raise CleanupError("An isolated restore has unsuccessful evidence")
+    marker = SHARED / ".cluster-health/files-restore-test-last"
+    metadata = marker.lstat()
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o022:
+        raise CleanupError("Cluster file restore success marker is missing")
+    age = dt.datetime.now().timestamp() - metadata.st_mtime
+    if not 0 <= age < 35 * 86400:
+        raise CleanupError("Cluster file restore success marker is stale")
 
 
 def quorum_checks(configuration: dict) -> None:
