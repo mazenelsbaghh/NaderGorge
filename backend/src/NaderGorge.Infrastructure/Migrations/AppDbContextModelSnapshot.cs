@@ -13170,8 +13170,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("SubmittedText")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");

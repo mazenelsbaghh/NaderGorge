@@ -93,6 +93,29 @@ function examAttempt(attemptId: string, remainingSeconds = 600): ActiveExamAttem
   return { attemptId, title: 'امتحان الإعادة', description: '', startedAt: new Date().toISOString(), durationMinutes: 10, remainingSeconds, totalScore: 1, questions: [{ id: 'question-1', text: 'سؤال المحاولة الجديدة', type: 'MCQ', points: 1, options: [{ id: 'option-1', text: 'الإجابة الأولى' }, { id: 'option-2', text: 'الإجابة الثانية' }] }] };
 }
 
+test('question navigation keeps working when the browser animation clock stops', async ({ page }) => {
+  await studentSession(page);
+  const attempt = examAttempt('navigation-attempt');
+  attempt.durationMinutes = undefined;
+  attempt.questions.push({ id: 'question-2', text: 'السؤال الثاني بعد الانتقال', type: 'Essay', points: 1, options: [] });
+  await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, null, 404));
+  await page.route(`**/api/exams/${assessmentId}/start`, route => reply(route, attempt));
+  await page.goto(`/student/exams/${assessmentId}`);
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+  await expect(page.getByText('سؤال المحاولة الجديدة', { exact: true })).toBeVisible();
+  await page.getByText('الإجابة الأولى', { exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'الإجابة الأولى', exact: true })).toBeChecked();
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+
+  await page.getByRole('button', { name: 'التالي', exact: true }).dispatchEvent('click');
+
+  await expect(page.getByText('السؤال الثاني بعد الانتقال', { exact: true })).toHaveCount(1);
+  await expect(page.getByText('سؤال المحاولة الجديدة', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'السابق', exact: true }).dispatchEvent('click');
+  await expect(page.getByRole('radio', { name: 'الإجابة الأولى', exact: true })).toBeChecked();
+});
+
 // 2026-10-16: Ashraf Bakr's first lesson shuffled questions despite randomization being disabled.
 for (const { order, label } of [
   { order: [1, 2, 3], label: 'teacher order' },

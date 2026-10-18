@@ -1504,7 +1504,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(sa => sa.Id);
             e.HasIndex(sa => new { sa.StudentExamAttemptId, sa.ExamQuestionId }).IsUnique();
             e.Property(sa => sa.PointsAwarded).HasColumnType("decimal(18,2)");
-            e.Property(sa => sa.SubmittedText).HasMaxLength(2000);
+            e.Property(sa => sa.SubmittedText).HasColumnType("text");
             e.HasOne(sa => sa.Attempt).WithMany(a => a.Answers).HasForeignKey(sa => sa.StudentExamAttemptId);
             e.HasOne(sa => sa.ExamQuestion).WithMany().HasForeignKey(sa => sa.ExamQuestionId);
             e.HasOne(sa => sa.SelectedOption)

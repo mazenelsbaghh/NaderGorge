@@ -835,7 +835,6 @@ export function ExamViewer({
   const [error, setError] = useState('');
   const [currentIdx, setCurrentIdx] = useState(0);
   const [totalScore, setTotalScore] = useState(attempt.totalScore);
-  const [direction, setDirection] = useState(1);
   // Lifelines
   const [hasUsedFiftyFifty, setHasUsedFiftyFifty] = useState(false);
   const [hasUsedHint, setHasUsedHint] = useState(false);
@@ -864,7 +863,6 @@ export function ExamViewer({
     setHasUsedSwap(false);
     setCurrentIdx(0);
     setTotalScore(attempt.totalScore);
-    setDirection(1);
     setError('');
     setResult(null);
 
@@ -985,7 +983,6 @@ export function ExamViewer({
   };
 
   const navigateTo = (idx: number) => {
-    setDirection(idx > currentIdx ? 1 : -1);
     setCurrentIdx(idx);
   };
 
@@ -1008,13 +1005,6 @@ export function ExamViewer({
   const answeredCount = Object.keys(answers).length;
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
   const currentQ = orderedQuestions[currentIdx];
-
-  const slideVariants = {
-    initial: (d: number) => ({ x: d > 0 ? '40%' : '-40%', opacity: 0 }),
-    active: { x: 0, opacity: 1, transition: { duration: 0.38, ease: 'easeOut' as const } },
-    exit: (d: number) => ({ x: d < 0 ? '40%' : '-40%', opacity: 0, transition: { duration: 0.28, ease: 'easeIn' as const } }),
-  };
-
 
   return (
     <div className="relative mx-auto max-w-3xl pb-16" role="form" aria-label={`امتحان: ${examTitle}`} dir="rtl">
@@ -1134,48 +1124,39 @@ export function ExamViewer({
 
       {/* ─── Question content ─── */}
       <div className="overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
-        <AnimatePresence mode="wait" custom={direction}>
-          {currentQ && (
-            <motion.div
-              key={currentIdx}
-              custom={direction}
-              variants={slideVariants}
-              initial="initial"
-              animate="active"
-              exit="exit"
-            >
-              <QuestionCard
-                q={currentQ}
-                qIndex={currentIdx}
-                totalCount={totalQ}
-                answers={answers}
-                skipped={skipped}
-                hiddenOptions={hiddenOptions}
-                hasUsedFiftyFifty={hasUsedFiftyFifty}
-                hasUsedHint={hasUsedHint}
-                revealedHintId={revealedHintId}
-                examId={examId}
-                attemptId={attempt.attemptId}
-                loading={loading}
-                onAnswer={handleAnswer}
-                onSkip={() => {
-                  setSkipped((prev) => new Set([...prev, currentQ.id]));
-                  if (currentIdx < totalQ - 1) navigateTo(currentIdx + 1);
-                }}
-                onUseFiftyFifty={(hiddenIds) => {
-                  setHiddenOptions((prev) => new Set([...prev, ...hiddenIds]));
-                  setHasUsedFiftyFifty(true);
-                }}
-                onUseHint={(qId) => {
-                  setHasUsedHint(true);
-                  setRevealedHintId(qId);
-                }}
-                hasUsedSwap={hasUsedSwap}
-                onUseSwap={handleSwap}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {currentQ && (
+          <div key={currentQ.id}>
+            <QuestionCard
+              q={currentQ}
+              qIndex={currentIdx}
+              totalCount={totalQ}
+              answers={answers}
+              skipped={skipped}
+              hiddenOptions={hiddenOptions}
+              hasUsedFiftyFifty={hasUsedFiftyFifty}
+              hasUsedHint={hasUsedHint}
+              revealedHintId={revealedHintId}
+              examId={examId}
+              attemptId={attempt.attemptId}
+              loading={loading}
+              onAnswer={handleAnswer}
+              onSkip={() => {
+                setSkipped((prev) => new Set([...prev, currentQ.id]));
+                if (currentIdx < totalQ - 1) navigateTo(currentIdx + 1);
+              }}
+              onUseFiftyFifty={(hiddenIds) => {
+                setHiddenOptions((prev) => new Set([...prev, ...hiddenIds]));
+                setHasUsedFiftyFifty(true);
+              }}
+              onUseHint={(qId) => {
+                setHasUsedHint(true);
+                setRevealedHintId(qId);
+              }}
+              hasUsedSwap={hasUsedSwap}
+              onUseSwap={handleSwap}
+            />
+          </div>
+        )}
       </div>
 
       {/* ─── Navigation footer ─── */}
