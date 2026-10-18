@@ -113,7 +113,7 @@ public sealed class GetPublicExamProductsQueryHandler : IRequestHandler<GetPubli
         }
 
         var rows = await query.OrderByDescending(x => x.CreatedAt)
-            .Select(x => new PublicExamProductDto(x.Id, x.ExamId, x.Exam.Title, x.Slug, x.IsPublished, x.IsPaid, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, x.IsPlatformWide, x.AvailableFrom, x.AvailableUntil, x.DisabledAt, null, x.Exam.ArchiveMode, x.Exam.ArchivedAt))
+            .Select(x => new PublicExamProductDto(x.Id, x.ExamId, x.Exam.Title, x.Slug, x.IsPublished, x.IsPaid, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, x.IsPlatformWide, x.AvailableFrom, x.AvailableUntil, x.DisabledAt, null, x.Exam.ArchiveMode, x.Exam.ArchivedAt, x.Exam.SingleAttemptOnly, x.Exam.IsActive))
             .ToListAsync(ct);
 
         if (request.PublishedOnly && _archiveAccess != null)

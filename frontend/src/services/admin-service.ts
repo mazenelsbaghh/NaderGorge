@@ -2051,6 +2051,7 @@ export const adminService = {
       requiredPointsToPass: number;
       homeworkComingSoonOn?: string | null;
       showResultsWhileEssayPending?: boolean;
+      singleAttemptOnly?: boolean;
       parentNotification?: AssessmentParentNotificationSettings;
       questions: {
         text: string;
@@ -2154,6 +2155,7 @@ export const adminService = {
     return res.data;
   },
   createInlineExam: async (payload: {
+    singleAttemptOnly?: boolean;
     showResultsWhileEssayPending?: boolean;
     essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
     parentNotification?: AssessmentParentNotificationSettings;
@@ -2245,9 +2247,9 @@ export const adminService = {
     );
     return res.data;
   },
-  deleteExamAttempt: async (examId: string, attemptId: string) => {
+  deleteExamAttempt: async (examId: string, attemptId: string, reason?: string) => {
     const res = await apiClient.delete<ApiResponse>(
-      `/admin/exams/${examId}/attempts/${attemptId}`
+      `/admin/exams/${examId}/attempts/${attemptId}`, { params: { reason } }
     );
     return res.data;
   },

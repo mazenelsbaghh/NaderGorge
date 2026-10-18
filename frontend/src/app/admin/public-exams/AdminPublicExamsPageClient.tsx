@@ -1,5 +1,7 @@
 'use client';
 
+import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,6 +19,7 @@ export default function AdminPublicExamsPageClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [activationPendingId, setActivationPendingId] = useState<string | null>(null);
   const [exams, setExams] = useState<PublicExamProductDto[]>([]);
   const [contentView, setContentView] = useState<'current' | 'archived'>('current');
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -40,6 +43,7 @@ export default function AdminPublicExamsPageClient() {
     showResultsWhileEssayPending: false,
     essayGradingMode: 'Automatic' as ExamEssayGradingMode,
     isRandomized: false,
+    singleAttemptOnly: true,
     availableFrom: '',
     availableUntil: '',
   });
@@ -67,6 +71,21 @@ export default function AdminPublicExamsPageClient() {
     void load();
   }, []);
 
+  async function changeActivation(exam: PublicExamProductDto, isEnabled: boolean) {
+    if (activationPendingId) return;
+    setActivationPendingId(exam.id);
+    setMessage('');
+    try {
+      const updated = await adminSalesService.setPublicExamActivation(exam.id, isEnabled);
+      setExams(current => current.map(item => item.id === exam.id ? updated : item));
+      setMessage(isEnabled ? 'تم تفعيل الامتحان العام.' : 'تم إيقاف الامتحان العام مع حفظ المحاولات والدرجات.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'تعذر تغيير تفعيل الامتحان العام.');
+    } finally {
+      setActivationPendingId(null);
+    }
+  }
+
   async function createExam() {
     setLoading(true);
     setMessage('');
@@ -89,6 +108,7 @@ export default function AdminPublicExamsPageClient() {
         totalScore: Number(form.totalScore || 0),
         durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
         isRandomized: form.isRandomized,
+        singleAttemptOnly: form.singleAttemptOnly,
         essayGradingMode: form.essayGradingMode,
         showResultsWhileEssayPending: form.showResultsWhileEssayPending,
         availableFrom: form.availableFrom ? cairoDateTimeLocalToIso(form.availableFrom) : null,
@@ -201,12 +221,13 @@ export default function AdminPublicExamsPageClient() {
             <AcademicScopeSelector value={academicScopes} onChange={setAcademicScopes} subjects={subjects} />
           </div>
 
+          <div className="mt-5"><ExamSingleAttemptSwitch enabled={form.singleAttemptOnly} onChange={singleAttemptOnly => setForm({ ...form, singleAttemptOnly })} disabled={loading} /></div>
           <div className="mt-5"><ExamEssayGradingSettings mode={form.essayGradingMode}
             onChange={essayGradingMode => setForm({ ...form, essayGradingMode })}
             showPendingResults={form.showResultsWhileEssayPending}
             onPendingResultsChange={showResultsWhileEssayPending => setForm({ ...form, showResultsWhileEssayPending })} disabled={loading} /></div>
           <div className="mt-5 grid gap-3 border-t border-[var(--admin-border)] pt-5 sm:grid-cols-2 lg:grid-cols-5">
-            <Toggle label="منشور" checked={form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
+            <Toggle label="تفعيل الامتحان العام" checked={form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
             <Toggle label="مدفوع" checked={form.isPaid} onChange={(v) => setForm({ ...form, isPaid: v })} />
             <Toggle label="ترتيب عشوائي" checked={form.isRandomized} onChange={(v) => setForm({ ...form, isRandomized: v })} icon={<Shuffle className="h-4 w-4" />} />
             <Field label="السعر" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} disabled={!form.isPaid} />
@@ -245,6 +266,10 @@ export default function AdminPublicExamsPageClient() {
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Toggle label="تفعيل الامتحان العام"
+                      checked={exam.isPublished && !exam.disabledAt && exam.isActive !== false}
+                      disabled={loading || activationPendingId !== null || (exam.archiveMode ?? 'None') !== 'None'}
+                      onChange={enabled => void changeActivation(exam, enabled)} />
                     <ContentArchiveControl targetType="Exam" targetId={exam.examId} title={exam.examTitle} archiveMode={exam.archiveMode} onChanged={load} compact />
                     <Link href={`/admin/public-exams/${exam.id}`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
                       <FileQuestion className="h-4 w-4" />
@@ -311,10 +336,10 @@ function Select({ label, value, onChange, options }: { label: string; value: str
   );
 }
 
-function Toggle({ label, checked, onChange, icon }: { label: string; checked: boolean; onChange: (value: boolean) => void; icon?: React.ReactNode }) {
+function Toggle({ label, checked, onChange, icon, disabled = false }: { label: string; checked: boolean; onChange: (value: boolean) => void; icon?: React.ReactNode; disabled?: boolean }) {
   return (
     <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-text)]">
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <input type="checkbox" role="switch" disabled={disabled} checked={checked} onChange={(event) => onChange(event.target.checked)} />
       {icon}
       {label}
     </label>

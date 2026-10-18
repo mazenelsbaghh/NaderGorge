@@ -4728,6 +4728,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("ShowResultsWhileEssayPending")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("SingleAttemptOnly")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -13237,6 +13240,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("UpdatedAt")

@@ -41,6 +41,14 @@ public sealed class AdminPublicExamsController : ControllerBase
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
+    [HttpPut("{id:guid}/activation")]
+    public async Task<IActionResult> Activation(Guid id, [FromBody] PublicExamActivationRequest request, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new SetPublicExamActivationCommand(id, request.IsEnabled, User.RequireUserId()), ct);
+        if (response.Errors?.Contains("NOT_FOUND") == true) return NotFound(response);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
     [HttpGet("{id:guid}/results")]
     public async Task<IActionResult> Results(Guid id, CancellationToken ct)
     {

@@ -14,6 +14,7 @@ public class Exam : BaseEntity, IArchivableContent
 {
     public ExamEssayGradingMode EssayGradingMode { get; set; }
     public bool ShowResultsWhileEssayPending { get; set; }
+    public bool SingleAttemptOnly { get; set; }
     public string? ParentNotificationSettingsJson { get; set; }
     public DateTime? ParentNotificationEnabledAt { get; set; }
     public string InternalCode { get; private set; } = string.Empty;
@@ -128,6 +129,7 @@ public class StudentExamAttempt : BaseEntity
 
     // Timer enforcement
     public DateTime? StartedAt { get; set; }
+    public DateTime? SubmittedAt { get; set; }
     public bool IsTimeExpired { get; set; }
 
     public ICollection<StudentAnswer> Answers { get; set; } = new List<StudentAnswer>();

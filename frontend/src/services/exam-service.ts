@@ -50,6 +50,7 @@ export interface AnswerSubmissionDto {
 export type PartialExamResultDto = PartialAssessmentResultDto;
 
 export interface ExamResultDto {
+  allowRetake?: boolean;
   partialResult?: PartialExamResultDto | null;
   attemptId: string;
   scoreAchieved: number;

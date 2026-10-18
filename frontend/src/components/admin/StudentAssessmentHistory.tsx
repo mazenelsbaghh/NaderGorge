@@ -152,14 +152,14 @@ export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [
   const [pendingDelete, setPendingDelete] = useState<{ kind: 'exam' | 'homework'; item: AssessmentHistoryItem } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const mutationRef = useRef(false);
-  const deleteAttempt = async () => {
+  const deleteAttempt = async (reason: string) => {
     if (!pendingDelete || mutationRef.current) return;
     mutationRef.current = true;
     setDeleting(true);
     try {
       const { kind, item } = pendingDelete;
       const response = kind === 'exam'
-        ? await adminService.deleteExamAttempt(item.assessmentId, item.id)
+        ? await adminService.deleteExamAttempt(item.assessmentId, item.id, reason)
         : await adminService.deleteHomeworkAttempt(item.assessmentId, item.id);
       if (!response.success) throw new Error(response.message || 'تعذر حذف المحاولة.');
       onAttemptDeleted(kind, item.id);
@@ -180,6 +180,7 @@ export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [
     <HistorySection kind="exam" title="سجل الامتحانات" description="كل محاولات الطالب ودرجاتها وحالة التصحيح في مكان واحد." items={exams} deleting={deleting} onDelete={canDeleteExam ? item => setPendingDelete({ kind: 'exam', item }) : undefined} />
     <HistorySection kind="homework" title="سجل الواجبات" description="كل الواجبات التي بدأها الطالب أو سلّمها مع الدرجة النهائية." items={homeworks} deleting={deleting} onDelete={canDeleteHomework ? item => setPendingDelete({ kind: 'homework', item }) : undefined} />
     <AdminConfirmationDialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)} onConfirm={deleteAttempt}
+      reasonLabel={pendingDelete?.kind === 'exam' ? 'سبب حذف المحاولة' : undefined} reasonRequired={pendingDelete?.kind === 'exam'}
       title={`حذف محاولة ${pendingDelete?.kind === 'homework' ? 'الواجب' : 'الامتحان'}`}
       consequence={pendingDelete ? `سيتم حذف محاولة ${studentName} في «${pendingDelete.item.title}» بتاريخ ${formatDate(pendingDelete.item.attemptedAt)}، بكل إجاباتها ودرجتها نهائيًا. لا يمكن التراجع عن الحذف.` : ''}
       confirmLabel="حذف المحاولة نهائيًا" variant="danger" isConfirming={deleting} />

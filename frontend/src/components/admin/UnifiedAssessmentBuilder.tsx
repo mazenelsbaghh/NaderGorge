@@ -1,5 +1,7 @@
 'use client';
 
+import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
+
 import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
 import { useState } from 'react';
 import { Save, BookOpen, Video, Shuffle, CalendarClock } from 'lucide-react';
@@ -51,6 +53,7 @@ export function UnifiedAssessmentBuilder({
   // New Toggles
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
+  const [singleAttemptOnly, setSingleAttemptOnly] = useState(false);
   const [essayGradingMode, setEssayGradingMode] = useState<ExamEssayGradingMode>('Automatic');
   const [showResultsWhileEssayPending, setShowResultsWhileEssayPending] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(
@@ -112,6 +115,7 @@ export function UnifiedAssessmentBuilder({
         const payload = {
           parentNotification,
           essayGradingMode,
+          singleAttemptOnly,
           showResultsWhileEssayPending,
           title,
           description,
@@ -292,6 +296,7 @@ export function UnifiedAssessmentBuilder({
               {isExam && <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving}
                 showPendingResults={showResultsWhileEssayPending} onPendingResultsChange={setShowResultsWhileEssayPending} />}
 
+              {isExam && <ExamSingleAttemptSwitch enabled={singleAttemptOnly} onChange={setSingleAttemptOnly} disabled={saving} />}
               {!isExam && <AssessmentPendingResultsSwitch enabled={showResultsWhileEssayPending} onChange={setShowResultsWhileEssayPending} disabled={saving} />}
 
               {!isExam && (

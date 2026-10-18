@@ -93,6 +93,8 @@ export interface PublicExamProductDto {
   availableFrom?: string | null;
   availableUntil?: string | null;
   disabledAt?: string | null;
+  singleAttemptOnly?: boolean;
+  isActive?: boolean;
   hasAccess?: boolean;
   hasCompletedAttempt?: boolean;
   latestAttemptId?: string | null;
@@ -105,6 +107,7 @@ export interface PublicExamProductDto {
 
 export interface CreatePublicExamDto {
   showResultsWhileEssayPending?: boolean;
+  singleAttemptOnly?: boolean;
   essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
   title: string;
   description?: string | null;
@@ -140,7 +143,7 @@ export interface PublicExamResultsDto {
     studentName: string;
     studentPhone: string;
     startedAt?: string | null;
-    submittedAt: string;
+    submittedAt: string | null;
     scoreAchieved: number;
     isPassed: boolean;
     isTimeExpired: boolean;
@@ -207,6 +210,9 @@ export const adminSalesService = {
   },
   async savePublicExam(payload: Record<string, unknown>) {
     return unwrap<PublicExamProductDto>(await apiClient.post('/admin/public-exams', payload));
+  },
+  async setPublicExamActivation(productId: string, isEnabled: boolean) {
+    return unwrap<PublicExamProductDto>(await apiClient.put(`/admin/public-exams/${productId}/activation`, { isEnabled }));
   },
   async createPublicExam(payload: CreatePublicExamDto) {
     return unwrap<PublicExamProductDto>(await apiClient.post('/admin/public-exams/new', payload));

@@ -51,6 +51,7 @@ public static class AssessmentDefinitionWriter
         exam.DurationMinutes = definition.DurationMinutes;
         exam.EssayGradingMode = definition.EssayGradingMode;
         exam.ShowResultsWhileEssayPending = definition.ShowResultsWhileEssayPending;
+        exam.SingleAttemptOnly = definition.SingleAttemptOnly;
         exam.IsMandatory = definition.IsMandatory;
         exam.IsRandomized = definition.IsRandomized;
         exam.DisplayQuestionCount = definition.DisplayQuestionCount;

@@ -27,6 +27,7 @@ export interface AssessmentDefinition {
   parentNotification?: AssessmentParentNotificationSettings;
   essayGradingMode?: ExamEssayGradingMode;
   showResultsWhileEssayPending?: boolean;
+  singleAttemptOnly?: boolean;
 }
 export interface RevisionPolicy {
   previousAttempts: 'Preserve' | 'Regrade';

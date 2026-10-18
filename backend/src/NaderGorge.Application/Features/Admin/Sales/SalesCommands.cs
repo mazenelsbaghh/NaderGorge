@@ -493,7 +493,7 @@ public sealed class SavePublicExamProductCommandHandler : IRequestHandler<SavePu
             .ToListAsync(ct);
         var archiveState = await db.Exams.AsNoTracking()
             .Where(exam => exam.Id == product.ExamId)
-            .Select(exam => new { exam.ArchiveMode, exam.ArchivedAt })
+            .Select(exam => new { exam.ArchiveMode, exam.ArchivedAt, exam.SingleAttemptOnly, exam.IsActive })
             .FirstAsync(ct);
 
         return new PublicExamProductDto(
@@ -513,7 +513,9 @@ public sealed class SavePublicExamProductCommandHandler : IRequestHandler<SavePu
             product.DisabledAt,
             AcademicScopeService.ToScopeSummaries(scopes),
             archiveState.ArchiveMode,
-            archiveState.ArchivedAt);
+            archiveState.ArchivedAt,
+            archiveState.SingleAttemptOnly,
+            archiveState.IsActive);
     }
 }
 
@@ -571,6 +573,7 @@ public sealed class CreatePublicExamProductCommandHandler : IRequestHandler<Crea
             DurationMinutes = r.DurationMinutes,
             EssayGradingMode = r.EssayGradingMode,
             ShowResultsWhileEssayPending = r.ShowResultsWhileEssayPending,
+            SingleAttemptOnly = r.SingleAttemptOnly,
             IsMandatory = false,
             IsRandomized = r.IsRandomized,
             CreatedByTeacherId = examOwnerTeacherId.Value

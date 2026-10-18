@@ -29,6 +29,7 @@ public sealed record AssessmentDefinitionSnapshot(
     public bool UsesAssignedQuestionPoints { get; init; }
     public ExamEssayGradingMode EssayGradingMode { get; init; }
     public bool ShowResultsWhileEssayPending { get; init; }
+    public bool SingleAttemptOnly { get; init; }
     public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
@@ -67,6 +68,7 @@ public sealed record AssessmentDefinitionSnapshot(
         IsActive = exam.IsActive,
         EssayGradingMode = exam.EssayGradingMode,
         ShowResultsWhileEssayPending = exam.ShowResultsWhileEssayPending,
+        SingleAttemptOnly = exam.SingleAttemptOnly,
         ParentNotification = AssessmentParentNotificationSettings.Read(exam.ParentNotificationSettingsJson),
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
@@ -143,6 +145,7 @@ public sealed record AssessmentDefinitionSnapshot(
             EssayGradingMode = snapshot.EssayGradingMode,
             // Visibility applies to existing pending attempts without regrading their saved answers.
             ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
+            SingleAttemptOnly = current.SingleAttemptOnly,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
             ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id, optionOrders)).ToList()

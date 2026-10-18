@@ -12,24 +12,34 @@ namespace NaderGorge.Application.Features.Assessments;
 
 public sealed class ExamRevisionCompletion(IAppDbContext db)
 {
-    public Task<ApiResponse<AssessmentDefinitionSnapshot>> Start(Guid attemptId, Guid studentId, CancellationToken ct) =>
-        SerializationRetryHelper.ExecuteAsync(async retryCt =>
+    public Task<ApiResponse<AssessmentDefinitionSnapshot>> Start(Guid attemptId, Guid studentId, CancellationToken ct)
+    {
+        if (db is DbContext context && context.Database.CurrentTransaction != null)
+            return StartOnce(attemptId, studentId, ct);
+        return SerializationRetryHelper.ExecuteAsync(async retryCt =>
         {
             db.ClearTrackedChanges();
             await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, retryCt);
-            var attempt = await db.StudentExamAttempts.SingleOrDefaultAsync(a => a.Id == attemptId && a.UserId == studentId, retryCt);
-            var definition = ReadPending(attempt);
-            if (definition is null) return ApiResponse<AssessmentDefinitionSnapshot>.Fail("تغيّرت المحاولة. أعد فتح الامتحان.");
-            if (definition.CompletionStartedAt is null)
-            {
-                attempt!.StartedAt = DateTime.UtcNow;
-                definition = definition with { CompletionStartedAt = attempt.StartedAt };
-                attempt.DefinitionSnapshotJson = definition.ToJson();
-                await db.SaveChangesAsync(retryCt);
-            }
-            await transaction.CommitAsync(retryCt);
-            return ApiResponse<AssessmentDefinitionSnapshot>.Ok(definition);
+            var response = await StartOnce(attemptId, studentId, retryCt);
+            if (response.Success) await transaction.CommitAsync(retryCt);
+            return response;
         }, ct);
+    }
+
+    private async Task<ApiResponse<AssessmentDefinitionSnapshot>> StartOnce(Guid attemptId, Guid studentId, CancellationToken ct)
+    {
+        var attempt = await db.StudentExamAttempts.SingleOrDefaultAsync(a => a.Id == attemptId && a.UserId == studentId, ct);
+        var definition = ReadPending(attempt);
+        if (definition is null) return ApiResponse<AssessmentDefinitionSnapshot>.Fail("تغيّرت المحاولة. أعد فتح الامتحان.");
+        if (definition.CompletionStartedAt is null)
+        {
+            attempt!.StartedAt = DateTime.UtcNow;
+            definition = definition with { CompletionStartedAt = attempt.StartedAt };
+            attempt.DefinitionSnapshotJson = definition.ToJson();
+            await db.SaveChangesAsync(ct);
+        }
+        return ApiResponse<AssessmentDefinitionSnapshot>.Ok(definition);
+    }
 
     public Task<ApiResponse<bool>> Submit(SubmitExamCommand request, CancellationToken ct) =>
         SerializationRetryHelper.ExecuteAsync(async retryCt =>

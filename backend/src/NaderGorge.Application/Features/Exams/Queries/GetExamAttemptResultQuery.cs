@@ -99,7 +99,7 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
             lesson?.ContentSection?.Term?.PackageId,
             BuildQuestionReviewSnapshots(answers, essays, exam),
             revealCorrectAnswers: true,
-            resultState);
+            resultState) with { AllowRetake = !exam.SingleAttemptOnly };
 
         return ApiResponse<ExamResultDto>.Ok(result);
     }

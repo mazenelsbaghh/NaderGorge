@@ -50,6 +50,24 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
     public async Task<ApiResponse<ActiveExamAttemptDto>> Handle(StartExamAttemptCommand request, CancellationToken ct)
     {
+        var singleAttemptOnly = await _db.Exams.AnyAsync(exam => exam.Id == request.ExamId && exam.SingleAttemptOnly, ct);
+        if (!singleAttemptOnly || _db is not DbContext context
+            || context.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+            return await StartOnce(request, singleAttemptOnly, ct);
+
+        // Concurrent starts must resume the same attempt instead of consuming two attempts.
+        return await SerializationRetryHelper.ExecuteAsync(async retryCt =>
+        {
+            _db.ClearTrackedChanges();
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, retryCt);
+            var response = await StartOnce(request, singleAttemptOnly, retryCt);
+            await transaction.CommitAsync(retryCt);
+            return response;
+        }, ct);
+    }
+
+    private async Task<ApiResponse<ActiveExamAttemptDto>> StartOnce(StartExamAttemptCommand request, bool singleAttemptOnly, CancellationToken ct)
+    {
         var examStatus = await _db.Exams.Where(exam => exam.Id == request.ExamId).Select(exam => (bool?)exam.IsActive).FirstOrDefaultAsync(ct);
         if (examStatus == false)
             return ApiResponse<ActiveExamAttemptDto>.Fail("هذا الامتحان معطل حالياً.");
@@ -155,12 +173,6 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         if (exam == null)
             return ApiResponse<ActiveExamAttemptDto>.Fail("Exam not found");
 
-        var hasPassedExam = await _db.StudentExamAttempts
-            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == request.ExamId && a.IsPassed, ct);
-
-        if (hasPassedExam)
-            return ApiResponse<ActiveExamAttemptDto>.Fail("لقد اجتزت هذا الامتحان بالفعل.");
-
         // ── Idempotency: reuse an existing in-progress attempt ───────────────
         // An attempt with Evaluation != null was already submitted (see SubmitExamCommand)
         var existingAttempt = await _db.StudentExamAttempts
@@ -169,6 +181,21 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                                    && a.ExamId == request.ExamId
                                    && !a.IsPassed
                                    && a.Evaluation == null, ct);
+
+        var requiresCompletion = existingAttempt?.DefinitionSnapshotJson is { } definitionJson
+            && AssessmentDefinitionSnapshot.Read(definitionJson, "exam", request.ExamId).Revision?.RequiresCompletion == true;
+
+        if (singleAttemptOnly && !requiresCompletion && await _db.StudentExamAttempts.AnyAsync(attempt =>
+            attempt.UserId == request.UserId && attempt.ExamId == request.ExamId
+            && (attempt.SubmittedAt != null || attempt.Evaluation != null
+                || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == attempt.Id)), ct))
+            return ApiResponse<ActiveExamAttemptDto>.Fail("هذا الامتحان يسمح بمحاولة واحدة فقط. يمكنك مراجعة نتيجتك أو التواصل مع الدعم.", ["EXAM_ATTEMPT_LIMIT_REACHED"]);
+
+        var hasPassedExam = await _db.StudentExamAttempts
+            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == request.ExamId && a.IsPassed, ct);
+
+        if (hasPassedExam)
+            return ApiResponse<ActiveExamAttemptDto>.Fail("لقد اجتزت هذا الامتحان بالفعل.");
 
         StudentExamAttempt attempt;
         var random = new Random();
@@ -225,7 +252,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         }
         else
         {
-            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            await using var transaction = _db is DbContext existingContext && existingContext.Database.CurrentTransaction != null
+                ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
             // Pick subset
             var allQuestions = exam.ExamQuestions.AsEnumerable();
             if (exam.IsRandomized)
@@ -278,7 +306,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 await _giftUsage.TryConsumeAsync(request.UserId, Domain.Enums.GiftTargetType.Exam, request.ExamId, ct);
             }
             await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
+            if (transaction != null) await transaction.CommitAsync(ct);
         }
 
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);

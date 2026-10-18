@@ -66,7 +66,7 @@ public sealed class PublicExamsController : ControllerBase
         var completedAttempts = await _db.StudentExamAttempts
             .Where(a => a.UserId == studentId
                 && examIds.Contains(a.ExamId)
-                && (_db.StudentAnswers.Any(answer => answer.StudentExamAttemptId == a.Id)
+                && (a.SubmittedAt != null || a.Evaluation != null
                     || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == a.Id)))
             .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
             .Select(a => new { a.Id, a.ExamId, a.IsPassed, a.ScoreAchieved })
@@ -88,6 +88,8 @@ public sealed class PublicExamsController : ControllerBase
                 product.ExamId,
                 product.ExamTitle,
                 product.Slug,
+                product.SingleAttemptOnly,
+                product.IsActive,
                 product.IsPublished,
                 product.IsPaid,
                 product.Price,

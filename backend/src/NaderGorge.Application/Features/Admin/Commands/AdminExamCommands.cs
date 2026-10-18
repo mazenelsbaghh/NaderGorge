@@ -19,6 +19,7 @@ public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
     public int? DurationMinutes { get; set; }
     public ExamEssayGradingMode EssayGradingMode { get; set; }
     public bool ShowResultsWhileEssayPending { get; set; }
+    public bool SingleAttemptOnly { get; set; }
     public bool IsMandatory { get; set; } = true;
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
@@ -194,6 +195,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             DurationMinutes = request.DurationMinutes,
             EssayGradingMode = request.EssayGradingMode,
             ShowResultsWhileEssayPending = request.ShowResultsWhileEssayPending,
+            SingleAttemptOnly = request.SingleAttemptOnly,
             IsMandatory = request.IsMandatory,
             IsRandomized = request.IsRandomized,
             DisplayQuestionCount = request.DisplayQuestionCount,
@@ -542,7 +544,7 @@ public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuesti
     }
 }
 
-public record DeleteExamAttemptCommand(Guid ExamId, Guid AttemptId, Guid? CurrentUserId = null) : IRequest<ApiResponse<bool>>;
+public record DeleteExamAttemptCommand(Guid ExamId, Guid AttemptId, Guid? CurrentUserId = null, string? Reason = null) : IRequest<ApiResponse<bool>>;
 
 public class DeleteExamAttemptCommandHandler : IRequestHandler<DeleteExamAttemptCommand, ApiResponse<bool>>
 {
@@ -592,6 +594,7 @@ public class DeleteExamAttemptCommandHandler : IRequestHandler<DeleteExamAttempt
         _db.AuditLogs.Add(new AuditLog
         {
             Action = "ExamAttemptDeleted", EntityType = nameof(StudentExamAttempt), EntityId = attempt.Id,
+            Reason = request.Reason?.Trim(),
             PerformedByUserId = request.CurrentUserId,
             OldValues = System.Text.Json.JsonSerializer.Serialize(new { attempt.ExamId, attempt.UserId, attempt.ScoreAchieved, answerCount = answers.Count })
         });

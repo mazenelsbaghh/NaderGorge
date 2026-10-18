@@ -13,7 +13,7 @@ public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<A
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
-public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions, PartialExamResultDto? PartialResult = null);
+public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired, string ResultState, Guid? LessonId, Guid? PackageId, List<ExamQuestionReviewDto> Questions, PartialExamResultDto? PartialResult = null, bool AllowRetake = true);
 
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {
@@ -78,6 +78,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             return ApiResponse<ExamResultDto>.Fail(error.Message);
         }
 
+        var allowRetake = !exam.SingleAttemptOnly;
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         if (attempt.DefinitionSnapshotJson is not null
@@ -185,6 +186,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         }
 
         var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
+        attempt.SubmittedAt ??= DateTime.UtcNow;
         attempt.ScoreAchieved = attempt.IsTimeExpired ? 0 : scaledScore;
         attempt.IsPassed = !attempt.IsTimeExpired && (hasEssayQuestions ? false : scaledScore >= exam.PassingScore);
         attempt.Evaluation = attempt.IsTimeExpired
@@ -399,7 +401,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                         persistedLesson?.ContentSection?.Term?.PackageId,
                         BuildQuestionReviewSnapshots(persistedAnswers, persistedEssays, exam),
                         revealCorrectAnswers: true,
-                        resultState: DetermineResultState(persistedEssays)),
+                        resultState: DetermineResultState(persistedEssays)) with { AllowRetake = allowRetake },
                     persistedAttempt.IsPassed ? "Exam passed!" : "Exam failed.");
             }
 
@@ -425,7 +427,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             lesson?.ContentSection?.Term?.PackageId,
             questionSnapshotsByQuestion,
             revealCorrectAnswers: true,
-            resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id)));
+            resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id))) with { AllowRetake = allowRetake };
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
     }

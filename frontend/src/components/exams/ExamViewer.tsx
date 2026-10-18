@@ -226,7 +226,7 @@ export function ExamResultPanel({
             </div>
 
             <h2 className="text-4xl font-black text-foreground sm:text-5xl">
-              {result.isPassed ? 'ممتاز!' : 'حاول مرة أخرى'}
+              {result.isPassed ? 'ممتاز!' : result.allowRetake === false ? 'راجع نتيجتك' : 'حاول مرة أخرى'}
             </h2>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
@@ -316,7 +316,7 @@ export function ExamResultPanel({
 
         {/* CTA buttons */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-          {isFinalResult && !result.isPassed && onRestart && (
+          {isFinalResult && !result.isPassed && result.allowRetake !== false && onRestart && (
             <button
               type="button"
               onClick={() => { void onRestart?.(); }}

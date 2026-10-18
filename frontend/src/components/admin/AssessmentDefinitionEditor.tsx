@@ -1,5 +1,7 @@
 'use client';
 
+import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
+
 import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -110,6 +112,8 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
             onChange={essayGradingMode => updateDefinition({ essayGradingMode })} disabled={busy}
             showPendingResults={definition.showResultsWhileEssayPending ?? false}
             onPendingResultsChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} />}
+          {kind === 'exam' && <ExamSingleAttemptSwitch enabled={definition.singleAttemptOnly ?? false}
+            onChange={singleAttemptOnly => updateDefinition({ singleAttemptOnly })} disabled={busy} />}
           {kind === 'homework' && <AssessmentPendingResultsSwitch enabled={definition.showResultsWhileEssayPending ?? false}
             onChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} disabled={busy} />}
           <div className="flex flex-wrap gap-6">

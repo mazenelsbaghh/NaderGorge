@@ -99,9 +99,11 @@ public sealed record CreatePublicExamRequest(
     DateTime? AvailableUntil,
     IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
     NaderGorge.Domain.Enums.ExamEssayGradingMode EssayGradingMode = NaderGorge.Domain.Enums.ExamEssayGradingMode.Automatic,
-    bool ShowResultsWhileEssayPending = false);
+    bool ShowResultsWhileEssayPending = false,
+    bool SingleAttemptOnly = false);
 
 public sealed record DisableRequest(string? Reason);
+public sealed record PublicExamActivationRequest(bool IsEnabled);
 
 public sealed record SalesRuleDto(Guid Id, SalesTargetType TargetType, Guid? TargetId, Guid? TeacherId, Guid? SubjectId, string? GradeLevel, Guid? VideoTypeId, bool IsActive);
 public sealed record SalesCouponUsageDto(
@@ -139,4 +141,4 @@ public sealed record StackingPolicyDto(Guid Id, string Name, StackingMode Mode, 
 public sealed record PrintableTemplateDto(Guid Id, string Name, decimal WidthMm, decimal HeightMm, string? BackgroundColor, string? BackgroundImageUrl, string LayoutJson, bool IsActive);
 public sealed record PrintableCodeDto(Guid Id, string Code, long SerialNumber, string QrPayload, SalesStatus Status);
 public sealed record PrintableBatchDto(Guid Id, string Name, PrintableCodeBehavior Behavior, SalesTargetType TargetType, Guid? TargetId, SalesOwnerType OwnerType, Guid? TeacherId, int TotalCodes, int UsedCount, SalesStatus Status, IReadOnlyList<PrintableCodeDto> SampleCodes);
-public sealed record PublicExamProductDto(Guid Id, Guid ExamId, string ExamTitle, string Slug, bool IsPublished, bool IsPaid, decimal Price, Guid? TeacherId, Guid? SubjectId, string? GradeLevel, bool IsPlatformWide, DateTime? AvailableFrom, DateTime? AvailableUntil, DateTime? DisabledAt, IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
+public sealed record PublicExamProductDto(Guid Id, Guid ExamId, string ExamTitle, string Slug, bool IsPublished, bool IsPaid, decimal Price, Guid? TeacherId, Guid? SubjectId, string? GradeLevel, bool IsPlatformWide, DateTime? AvailableFrom, DateTime? AvailableUntil, DateTime? DisabledAt, IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, bool SingleAttemptOnly = false, bool IsActive = true);

@@ -1029,9 +1029,9 @@ public class AdminController : ControllerBase
 
     [HttpDelete("exams/{examId:guid}/attempts/{attemptId:guid}")]
     [HasPermission("exams.manage")]
-    public async Task<IActionResult> DeleteExamAttempt(Guid examId, Guid attemptId)
+    public async Task<IActionResult> DeleteExamAttempt(Guid examId, Guid attemptId, [FromQuery] string? reason = null)
     {
-        var result = await _mediator.Send(new DeleteExamAttemptCommand(examId, attemptId, GetUserId()));
+        var result = await _mediator.Send(new DeleteExamAttemptCommand(examId, attemptId, GetUserId(), reason));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
