@@ -7471,6 +7471,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<DateTime?>("StudentOpenedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("SubtitleUrl")
                         .HasColumnType("text");
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Users, GraduationCap, Calendar, Phone, User, MapPin, School, ShieldCheck } from "lucide-react";
 import { 
   AdminDataTable, 
@@ -118,6 +119,7 @@ export default function TeacherStudentsPageClient() {
       sectionLabel="قائمة الطلاب"
       pageTitle="الطلاب النشطون"
       subtitle="استعرض جميع الطلاب المشتركين والمفعلين لباقاتك الدراسية وتتبع تواريخ انضمامهم."
+      action={<Link href="/teacher/student-follow-up" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-white">متابعة الطلاب</Link>}
     >
       <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
         <section className="grid grid-cols-1 gap-6 md:grid-cols-3">

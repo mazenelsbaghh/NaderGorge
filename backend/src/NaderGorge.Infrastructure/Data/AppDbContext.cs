@@ -3703,6 +3703,15 @@ public class AppDbContext : DbContext, IAppDbContext
         ApplyFinancialPrincipalSoftDelete();
         ApplyFinancialConcurrencyVersions();
 
+        foreach (var entry in ChangeTracker.Entries<LessonVideo>())
+        {
+            // Availability starts when a video opens, including delayed Bunny readiness.
+            if (entry.Entity.IsActive && (entry.State == EntityState.Added
+                || (entry.Property(video => video.IsActive).IsModified
+                    && !entry.Property(video => video.IsActive).OriginalValue)))
+                entry.Entity.StudentOpenedAtUtc = DateTime.UtcNow;
+        }
+
         foreach (var entry in ChangeTracker.Entries<Domain.Common.BaseEntity>())
         {
             if (entry.State == EntityState.Modified)

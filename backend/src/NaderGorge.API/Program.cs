@@ -116,6 +116,8 @@ builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbConte
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportQueryService, NaderGorge.Application.Features.Reporting.ReportQueryService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportExportService, NaderGorge.Infrastructure.Services.ReportExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IStudentLedgerExportService, NaderGorge.Infrastructure.Services.StudentLedgerExportService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.StudentFollowUp.IStudentFollowUpReader, NaderGorge.Application.Features.StudentFollowUp.StudentFollowUpReader>();
+builder.Services.AddScoped<NaderGorge.Application.Features.StudentFollowUp.IStudentFollowUpExporter, NaderGorge.Infrastructure.Services.StudentFollowUpExportService>();
 
 // ---------- Redis ----------
 builder.Services.AddSingleton<IUserSecurityStateCache, RedisUserSecurityStateCache>();

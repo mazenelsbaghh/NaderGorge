@@ -80,6 +80,7 @@ public class Lesson : BaseEntity, IArchivableContent
 
 public class LessonVideo : BaseEntity, IArchivableContent
 {
+    public DateTime? StudentOpenedAtUtc { get; set; }
     public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
 

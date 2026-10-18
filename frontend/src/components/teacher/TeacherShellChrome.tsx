@@ -60,6 +60,7 @@ export type TeacherShellRoute =
   | '/teacher/comments'
   | '/teacher/essays'
   | '/teacher/students'
+  | '/teacher/student-follow-up'
   | '/teacher/finance'
   | '/teacher/learning-center'
   | '/teacher/reports'
@@ -132,6 +133,13 @@ const navItems: TeacherNavItem[] = [
     permission: 'students',
   },
   {
+    href: '/teacher/student-follow-up',
+    label: 'متابعة الطلاب',
+    icon: Activity,
+    group: 'followup',
+    permission: 'students',
+  },
+  {
     href: '/teacher/community',
     label: 'مجتمع المدرس',
     icon: MessageSquareText,
@@ -199,7 +207,7 @@ const GROUP_CONFIG: Array<{
     id: 'followup',
     label: 'المتابعة والتفاعل',
     icon: Users,
-    hrefs: ['/teacher/activity', '/teacher/students', '/teacher/community', '/teacher/comments', '/teacher/essays', '/teacher/reports', '/teacher/learning-center'],
+    hrefs: ['/teacher/activity', '/teacher/students', '/teacher/student-follow-up', '/teacher/community', '/teacher/comments', '/teacher/essays', '/teacher/reports', '/teacher/learning-center'],
   },
   {
     id: 'content',
@@ -226,6 +234,7 @@ const teacherLabelMap: Record<string, string> = {
   activity: 'نشاط الطلاب',
   reports: 'مركز التقارير',
   students: 'الطلاب',
+  'student-follow-up': 'متابعة الطلاب',
   packages: 'المحتوى الدراسي',
   codes: 'أكواد الوصول',
   'public-exams': 'الامتحانات العامة',

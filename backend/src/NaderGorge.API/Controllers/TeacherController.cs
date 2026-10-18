@@ -13,6 +13,7 @@ using NaderGorge.Application.Features.Community.Commands;
 using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Features.StudentFollowUp;
 
 namespace NaderGorge.API.Controllers;
 
@@ -173,6 +174,46 @@ public class TeacherController : ControllerBase
         if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
         var result = await _mediator.Send(new GetTeacherStudentsQuery(context.TeacherUserId));
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("student-follow-up/options")]
+    public async Task<IActionResult> FollowUpOptions([FromQuery] Guid? packageId,
+        [FromServices] IStudentFollowUpReader reader, CancellationToken ct)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
+        return Ok(NaderGorge.Application.Common.ApiResponse<StudentFollowUpOptions>.Ok(
+            await reader.OptionsAsync(context!.TeacherId, packageId, false, ct)));
+    }
+
+    [HttpPost("student-follow-up")]
+    public async Task<IActionResult> FollowUp([FromBody] StudentFollowUpFilter filter,
+        [FromServices] IStudentFollowUpReader reader, CancellationToken ct)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
+        try
+        {
+            return Ok(NaderGorge.Application.Common.ApiResponse<StudentFollowUpReport>.Ok(
+                await reader.ReadAsync(filter with { TeacherId = context!.TeacherId }, false, ct)));
+        }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
+    }
+
+    [HttpPost("student-follow-up/export")]
+    public async Task<IActionResult> ExportFollowUp([FromBody] StudentFollowUpFilter filter,
+        [FromServices] IStudentFollowUpReader reader, [FromServices] IStudentFollowUpExporter exporter, CancellationToken ct)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
+        try
+        {
+            filter = filter with { TeacherId = context!.TeacherId };
+            var report = await reader.ReadAsync(filter, true, ct);
+            var content = await exporter.ExportAsync(report, filter, GetUserId(), ct);
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "student-follow-up.xlsx");
+        }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
     }
 
     [HttpGet("essays")]

@@ -45,6 +45,7 @@ export const adminMenuItems = [
   { label: 'المستندات والمواد', href: '/admin/subjects', icon: <Library className="h-4 w-4" />, permission: 'content.manage' },
   { label: 'المعلمين', href: '/admin/teachers', icon: <GraduationCap className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'الطلاب', href: '/admin/students', icon: <Users className="h-4 w-4" />, permission: 'users.manage' },
+  { label: 'متابعة الطلاب', href: '/admin/student-follow-up', icon: <BarChart3 className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'الموظفون والمساعدون', href: '/admin/assistants', icon: <Briefcase className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المديرين', href: '/admin/admins', icon: <UserCog className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المحتوى', href: '/admin/content', icon: <BookOpen className="h-4 w-4" />, permission: 'content.manage' },
@@ -128,6 +129,12 @@ export const adminRootLinks: AdminRootLink[] = [
     title: 'إدارة الطلاب',
     body: 'الحسابات والصلاحيات والحالات والأجهزة للطلاب.',
     icon: Users,
+  },
+  {
+    href: '/admin/student-follow-up',
+    title: 'متابعة الطلاب',
+    body: 'متابعة مشاهدة الحصص والتأخير حسب المدرس والصف، مع كشف إكسيل.',
+    icon: BarChart3,
   },
   {
     href: '/admin/assistants',

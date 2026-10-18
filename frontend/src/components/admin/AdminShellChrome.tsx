@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Activity,
   BookOpenText,
   Briefcase,
   ClipboardList,
@@ -96,6 +97,7 @@ export type AdminShellRoute =
   | '/admin/ai-agent'
   | '/admin/users'
   | '/admin/students'
+  | '/admin/student-follow-up'
   | '/admin/assistants'
   | '/admin/admins'
   | '/admin/teachers'
@@ -331,6 +333,12 @@ const navItems: AdminNavItem[] = [
     href: '/admin/students',
     label: 'الطلاب',
     icon: Users,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/student-follow-up',
+    label: 'متابعة الطلاب',
+    icon: Activity,
     permission: 'users.manage',
   },
   {
@@ -662,7 +670,7 @@ const GROUP_CONFIG = [
     id: 'users',
     label: 'شؤون الأعضاء',
     icon: Users,
-    hrefs: ['/admin/students', '/admin/teachers', '/admin/assistants', '/admin/admins'],
+    hrefs: ['/admin/students', '/admin/student-follow-up', '/admin/teachers', '/admin/assistants', '/admin/admins'],
   },
   {
     id: 'academic',
