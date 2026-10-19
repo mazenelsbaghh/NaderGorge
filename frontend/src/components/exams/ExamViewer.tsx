@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -829,8 +829,10 @@ export function ExamViewer({
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const draftId = `${attempt.attemptId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
+  const [draftRestored, setDraftRestored] = useState(false);
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [result, setResult] = useState<ExamResultDto | null>(null);
   const [error, setError] = useState('');
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -875,6 +877,7 @@ export function ExamViewer({
     } catch {
       // ignore JSON parse or localStorage errors
     }
+    setDraftRestored(true);
   }, [attempt.totalScore, draftId]);
 
   const [orderedQuestions, setOrderedQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
@@ -942,28 +945,30 @@ export function ExamViewer({
   };
 
   const handleSubmit = async (isTimeout = false) => {
+    if (!draftRestored || submittingRef.current) return;
     if (!isTimeout) {
-      const answeredCount = attempt.questions.filter(q => answers[q.id]).length;
-      const missing = attempt.questions.length - answeredCount;
+      const answeredCount = orderedQuestions.filter(q => answers[q.id]).length;
+      const missing = orderedQuestions.length - answeredCount;
       if (missing > 0) {
         setPendingMissing(missing);
         setShowConfirm(true);
         return;
       }
     }
+    submittingRef.current = true;
     setLoading(true);
     setError('');
     setShowConfirm(false);
 
-    const submissions: AnswerSubmissionDto[] = Object.keys(answers).map((qId) => {
-      const q = orderedQuestions.find((x) => x.id === qId);
-      if (q?.type === 'Essay') {
+    const submissions: AnswerSubmissionDto[] = orderedQuestions.filter(q => answers[q.id]).map((q) => {
+      const qId = q.id;
+      if (q.type === 'Essay') {
         return {
           examQuestionId: qId,
           answerText: answers[qId] || ''
         };
       }
-      if (q?.type === 'FindTheMistake') return { examQuestionId: qId, selectedText: answers[qId] };
+      if (q.type === 'FindTheMistake') return { examQuestionId: qId, selectedText: answers[qId] };
       return { examQuestionId: qId, selectedOptionId: answers[qId] };
     });
 
@@ -976,8 +981,9 @@ export function ExamViewer({
       setResult(res.data.data);
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
-      setError(apiError.response?.data?.message || 'فشل في إرسال الامتحان. حاول مرة أخرى.');
+      setError(apiError.response?.data?.message || 'تعذر تأكيد تسليم الامتحان. إجاباتك ما زالت موجودة؛ تحقق من اتصالك ثم حاول مرة أخرى.');
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -1002,7 +1008,7 @@ export function ExamViewer({
   }
 
   const totalQ = orderedQuestions.length;
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = orderedQuestions.filter(q => answers[q.id]).length;
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
   const currentQ = orderedQuestions[currentIdx];
 
@@ -1010,7 +1016,7 @@ export function ExamViewer({
     <div className="relative mx-auto max-w-3xl pb-16" role="form" aria-label={`امتحان: ${examTitle}`} dir="rtl">
 
       {/* ─── Countdown ─── */}
-      {attempt.durationMinutes && (
+      {draftRestored && attempt.durationMinutes && (
         <div className="mb-4 flex justify-start">
           <CountdownTimer
             startedAt={attempt.startedAt}

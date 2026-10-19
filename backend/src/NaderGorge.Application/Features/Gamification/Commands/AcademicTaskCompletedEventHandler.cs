@@ -16,6 +16,10 @@ public class AcademicTaskCompletedEventHandler : INotificationHandler<AcademicTa
 
     public async Task Handle(AcademicTaskCompletedEvent notification, CancellationToken cancellationToken)
     {
+        if (notification.SourceEventId is { } sourceEventId
+            && await _dbContext.GamificationActionLogs.AnyAsync(log => log.Id == sourceEventId, cancellationToken))
+            return;
+
         var gamification = await _dbContext.StudentGamifications
             .FirstOrDefaultAsync(g => g.StudentId == notification.StudentId, cancellationToken);
 
@@ -38,6 +42,7 @@ public class AcademicTaskCompletedEventHandler : INotificationHandler<AcademicTa
         // Logging the action
         var actionLog = new GamificationActionLog
         {
+            Id = notification.SourceEventId ?? Guid.NewGuid(),
             StudentId = notification.StudentId,
             EventType = notification.TaskType,
             PointsAwarded = notification.BasePoints

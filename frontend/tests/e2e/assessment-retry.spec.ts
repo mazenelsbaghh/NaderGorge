@@ -93,6 +93,135 @@ function examAttempt(attemptId: string, remainingSeconds = 600): ActiveExamAttem
   return { attemptId, title: 'امتحان الإعادة', description: '', startedAt: new Date().toISOString(), durationMinutes: 10, remainingSeconds, totalScore: 1, questions: [{ id: 'question-1', text: 'سؤال المحاولة الجديدة', type: 'MCQ', points: 1, options: [{ id: 'option-1', text: 'الإجابة الأولى' }, { id: 'option-2', text: 'الإجابة الثانية' }] }] };
 }
 
+async function prepareAnsweredExam(page: Page, attemptId: string, remainingSeconds?: number) {
+  await studentSession(page);
+  const attempt = { ...examAttempt(attemptId), durationMinutes: remainingSeconds === undefined ? undefined : 10, remainingSeconds, totalScore: 120 };
+  attempt.questions = Array.from({ length: 120 }, (_, index) => ({
+    id: `question-${index + 1}`, text: `سؤال الامتحان الشامل ${index + 1}`, type: 'MCQ', points: 1,
+    options: [{ id: `option-${index + 1}`, text: `إجابة السؤال ${index + 1}` }],
+  }));
+  const answers = Object.fromEntries(attempt.questions.map(question => [question.id, question.options[0].id]));
+  const draftKey = `exam_answers_${attemptId}`;
+  await page.addInitScript(({ key, savedAnswers }) => {
+    if (window !== window.top) return;
+    localStorage.setItem(key, JSON.stringify({ ...savedAnswers, 'stale-question': 'stale-option' }));
+  }, { key: draftKey, savedAnswers: answers });
+  await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, null, 404));
+  await page.route(`**/api/exams/${assessmentId}/start`, route => reply(route, attempt));
+  return { draftKey, answers, submissions: attempt.questions.map(question => ({ examQuestionId: question.id, selectedOptionId: answers[question.id] })) };
+}
+
+async function fullyAnsweredExam(page: Page, attemptId: string) {
+  const saved = await prepareAnsweredExam(page, attemptId);
+  await page.goto(`/student/exams/${assessmentId}`);
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '120 من 120 أسئلة تمت الإجابة عنها');
+  await page.getByRole('button', { name: 'سؤال 120: تمت الإجابة', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'إجابة السؤال 120', exact: true })).toBeChecked();
+  return saved;
+}
+
+// 2026-10-19: a fully answered 120-question exam stayed on a submission error in the student UI.
+for (const failure of ['response-lost', 'server-error', 'already-submitted'] as const) {
+  test(`a 120-answer exam recovers its saved result after ${failure} without resubmitting`, async ({ page }) => {
+    const attemptId = `recovered-${failure}`;
+    const { draftKey, submissions } = await fullyAnsweredExam(page, attemptId);
+    const postedAnswers: unknown[] = [];
+    const savedResult: ExamResultDto = { ...failedExam, attemptId, scoreAchieved: 120, totalScore: 120, isPassed: true, blocksNextLesson: false, isTimeExpired: false, evaluation: 'ممتاز' };
+    await page.route(`**/api/exams/${assessmentId}/submit/${attemptId}*`, route => {
+      postedAnswers.push(route.request().postDataJSON());
+      if (failure === 'response-lost') return route.abort('connectionfailed');
+      return route.fulfill({ status: failure === 'server-error' ? 503 : 400, json: { success: false, message: failure === 'server-error' ? 'تعذر استقبال رد التسليم' : 'This attempt has already been submitted.' } });
+    });
+    await page.route(`**/api/exams/attempts/${attemptId}/result`, route => reply(route, savedResult));
+
+    await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'ممتاز!', exact: true })).toBeVisible();
+    await expect(page.getByText('120 / 120', { exact: true })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+    await expect(page.getByText(/^(Network Error|تعذر استقبال رد التسليم|This attempt has already been submitted\.)$/)).toHaveCount(0);
+    expect(postedAnswers).toEqual([submissions]);
+    expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull();
+  });
+}
+
+for (const recovery of ['no-result', 'another-attempt'] as const) {
+  test(`a 120-answer exam keeps its draft when recovery finds ${recovery} and allows manual retry`, async ({ page }) => {
+    const attemptId = `unsaved-${recovery}`;
+    const { draftKey, answers, submissions } = await fullyAnsweredExam(page, attemptId);
+    const postedAnswers: unknown[] = [];
+    const failureMessage = 'تعذر حفظ إجاباتك الآن، حاول التسليم مرة أخرى';
+    await page.route(`**/api/exams/${assessmentId}/submit/${attemptId}*`, route => {
+      postedAnswers.push(route.request().postDataJSON());
+      if (postedAnswers.length === 1)
+        return route.fulfill({ status: 503, json: { success: false, message: failureMessage } });
+      return reply(route, { ...failedExam, attemptId, scoreAchieved: 120, totalScore: 120, isPassed: true, blocksNextLesson: false, isTimeExpired: false, evaluation: 'ممتاز' });
+    });
+    await page.route(`**/api/exams/attempts/${attemptId}/result`, route => recovery === 'no-result' ? reply(route, null, 404) : reply(route, failedExam));
+
+    await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+
+    await expect(page.getByRole('alert').filter({ hasText: failureMessage })).toHaveText(failureMessage);
+    await expect(page.getByText(failureMessage, { exact: true })).toHaveCount(1);
+    await expect(page.getByRole('radio', { name: 'إجابة السؤال 120', exact: true })).toBeChecked();
+    expect(postedAnswers).toEqual([submissions]);
+    expect(JSON.parse((await page.evaluate(key => localStorage.getItem(key), draftKey))!)).toMatchObject(answers);
+    await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'ممتاز!', exact: true })).toBeVisible();
+    expect(postedAnswers).toEqual([submissions, submissions]);
+    expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull();
+  });
+}
+
+test('reopening an expired exam restores all 120 answers before its single automatic submission', async ({ page }) => {
+  const attemptId = 'expired-restored-attempt';
+  const { draftKey, submissions } = await prepareAnsweredExam(page, attemptId, 0);
+  const postedAnswers: unknown[] = [];
+  await page.route(`**/api/exams/${assessmentId}/submit/${attemptId}*`, route => {
+    postedAnswers.push(route.request().postDataJSON());
+    return reply(route, { ...failedExam, attemptId });
+  });
+
+  await page.goto(`/student/exams/${assessmentId}`);
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+
+  await expect(page.getByRole('button', { name: 'إعادة الامتحان', exact: true })).toBeVisible();
+  expect(postedAnswers).toEqual([submissions]);
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull();
+});
+
+test('double click and timer expiry share one in-flight submission with all 120 answers', async ({ page }) => {
+  await page.clock.install();
+  const attemptId = 'overlapping-submit-attempt';
+  const { draftKey, submissions } = await prepareAnsweredExam(page, attemptId, 5);
+  const postedAnswers: unknown[] = [];
+  let releaseResponse!: () => void;
+  const responseReady = new Promise<void>(resolve => { releaseResponse = resolve; });
+  await page.route(`**/api/exams/${assessmentId}/submit/${attemptId}*`, async route => {
+    postedAnswers.push(route.request().postDataJSON());
+    await responseReady;
+    return reply(route, { ...failedExam, attemptId });
+  });
+  await page.goto(`/student/exams/${assessmentId}`);
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+  await page.getByRole('button', { name: 'سؤال 120: تمت الإجابة', exact: true }).click();
+  await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).evaluate(element => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+  await expect.poll(() => postedAnswers.length).toBe(1);
+  await page.clock.runFor(6000);
+  expect(postedAnswers).toEqual([submissions]);
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).not.toBeNull();
+  releaseResponse();
+
+  await expect(page.getByRole('button', { name: 'إعادة الامتحان', exact: true })).toBeVisible();
+  expect(postedAnswers).toEqual([submissions]);
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull();
+});
+
 test('question navigation keeps working when the browser animation clock stops', async ({ page }) => {
   await studentSession(page);
   const attempt = examAttempt('navigation-attempt');
@@ -236,7 +365,7 @@ test('editing answers does not extend the exam deadline or duplicate timeout sub
   let submissions = 0;
   await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, null, 404));
   await page.route(`**/api/exams/${assessmentId}/start`, route => reply(route, attempt));
-  await page.route(`**/api/exams/${assessmentId}/submit/timed-attempt*`, route => { submissions++; return reply(route, failedExam); });
+  await page.route(`**/api/exams/${assessmentId}/submit/timed-attempt*`, route => { submissions++; return reply(route, { ...failedExam, attemptId: attempt.attemptId }); });
   await page.goto(`/student/exams/${assessmentId}`);
   await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
   await expect(page.getByText('سؤال المحاولة الجديدة', { exact: true })).toBeVisible();

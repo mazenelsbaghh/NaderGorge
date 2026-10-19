@@ -1,3 +1,4 @@
+import axios from 'axios';
 import type { PartialAssessmentResultDto } from './assessment-result';
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
@@ -104,6 +105,25 @@ export interface ExamAttemptGradingStatusDto {
   essays: EssayGradingStatusItemDto[];
 }
 
+function mayHaveSubmitted(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return !error.response || status === 408 || status === 409 || (status !== undefined && status >= 500)
+    || (status === 400 && error.response?.data?.message === 'This attempt has already been submitted.');
+}
+
+async function recoverSubmittedAttempt(attemptId: string, submissionError: unknown) {
+  if (!mayHaveSubmitted(submissionError)) throw submissionError;
+  try {
+    const saved = await apiClient.get<{ data: ExamResultDto }>(`/exams/attempts/${attemptId}/result`, { suppressErrorToast: true });
+    if (saved.data.data?.attemptId === attemptId) return saved;
+  } catch (recoveryError) {
+    if (!axios.isAxiosError(recoveryError)) throw recoveryError;
+    // A failed read cannot prove submission; retain the original error and draft.
+  }
+  throw submissionError;
+}
+
 export const examService = {
   useFiftyFifty: (examId: string, attemptId: string, questionId: string) =>
     apiClient.get<{ data: string[] }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`),
@@ -123,7 +143,11 @@ export const examService = {
   getAttemptResult: (attemptId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/attempts/${attemptId}/result`),
   submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[], revisionId?: string | null) => {
-    const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers, { params: { revisionId } });
+    const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers, {
+      params: { revisionId }, suppressErrorToast: true,
+    }).catch(error => recoverSubmittedAttempt(attemptId, error));
+    if (response.data.data?.attemptId !== attemptId)
+      throw new Error('تعذر تأكيد تسليم الامتحان. إجاباتك ما زالت موجودة؛ حاول مرة أخرى.');
     invalidateMany(['student:exams', 'assessments']);
     return response;
   },

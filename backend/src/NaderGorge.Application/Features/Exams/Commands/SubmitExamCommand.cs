@@ -18,12 +18,14 @@ public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal Total
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {
     private readonly IAppDbContext _db;
-    private readonly IPublisher _publisher;
-    private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
-    private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
+
+    public SubmitExamCommandHandler(IAppDbContext db)
+    {
+        _db = db;
+    }
 
     public SubmitExamCommandHandler(IAppDbContext db, IPublisher publisher, NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
-        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader())
+        : this(db)
     {
     }
 
@@ -32,15 +34,44 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IPublisher publisher,
         NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
         ICachedPlatformSettingsReader cachedPlatformSettingsReader)
+        : this(db)
     {
-        _db = db;
-        _publisher = publisher;
-        _jobEnqueuer = jobEnqueuer;
-        _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
     }
 
-    public Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
-        => HandleOnce(request, ct, progressConflictRetries: 0);
+    public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
+    {
+        if (_db is not DbContext context
+            || context.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+            return await HandleOnce(request, ct, progressConflictRetries: 0);
+
+        ApiResponse<ExamResultDto>? submitted = null;
+        await using (var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct))
+        {
+            // The attempt row also protects its answer placeholders and effect events from overlapping submissions.
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                SELECT "Id" FROM student_exam_attempts
+                WHERE "Id" = {request.AttemptId} AND "UserId" = {request.UserId} AND "ExamId" = {request.ExamId}
+                FOR UPDATE
+                """, ct);
+            _db.ClearTrackedChanges();
+            if (!await RequiresRevisionCompletionAsync(request, ct))
+            {
+                submitted = await HandleOnce(request, ct, progressConflictRetries: 0);
+                await transaction.CommitAsync(ct);
+            }
+        }
+        // Revision completion owns its serializable transaction and rereads the pending revision after acquiring it.
+        return submitted ?? await HandleOnce(request, ct, progressConflictRetries: 0);
+    }
+
+    private async Task<bool> RequiresRevisionCompletionAsync(SubmitExamCommand request, CancellationToken ct)
+    {
+        var snapshot = await _db.StudentExamAttempts.Where(attempt => attempt.Id == request.AttemptId
+            && attempt.UserId == request.UserId && attempt.ExamId == request.ExamId)
+            .Select(attempt => attempt.DefinitionSnapshotJson).SingleOrDefaultAsync(ct);
+        return snapshot is not null
+            && AssessmentDefinitionSnapshot.Read(snapshot, "exam", request.ExamId).Revision?.RequiresCompletion == true;
+    }
 
     private async Task<ApiResponse<ExamResultDto>> HandleOnce(
         SubmitExamCommand request, CancellationToken ct, int progressConflictRetries)
@@ -98,14 +129,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         if (alreadySubmitted)
         {
-            if (progressConflictRetries > 0)
-                return await new Queries.GetExamAttemptResultQueryHandler(_db)
-                    .Handle(new(request.AttemptId, request.UserId), ct);
-
-            return ApiResponse<ExamResultDto>.Fail("This attempt has already been submitted.");
+            return await new Queries.GetExamAttemptResultQueryHandler(_db)
+                .Handle(new(request.AttemptId, request.UserId), ct);
         }
 
-        var platformSettings = await _cachedPlatformSettingsReader.GetAsync(ct);
         var evaluationTimestamp = DateTime.UtcNow;
 
         attempt.ScoreAchieved = 0;
@@ -240,6 +267,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 })
             };
             _db.OutboxEvents.Add(examSubmittedEvent);
+            ExamSubmissionEffects.Enqueue(_db, attempt, exam);
 
             // Persist the AI work alongside the submitted attempt. The outbox worker
             // dispatches it independently of this HTTP request, so closing the page
@@ -346,16 +374,6 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 return await HandleOnce(request, ct, progressConflictRetries + 1);
             }
 
-            // Enqueue notification payload for parent push notifications
-            await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
-            {
-                StudentId = request.UserId,
-                Title = "حل اختبار جديد",
-                Body = $"تم حل اختبار {exam.Title} بنجاح.",
-                Category = "Exam",
-                ParentPush = true
-            });
-
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -406,17 +424,6 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             }
 
             return ApiResponse<ExamResultDto>.Fail("تعذر حفظ تسليم الامتحان. حاول مرة أخرى.");
-        }
-
-        if (attempt.IsPassed)
-        {
-            var basePoints = (int)exam.TotalScore > 0 ? (int)exam.TotalScore : 50;
-            await _publisher.Publish(
-                new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(
-                    request.UserId,
-                    NaderGorge.Domain.Entities.Gamification.GamificationEventType.PerfectExam,
-                    basePoints),
-                ct);
         }
 
         var result = ExamResultBuilder.Build(
@@ -611,15 +618,4 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         return "Completed";
     }
 
-    private sealed class DefaultCachedPlatformSettingsReader : ICachedPlatformSettingsReader
-    {
-        public Task<CachedPlatformSettings> GetAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(CachedPlatformSettings.Default);
-        }
-
-        public void Invalidate()
-        {
-        }
-    }
 }

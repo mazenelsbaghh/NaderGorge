@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
 using NaderGorge.Application.Features.Assessments;
+using NaderGorge.Application.Features.Exams;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
@@ -52,8 +54,10 @@ public sealed class SubmitExamProgressRaceTests
         Assert.NotNull(attempt.Evaluation);
         Assert.Equal(result.Data.ScoreAchieved, attempt.ScoreAchieved);
         Assert.Equal(1, await read.OutboxEvents.CountAsync(e => e.Type == "ExamSubmitted"));
-        Assert.Equal(1, effects.ParentJobs);
-        Assert.Equal(passed ? 1 : 0, effects.AcademicEvents);
+        Assert.Equal(1, await read.OutboxEvents.CountAsync(e => e.Type == ExamSubmissionEffects.ParentPushEventType));
+        Assert.Equal(passed ? 1 : 0, await read.OutboxEvents.CountAsync(e => e.Type == ExamSubmissionEffects.AcademicRewardEventType));
+        Assert.Equal(0, effects.ParentJobs);
+        Assert.Equal(0, effects.AcademicEvents);
         Assert.Equal("IX_lesson_progress_UserId_LessonId", race.Conflict?.ConstraintName);
         Assert.Equal("23505", race.Conflict?.SqlState);
     }
@@ -65,28 +69,36 @@ public sealed class SubmitExamProgressRaceTests
         await using var seed = fixture.CreateDbContext();
         await seed.Database.MigrateAsync();
         var scenario = await SeedAsync(seed, passed: true);
+        // A pre-existing progress row used to let both submits update the same answers without a conflict.
+        seed.LessonProgresses.Add(new LessonProgress { UserId = scenario.UserId, LessonId = scenario.LessonId });
+        await seed.SaveChangesAsync();
         var effects = new Effects();
-        var race = new ProgressRace(async () =>
-        {
-            await using var winner = fixture.CreateDbContext();
-            var saved = await new SubmitExamCommandHandler(winner, effects, effects)
-                .Handle(scenario.Command, default);
-            Assert.True(saved.Success, saved.Message);
-        });
-        await using var loser = CreateLoser(fixture, race);
+        var gate = new SubmissionGate();
+        await using var winner = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(fixture.ConnectionString).AddInterceptors(gate).Options);
+        await using var loser = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(fixture.ConnectionString).AddInterceptors(new LockAttemptSignal(gate)).Options);
+        var firstSubmission = new SubmitExamCommandHandler(winner, effects, effects).Handle(scenario.Command, default);
+        await gate.Saving.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var secondSubmission = new SubmitExamCommandHandler(loser, effects, effects)
+            .Handle(scenario.Command with { Answers = [] }, default);
+        try { await gate.LockAttempted.Task.WaitAsync(TimeSpan.FromSeconds(10)); }
+        finally { gate.Release.TrySetResult(); }
+        var accepted = await firstSubmission;
+        var result = await secondSubmission;
 
-        var result = await new SubmitExamCommandHandler(loser, effects, effects)
-            .Handle(scenario.Command, default);
-
+        Assert.True(accepted.Success, accepted.Message);
         Assert.True(result.Success, result.Message);
         Assert.True(result.Data!.IsPassed);
         Assert.Equal(2m, result.Data.ScoreAchieved);
         await using var read = fixture.CreateDbContext();
         Assert.Equal(1, await read.LessonProgresses.CountAsync());
         Assert.Equal(1, await read.OutboxEvents.CountAsync(e => e.Type == "ExamSubmitted"));
-        Assert.Equal(1, effects.ParentJobs);
-        Assert.Equal(1, effects.AcademicEvents);
-        Assert.Equal("23505", race.Conflict?.SqlState);
+        Assert.Equal(1, await read.OutboxEvents.CountAsync(e => e.Type == ExamSubmissionEffects.ParentPushEventType));
+        Assert.Equal(1, await read.OutboxEvents.CountAsync(e => e.Type == ExamSubmissionEffects.AcademicRewardEventType));
+        Assert.Equal(0, effects.ParentJobs);
+        Assert.Equal(0, effects.AcademicEvents);
+        Assert.Equal(accepted.Data!.ScoreAchieved, result.Data.ScoreAchieved);
     }
 
     private static AppDbContext CreateLoser(PostgresAdminAIFixture fixture, ProgressRace race) => new(
@@ -113,18 +125,44 @@ public sealed class SubmitExamProgressRaceTests
         var lesson = new Lesson { Title = "Race lesson", ContentSection = section, ExamId = exam.Id };
         var attempt = new StudentExamAttempt
         {
-            Exam = exam, User = student, StartedAt = DateTime.UtcNow,
-            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
+            Exam = exam, User = student, StartedAt = DateTime.UtcNow
         };
         var answer = new StudentAnswer { Attempt = attempt, ExamQuestion = examQuestion };
         db.AddRange(student, teacherUser, teacher, subject, package, term, section, question, correct, wrong,
             exam, examQuestion, lesson, attempt, answer);
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await db.SaveChangesAsync();
         return new(student.Id, lesson.Id, new(exam.Id, attempt.Id, student.Id,
             [new(examQuestion.Id, passed ? correct.Id : wrong.Id, null)]));
     }
 
     private sealed record Scenario(Guid UserId, Guid LessonId, SubmitExamCommand Command);
+
+    private sealed class SubmissionGate : SaveChangesInterceptor
+    {
+        public TaskCompletionSource Saving { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource LockAttempted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            Saving.TrySetResult();
+            await Release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            return result;
+        }
+    }
+
+    private sealed class LockAttemptSignal(SubmissionGate gate) : DbCommandInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal))
+                gate.LockAttempted.TrySetResult();
+            return ValueTask.FromResult(result);
+        }
+    }
 
     // Coordinate two real PostgreSQL writers at the persistence boundary; no fake DB failure.
     private sealed class ProgressRace(Func<Task> commitWinner) : SaveChangesInterceptor
