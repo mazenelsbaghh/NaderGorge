@@ -33,8 +33,7 @@ public class ExamSubmissionTimeTests
         var graded = await new WebhookEssayGradedCommandHandler(db).Handle(new(essay.Id, 1, "Correct"), default);
         Assert.True(graded.Success, graded.Message);
         var duplicate = await handler.Handle(command, default);
-        Assert.True(duplicate.Success, duplicate.Message);
-        Assert.Equal(attempt.Id, duplicate.Data!.AttemptId);
+        Assert.False(duplicate.Success);
 
         db.ChangeTracker.Clear();
         Assert.Equal(originalSubmission, (await db.StudentExamAttempts.SingleAsync(a => a.Id == attempt.Id)).SubmittedAt);
