@@ -230,11 +230,15 @@ class CloudSupportController extends ChangeNotifier {
       throw const CenterException('انتظر انتهاء حفظ إعدادات الدعم.');
     }
     _busy = true;
-    _publish();
+    // An unchanged background probe must not wake reception or LAN listeners.
+    var publishStatus = !automatic;
+    if (publishStatus) _publish();
     try {
       _pending = await _capture(skipUnchanged: automatic);
+      publishStatus = publishStatus || _pending != null;
       _retryAt = null;
     } catch (error, stack) {
+      publishStatus = true;
       _log(error, stack, 'cloud.snapshot');
       final message = error is _UploadFailure
           ? error.message
@@ -243,7 +247,7 @@ class CloudSupportController extends ChangeNotifier {
       throw CenterException(message);
     } finally {
       _busy = false;
-      _publish();
+      if (publishStatus) _publish();
     }
   }
 

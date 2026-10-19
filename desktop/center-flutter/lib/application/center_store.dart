@@ -587,6 +587,7 @@ class CenterStore extends ChangeNotifier {
   bool get isReady => !_closed;
   bool get hasStaff => _state.staff.isNotEmpty;
   bool get canManage => currentUser?.role == StaffRole.admin;
+  bool get canCreateGroups => currentUser != null;
   bool get canEditDiscount => currentUser != null;
   bool get canCollect => canManage || currentUser?.role == StaffRole.cashier;
   bool get canAssess => currentUser != null;
@@ -1108,7 +1109,7 @@ class CenterStore extends ChangeNotifier {
   Future<void> saveGroup(
     StudyGroup group,
   ) => _change('group_save', 'حفظ مجموعة ${group.name}', () async {
-    _require(canManage);
+    _require(group.id.isEmpty ? canCreateGroups : canManage);
     if (group.id.isNotEmpty) {
       final previous = _group(group.id);
       final identityChanged =
@@ -4636,6 +4637,8 @@ class CenterStore extends ChangeNotifier {
           'رقم العملية',
           'الطالب',
           'الكود',
+          'رقم الطالب',
+          'رقم ولي الأمر',
           'المجموعة',
           'التاريخ',
           'البيان',
@@ -4652,6 +4655,8 @@ class CenterStore extends ChangeNotifier {
             e.id,
             _student(e.studentId).name,
             _student(e.studentId).code,
+            _student(e.studentId).phone,
+            _student(e.studentId).guardianPhone,
             groupLabel(e.groupId),
             e.createdAt.toIso8601String(),
             e.description,
@@ -4669,6 +4674,8 @@ class CenterStore extends ChangeNotifier {
             e.id,
             _student(e.studentId).name,
             _student(e.studentId).code,
+            _student(e.studentId).phone,
+            _student(e.studentId).guardianPhone,
             e.groupId == null ? '' : groupLabel(e.groupId!),
             e.createdAt.toIso8601String(),
             'رسوم كارت',
@@ -4691,6 +4698,8 @@ class CenterStore extends ChangeNotifier {
             e.id,
             _student(e.studentId).name,
             _student(e.studentId).code,
+            _student(e.studentId).phone,
+            _student(e.studentId).guardianPhone,
             groupId == null ? '' : groupLabel(groupId),
             e.createdAt.toIso8601String(),
             'تسديد مديونية — عملية ${e.paymentId}',
@@ -4708,6 +4717,8 @@ class CenterStore extends ChangeNotifier {
             e.id,
             _student(e.studentId).name,
             _student(e.studentId).code,
+            _student(e.studentId).phone,
+            _student(e.studentId).guardianPhone,
             groupLabel(e.groupId),
             e.createdAt.toIso8601String(),
             'استرداد فعلي — ${e.reason}',

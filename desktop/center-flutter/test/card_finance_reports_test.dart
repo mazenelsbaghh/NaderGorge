@@ -58,6 +58,8 @@ void main() {
         Student(
           code: code,
           name: name,
+          phone: code == 'C-1' ? '01000000001' : '',
+          guardianPhone: code == 'C-1' ? '01200000001' : '',
           groupIds: [group.id],
           discountPercent: discount,
           createdAt: DateTime.now().subtract(const Duration(days: 10)),
@@ -85,6 +87,109 @@ void main() {
     await store.close();
     await directory.delete(recursive: true);
   });
+
+  test(
+    'lesson and card settlements retain contacts in current reports and legacy financial CSV',
+    () async {
+      await store.collectAndAttend(
+        EntryRequest(
+          studentId: mina.id,
+          sessionId: session.id,
+          mode: EntryMode.single,
+          paidAmount: 2500,
+        ),
+      );
+      final lessonPayment = store.payments.single;
+      await store.settleDebt(
+        paymentId: lessonPayment.id,
+        kind: DebtKind.lesson,
+        amount: 1000,
+        sessionId: session.id,
+      );
+      await store.collectStudentCard(
+        studentId: mina.id,
+        sessionId: session.id,
+        paidAmount: 1000,
+      );
+      await store.settleDebt(
+        paymentId: store.cardPayments.single.id,
+        kind: DebtKind.card,
+        amount: 500,
+        sessionId: session.id,
+      );
+      await store.reverseEntry(
+        attendanceId: store.attendances.single.id,
+        reason: 'رد التحصيل الفعلي',
+      );
+      final before = jsonEncode([
+        store.students,
+        store.allPayments,
+        store.cardPayments,
+        store.debtSettlements,
+        store.refunds,
+        store.audit,
+      ]);
+      final payments = CenterReports.build(
+        store,
+        CenterReportKind.payments,
+        CenterReportFilter(studentId: mina.id),
+      );
+      expect(payments.rows, hasLength(5));
+      expect(payments.summary['التحصيل'], '50.00 ج');
+      expect(payments.summary['الاستردادات'], '35.00 ج');
+      for (final cells in payments.rows) {
+        expect(cells, hasLength(payments.columns.length));
+        final row = Map.fromIterables(payments.columns, cells);
+        expect(row['رقم الطالب'], mina.phone);
+        expect(row['رقم ولي الأمر'], mina.guardianPhone);
+      }
+      final path = await CenterReports.exportCsv(
+        store: store,
+        kind: CenterReportKind.payments,
+        filter: CenterReportFilter(studentId: mina.id),
+        destination: '${directory.path}/settlements.csv',
+      );
+      final legacyPath = await store.exportReport(
+        '${directory.path}/legacy.csv',
+      );
+      for (final csvPath in [path, legacyPath]) {
+        final csv = await File(csvPath).readAsString();
+        final lines = csv
+            .split('\r\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
+        expect(lines, hasLength(6));
+        expect(lines.first, contains('"رقم الطالب","رقم ولي الأمر"'));
+        for (final row in lines.skip(1)) {
+          expect(row, contains('"01000000001","01200000001"'));
+        }
+        expect(csv, contains('مديونية'));
+      }
+      for (final kind in [CenterReportKind.cards, CenterReportKind.debts]) {
+        final table = CenterReports.build(
+          store,
+          kind,
+          CenterReportFilter(studentId: mina.id),
+        );
+        expect(table.rows, hasLength(1));
+        expect(table.rows.single, hasLength(table.columns.length));
+        final row = Map.fromIterables(table.columns, table.rows.single);
+        expect(row['رقم الطالب'], mina.phone);
+        expect(row['رقم ولي الأمر'], mina.guardianPhone);
+      }
+      expect(
+        jsonEncode([
+          store.students,
+          store.allPayments,
+          store.cardPayments,
+          store.debtSettlements,
+          store.refunds,
+          store.audit,
+        ]),
+        before,
+      );
+    },
+  );
 
   test(
     'card-only payment cannot settle the lesson and linked cash appears separately in saved closing',

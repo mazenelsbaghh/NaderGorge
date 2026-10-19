@@ -63,6 +63,7 @@ extension CenterStoreLanHost on CenterStore {
         ...stateFields,
         'currentUser': user.toJson(),
         'canConfigureCards': canConfigureCards,
+        'canCreateGroups': canCreateGroups,
         'supportStatus': supportStatus,
         if (_examMonitorHeartbeats.isNotEmpty)
           'examMonitorObservedAt': DateTime.now().toIso8601String(),

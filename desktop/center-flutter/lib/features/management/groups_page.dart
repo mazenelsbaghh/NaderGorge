@@ -102,7 +102,10 @@ class _GroupsPageState extends State<GroupsPage> {
   }
 
   Future<void> _edit(BuildContext context, [StudyGroup? group]) async {
-    if (_editing || !store.canManage) return;
+    if (_editing ||
+        !(group == null ? store.canCreateGroups : store.canManage)) {
+      return;
+    }
     setState(() => _editing = true);
     final name = TextEditingController(text: group?.name);
     final schedule = TextEditingController(text: group?.schedule);
@@ -342,7 +345,7 @@ class _GroupsPageState extends State<GroupsPage> {
         ? 'مجموعات القاهرة للرصد والتحضير بالدرجة، بدون تحصيل.'
         : 'كل مجموعة مرتبطة بمادة وسنتر وصف دراسي. الشهور وحصصها مشتركة، ويمكن تخصيص سعر المجموعة.',
     actions: [
-      if (store.canManage)
+      if (store.canCreateGroups)
         FilledButton.icon(
           onPressed: _catalogsReady && !_editing ? () => _edit(context) : null,
           icon: const Icon(Icons.add),

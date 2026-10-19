@@ -33,6 +33,7 @@ class _Harness {
   bool loseNextMonitorReply = false;
   bool shiftMonitorClock = false;
   bool legacySnapshots = false;
+  bool omitGroupCreationCapability = false;
   bool corruptNextCommandDelta = false;
   bool failNextFullState = false;
   Completer<void>? fullStateArrived, releaseFullState;
@@ -148,6 +149,12 @@ class _Harness {
         final legacy = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
         legacy.remove('stateVersion');
         bytes = utf8.encode(jsonEncode(legacy));
+      }
+      if (omitGroupCreationCapability) {
+        final responseBody =
+            jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+        responseBody.remove('canCreateGroups');
+        bytes = utf8.encode(jsonEncode(responseBody));
       }
       if (isCommand) {
         lastCommandBytes = bytes.length;
@@ -1262,6 +1269,74 @@ void main() {
       expect(h.remote.students, hasLength(3));
     },
   );
+
+  test('older LAN hosts expose group creation only to admins', () async {
+    h.omitGroupCreationCapability = true;
+    await h.remote.refreshRemote();
+    expect(h.remote.canCreateGroups, isFalse);
+    h.remote.signOut();
+    await h.remote.signIn('manager', 'test-manager-123');
+    expect(h.remote.canCreateGroups, isTrue);
+    h.remote.signOut();
+    expect(h.remote.canCreateGroups, isFalse);
+  });
+
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    test(
+      'LAN ${role.name} can create groups without inheriting host edit privileges',
+      () async {
+        if (role == StaffRole.assistant) {
+          h.remote.signOut();
+          await h.remote.signIn('assistant', 'test-assistant-123');
+        }
+        final original = h.group;
+        final hostActor = h.host.currentUser!.id;
+        final remoteActor = h.remote.currentUser!.id;
+        expect(h.remote.canCreateGroups, isTrue);
+        expect(h.remote.canManage, isFalse);
+        await h.remote.saveGroup(
+          original.copyWith(id: '', name: 'مجموعة الشبكة'),
+        );
+        final created = h.host.groups.last;
+        expect(created.id, isNot(original.id));
+        expect(created.name, 'مجموعة الشبكة');
+        expect(h.host.audit.last.staffId, remoteActor);
+        expect(h.host.currentUser!.id, hostActor);
+        expect(h.remote.groups.last.toJson(), created.toJson());
+        final auditCount = h.host.audit.length;
+        for (final group in [
+          original,
+          created,
+          created.copyWith(id: 'invented'),
+        ]) {
+          await expectLater(
+            h.remote.saveGroup(group.copyWith(name: 'تعديل غير مسموح')),
+            throwsA(isA<CenterException>()),
+          );
+        }
+        await expectLater(
+          h.remote.saveCatalog(
+            const CatalogEntry(name: 'مادة الشبكة', kind: CatalogKind.subject),
+          ),
+          throwsA(isA<CenterException>()),
+        );
+        expect(h.host.groups.map((group) => group.name), [
+          'الأحد',
+          'مجموعة الشبكة',
+        ]);
+        expect(h.host.catalogs, hasLength(3));
+        expect(h.host.audit, hasLength(auditCount));
+        await h.expectMatchingPublicState();
+        h.remote.signOut();
+        expect(h.remote.canCreateGroups, isFalse);
+        await expectLater(
+          h.remote.saveGroup(original.copyWith(id: '', name: 'بدون جلسة')),
+          throwsA(isA<CenterException>()),
+        );
+        expect(h.host.groups, hasLength(2));
+      },
+    );
+  }
 
   test(
     'cashier can edit discounts but cannot inherit the host admin staff permission',

@@ -160,7 +160,7 @@ func TestCenterPresenceTemplateExcludesAbsentRowsAndDynamicStatusTemplateKeepsTh
 func TestParentTemplateHomeworkUsesAuthoritativeCenterLabelsAsVerbsWithoutInventingMissingWork(t *testing.T) {
 	c, base := centerCloudBatch(t)
 	labels := []string{"كامل", "ناقص", "لم يعمل", "لم يُراجع", "لم يحدد واجب", "معفى", "حالة مخصصة"}
-	phrases := []string{"عمل", "عمل جزءًا من", "لم يعمل", "لم تُراجع حالة", "لم يُحدد", "معفى من", "حالة مخصصة"}
+	phrases := []string{"عمل", "عمل جزءًا من", "لم يعمل", "لم تُسجل حالة", "لم يُحدد", "معفى من", "حالة مخصصة"}
 	records, ids := []any{}, []any{}
 	for index, label := range labels {
 		id := fmt.Sprintf("homework-%d", index)

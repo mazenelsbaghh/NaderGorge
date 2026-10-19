@@ -347,6 +347,38 @@ void main() {
   };
 
   test(
+    'academic catalog follows committed changes after unchanged polls',
+    () async {
+      exam = await store.saveAcademicActivity(exam.copyWith(maxScore: 10));
+      engine.snapshot['academicCatalogProtocol'] = 1;
+      await controller.refresh();
+      await controller.refresh();
+      expect(engine.academicCatalogs, hasLength(1));
+
+      exam = await store.saveAcademicActivity(
+        exam.copyWith(name: 'Updated exam'),
+      );
+      await controller.refresh();
+      final contexts = engine.academicCatalogs.last['contexts'] as List;
+      expect((contexts.single as Map)['activityName'], 'Updated exam');
+      expect(engine.academicCatalogs, hasLength(2));
+      await controller.refresh();
+      expect(engine.academicCatalogs, hasLength(2));
+    },
+  );
+
+  test('replacement exam source receives unchanged academic catalog', () async {
+    exam = await store.saveAcademicActivity(exam.copyWith(maxScore: 10));
+    engine.snapshot['academicCatalogProtocol'] = 1;
+    engine.snapshot['bindings'] = <Map<String, dynamic>>[];
+    await controller.refresh();
+    engine.snapshot['sourceId'] = 'replacement-controller-engine';
+    await controller.refresh();
+    expect(engine.academicCatalogs, hasLength(2));
+    expect(engine.academicCatalogs.last, engine.academicCatalogs.first);
+  });
+
+  test(
     'standalone paging publishes raw results without grades and caches academic labels without a roster',
     () async {
       exam = await store.saveAcademicActivity(

@@ -171,6 +171,53 @@ void main() {
   );
 
   test(
+    'named and historical homework keep their saved states in followup messages',
+    () async {
+      for (final (student, status) in [
+        (first, HomeworkStatus.missing),
+        (second, HomeworkStatus.exempt),
+      ]) {
+        await store.saveAcademic(
+          AcademicRecord(
+            studentId: student.id,
+            sessionId: session.id,
+            homework: status,
+            updatedAt: classDate,
+          ),
+        );
+      }
+      Map<String, dynamic> studentMessage(
+        CenterReportData report,
+        Student student,
+      ) => report.whatsAppRecords.singleWhere(
+        (row) => row['studentId'] == student.id,
+      );
+
+      expect(studentMessage(report(), first)['homework'], 'كامل');
+      expect(studentMessage(report(), second)['homework'], 'لم يُراجع');
+      final historical = CenterWhatsAppReports.build(
+        store,
+        CenterWhatsAppSelection(
+          groupId: group.id,
+          sessionId: session.id,
+          homeworkId: CenterWhatsAppSelection.legacyHomeworkId,
+        ),
+      );
+      expect(studentMessage(historical, first)['homework'], 'لم يعمل');
+      expect(studentMessage(historical, second)['homework'], 'معفى');
+      expect(studentMessage(historical, unrecorded)['homework'], 'لم يُراجع');
+      final attendance = CenterReports.build(
+        store,
+        CenterReportKind.attendance,
+        CenterReportFilter(sessionId: session.id),
+      );
+      expect(studentMessage(attendance, first)['homework'], 'كامل');
+      expect(studentMessage(attendance, first)['score'], 0);
+      expect(studentMessage(attendance, second)['maximum'], 12);
+    },
+  );
+
+  test(
     'only the store closing can turn unrecorded presence into recorded absence',
     () async {
       expect(
@@ -245,6 +292,14 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.runAsync(() async {
+        await store.saveAcademic(
+          AcademicRecord(
+            studentId: first.id,
+            sessionId: session.id,
+            homework: HomeworkStatus.missing,
+            updatedAt: classDate,
+          ),
+        );
         await (FontLoader(
           'Tajawal',
         )..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))).load();
@@ -289,6 +344,28 @@ void main() {
       );
       expect(find.text('0 من 10'), findsOneWidget);
       expect(find.text('11 من 12'), findsOneWidget);
+      final previewButton = find.byKey(const Key('whatsapp-open-preview'));
+      expect(tester.widget<FilledButton>(previewButton).onPressed, isNull);
+      await choose('الواجب', 'رصد سابق بدون اسم');
+      await tester.ensureVisible(previewButton);
+      await tester.tap(previewButton);
+      await tester.pumpAndSettle();
+      expect(
+        preview!.whatsAppRecords.singleWhere(
+          (row) => row['studentId'] == first.id,
+        )['homework'],
+        'لم يعمل',
+      );
+      await choose('الواجب', homework.name);
+      await tester.ensureVisible(previewButton);
+      await tester.tap(previewButton);
+      await tester.pumpAndSettle();
+      expect(
+        preview!.whatsAppRecords.singleWhere(
+          (row) => row['studentId'] == first.id,
+        )['homework'],
+        'كامل',
+      );
       final screenshotPath = Platform.environment['MASSAR_WHATSAPP_SCREENSHOT'];
       if (screenshotPath != null) {
         await tester.runAsync(() async {

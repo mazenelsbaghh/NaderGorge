@@ -59,6 +59,9 @@ class ExamRoomController extends ChangeNotifier {
   final Map<String, String> resultProblems = {};
   final Map<String, String> _rosterFingerprints = {};
   String? _academicCatalogFingerprint;
+  CenterStore? _academicCatalogStore;
+  Object? _academicCatalogRevision;
+  String? _academicCatalogSourceId;
   final Map<String, Object> _rejectedRevision = {};
   final Map<String, DateTime> _retryAfter = {};
   List<Map<String, dynamic>> get exams => _rows(state['exams']);
@@ -80,6 +83,7 @@ class ExamRoomController extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
+      _invalidateAcademicCatalog();
       final reconnected = await engine.reconnect();
       if (!reconnected && clientOnly) await engine.start();
       if (reconnected || clientOnly) {
@@ -104,7 +108,7 @@ class ExamRoomController extends ChangeNotifier {
     _store = value;
     _store.addListener(_storeChanged);
     _rosterFingerprints.clear();
-    _academicCatalogFingerprint = null;
+    _invalidateAcademicCatalog();
     _rejectedRevision.clear();
     _storeChanged(force: true);
   }
@@ -117,6 +121,7 @@ class ExamRoomController extends ChangeNotifier {
         _syncAuthorized == canSync) {
       return;
     }
+    _invalidateAcademicCatalog();
     final changedEmployee = _actor != null && _actor != actor;
     if (changedEmployee) {
       _offlineUntil = null;
@@ -190,6 +195,7 @@ class ExamRoomController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
+      _invalidateAcademicCatalog();
       await engine.start();
       _beginPolling();
       await refresh();
@@ -343,10 +349,22 @@ class ExamRoomController extends ChangeNotifier {
     return examId;
   }
 
+  void _invalidateAcademicCatalog() {
+    _academicCatalogFingerprint = null;
+    _academicCatalogStore = null;
+    _academicCatalogRevision = null;
+    _academicCatalogSourceId = null;
+  }
+
   Future<void> _publishAcademicCatalog(
     CenterStore source,
     bool Function() stillAuthorized,
   ) async {
+    final revision = source.readRevision;
+    if (identical(source, _academicCatalogStore) &&
+        identical(revision, _academicCatalogRevision)) {
+      return;
+    }
     final contexts = <Map<String, dynamic>>[];
     for (final session in source.sessions) {
       if (session.status == SessionStatus.canceled) {
@@ -375,7 +393,11 @@ class ExamRoomController extends ChangeNotifier {
       'contexts': contexts,
     };
     final encoded = jsonEncode(catalog);
-    if (_academicCatalogFingerprint == encoded) return;
+    if (_academicCatalogFingerprint == encoded) {
+      _academicCatalogStore = source;
+      _academicCatalogRevision = revision;
+      return;
+    }
     if (contexts.length > 1000 || utf8.encode(encoded).length > 1024 * 1024) {
       throw const CenterException(
         'كشف الحصص والامتحانات أكبر من حد النقل إلى جهاز الامتحان.',
@@ -387,7 +409,11 @@ class ExamRoomController extends ChangeNotifier {
         'لم يؤكد جهاز الامتحان حفظ كشف الحصص والامتحانات.',
       );
     }
-    if (stillAuthorized() && canSync) _academicCatalogFingerprint = encoded;
+    if (stillAuthorized() && canSync) {
+      _academicCatalogFingerprint = encoded;
+      _academicCatalogStore = source;
+      _academicCatalogRevision = revision;
+    }
   }
 
   Future<void> _publishStandaloneRooms(
@@ -521,8 +547,14 @@ class ExamRoomController extends ChangeNotifier {
         if (!stillAuthorized() || !canSync) return;
       }
       if (next['academicCatalogProtocol'] == 1) {
+        if (_academicCatalogSourceId != next['sourceId']) {
+          _invalidateAcademicCatalog();
+          _academicCatalogSourceId = next['sourceId'] as String?;
+        }
         await _publishAcademicCatalog(activeStore, stillAuthorized);
         if (!stillAuthorized() || !canSync) return;
+      } else {
+        _invalidateAcademicCatalog();
       }
       final currentResults = _rows(next['results']);
       final keys = currentResults
@@ -777,7 +809,10 @@ class ExamRoomController extends ChangeNotifier {
 
   Future<void> prepareNetworkEngine() async {
     if (_disposed) throw const CenterException('أعد فتح شاشة تجهيز الشبكة.');
-    if (!running) await engine.start();
+    if (!running) {
+      _invalidateAcademicCatalog();
+      await engine.start();
+    }
     if (!canAdmin) await _setAdminAccess(false);
     _beginPolling();
   }

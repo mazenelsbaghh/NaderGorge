@@ -5,6 +5,8 @@ import 'center_store.dart';
 
 /// A single class snapshot, with each named assessment kept independent.
 class CenterWhatsAppSelection {
+  static const legacyHomeworkId = 'legacy-homework';
+
   const CenterWhatsAppSelection({
     required this.groupId,
     required this.sessionId,
@@ -37,10 +39,12 @@ abstract final class CenterWhatsAppReports {
       selection.examId,
       AcademicActivityKind.exam,
     );
+    final legacyHomework =
+        selection.homeworkId == CenterWhatsAppSelection.legacyHomeworkId;
     final homework = _activity(
       store,
       session,
-      selection.homeworkId,
+      legacyHomework ? null : selection.homeworkId,
       AcademicActivityKind.homework,
     );
     final attendance = {
@@ -69,7 +73,9 @@ abstract final class CenterWhatsAppReports {
     };
     final homeworkRecords = {
       for (final record in academics.where(
-        (record) => homework != null && record.activityId == homework.id,
+        (record) =>
+            (legacyHomework || homework != null) &&
+            record.activityId == homework?.id,
       ))
         record.studentId: record,
     };
@@ -111,7 +117,7 @@ abstract final class CenterWhatsAppReports {
         'maximum': examRecord?.maxScoreKnown == true
             ? examRecord!.maxScore
             : null,
-        'homework': homework == null
+        'homework': homework == null && !legacyHomework
             ? 'لم يحدد واجب'
             : homeworkLabel(
                 homeworkRecords[student.id]?.homework ??

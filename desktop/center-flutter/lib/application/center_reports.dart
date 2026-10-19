@@ -994,14 +994,15 @@ class _ReportContext {
     AcademicActivityKind? kind,
   }) {
     AcademicRecord? related(AcademicActivityKind kind) {
-      final candidates = <AcademicRecord>[
-        ?academicByPair[(student.id, session.id)],
+      final named = <AcademicRecord>[
         for (final candidate
             in activitiesBySession[(session.id, kind)] ??
                 const <AcademicActivity>[])
           ?academicByActivity[(student.id, session.id, candidate.id)],
       ];
-      return candidates.length == 1 ? candidates.single : null;
+      // A historical combined record must not mask the named assessment.
+      if (named.isNotEmpty) return named.length == 1 ? named.single : null;
+      return academicByPair[(student.id, session.id)];
     }
 
     final exam = (kind ?? activity?.kind) == AcademicActivityKind.exam
@@ -1159,6 +1160,8 @@ class _ReportContext {
         'وقت التصحيح',
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'الحصة',
         'التصحيح',
         'الحالة قبل التصحيح',
@@ -1174,6 +1177,8 @@ class _ReportContext {
           _timeLabel(correction.createdAt),
           students[correction.studentId]!.code,
           students[correction.studentId]!.name,
+          students[correction.studentId]!.phone,
+          students[correction.studentId]!.guardianPhone,
           _sessionLabel(correction.sessionId),
           CenterReports.correctionLabel(correction.action),
           _historicalEntryLabel(original),
@@ -1245,6 +1250,8 @@ class _ReportContext {
       columns: [
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'المجموعة',
         'تاريخ الشراء',
         'الحصص الأصلية',
@@ -1268,6 +1275,8 @@ class _ReportContext {
         return <Object?>[
           students[package.studentId]!.code,
           students[package.studentId]!.name,
+          students[package.studentId]!.phone,
+          students[package.studentId]!.guardianPhone,
           _groupLabel(package.groupId),
           _timeLabel(package.purchasedAt),
           package.totalSessions,
@@ -1348,6 +1357,8 @@ class _ReportContext {
         : 'تحصيل',
     students[payment.studentId]!.code,
     students[payment.studentId]!.name,
+    students[payment.studentId]!.phone,
+    students[payment.studentId]!.guardianPhone,
     _groupLabel(payment.groupId),
     _sessionLabel(payment.sessionId),
     payment.description,
@@ -1372,6 +1383,8 @@ class _ReportContext {
       'استرداد',
       students[refund.studentId]!.code,
       students[refund.studentId]!.name,
+      students[refund.studentId]!.phone,
+      students[refund.studentId]!.guardianPhone,
       _groupLabel(refund.groupId),
       _sessionLabel(refund.sessionId),
       'رد المبلغ المحصل فعليًا',
@@ -1422,6 +1435,8 @@ class _ReportContext {
       'سداد مديونية',
       students[settlement.studentId]!.code,
       students[settlement.studentId]!.name,
+      students[settlement.studentId]!.phone,
+      students[settlement.studentId]!.guardianPhone,
       _optionalGroupLabel(_settlementGroup(settlement, original)),
       _sessionLabel(settlement.sessionId),
       original.description,
@@ -1537,6 +1552,8 @@ class _ReportContext {
         'نوع الحركة',
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'المجموعة',
         'حصة التحصيل أو الرد',
         'البيان',
@@ -1624,6 +1641,8 @@ class _ReportContext {
       columns: const [
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'نوع الالتزام',
         'البيان',
         'المجموعة الأصلية',
@@ -1640,6 +1659,8 @@ class _ReportContext {
             (debt) => <Object?>[
               students[debt.studentId]!.code,
               students[debt.studentId]!.name,
+              students[debt.studentId]!.phone,
+              students[debt.studentId]!.guardianPhone,
               debt.kind == DebtKind.card ? 'كارت' : 'حصة / باقة',
               debt.description,
               _optionalGroupLabel(debt.groupId),
@@ -1990,6 +2011,8 @@ class _ReportContext {
             _timeLabel(check.checkedAt),
             students[check.studentId]!.code,
             students[check.studentId]!.name,
+            students[check.studentId]!.phone,
+            students[check.studentId]!.guardianPhone,
             _sessionLabel(check.sessionId),
             'مراجعة كود',
             if (showAmounts) ...[null, null, null],
@@ -2016,6 +2039,8 @@ class _ReportContext {
             _timeLabel(review.createdAt),
             students[review.studentId]!.code,
             students[review.studentId]!.name,
+            students[review.studentId]!.phone,
+            students[review.studentId]!.guardianPhone,
             _sessionLabel(review.sessionId),
             'مراجعة مبلغ',
             reportAmount(review.expectedAmount),
@@ -2048,6 +2073,8 @@ class _ReportContext {
         'وقت المراجعة',
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'الحصة',
         'نوع المراجعة',
         if (showAmounts) ...[

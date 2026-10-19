@@ -104,6 +104,55 @@ void main() {
     return store.groups.single;
   }
 
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    testWidgets(
+      '${role.name} can add a group from the workspace while editing stays locked',
+      (tester) async {
+        await tester.runAsync(() async {
+          await seedGroup();
+          await store.saveStaff(
+            name: role.name,
+            password: 'staff-group-123',
+            role: role,
+          );
+          store.signOut();
+          await store.signIn(role.name, 'staff-group-123');
+          await openWorkspace(tester);
+          await navigateManagementPage(tester, 'المجموعات');
+          expect(find.byKey(const Key('manage-billing-months')), findsNothing);
+          expect(find.byKey(const Key('add-month-all-groups')), findsNothing);
+          final edit = tester.widget<IconButton>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton && widget.tooltip == 'تعديل المجموعة',
+            ),
+          );
+          expect(edit.onPressed, isNull);
+          await tester.tap(find.widgetWithText(FilledButton, 'مجموعة جديدة'));
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.widgetWithText(TextFormField, 'اسم أو رقم المجموعة'),
+            'مجموعة الموظف',
+          );
+          await select(tester, 'المادة', 'اختبار subject');
+          await select(tester, 'السنتر', 'اختبار center');
+          await select(tester, 'الصف الدراسي', 'اختبار grade');
+          await tester.enterText(
+            find.widgetWithText(TextFormField, 'المواعيد'),
+            'الأحد ٥ مساءً',
+          );
+          await commitAction(
+            tester,
+            find.widgetWithText(FilledButton, 'إضافة مجموعة'),
+          );
+          expect(store.groups.last.name, 'مجموعة الموظف');
+          expect(store.audit.last.staffId, store.currentUser!.id);
+          expect(tester.takeException(), isNull);
+        });
+      },
+    );
+  }
+
   testWidgets(
     'first run catalog and group forms persist linked prices without demo records',
     (tester) async {

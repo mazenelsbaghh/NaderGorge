@@ -74,6 +74,55 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  for (final role in [StaffRole.cashier, StaffRole.assistant]) {
+    test(
+      '${role.name} can create groups but cannot edit groups or catalogs',
+      () async {
+        final original = store.groups.single;
+        await store.saveStaff(
+          name: role.name,
+          password: 'staff-group-123',
+          role: role,
+        );
+        store.signOut();
+        await store.signIn(role.name, 'staff-group-123');
+        final actorId = store.currentUser!.id;
+        await store.saveGroup(original.copyWith(id: '', name: 'مجموعة الموظف'));
+        final created = store.groups.last;
+        expect(created.id, isNot(original.id));
+        expect(created.name, 'مجموعة الموظف');
+        expect(store.audit.last.staffId, actorId);
+        final auditCount = store.audit.length;
+        for (final group in [
+          original,
+          created,
+          created.copyWith(id: 'invented'),
+        ]) {
+          await expectLater(
+            store.saveGroup(group.copyWith(name: 'تعديل غير مسموح')),
+            throwsA(isA<CenterException>()),
+          );
+        }
+        await expectLater(
+          store.saveCatalog(
+            const CatalogEntry(name: 'مادة الموظف', kind: CatalogKind.subject),
+          ),
+          throwsA(isA<CenterException>()),
+        );
+        expect(store.groups.map((group) => group.name), ['أ', 'مجموعة الموظف']);
+        expect(store.catalogs, hasLength(3));
+        expect(store.audit, hasLength(auditCount));
+        store.signOut();
+        expect(store.canCreateGroups, isFalse);
+        await expectLater(
+          store.saveGroup(original.copyWith(id: '', name: 'بدون حساب')),
+          throwsA(isA<CenterException>()),
+        );
+        expect(store.groups, hasLength(2));
+      },
+    );
+  }
+
   test(
     'package entry atomically buys discounted four and duplicate cannot charge',
     () async {

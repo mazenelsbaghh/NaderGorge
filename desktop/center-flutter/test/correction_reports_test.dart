@@ -37,6 +37,8 @@ void main() {
       Student(
         code: '001',
         name: 'أحمد',
+        phone: '01000000001',
+        guardianPhone: '01200000001',
         groupIds: [group.id],
         discountPercent: 25,
         createdAt: DateTime.now().subtract(const Duration(days: 20)),
@@ -144,6 +146,14 @@ void main() {
         CenterReportKind.attendance,
         const CenterReportFilter(attendanceCorrections: true),
       );
+      for (final table in [movements, packages, correctionHistory]) {
+        for (final cells in table.rows) {
+          expect(cells, hasLength(table.columns.length));
+          final row = Map.fromIterables(table.columns, cells);
+          expect(row['رقم الطالب'], student.phone);
+          expect(row['رقم ولي الأمر'], student.guardianPhone);
+        }
+      }
       final changed = correctionHistory.rows.firstWhere(
         (row) => row.contains('تصحيح طريقة الدخول'),
       );
@@ -179,6 +189,8 @@ void main() {
         destination: path,
       );
       final csv = await File(path).readAsString();
+      expect(csv, contains('"رقم الطالب","رقم ولي الأمر"'));
+      expect(csv, contains('"أحمد","01000000001","01200000001"'));
       expect(csv, contains('"-300.00"'));
       expect(csv, contains("'=سبب رد الشهر"));
       expect(csv, isNot(contains('"تحصيل"')));

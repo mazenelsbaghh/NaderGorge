@@ -11378,20 +11378,22 @@ var Pe = {
 	sending: "جارٍ الإرسال"
 }, Fe = (e) => (e?.components || []).find((e) => e.type === "BODY")?.text || "";
 function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
-	let c = e.find((e) => e.id === t && e.reportSupported), l = Oe(c), u = ke(c, o, s), d = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), f = (t) => {
+	let c = e.find((e) => e.id === t && e.reportSupported), l = Oe(c), u = ke(c, o, s), d = e.filter((e) => e.reportSupported), f = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), p = (t) => {
 		n(t), i(je(e.find((e) => e.id === t), o, s));
-	}, p = (e, t) => i(l.map((n, i) => i === e ? {
+	}, m = (e, t) => i(l.map((n, i) => i === e ? {
 		...r[i],
 		...t
 	} : r[i] || { source: "" }));
 	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["قالب رسالة التقرير", /* @__PURE__ */ (0, M.jsxs)("select", {
+		className: "whatsapp-template-list",
+		size: Math.max(2, Math.min(6, d.length + 1)),
 		disabled: a,
 		value: t,
-		onChange: (e) => f(e.target.value),
+		onChange: (e) => p(e.target.value),
 		children: [/* @__PURE__ */ (0, M.jsx)("option", {
 			value: "",
 			children: "اختر قالبًا معتمدًا من الحساب"
-		}), e.filter((e) => e.reportSupported).map((e) => /* @__PURE__ */ (0, M.jsxs)("option", {
+		}), d.map((e) => /* @__PURE__ */ (0, M.jsxs)("option", {
 			value: e.id,
 			children: [
 				e.name,
@@ -11405,7 +11407,7 @@ function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 		children: Fe(c)
 	}), /* @__PURE__ */ (0, M.jsxs)("details", {
 		open: !u || void 0,
-		children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: d ? "ربط المتغيرات مثبت · تعديل الربط" : "حدد بيانات متغيرات القالب" }), /* @__PURE__ */ (0, M.jsx)("div", {
+		children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: f ? "ربط المتغيرات مثبت · تعديل الربط" : "حدد بيانات متغيرات القالب" }), /* @__PURE__ */ (0, M.jsx)("div", {
 			className: "whatsapp-fields",
 			children: l.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: [
 				e.scope === "header" ? "العنوان" : e.scope === "button" ? "زر الرابط" : "نص الرسالة",
@@ -11414,7 +11416,7 @@ function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 				/* @__PURE__ */ (0, M.jsxs)("select", {
 					disabled: a,
 					value: r[t]?.source || "",
-					onChange: (e) => p(t, { source: e.target.value }),
+					onChange: (e) => m(t, { source: e.target.value }),
 					children: [/* @__PURE__ */ (0, M.jsx)("option", {
 						value: "",
 						children: "اختر بيانات الطالب"
@@ -11427,7 +11429,7 @@ function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 				disabled: a,
 				maxLength: 1e3,
 				value: r[t]?.text || "",
-				onChange: (e) => p(t, { text: e.target.value })
+				onChange: (e) => m(t, { text: e.target.value })
 			})] })] }, e.key))
 		})]
 	}, `${c.id}:${c.bindingSchema}:${!!u}`)] })] });

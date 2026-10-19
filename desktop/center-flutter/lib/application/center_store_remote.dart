@@ -14,6 +14,7 @@ class _RemoteCenterStore extends CenterStore {
   @override
   bool get supportsLiveRefresh => _supportsLiveRefresh;
   bool _canConfigureCards = false;
+  bool _canCreateGroups = false;
   String? _snapshotFingerprint;
   String? _snapshotVersion;
   Future<void>? _backgroundRefresh;
@@ -71,6 +72,8 @@ class _RemoteCenterStore extends CenterStore {
   bool get hasStaff => true;
   @override
   bool get canConfigureCards => canManage && _canConfigureCards;
+  @override
+  bool get canCreateGroups => currentUser != null && _canCreateGroups;
 
   void _apply(Map<String, dynamic> response) {
     final trace = PerformanceTrace('lan.refresh', budgetMs: 32);
@@ -113,6 +116,10 @@ class _RemoteCenterStore extends CenterStore {
     final nextUser = StaffUser.fromJson(
       response['currentUser'] as Map<String, dynamic>,
     );
+    final nextCanCreateGroups =
+        response['canCreateGroups'] == true ||
+        !response.containsKey('canCreateGroups') &&
+            nextUser.role == StaffRole.admin;
     final changed =
         !_connected ||
         supportChanged ||
@@ -120,7 +127,8 @@ class _RemoteCenterStore extends CenterStore {
         stateChanged ||
         _currentUser?.id != nextUser.id ||
         _currentUser?.role != nextUser.role ||
-        _canConfigureCards != (response['canConfigureCards'] == true);
+        _canConfigureCards != (response['canConfigureCards'] == true) ||
+        _canCreateGroups != nextCanCreateGroups;
     final nextState = !stateChanged
         ? _state
         : delta != null
@@ -143,6 +151,7 @@ class _RemoteCenterStore extends CenterStore {
       ..addAll(parsedHeartbeats);
     _currentUser = nextUser;
     _canConfigureCards = response['canConfigureCards'] == true;
+    _canCreateGroups = nextCanCreateGroups;
     _connected = true;
     _snapshotFingerprint = fingerprint;
     _snapshotVersion = version;
@@ -330,6 +339,7 @@ class _RemoteCenterStore extends CenterStore {
     final session = _staffSession;
     _staffSession = null;
     _canConfigureCards = false;
+    _canCreateGroups = false;
     _snapshotFingerprint = null;
     _snapshotVersion = null;
     _remoteSupportStatus = const {'configured': false};

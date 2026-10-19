@@ -17,7 +17,7 @@ func templateHomeworkValue(template M, value string) string {
 		return value
 	}
 	// The existing parent template appends "الواجب" to variable 8.
-	phrases := map[string]string{"كامل": "عمل", "ناقص": "عمل جزءًا من", "لم يُراجع": "لم تُراجع حالة", "لم يحدد واجب": "لم يُحدد", "لم يُحدد واجب": "لم يُحدد", "معفى": "معفى من"}
+	phrases := map[string]string{"كامل": "عمل", "ناقص": "عمل جزءًا من", "لم يُراجع": "لم تُسجل حالة", "لم يحدد واجب": "لم يُحدد", "لم يُحدد واجب": "لم يُحدد", "معفى": "معفى من"}
 	if phrase, exists := phrases[strings.TrimSpace(value)]; exists {
 		return phrase
 	}

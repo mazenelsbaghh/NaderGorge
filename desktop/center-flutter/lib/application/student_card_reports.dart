@@ -32,6 +32,8 @@ extension _StudentCardReports on _ReportContext {
         : 'تحصيل كارت',
     students[payment.studentId]!.code,
     students[payment.studentId]!.name,
+    students[payment.studentId]!.phone,
+    students[payment.studentId]!.guardianPhone,
     _optionalGroupLabel(payment.groupId),
     _sessionLabel(payment.sessionId),
     'رسوم كارت الطالب',
@@ -82,6 +84,8 @@ extension _StudentCardReports on _ReportContext {
       columns: const [
         'الكود',
         'الطالب',
+        'رقم الطالب',
+        'رقم ولي الأمر',
         'المجموعات الحالية',
         'دفع الكارت',
         'المحصل حتى الآن (جنيه مصري)',
@@ -99,6 +103,8 @@ extension _StudentCardReports on _ReportContext {
         return <Object?>[
           student.code,
           student.name,
+          student.phone,
+          student.guardianPhone,
           student.groupIds.map(_groupLabel).join(' • '),
           payment == null ? 'لا يوجد دفع مسجل' : _cardPaymentStatus(payment),
           payment == null

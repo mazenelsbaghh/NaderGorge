@@ -193,9 +193,10 @@ void main() {
   }
 
   test(
-    'exam and attendance CSV include the correct student and guardian contacts without changing records',
+    'student detail CSVs preserve contacts and student filters without changing records',
     () async {
       final before = jsonEncode([
+        store.students,
         store.allAttendances,
         store.allPayments,
         store.academics,
@@ -203,46 +204,101 @@ void main() {
         store.closings,
         store.audit,
       ]);
+      final sessionFilter = CenterReportFilter(
+        groupId: firstGroup.id,
+        sessionId: firstSession.id,
+      );
+      final exams = report(CenterReportKind.exams, sessionFilter);
+      final attendance = report(CenterReportKind.attendance, sessionFilter);
+      expect(exams.rows, hasLength(3));
+      expect(attendance.rows, hasLength(3));
+      expect(studentRow(exams, mina.code)['حالة الامتحان'], 'غائب عن الامتحان');
+      expect(
+        studentRow(attendance, absent.code)['الحالة'],
+        'غائب — تم التعويض',
+      );
       for (final kind in [
+        CenterReportKind.students,
+        CenterReportKind.packages,
+        CenterReportKind.payments,
         CenterReportKind.exams,
         CenterReportKind.attendance,
+        CenterReportKind.homework,
+        CenterReportKind.reviews,
+        CenterReportKind.cards,
+        CenterReportKind.debts,
       ]) {
-        final filter = CenterReportFilter(
-          groupId: firstGroup.id,
-          sessionId: firstSession.id,
-        );
-        final table = report(kind, filter);
-        expect(table.rows, hasLength(3));
-        final first = studentRow(table, ahmed.code);
-        expect(first['رقم الطالب'], '01000000001');
-        expect(first['رقم ولي الأمر'], '01200000001');
-        final missingContacts = studentRow(table, absent.code);
-        expect(missingContacts['رقم الطالب'], '');
-        expect(missingContacts['رقم ولي الأمر'], '');
-        if (kind == CenterReportKind.exams) {
-          expect(first['الدرجة'], 0);
-          expect(
-            studentRow(table, mina.code)['حالة الامتحان'],
-            'غائب عن الامتحان',
+        final phoneColumn = kind == CenterReportKind.students
+            ? 'هاتف الطالب'
+            : 'رقم الطالب';
+        final guardianColumn = kind == CenterReportKind.students
+            ? 'هاتف ولي الأمر'
+            : 'رقم ولي الأمر';
+        final contactHeaders = '"$phoneColumn","$guardianColumn"';
+        for (final student in [ahmed, absent]) {
+          final filter = CenterReportFilter(
+            studentId: student.id,
+            reviewMode: ReviewReportMode.amounts,
+            debtStatus: DebtReportStatus.all,
           );
-        } else {
-          expect(missingContacts['الحالة'], 'غائب — تم التعويض');
+          final table = report(kind, filter);
+          expect(
+            table.rows,
+            isNotEmpty,
+            reason: '${kind.name}: ${student.code}',
+          );
+          for (final cells in table.rows) {
+            expect(cells, hasLength(table.columns.length));
+            final row = Map.fromIterables(table.columns, cells);
+            expect(row['الكود'], student.code);
+            expect(row[phoneColumn], student.phone);
+            expect(row[guardianColumn], student.guardianPhone);
+            if (kind == CenterReportKind.exams && student.id == ahmed.id) {
+              expect(row['الدرجة'], 0);
+            }
+          }
+          final path = await CenterReports.exportCsv(
+            store: store,
+            kind: kind,
+            filter: filter,
+            destination: '${directory.path}/${kind.name}-${student.code}.csv',
+          );
+          final bytes = await File(path).readAsBytes();
+          expect(bytes.take(3), [0xef, 0xbb, 0xbf]);
+          final csv = utf8.decode(bytes.skip(3).toList());
+          expect(csv, contains(contactHeaders));
+          expect(
+            csv,
+            contains(
+              '"${student.name}","${student.phone}","${student.guardianPhone}"',
+            ),
+          );
+          expect(csv, isNot(contains('"${mina.name}"')));
+          expect(csv, isNot(contains('"${inactive.name}"')));
         }
-        final path = await CenterReports.exportCsv(
+        final emptyFilter = CenterReportFilter(
+          studentId: ahmed.id,
+          groupId: secondGroup.id,
+          reviewMode: ReviewReportMode.amounts,
+          debtStatus: DebtReportStatus.all,
+        );
+        expect(report(kind, emptyFilter).rows, isEmpty);
+        final emptyPath = await CenterReports.exportCsv(
           store: store,
           kind: kind,
-          filter: filter,
-          destination: '${directory.path}/${kind.name}-contacts.csv',
+          filter: emptyFilter,
+          destination: '${directory.path}/${kind.name}-empty.csv',
         );
-        final bytes = await File(path).readAsBytes();
-        expect(bytes.take(3), [0xef, 0xbb, 0xbf]);
-        final csv = utf8.decode(bytes.skip(3).toList());
-        expect(csv, contains('"رقم الطالب","رقم ولي الأمر"'));
-        expect(csv, contains('"أحمد","01000000001","01200000001"'));
-        expect(csv, contains('"يوسف","",""'));
+        final emptyCsv = await File(emptyPath).readAsString();
+        expect(emptyCsv, contains(contactHeaders));
+        expect(
+          emptyCsv.split('\r\n').where((line) => line.isNotEmpty),
+          hasLength(1),
+        );
       }
       expect(
         jsonEncode([
+          store.students,
           store.allAttendances,
           store.allPayments,
           store.academics,
@@ -461,6 +517,11 @@ void main() {
       }
       var checks = report(CenterReportKind.reviews);
       expect(checks.rows, hasLength(2));
+      expect(studentRow(checks, ahmed.code)['رقم الطالب'], ahmed.phone);
+      expect(
+        studentRow(checks, ahmed.code)['رقم ولي الأمر'],
+        ahmed.guardianPhone,
+      );
       expect(checks.columns, isNot(contains('الورق (جنيه مصري)')));
       final payment = store.payments.singleWhere(
         (p) => p.studentId == ahmed.id,

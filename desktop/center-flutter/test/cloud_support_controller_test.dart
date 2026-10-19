@@ -227,12 +227,16 @@ void main() {
       );
       await configure(controller);
       await controller.syncNow(automatic: true);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
       await controller.syncNow(automatic: true);
+      expect(notifications, 0);
       expect(captures, 1);
       expect(network.requests, hasLength(1));
       diagnosticEvents += '{"kind":"problem","operation":"synthetic.change"}\n';
       await controller.syncNow(automatic: true);
       expect(captures, 2);
+      expect(notifications, greaterThan(0));
       expect(
         jsonDecode(network.requests.last.body)['diagnostics'],
         contains('synthetic.change'),

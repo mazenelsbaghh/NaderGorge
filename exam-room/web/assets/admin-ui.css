@@ -364,6 +364,11 @@ body.center-embedded { display:block; font-size:15px; line-height:1.65; }
 }
 /* Native appearance changes are immediate, including foregrounds and fills. */
 .center-embedded :is(button,input,select,textarea) { transition:none; }
+
+/* Inline options avoid native popup menus outside the embedded Windows view. */
+select.whatsapp-template-list { width:100%; height:auto; padding:4px; background:var(--paper); color:var(--ink); }
+select.whatsapp-template-list option { padding:10px 12px; min-height:40px; }
+select.whatsapp-template-list:disabled { opacity:.6; }
 .center-embedded .room-launcher-drawer { margin-bottom:16px; }
 .center-embedded .room-launcher-drawer>summary { min-height:44px; padding:10px 0; color:var(--teal); font-weight:700; cursor:pointer; }
 .center-embedded .room-launcher-drawer[open]>summary { margin-bottom:12px; }

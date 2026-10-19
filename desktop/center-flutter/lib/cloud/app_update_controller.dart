@@ -414,8 +414,6 @@ class AppUpdateController extends ChangeNotifier {
     _UpdateManifest manifest,
   ) async {
     final file = await temporary.open(mode: FileMode.writeOnly);
-    final digest = _DigestReceiver();
-    final hash = sha256.startChunkedConversion(digest);
     var written = 0;
     try {
       await for (final chunk in response.timeout(_networkTimeout)) {
@@ -428,36 +426,28 @@ class AppUpdateController extends ChangeNotifier {
           );
         }
         await file.writeFrom(chunk);
-        hash.add(chunk);
         final fraction = written / manifest.size;
         if (fraction - (_progress ?? 0) >= 0.01) {
           _progress = fraction;
           _notify();
         }
       }
-      hash.close();
-      if (written != manifest.size ||
-          digest.value.toString() != manifest.sha256) {
+      if (written != manifest.size) {
         throw const FormatException('Update digest mismatch');
       }
       await file.flush();
     } finally {
       await file.close();
     }
+    await _verifyArchive(temporary, manifest);
   }
 
-  static Future<void> _verifyArchive(
-    File archive,
-    _UpdateManifest manifest,
-  ) async {
-    if (await FileSystemEntity.type(archive.path, followLinks: false) !=
-            FileSystemEntityType.file ||
-        await archive.length() != manifest.size ||
-        (await sha256.bind(archive.openRead()).single).toString() !=
-            manifest.sha256) {
-      throw const FormatException('Saved update digest mismatch');
-    }
-  }
+  static Future<void> _verifyArchive(File archive, _UpdateManifest manifest) =>
+      compute(_verifyUpdateArchive, (
+        filePath: archive.path,
+        size: manifest.size,
+        sha256: manifest.sha256,
+      ));
 
   Future<void> _requireSameConfiguration(
     CloudSupportConfiguration expected,
@@ -782,12 +772,18 @@ class _ReleaseVersion implements Comparable<_ReleaseVersion> {
   }
 }
 
-class _DigestReceiver implements Sink<Digest> {
-  Digest? value;
-  @override
-  void add(Digest digest) => value = digest;
-  @override
-  void close() {}
+// Large update archives must not compete with code entry on the UI isolate.
+Future<void> _verifyUpdateArchive(
+  ({String filePath, int size, String sha256}) expected,
+) async {
+  final archive = File(expected.filePath);
+  if (await FileSystemEntity.type(archive.path, followLinks: false) !=
+          FileSystemEntityType.file ||
+      await archive.length() != expected.size ||
+      (await sha256.bind(archive.openRead()).single).toString() !=
+          expected.sha256) {
+    throw const FormatException('Saved update digest mismatch');
+  }
 }
 
 class _UpdateAuthorizationException implements Exception {

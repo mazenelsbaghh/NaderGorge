@@ -44,6 +44,26 @@ class _WhatsAppPageState extends State<WhatsAppPage> {
           .toList()
         ..sort(compareSessionsNewestFirst);
 
+  Map<String, String> _homeworkOptions(LessonSession? session) {
+    if (session == null) return const {};
+    return {
+      for (final activity in widget.store.academicActivities.where(
+        (activity) =>
+            activity.kind == AcademicActivityKind.homework &&
+            activity.appliesToSession(session),
+      ))
+        activity.id: activity.name,
+      if (widget.store
+          .academicRecordsForSession(session.id)
+          .any(
+            (record) =>
+                record.activityId == null &&
+                record.homework != HomeworkStatus.notReviewed,
+          ))
+        CenterWhatsAppSelection.legacyHomeworkId: 'رصد سابق بدون اسم',
+    };
+  }
+
   CenterReportData? _report() {
     if (_groupId == null || _sessionId == null) return null;
     return CenterWhatsAppReports.build(
@@ -232,13 +252,9 @@ class _WhatsAppPageState extends State<WhatsAppPage> {
             final exams = candidates
                 .where((activity) => activity.kind == AcademicActivityKind.exam)
                 .toList();
-            final homework = candidates
-                .where(
-                  (activity) => activity.kind == AcademicActivityKind.homework,
-                )
-                .toList();
+            final homework = _homeworkOptions(session);
             _examId = exams.length == 1 ? exams.single.id : null;
-            _homeworkId = homework.length == 1 ? homework.single.id : null;
+            _homeworkId = homework.length == 1 ? homework.keys.single : null;
             _excluded.clear();
           }),
         ),
@@ -259,12 +275,7 @@ class _WhatsAppPageState extends State<WhatsAppPage> {
         _select(
           'الواجب',
           _homeworkId,
-          {
-            for (final activity in activities.where(
-              (activity) => activity.kind == AcademicActivityKind.homework,
-            ))
-              activity.id: activity.name,
-          },
+          _homeworkOptions(selectedSession),
           (id) => setState(() {
             _homeworkId = id;
             _excluded.clear();
@@ -318,7 +329,11 @@ class _WhatsAppPageState extends State<WhatsAppPage> {
           .length;
       final requiresActivity =
           (_messageKind == 'grade' && _examId == null) ||
-          (_messageKind == 'homework' && _homeworkId == null);
+          (_messageKind == 'homework' && _homeworkId == null) ||
+          (_messageKind == 'followup' &&
+              _homeworkId == null &&
+              _homeworkOptions(widget.store.sessionById(_sessionId)).length >
+                  1);
       final canPreview =
           widget.onWhatsApp != null &&
           report != null &&

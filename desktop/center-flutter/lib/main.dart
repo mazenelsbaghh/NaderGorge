@@ -539,7 +539,7 @@ class _CenterAppState extends State<CenterApp> {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: Listenable.merge([_appearance, _lan, ?_exams]),
+    animation: Listenable.merge([_appearance, _lan]),
     builder: (context, _) => AppearanceScope(
       settings: _appearance,
       child: MaterialApp(
@@ -657,27 +657,30 @@ class _CenterAppState extends State<CenterApp> {
               }
               if (store.currentUser == null) {
                 return withConnection(
-                  AuthScreen(
-                    key: ValueKey(store),
-                    store: store,
-                    onOpenLan: () => _openLan(context),
-                    onOpenNetwork: _exams == null
-                        ? null
-                        : () => _openExamNetwork(context),
-                    examWorkspaceAvailable: _exams != null,
-                    onOpenPreparedExams:
-                        _exams?.clientOnly == true || _exams?.canAdmin == true
-                        ? () => _openExams(context)
-                        : null,
-                    onSignedIn: (exams) {
-                      if (exams) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted && context.mounted) {
-                            unawaited(_openExams(context));
-                          }
-                        });
-                      }
-                    },
+                  AnimatedBuilder(
+                    animation: Listenable.merge([?_exams]),
+                    builder: (context, _) => AuthScreen(
+                      key: ValueKey(store),
+                      store: store,
+                      onOpenLan: () => _openLan(context),
+                      onOpenNetwork: _exams == null
+                          ? null
+                          : () => _openExamNetwork(context),
+                      examWorkspaceAvailable: _exams != null,
+                      onOpenPreparedExams:
+                          _exams?.clientOnly == true || _exams?.canAdmin == true
+                          ? () => _openExams(context)
+                          : null,
+                      onSignedIn: (exams) {
+                        if (exams) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && context.mounted) {
+                              unawaited(_openExams(context));
+                            }
+                          });
+                        }
+                      },
+                    ),
                   ),
                 );
               }
