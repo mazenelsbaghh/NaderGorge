@@ -59,7 +59,11 @@ void main() {
             : null;
         final tcpConnections = tcp?.listen((socket) => socket.destroy());
         final udp = protocol == 'udp'
-            ? await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0)
+            ? await RawDatagramSocket.bind(
+                InternetAddress.anyIPv4,
+                0,
+                reuseAddress: false,
+              )
             : null;
         final log = ProblemLog(Directory('${directory.path}/diagnostics'));
         final gateway = LanHostProcess(executablePath: executable);

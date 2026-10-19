@@ -133,6 +133,25 @@ try {
         }
     }
     finally { Pop-Location }
+    $LanBuildDirectory = Join-Path $AppRoot 'build/lan-native'
+    New-Item -ItemType Directory -Path $LanBuildDirectory -Force | Out-Null
+    $LanExecutable = Join-Path $LanBuildDirectory 'massar-lan-host.exe'
+    Push-Location $LanRoot
+    try {
+        & go build -trimpath -ldflags="-s -w" -o $LanExecutable .
+        if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
+    }
+    finally { Pop-Location }
+    $PreviousLanTestExecutable = $env:MASSAR_LAN_TEST_EXECUTABLE
+    try {
+        $env:MASSAR_LAN_TEST_EXECUTABLE = $LanExecutable
+        & flutter test test/lan_services_test.dart test/lan_background_refresh_test.dart test/lan_snapshot_transfer_test.dart test/client_only_startup_test.dart --reporter expanded | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows host/client LAN integration checks failed.' }
+    }
+    finally { $env:MASSAR_LAN_TEST_EXECUTABLE = $PreviousLanTestExecutable }
+    if (-not $ClientOnly) {
+        & (Join-Path $PSScriptRoot 'tests/test-lan-firewall-windows.ps1') -GatewayExecutable $LanExecutable
+    }
     Build-ExamFrontend $ExamRoot
     $NativeVerification = Test-ExamNativeRuntime $ExamRoot (Join-Path $AppRoot 'build/exam-native')
     $ExamFingerprints = @(Exam-InputFingerprints $ExamRoot)
@@ -207,21 +226,9 @@ try {
     elseif (-not (Test-Path -LiteralPath (Join-Path $PackagedAssets "installation_seed.json") -PathType Leaf)) {
         throw "The compiled host package is missing installation_seed.json."
     }
-    Push-Location $LanRoot
-    try {
-        & go build -trimpath -ldflags="-s -w" -o (Join-Path $ReleaseDirectory "massar-lan-host.exe") .
-        if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
-    }
-    finally { Pop-Location }
-    $PreviousLanTestExecutable = $env:MASSAR_LAN_TEST_EXECUTABLE
-    try {
-        $env:MASSAR_LAN_TEST_EXECUTABLE = Join-Path $ReleaseDirectory 'massar-lan-host.exe'
-        & flutter test test/lan_services_test.dart test/lan_background_refresh_test.dart test/lan_snapshot_transfer_test.dart test/client_only_startup_test.dart --reporter expanded | Out-Host
-        if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows host/client LAN integration checks failed.' }
-    }
-    finally { $env:MASSAR_LAN_TEST_EXECUTABLE = $PreviousLanTestExecutable }
-    if (-not $ClientOnly) {
-        & (Join-Path $PSScriptRoot 'tests/test-lan-firewall-windows.ps1') -GatewayExecutable (Join-Path $ReleaseDirectory 'massar-lan-host.exe')
+    Copy-Item -LiteralPath $LanExecutable -Destination (Join-Path $ReleaseDirectory 'massar-lan-host.exe') -Force
+    if ((Get-FileHash -LiteralPath $LanExecutable).Hash -ne (Get-FileHash -LiteralPath (Join-Path $ReleaseDirectory 'massar-lan-host.exe')).Hash) {
+        throw 'Packaged LAN gateway differs from the tested executable.'
     }
     $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory $NativeVerification $AppVersion
     Copy-VisualCppRuntime $ReleaseDirectory

@@ -16,6 +16,7 @@ import 'package:massar_center/lan/lan_host_process.dart';
 import 'package:massar_center/lan/lan_settings.dart';
 import 'package:massar_center/lan/lan_transport.dart';
 import 'package:massar_center/main.dart';
+import 'package:path/path.dart' as p;
 import 'helpers/synthetic_installer_assets.dart';
 
 class _TestHostProcess extends LanHostProcess {
@@ -224,8 +225,11 @@ void main() {
         expect(await File(entry.key).readAsBytes(), entry.value);
       }
       expect(
-        await Directory(path).list().map((e) => e.path).toList(),
-        unorderedEquals([...originals.keys, settings.filePath]),
+        await Directory(path).list().map((e) => p.normalize(e.path)).toList(),
+        unorderedEquals([
+          ...originals.keys.map(p.normalize),
+          p.normalize(settings.filePath),
+        ]),
       );
       final pending = File('$path/lan-pending-command.json');
       const receipt = '{"requestId":"unresolved-temporary-receipt"}';
