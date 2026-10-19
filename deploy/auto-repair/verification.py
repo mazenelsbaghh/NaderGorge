@@ -26,7 +26,7 @@ class TestServices:
             command(['sudo', '-n', '/usr/sbin/nft', 'add', 'element', 'inet', 'massar_repair',
                      'blocked_bridges', '{', self.bridge, '}'], self.root)
             for service, image in (('postgres', self.config['postgres_image']), ('redis', self.config['redis_image']),
-                                   ('redis-unavailable', self.config['redis_image'])):
+                                   ('redis-unavailable', self.config['redis_image']), ('redis-readonly', self.config['redis_image'])):
                 name = self.network + '-' + service
                 self.names.append(name)
                 argv = [*DOCKER, 'run', '-d', '--rm', '--pull=never', '--name', name, '--network', self.network,
@@ -36,16 +36,30 @@ class TestServices:
                     for alias in ('api.lvh.me', 'app.lvh.me', 'admin.lvh.me', 'staff.lvh.me', 'teacher.lvh.me'):
                         argv += ['--network-alias', alias]
                 extra = ['redis-server', '--min-replicas-to-write', '1'] if service == 'redis-unavailable' else []
+                if service == 'redis-readonly':
+                    # A reachable master lets Redis clients redirect writes away from the replica.
+                    extra = ['redis-server', '--replicaof', '127.0.0.1', '1', '--replica-read-only', 'yes']
                 command([*argv, image, *extra], self.root)
             for _ in range(30):
-                ready = subprocess.run([*DOCKER, 'exec', self.names[0], 'pg_isready', '-U', 'postgres'], capture_output=True)
-                if ready.returncode == 0:
+                ready = subprocess.run([*DOCKER, 'exec', self.names[0], 'pg_isready', '-U', 'postgres'], capture_output=True, timeout=5)
+                if ready.returncode == 0 and self.readonly_ready():
                     return
                 time.sleep(1)
-            raise RepairFailure('Isolated PostgreSQL did not become ready')
+            raise RepairFailure('Isolated PostgreSQL and read-only Redis did not become ready')
         except (OSError, RuntimeError, subprocess.SubprocessError):
             self.close()
             raise
+
+    def readonly_ready(self):
+        from runner import DOCKER
+        replica = self.network + '-redis-readonly'
+        role = subprocess.run([*DOCKER, 'exec', replica, 'redis-cli', '--raw', 'ROLE'],
+                              capture_output=True, text=True, timeout=5)
+        if role.returncode or role.stdout.splitlines()[:1] != ['slave']:
+            return False
+        rejected = subprocess.run([*DOCKER, 'exec', replica, 'redis-cli', '--raw', 'SET',
+                                   'massar-repair:readiness', '1'], capture_output=True, text=True, timeout=5)
+        return rejected.returncode in (0, 1) and rejected.stdout.strip().startswith('READONLY ')
 
     def close(self):
         from runner import DOCKER

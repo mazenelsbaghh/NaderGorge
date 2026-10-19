@@ -19,14 +19,13 @@ dotnet restore backend/NaderGorge.sln --configfile /tmp/repair-nuget.config -p:N
 dotnet build backend/NaderGorge.sln --no-restore
 export ConnectionStrings__Redis=redis:6379
 export Redis__ConnectionString=redis:6379
-# Several integration fixtures reset their database. Assemblies must not race
-# against the AutoRepair lifecycle test's independently named repair_test DB.
-# The legacy timestamp switch must be set before Npgsql caches its first model.
-# Run the strict migration/lifecycle fixture in a fresh process, never suppress its guard.
+# PostgreSQL fixtures use dedicated databases and set the global legacy timestamp
+# switch before Npgsql caches its first model. Keep them in a fresh process away
+# from unrelated tests; run each Application test in exactly one of these groups.
 dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-build \
-  --filter 'FullyQualifiedName~AutoRepairPostgresTests' --logger 'trx;LogFileName=repair-postgres.trx'
+  --filter 'FullyQualifiedName~NaderGorge.Application.Tests.AutoRepairPostgresTests.|FullyQualifiedName~NaderGorge.Application.Tests.TeacherPaidFundingCorrectionTests.|FullyQualifiedName~NaderGorge.Application.Tests.Finance.CodeCollectionMigrationGateTests.|FullyQualifiedName~NaderGorge.Application.Tests.Finance.CodeBatchPostgresTests.|FullyQualifiedName~NaderGorge.Application.Tests.MimGames.MimGamePostgresConcurrencyTests.' --logger 'trx;LogFileName=repair-postgres.trx'
 dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-build \
-  --filter 'FullyQualifiedName!~AutoRepairPostgresTests' --logger 'trx;LogFileName=repair.trx'
+  --filter 'FullyQualifiedName!~NaderGorge.Application.Tests.AutoRepairPostgresTests.&FullyQualifiedName!~NaderGorge.Application.Tests.TeacherPaidFundingCorrectionTests.&FullyQualifiedName!~NaderGorge.Application.Tests.Finance.CodeCollectionMigrationGateTests.&FullyQualifiedName!~NaderGorge.Application.Tests.Finance.CodeBatchPostgresTests.&FullyQualifiedName!~NaderGorge.Application.Tests.MimGames.MimGamePostgresConcurrencyTests.' --logger 'trx;LogFileName=repair.trx'
 export ConnectionStrings__DefaultConnection='Host=127.0.0.1;Database=massar_live_support_query_budget_disposable_repair;Username=postgres'
 export MASSAR_LEARNING_TEST_CONNECTION='Host=127.0.0.1;Database=massar_learning_test;Username=postgres'
 export LIVE_SUPPORT_QUERY_BUDGET_DATABASE_AUTHORIZATION=DELETE-DISPOSABLE-LIVE-SUPPORT-QUERY-BUDGET-DATABASE

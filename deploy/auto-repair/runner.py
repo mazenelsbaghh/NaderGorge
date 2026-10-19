@@ -176,7 +176,11 @@ class Runner:
             '-e', 'ConnectionStrings__Redis=redis:6379', '-e', 'Redis__ConnectionString=redis:6379',
             '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379', '-e', 'TEST_REDIS_CONNECTION=redis:6379',
             '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
-            '-e', 'NO_PROXY=127.0.0.1,localhost,postgres,redis,redis-unavailable,.lvh.me',
+            '-e', 'TEST_REDIS_READONLY_CONNECTION=redis-readonly:6379,abortConnect=false',
+            '-e', 'FINANCE_REPAIR_TEST_DB=Host=127.0.0.1;Database=finance_repair_test;Username=postgres',
+            '-e', 'TEACHER_CODE_TEST_DB=Host=127.0.0.1;Database=teacher_code_finance_test;Username=postgres',
+            '-e', 'MIM_GAME_TEST_DB=Host=127.0.0.1;Database=mim_game_test;Username=postgres',
+            '-e', 'NO_PROXY=127.0.0.1,localhost,postgres,redis,redis-unavailable,redis-readonly,.lvh.me',
             '-e', 'CODEX_HOME=/codex', '-e', 'HOME=/tmp', '-e', 'HTTPS_PROXY=' + self.config['https_proxy'],
             '-e', 'HTTP_PROXY=' + self.config['https_proxy'], '-w', '/workspace', self.image,
             # Codex documents this flag for externally sandboxed environments. Docker provides
@@ -292,6 +296,10 @@ class Runner:
             '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379',
             '-e', 'TEST_REDIS_CONNECTION=redis:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
             '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379',
+            '-e', 'TEST_REDIS_READONLY_CONNECTION=redis-readonly:6379,abortConnect=false',
+            '-e', 'FINANCE_REPAIR_TEST_DB=Host=127.0.0.1;Database=finance_repair_test;Username=postgres',
+            '-e', 'TEACHER_CODE_TEST_DB=Host=127.0.0.1;Database=teacher_code_finance_test;Username=postgres',
+            '-e', 'MIM_GAME_TEST_DB=Host=127.0.0.1;Database=mim_game_test;Username=postgres',
             '-w', '/workspace', self.image, 'bash', '/verify.sh']
         try:
             self.verify_container(argv, workspace, lease)
