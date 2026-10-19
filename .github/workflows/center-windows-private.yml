@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   windows:
-    if: github.event.repository.private == true
+    if: github.repository == 'mazenelsbaghh/massar-center-desktop'
     runs-on: windows-2022
     timeout-minutes: 45
     strategy:
@@ -99,7 +99,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PACKAGE_ROLE: ${{ matrix.role }}
-          MASSAR_WINDOWS_DELIVERY: github-release-assets-v1
+          MASSAR_WINDOWS_DELIVERY: github-draft-release-assets-v1
         run: |
           python desktop/center-flutter/scripts/windows_private_delivery.py --dist desktop/center-flutter/dist
           if ($LASTEXITCODE -ne 0) { throw 'Private native package delivery failed.' }

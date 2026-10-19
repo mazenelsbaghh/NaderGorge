@@ -67,6 +67,7 @@ class DeliveryFixture:
         elif path == "/actions/runs/73/attempts/2/jobs?per_page=100": value = {"jobs": self.jobs}
         elif path == "/actions/runs/73/artifacts?per_page=100": value = {"artifacts": self.artifacts}
         elif path.startswith("/releases/tags/"): value = self.releases[path.removeprefix("/releases/tags/")]
+        elif path == "/releases?per_page=100&page=1": value = list(self.releases.values())
         elif path.startswith("/git/ref/tags/"): value = self.refs[path.removeprefix("/git/ref/tags/")]
         else: raise AssertionError("Unexpected synthetic API path: " + path)
         return copy.deepcopy(value)
@@ -86,6 +87,36 @@ class DeliveryFixture:
 
 
 class NativeDeliveryTests(unittest.TestCase):
+    def test_public_build_accepts_drafts_and_rejects_a_published_attachment(self):
+        fixture = DeliveryFixture()
+        fixture.repository["private"] = False
+        fixture.workflow = b"env:\n  MASSAR_WINDOWS_DELIVERY: github-draft-release-assets-v1\n"
+        for release in fixture.releases.values():
+            release["draft"] = True
+            body = json.loads(release["body"])
+            body["transport"] = "github-draft-release-assets"
+            release["body"] = json.dumps(body)
+        for evidence in fixture.evidence.values():
+            evidence["transport"] = "draft-release-assets"
+        with (tempfile.TemporaryDirectory() as directory,
+              patch.object(verifier, "api", side_effect=fixture.api),
+              patch.object(trial, "api", side_effect=fixture.api),
+              patch.object(verifier, "git", side_effect=fixture.git),
+              patch.object(verifier.urllib.request, "build_opener") as opener):
+            output = Path(directory)
+            (output / "build-run.json").write_text(json.dumps(fixture.run))
+            opener.return_value.open.side_effect = fixture.open
+            verifier.download_trial(fixture.document, output, "synthetic-token")
+            for role in ("host", "client"):
+                evidence = json.loads((output / (role + "-verification.json")).read_text())
+                self.assertEqual(evidence["transport"], "draft-release-assets")
+                self.assertEqual(Path(evidence["path"]).read_bytes(), fixture.payloads[evidence["artifactId"]])
+            for role in ("host", "client"):
+                verifier.verify_delivery_binding(fixture.document, fixture.run, fixture.evidence[role], "synthetic-token")
+            fixture.releases["windows-native-73-2-host"]["draft"] = False
+            with self.assertRaises(RuntimeError):
+                verifier.verify_delivery_binding(fixture.document, fixture.run, fixture.evidence["host"], "synthetic-token")
+
     def test_release_delivery_roundtrip_verifies_both_native_roles_and_retained_bindings(self):
         fixture = DeliveryFixture()
         with tempfile.TemporaryDirectory() as directory:

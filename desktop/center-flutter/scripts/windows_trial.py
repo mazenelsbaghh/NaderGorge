@@ -371,8 +371,10 @@ def selected_run(document, output, token):
 def dispatch(document, output, token):
     assert_source_unchanged(document)
     assert_sealed_commit(document)
-    if api("", token)["private"] is not True:
-        raise RuntimeError("Windows trial repository must be private.")
+    from windows_trial_verify import delivery_transport
+    repository = api("", token)
+    if repository["private"] is not True and delivery_transport(document) != "draft-release-assets":
+        raise RuntimeError("A public build requires the protected draft-delivery workflow.")
     inputs = document["privateInputs"]
     asset = api("/releases/assets/" + str(inputs["assetId"]), token)
     if asset["size"] != inputs["size"] or asset.get("digest") != "sha256:" + inputs["sha256"]:

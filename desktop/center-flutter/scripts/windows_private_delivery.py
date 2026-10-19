@@ -1,7 +1,7 @@
-"""Deliver tested native ZIPs to a private, exact-run GitHub release.
+"""Deliver tested native ZIPs to an unpublished, exact-run GitHub draft.
 
 This transport does not use Actions artifact storage. It neither replaces an
-existing conflicting asset nor publishes to a public repository.
+existing conflicting asset nor publishes the draft or its attachments.
 """
 import argparse
 from dataclasses import dataclass
@@ -18,7 +18,7 @@ import urllib.request
 import zipfile
 
 REPOSITORY = "mazenelsbaghh/massar-center-desktop"
-DELIVERY_MARKER = "github-release-assets-v1"
+DELIVERY_MARKER = "github-draft-release-assets-v1"
 API_ROOT = "https://api.github.com/repos/" + REPOSITORY
 UPLOAD_ROOT = "https://uploads.github.com/repos/" + REPOSITORY
 MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
@@ -91,12 +91,7 @@ class GitHubDelivery:
         return self._response(urllib.request.Request(API_ROOT + path, data=body, headers=headers, method=method))
 
     def release(self, tag):
-        try:
-            return self.json("GET", "/releases/tags/" + urllib.parse.quote(tag, safe=""))
-        except GitHubError as error:
-            if error.status == 404:
-                return None
-            raise
+        return draft_release(lambda path: self.json("GET", path), tag)
 
     def upload(self, release_id, payload):
         query = urllib.parse.urlencode({"name": payload.name})
@@ -104,10 +99,21 @@ class GitHubDelivery:
         url = UPLOAD_ROOT + f"/releases/{release_id}/assets?" + query
         return self._response(urllib.request.Request(url, data=payload.content, headers=headers, method="POST"))
 
+    def require_hidden(self, path):
+        request = urllib.request.Request(API_ROOT + path,
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "Massar-Anonymous-Visibility-Check"})
+        try:
+            with self._opener.open(request, timeout=45):
+                raise DeliveryError("Draft metadata is anonymously accessible.")
+        except urllib.error.HTTPError as error:
+            error.close()
+            if error.code != 404:
+                raise DeliveryError("Anonymous draft visibility could not be denied.") from None
+
 
 def identity_from_environment(environment):
     if environment.get("GITHUB_REPOSITORY") != REPOSITORY:
-        raise DeliveryError("Native delivery is restricted to the reviewed private repository.")
+        raise DeliveryError("Native delivery is restricted to the reviewed repository.")
     if environment.get("MASSAR_WINDOWS_DELIVERY") != DELIVERY_MARKER:
         raise DeliveryError("Native delivery transport marker is missing.")
     for name in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT"):
@@ -156,14 +162,30 @@ def local_assets(directory, identity):
     return payloads
 
 
-def require_private_repository(api):
+def draft_release(read_page, tag):
+    # The by-tag endpoint returns published releases; authenticated listing
+    # also includes drafts accessible to this workflow's write token.
+    selected = None
+    for page in range(1, 21):
+        releases = read_page(f"/releases?per_page=100&page={page}")
+        matches = [release for release in releases if release.get("tag_name") == tag]
+        if len(matches) > 1 or matches and selected is not None:
+            raise DeliveryError("Ambiguous exact-run draft release.")
+        if matches:
+            selected = matches[0]
+        if len(releases) < 100:
+            return selected
+    raise DeliveryError("Exact-run draft search exceeded the release limit.")
+
+
+def require_repository(api):
     repository = api.json("GET", "")
-    if repository.get("private") is not True or repository.get("full_name") != REPOSITORY:
-        raise DeliveryError("Native outputs must remain in the reviewed private repository.")
+    if repository.get("full_name") != REPOSITORY:
+        raise DeliveryError("Native outputs must remain in the reviewed repository.")
 
 
 def delivery_binding(identity, payloads):
-    return {"schemaVersion": 1, "transport": "github-release-assets", "repository": REPOSITORY,
+    return {"schemaVersion": 1, "transport": "github-draft-release-assets", "repository": REPOSITORY,
             "runId": identity.run_id, "runAttempt": identity.run_attempt, "role": identity.role,
             "sourceCommit": identity.source_commit, "assets": [payload.binding for payload in payloads]}
 
@@ -171,7 +193,7 @@ def delivery_binding(identity, payloads):
 def require_release(release, identity, binding):
     if (type(release.get("id")) is not int or release["id"] <= 0
             or release.get("tag_name") != identity.tag or release.get("target_commitish") != identity.source_commit
-            or release.get("draft") is not False or release.get("prerelease") is not True
+            or release.get("draft") is not True or release.get("prerelease") is not True
             or json.loads(release.get("body", "")) != binding):
         raise DeliveryError("Existing native release conflicts with the exact build binding.")
 
@@ -184,6 +206,17 @@ def require_tag(api, identity):
         raise DeliveryError("Native release tag does not point to the exact source commit.")
 
 
+def ensure_tag(api, identity):
+    # Draft creation does not publish a tag, so bind the sanitized source first.
+    try:
+        require_tag(api, identity)
+    except GitHubError as error:
+        if error.status != 404:
+            raise
+        api.json("POST", "/git/refs", {"ref": "refs/tags/" + identity.tag, "sha": identity.source_commit})
+        require_tag(api, identity)
+
+
 def require_asset(asset, binding):
     if (type(asset.get("id")) is not int or asset["id"] <= 0 or asset.get("state") != "uploaded"
             or asset.get("name") != binding["name"] or asset.get("size") != binding["size"]
@@ -192,16 +225,18 @@ def require_asset(asset, binding):
 
 
 def deliver(api, identity, payloads):
-    require_private_repository(api)
+    require_repository(api)
     binding = delivery_binding(identity, payloads)
     release = api.release(identity.tag)
     if release is None:
+        ensure_tag(api, identity)
         release = api.json("POST", "/releases", {
             "tag_name": identity.tag, "target_commitish": identity.source_commit,
             "name": identity.tag, "body": json.dumps(binding, separators=(",", ":")),
-            "draft": False, "prerelease": True, "make_latest": "false"})
+            "draft": True, "prerelease": True, "make_latest": "false"})
     require_release(release, identity, binding)
     require_tag(api, identity)
+    api.require_hidden("/releases/" + str(release["id"]))
     existing = release.get("assets", [])
     expected_names = {payload.name for payload in payloads}
     if len(existing) != len({asset["name"] for asset in existing}) or any(asset["name"] not in expected_names for asset in existing):
@@ -213,10 +248,11 @@ def deliver(api, identity, payloads):
         if matching:
             require_asset(matching[0], payload.binding)
         else:
-            require_private_repository(api)
+            require_repository(api)
+            require_release(api.release(identity.tag), identity, binding)
             require_tag(api, identity)
             require_asset(api.upload(release["id"], payload), payload.binding)
-    require_private_repository(api)
+    require_repository(api)
     require_tag(api, identity)
     final = api.release(identity.tag)
     require_release(final, identity, binding)
@@ -225,6 +261,9 @@ def deliver(api, identity, payloads):
         raise DeliveryError("Native release does not contain exactly the ZIP and checksum.")
     for payload in payloads:
         require_asset(next(asset for asset in assets if asset["name"] == payload.name), payload.binding)
+    api.require_hidden("/releases/" + str(final["id"]))
+    for asset in assets:
+        api.require_hidden("/releases/assets/" + str(asset["id"]))
     return {"tag": identity.tag, "releaseId": final["id"], "assets": assets}
 
 

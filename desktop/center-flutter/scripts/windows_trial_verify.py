@@ -15,6 +15,7 @@ PUBLIC_ASSETS = {"logo.svg", "logo-light.svg", "fonts/Tajawal-Regular.ttf", "fon
 NATIVE_EXECUTABLES = {"massar-exam-room.exe", "massar-exam-portal-proxy.exe", "massar-exam-network.exe", "hotspot/Massar.Hotspot.exe", "report-pdf/massar-report-pdf.exe"}
 RUNTIME_NAMES = {"network.json", "leases.json", "heartbeat.json", "adapter-backup.json", "identity.json", "devices.json", "lan-settings.json", "lan-pending-command.json", "last-opened-build.json", "data-repair-status.json", "portal-mode.json", "capport-public.json", "center.sqlite.lock", "omada-controller.enc", ".env"}
 RELEASE_DELIVERY_MARKER = "github-release-assets-v1"
+DRAFT_DELIVERY_MARKER = "github-draft-release-assets-v1"
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -27,13 +28,15 @@ def delivery_transport(document):
     markers = re.findall(r"(?m)^[ \t]*MASSAR_WINDOWS_DELIVERY:[ \t]*([a-z0-9-]+)[ \t]*$", workflow)
     if "MASSAR_WINDOWS_DELIVERY" not in workflow:
         return "actions-artifact"
+    if markers == [DRAFT_DELIVERY_MARKER]:
+        return "draft-release-assets"
     if markers != [RELEASE_DELIVERY_MARKER]:
         raise RuntimeError("Unknown or ambiguous sealed Windows delivery transport.")
     return "release-assets"
 
 
 def _verified_run(document, run, token):
-    if api("", token).get("private") is not True:
+    if api("", token).get("private") is not True and delivery_transport(document) != "draft-release-assets":
         raise RuntimeError("Native Windows delivery must remain in the private repository.")
     actual = api(f"/actions/runs/{run['id']}", token)
     keys = ("id", "run_attempt", "workflow_id", "head_sha", "head_branch", "event", "name", "status", "conclusion")
@@ -59,17 +62,24 @@ def _actions_delivery(run, role, token):
 
 def _release_delivery(document, run, role, token):
     tag = f"windows-native-{run['id']}-{run['run_attempt']}-{role}"
-    release = api("/releases/tags/" + tag, token)
+    draft = delivery_transport(document) == "draft-release-assets"
+    if draft:
+        from windows_private_delivery import draft_release
+        release = draft_release(lambda path: api(path, token), tag)
+        if release is None:
+            raise RuntimeError("Exact-run draft release is missing.")
+    else:
+        release = api("/releases/tags/" + tag, token)
     reference = api("/git/ref/tags/" + tag, token)
     if (type(release.get("id")) is not int or release["id"] < 1 or release.get("tag_name") != tag
-            or release.get("target_commitish") != document["commit"] or release.get("draft") is not False
+            or release.get("target_commitish") != document["commit"] or release.get("draft") is not draft
             or release.get("prerelease") is not True
             or reference.get("ref") != "refs/tags/" + tag
             or reference.get("object", {}).get("type") != "commit"
             or reference["object"].get("sha") != document["commit"]):
         raise RuntimeError("Native release tag or target differs from the exact source commit.")
     receipt = json.loads(release.get("body") or "null")
-    expected = {"schemaVersion": 1, "transport": "github-release-assets", "repository": REPO,
+    expected = {"schemaVersion": 1, "transport": "github-draft-release-assets" if draft else "github-release-assets", "repository": REPO,
                 "runId": run["id"], "runAttempt": run["run_attempt"], "role": role,
                 "sourceCommit": document["commit"]}
     if (not isinstance(receipt, dict) or set(receipt) != set(expected) | {"assets"}
@@ -313,7 +323,7 @@ def download_trial(document, output, token):
     transport = delivery_transport(document)
     releases = []
     for role in ("host", "client"):
-        if transport == "release-assets":
+        if transport in ("release-assets", "draft-release-assets"):
             delivery = _release_delivery(document, run, role, token)
             release, archive, sidecar = delivery["release"], delivery["zip"], delivery["sidecar"]
             payload = download_release_asset(archive, token, maximum_bytes=512 * 1024 * 1024)
@@ -329,7 +339,7 @@ def download_trial(document, output, token):
             payload = unwrap_artifact(outer)
             identity = {"artifactId": artifact["id"], "outerSha256": digest(outer)}
         manifest = verify_archive(payload, document, role)
-        if transport == "release-assets" and archive["name"] != f"massar-center-windows-{role}-run-{run['id']}-{run['run_attempt']}-{manifest['buildId']}.zip":
+        if transport in ("release-assets", "draft-release-assets") and archive["name"] != f"massar-center-windows-{role}-run-{run['id']}-{run['run_attempt']}-{manifest['buildId']}.zip":
             raise RuntimeError("Native release asset name differs from its verified packaged build identity.")
         path = output / f"massar-windows-{role}-trial-{document['version'].replace('+', '-')}.zip"
         save_archive(path, payload)

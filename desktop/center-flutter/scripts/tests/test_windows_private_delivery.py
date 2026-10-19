@@ -29,7 +29,12 @@ class GitHubFixture:
         if method == "GET" and path == "":
             return {"private": self.private, "full_name": delivery.REPOSITORY}
         if method == "GET" and path == "/git/ref/tags/" + self.identity.tag:
+            if self.tag_sha is None:
+                raise delivery.GitHubError(404)
             return {"ref": "refs/tags/" + self.identity.tag, "object": {"type": "commit", "sha": self.tag_sha}}
+        if method == "POST" and path == "/git/refs":
+            self.tag_sha = document["sha"]
+            return {"ref": document["ref"]}
         if method == "POST" and path == "/releases":
             self.current = dict(document, id=91, assets=[])
             return copy.deepcopy(self.current)
@@ -47,6 +52,10 @@ class GitHubFixture:
         self.current["assets"].append(asset)
         self.uploads.append(payload.content)
         return copy.deepcopy(asset)
+
+    def require_hidden(self, path):
+        if self.current["draft"] is not True:
+            raise delivery.DeliveryError("Draft was published.")
 
 
 class NativeDeliveryTests(unittest.TestCase):
@@ -77,20 +86,36 @@ class NativeDeliveryTests(unittest.TestCase):
         delivery.deliver(api, self.identity, payloads)
         self.assertEqual(len(api.uploads), 2)
 
-    def test_public_repository_is_rejected_before_creating_or_uploading(self):
+    def test_public_repository_delivers_only_an_unpublished_exact_run_draft(self):
         api = GitHubFixture(self.identity);api.private = False
+        payloads = self.outputs()
+        delivery.deliver(api, self.identity, payloads)
+        self.assertTrue(api.current["draft"])
+        self.assertEqual(api.uploads, [payload.content for payload in payloads])
+
+    def test_missing_tag_is_bound_to_the_source_before_draft_delivery(self):
+        api = GitHubFixture(self.identity);api.tag_sha = None
+        delivery.deliver(api, self.identity, self.outputs())
+        self.assertEqual(api.tag_sha, self.identity.source_commit)
+        self.assertTrue(api.current["draft"])
+
+    def test_draft_lookup_paginates_and_rejects_ambiguous_tags(self):
+        pages = [[{"tag_name": "other-" + str(n)} for n in range(100)], [{"id": 7, "tag_name": self.identity.tag}]]
+        def read_page(path):
+            return pages[int(path.rsplit("=", 1)[1]) - 1]
+        self.assertEqual(delivery.draft_release(read_page, self.identity.tag)["id"], 7)
+        pages[1].append(dict(pages[1][0], id=8))
         with self.assertRaises(delivery.DeliveryError):
-            delivery.deliver(api, self.identity, self.outputs())
-        self.assertIsNone(api.current)
-        self.assertEqual(api.uploads, [])
+            delivery.draft_release(read_page, self.identity.tag)
 
     def test_conflicting_release_or_assets_are_never_overwritten(self):
         payloads = self.outputs()
-        for mutation in ("body", "source", "tag", "asset-digest", "asset-size", "extra", "duplicate"):
+        for mutation in ("published", "body", "source", "tag", "asset-digest", "asset-size", "extra", "duplicate"):
             with self.subTest(mutation=mutation):
                 api = GitHubFixture(self.identity)
                 delivery.deliver(api, self.identity, payloads)
-                if mutation == "body": api.current["body"] = "{}"
+                if mutation == "published": api.current["draft"] = False
+                elif mutation == "body": api.current["body"] = "{}"
                 elif mutation == "source": api.current["target_commitish"] = "b" * 40
                 elif mutation == "tag": api.tag_sha = "b" * 40
                 elif mutation == "asset-digest": api.current["assets"][1]["digest"] = "sha256:" + "f" * 64
@@ -148,13 +173,14 @@ class NativeDeliveryTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(delivery.DeliveryError):
                 delivery.identity_from_environment(dict(environment, **{key: wrong}))
 
-    def test_bearer_request_redirect_is_not_followed(self):
+    def test_redirects_are_not_followed_and_draft_visibility_checks_are_anonymous(self):
         received = []
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
-                received.append(self.path)
-                self.send_response(302)
-                self.send_header("Location", self.server.redirect_target)
+                received.append((self.path, self.headers.get("Authorization")))
+                self.send_response(404 if self.path == "/hidden" else 200 if self.path == "/public" else 302)
+                if self.path not in ("/hidden", "/public"):
+                    self.send_header("Location", self.server.redirect_target)
                 self.end_headers()
             def log_message(self, *_): pass
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -164,9 +190,14 @@ class NativeDeliveryTests(unittest.TestCase):
             with patch.object(delivery, "API_ROOT", "http://127.0.0.1:" + str(server.server_port)):
                 with self.assertRaises(delivery.GitHubError) as caught:
                     delivery.GitHubDelivery("synthetic-private-token").json("GET", "/metadata")
-            self.assertEqual(caught.exception.status, 302)
-            self.assertNotIn("synthetic-private-token", str(caught.exception))
-            self.assertEqual(received, ["/metadata"])
+                self.assertEqual(caught.exception.status, 302)
+                self.assertNotIn("synthetic-private-token", str(caught.exception))
+                client = delivery.GitHubDelivery("synthetic-private-token")
+                client.require_hidden("/hidden")
+                for path in ("/public", "/redirect"):
+                    with self.subTest(path=path), self.assertRaises(delivery.DeliveryError):
+                        client.require_hidden(path)
+                self.assertEqual(received, [("/metadata", "Bearer synthetic-private-token"), ("/hidden", None), ("/public", None), ("/redirect", None)])
         finally:
             server.shutdown();server.server_close();worker.join(timeout=2)
 
