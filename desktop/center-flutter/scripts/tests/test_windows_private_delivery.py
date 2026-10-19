@@ -24,6 +24,7 @@ class GitHubFixture:
         self.current = None
         self.tag_sha = identity.source_commit
         self.uploads = []
+        self.list_visible = True
 
     def json(self, method, path, document=None):
         if method == "GET" and path == "":
@@ -38,12 +39,14 @@ class GitHubFixture:
         if method == "POST" and path == "/releases":
             self.current = dict(document, id=91, assets=[])
             return copy.deepcopy(self.current)
+        if method == "GET" and self.current and path == "/releases/" + str(self.current["id"]):
+            return copy.deepcopy(self.current)
         raise AssertionError("Unexpected external operation: " + method + " " + path)
 
     def release(self, tag):
         if tag != self.identity.tag:
             raise AssertionError("Different attempt or role requested")
-        return copy.deepcopy(self.current)
+        return copy.deepcopy(self.current) if self.list_visible else None
 
     def upload(self, release_id, payload):
         if release_id != self.current["id"]:
@@ -98,6 +101,14 @@ class NativeDeliveryTests(unittest.TestCase):
         delivery.deliver(api, self.identity, self.outputs())
         self.assertEqual(api.tag_sha, self.identity.source_commit)
         self.assertTrue(api.current["draft"])
+
+    def test_new_draft_delivery_survives_release_list_index_delay(self):
+        # Run 39183808133: the host draft existed by ID before listing saw it.
+        api = GitHubFixture(self.identity);api.list_visible = False
+        payloads = self.outputs()
+        delivered = delivery.deliver(api, self.identity, payloads)
+        self.assertEqual(delivered["releaseId"], api.current["id"])
+        self.assertEqual(api.uploads, [payload.content for payload in payloads])
 
     def test_draft_lookup_paginates_and_rejects_ambiguous_tags(self):
         pages = [[{"tag_name": "other-" + str(n)} for n in range(100)], [{"id": 7, "tag_name": self.identity.tag}]]

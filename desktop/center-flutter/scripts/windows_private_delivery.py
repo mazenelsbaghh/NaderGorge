@@ -249,12 +249,14 @@ def deliver(api, identity, payloads):
             require_asset(matching[0], payload.binding)
         else:
             require_repository(api)
-            require_release(api.release(identity.tag), identity, binding)
+            require_release(api.json("GET", "/releases/" + str(release["id"])), identity, binding)
             require_tag(api, identity)
             require_asset(api.upload(release["id"], payload), payload.binding)
     require_repository(api)
     require_tag(api, identity)
-    final = api.release(identity.tag)
+    # New drafts can lag behind the release-list index; their returned ID is
+    # authoritative for read-after-write checks and cannot select another draft.
+    final = api.json("GET", "/releases/" + str(release["id"]))
     require_release(final, identity, binding)
     assets = final.get("assets", [])
     if len(assets) != 2 or {asset["name"] for asset in assets} != expected_names:
