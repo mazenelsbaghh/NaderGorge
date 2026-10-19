@@ -8,6 +8,7 @@ import '../shared/problem_reporting.dart';
 import 'center_store_host_bridge.dart';
 import 'lan_discovery.dart';
 import 'lan_host_process.dart';
+import 'lan_firewall_repair.dart';
 import 'lan_settings.dart';
 import 'lan_transport.dart';
 
@@ -28,10 +29,12 @@ class LanController extends ChangeNotifier {
     Future<List<LanEndpoint>> Function()? searchHosts,
     this.clientOnly = false,
     this.homeworkHotspot,
+    Future<void> Function()? repairNetwork,
   }) : _settings =
            settings ?? LanSettings(File(localStore.databasePath).parent),
        _hostProcess = hostProcess ?? LanHostProcess(),
        _searchHosts = searchHosts ?? (() => LanDiscovery.search()),
+       _repairNetwork = repairNetwork ?? LanFirewallRepair.repair,
        _activeStore = localStore;
 
   final CenterStore localStore;
@@ -99,6 +102,20 @@ class LanController extends ChangeNotifier {
   bool get isClientOnly => clientOnly;
   final LanSettings _settings;
   final LanHostProcess _hostProcess;
+  final Future<void> Function() _repairNetwork;
+  bool get supportsNetworkRepair =>
+      !clientOnly && defaultTargetPlatform == TargetPlatform.windows;
+
+  Future<void> repairHostNetwork() => _exclusive(() async {
+    _requireHostStaff();
+    try {
+      await _repairNetwork();
+      reportLan('lan.control', 'config');
+    } catch (error) {
+      reportLan('lan.control', 'config', error: error);
+      rethrow;
+    }
+  });
   final Future<List<LanEndpoint>> Function() _searchHosts;
   CenterStore _activeStore;
   LanConfiguration? _configuration;

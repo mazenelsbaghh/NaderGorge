@@ -89,5 +89,14 @@ try {
     if ($Reason -in $KnownReasons) { Write-Host ('Reason: ' + $Reason) }
     else { Write-Host ('Windows operation failed. Error code: ' + $Failure.HResult) }
     if ($RollbackFailed) { Write-Host 'ROLLBACK_INCOMPLETE: review the Massar Center LAN folder repair firewall group.' }
-    exit 1
+    if ($RollbackFailed) { exit 14 }
+    switch ($Reason) {
+        'PLACE_FILES_IN_NEW_HOST_FOLDER' { exit 10 }
+        'HOST_BUILD_MANIFEST_NOT_FOUND' { exit 10 }
+        'USE_ON_HOST_NOT_SECONDARY' { exit 11 }
+        'EXPLICIT_HOST_BLOCK_REQUIRES_REVIEW' { exit 12 }
+        'EXISTING_RULE_IDENTITY_MISMATCH' { exit 13 }
+        'EXISTING_REPAIR_RULE_CHANGED' { exit 13 }
+        default { exit $Failure.HResult }
+    }
 }

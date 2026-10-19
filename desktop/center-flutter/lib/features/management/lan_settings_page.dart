@@ -37,6 +37,7 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
   bool _busy = false, _changingContext = false;
   int _hostSelectionRevision = 0;
   String? _operationError;
+  String? _networkRepairMessage;
   late String _savedName = controller.configuration?.deviceName ?? '';
   bool get _dirty =>
       (!controller.isHost && _name.text != _savedName) ||
@@ -525,7 +526,9 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
           FilledButton.icon(
             key: const Key('lan-start-host'),
             onPressed:
-                locked || !controller.canConfigureHost || controller.isHost
+                locked ||
+                    !controller.canConfigureHost ||
+                    controller.hostReady != null
                 ? null
                 : () => _run(
                     () => controller.startHost(name: _name.text),
@@ -556,8 +559,48 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
                     },
               child: const Text('إيقاف السيرفر'),
             ),
+          if (controller.supportsNetworkRepair)
+            OutlinedButton.icon(
+              key: const Key('lan-repair-network'),
+              onPressed: locked || !controller.canConfigureHost
+                  ? null
+                  : () => _run(
+                      () async {
+                        setState(() => _networkRepairMessage = null);
+                        await controller.repairHostNetwork();
+                        if (mounted) {
+                          setState(
+                            () => _networkRepairMessage =
+                                'تم ضبط صلاحيات الشبكة لهذه النسخة. شغّل السيرفر لو متوقف، ثم جرّب الاتصال من الجهاز الآخر.',
+                          );
+                        }
+                      },
+                      failureMessage:
+                          'تعذر إصلاح صلاحيات الشبكة. صدّر سجل مشكلة الربط لمراجعة السبب.',
+                    ),
+              icon: const Icon(Icons.settings_ethernet),
+              label: Text(
+                _busy ? 'جارٍ تنفيذ العملية…' : 'إصلاح صلاحيات الشبكة',
+              ),
+            ),
         ],
       ),
+      if (controller.supportsNetworkRepair) ...[
+        const SizedBox(height: 8),
+        const Text(
+          'لو الجهاز الآخر لا يتصل بعد تحديث الهوست، اضغط «إصلاح صلاحيات الشبكة» ووافق على طلب المسؤول من ويندوز.',
+        ),
+        if (_networkRepairMessage != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _networkRepairMessage!,
+              key: const Key('lan-repair-result'),
+            ),
+          ),
+        ],
+      ],
       if (controller.hostReady != null) ...[
         const SizedBox(height: 20),
         SelectableText('الجهاز الرئيسي: ${controller.hostReady!.name}'),

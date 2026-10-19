@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/features/management/lan_settings_page.dart';
 import 'package:massar_center/lan/lan_controller.dart';
 import 'package:massar_center/lan/lan_host_process.dart';
+import 'package:massar_center/lan/lan_firewall_repair.dart';
 import 'package:massar_center/lan/lan_settings.dart';
 import 'package:massar_center/lan/lan_transport.dart';
 import 'package:massar_center/shared/theme.dart';
@@ -49,6 +51,7 @@ void main() {
   late String binary;
   late CenterStore hostStore, localStore;
   late LanController host, client;
+  late LanHostProcess hostWorker;
   List<LanEndpoint> discovered = [];
   Object? discoveryFailure;
   Completer<List<LanEndpoint>>? discoveryGate;
@@ -85,6 +88,7 @@ void main() {
   Future<void> setUpFixture({
     bool clientOnly = false,
     Future<Map<String, dynamic>> Function(Map<String, dynamic>)? hotspot,
+    Future<void> Function()? repairNetwork,
   }) async {
     directory = await Directory.systemTemp.createTemp('massar-lan-controller-');
     hostStore = await CenterStore.open(directory: '${directory.path}/host');
@@ -134,10 +138,12 @@ void main() {
     searches = 0;
     secondHost = null;
     secondHostStore = null;
+    hostWorker = _TestHostProcess(binary);
     host = LanController(
       localStore: hostStore,
       homeworkHotspot: hotspot,
-      hostProcess: _TestHostProcess(binary),
+      hostProcess: hostWorker,
+      repairNetwork: repairNetwork,
       searchHosts: () async => [],
     );
     client = LanController(
@@ -211,6 +217,7 @@ void main() {
         await body(tester);
       } finally {
         await disposeFixture(tester);
+        debugDefaultTargetPlatformOverride = null;
       }
     });
   }
@@ -346,6 +353,55 @@ void main() {
     await host.startHost(name: 'الجهاز الرئيسي للاختبار');
     discovered = [host.hostReady!.endpoint];
   }
+
+  testLanWidgets(
+    'Windows host repairs inside the page and can restart a stopped saved host',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final gate = Completer<void>();
+      var requests = 0;
+      await realAsync(
+        tester,
+        () => setUpFixture(
+          repairNetwork: () async {
+            requests++;
+            if (requests == 1) throw LanFirewallRepair.failure(20);
+            await gate.future;
+          },
+        ),
+      );
+      await realAsync(tester, startFixture);
+      await realAsync(tester, hostWorker.stop);
+      await waitUi(tester, () => host.hostReady == null);
+      expect(host.isHost, isTrue);
+      await open(tester, host, size: const Size(960, 500), textScale: 1.5);
+      final repair = find.byKey(const Key('lan-repair-network'));
+      await tap(tester, repair);
+      expect(requests, 1);
+      await expectInlineError(tester, 'اتلغى طلب صلاحية المسؤول');
+      await tap(tester, repair);
+      expect(requests, 2);
+      expect(tester.widget<OutlinedButton>(repair).onPressed, isNull);
+      gate.complete();
+      await waitUi(
+        tester,
+        () =>
+            find.textContaining('تم ضبط صلاحيات الشبكة').evaluate().isNotEmpty,
+      );
+      await tap(tester, find.byKey(const Key('lan-start-host')));
+      await waitUi(tester, () => host.hostReady != null);
+      expect(host.status, LanConnectionStatus.hosting);
+      expect(hostStore.students.single.code, 'HOST');
+      await realAsync(tester, () async {
+        hostStore.signOut();
+        await expectLater(
+          host.repairHostNetwork(),
+          throwsA(isA<CenterException>()),
+        );
+      });
+      expect(requests, 2);
+    },
+  );
 
   testLanWidgets(
     'host staff can configure the gateway while signed-out access stays blocked',
@@ -1039,6 +1095,14 @@ void main() {
       expect(find.byKey(const ValueKey('lan-mode-host')), findsNothing);
       expect(find.byKey(const ValueKey('lan-mode-standalone')), findsNothing);
       expect(find.byKey(const Key('lan-start-host')), findsNothing);
+      expect(find.byKey(const Key('lan-repair-network')), findsNothing);
+      await realAsync(
+        tester,
+        () => expectLater(
+          client.repairHostNetwork(),
+          throwsA(isA<CenterException>()),
+        ),
+      );
       expect(find.byKey(const Key('lan-direct-host-identity')), findsOneWidget);
       expect(find.byKey(const Key('lan-pair-dialog')), findsNothing);
       expect(
