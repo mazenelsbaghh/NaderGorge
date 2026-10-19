@@ -36,7 +36,7 @@ void main() {
         'massar-button-test-',
       );
       final folder = await Directory(
-        '${directory.path}/نسخة \' \$() الهوست',
+        p.join(await directory.resolveSymbolicLinks(), "نسخة ' \$() الهوست"),
       ).create();
       final executable = File(p.join(folder.path, 'massar-lan-host.exe'));
       final native = Platform.environment['MASSAR_LAN_TEST_EXECUTABLE'];
@@ -49,7 +49,9 @@ void main() {
       final helper = await File(
         'scripts/repair-lan-firewall.ps1',
       ).copy(p.join(folder.path, 'repair-lan-firewall.ps1'));
-      final encodedPath = base64Encode(utf8.encode(executable.path));
+      final encodedPath = base64Encode(
+        utf8.encode(p.normalize(executable.absolute.path)),
+      );
       final filters =
           r'''$env:PSModulePath = [IO.Path]::Combine($PSHOME, 'Modules')
 $ErrorActionPreference = 'Stop'
