@@ -60,6 +60,10 @@ test.describe('lesson video context-menu guard', () => {
   // Production regression 2026-09-01: a mouse context menu exposed a browser
   // extension's download entry outside the video player on the lesson page.
   test('blocks the mouse menu across a viewable lesson and cleans up after client navigation', async ({ page, request }) => {
+    // Keep the optional welcome animation from delaying the parent-code dialog.
+    await page.route('**/api/student/welcome/claim', route => route.fulfill({
+      json: { success: true, data: null },
+    }));
     await seedE2E(request);
 
     const clearDevices = await request.post(`${apiUrl}/e2e/clear-devices`, {

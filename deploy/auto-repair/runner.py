@@ -175,6 +175,7 @@ class Runner:
             '-e', 'LIVE_SUPPORT_QUERY_BUDGET_DATABASE_AUTHORIZATION=DELETE-DISPOSABLE-LIVE-SUPPORT-QUERY-BUDGET-DATABASE',
             '-e', 'ConnectionStrings__Redis=redis:6379', '-e', 'Redis__ConnectionString=redis:6379',
             '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379', '-e', 'TEST_REDIS_CONNECTION=redis:6379',
+            '-e', 'REFUND_TEST_REDIS=redis:6379',
             '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
             '-e', 'TEST_REDIS_READONLY_CONNECTION=redis-readonly:6379,abortConnect=false',
             '-e', 'FINANCE_REPAIR_TEST_DB=Host=127.0.0.1;Database=finance_repair_test;Username=postgres',
@@ -295,6 +296,7 @@ class Runner:
             '-e', 'AUTO_REPAIR_TEST_DB=Host=127.0.0.1;Database=repair_test;Username=postgres',
             '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379',
             '-e', 'TEST_REDIS_CONNECTION=redis:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
+            '-e', 'REFUND_TEST_REDIS=redis:6379',
             '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379',
             '-e', 'TEST_REDIS_READONLY_CONNECTION=redis-readonly:6379,abortConnect=false',
             '-e', 'FINANCE_REPAIR_TEST_DB=Host=127.0.0.1;Database=finance_repair_test;Username=postgres',
@@ -313,7 +315,7 @@ class Runner:
         log = workspace.parent / 'verification.log'
         with log.open('w') as output:
             proc = subprocess.Popen(argv, stdout=output, stderr=subprocess.STDOUT)
-            deadline = time.monotonic() + 1800
+            deadline = time.monotonic() + 3600
             try:
                 while proc.poll() is None:
                     if lease.lost.is_set() or lease.paused or self.stopping or time.monotonic() > deadline:

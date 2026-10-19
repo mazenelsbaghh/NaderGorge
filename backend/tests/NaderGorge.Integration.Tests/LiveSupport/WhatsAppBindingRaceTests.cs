@@ -50,6 +50,8 @@ public sealed class WhatsAppBindingRaceTests
         seed.AddRange(guest, conversation, trackedUser, otherAccount);
         await seed.SaveChangesAsync();
         var winningInboundAt = DateTime.UtcNow.AddMinutes(5);
+        // PostgreSQL persists microseconds; keep the expected instant exactly representable.
+        winningInboundAt = winningInboundAt.AddTicks(-(winningInboundAt.Ticks % TimeSpan.TicksPerMicrosecond));
         var race = new BindingRace(async () =>
         {
             await using var winner = fixture.CreateDbContext();

@@ -54,8 +54,13 @@ npm --prefix worker ci --offline --ignore-scripts
 npm --prefix worker test
 
 # Real browser requests use only the disposable PostgreSQL network namespace.
+if [ "${AUTO_REPAIR_TEST_DB:-}" != 'Host=127.0.0.1;Database=repair_test;Username=postgres' ]; then
+  echo 'Refuse destructive browser reset outside isolated repair_test' >&2
+  exit 1
+fi
 export ASPNETCORE_ENVIRONMENT=E2e
 export ConnectionStrings__DefaultConnection="$AUTO_REPAIR_TEST_DB"
+export E2E_ALLOW_DESTRUCTIVE_RESET=true
 export ConnectionStrings__Redis=redis:6379
 export Redis__ConnectionString=redis:6379
 export CookieSettings__Domain=.lvh.me

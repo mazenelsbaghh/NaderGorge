@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 
 const directory = '/opt/cache/fonts';
-const stylesheetUrl = 'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap';
+const stylesheetUrl = 'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap';
 const port = 17788;
 
 async function prepare() {

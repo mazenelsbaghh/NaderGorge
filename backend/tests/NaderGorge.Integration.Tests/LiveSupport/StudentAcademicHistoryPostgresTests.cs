@@ -49,7 +49,8 @@ public sealed class StudentAcademicHistoryPostgresTests
             User = student,
             Exam = exam,
             Evaluation = "قيد التصحيح",
-            StartedAt = DateTime.UtcNow.AddDays(-1)
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
         };
         var homework = new Homework { LessonId = lesson.Id, Title = "واجب الحصة", TotalScore = 20 };
         var secondHomework = new Homework { LessonId = lesson.Id, Title = "واجب إضافي", TotalScore = 10 };
