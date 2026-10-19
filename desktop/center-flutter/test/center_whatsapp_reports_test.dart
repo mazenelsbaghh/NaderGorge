@@ -142,7 +142,7 @@ void main() {
       );
 
   test(
-    'class followup preserves zero and per-student maxima without inventing absence or missing homework',
+    'class followup defaults attendees homework to complete while preserving zero and unknown attendance',
     () {
       final snapshot = report();
       final messages = {
@@ -161,9 +161,10 @@ void main() {
       );
       expect(
         messages[second.id]!['homework'],
-        homeworkLabel(HomeworkStatus.notReviewed),
+        homeworkLabel(HomeworkStatus.complete),
       );
       expect(messages[unrecorded.id]!['attendance'], 'لم يُسجل حضور');
+      expect(messages[unrecorded.id]!['homework'], 'لم يُراجع');
       expect(messages[unrecorded.id]!['score'], isNull);
       expect(messages[unrecorded.id]!['maximum'], isNull);
       expect(store.payments, isEmpty);
@@ -194,7 +195,7 @@ void main() {
       );
 
       expect(studentMessage(report(), first)['homework'], 'كامل');
-      expect(studentMessage(report(), second)['homework'], 'لم يُراجع');
+      expect(studentMessage(report(), second)['homework'], 'كامل');
       final historical = CenterWhatsAppReports.build(
         store,
         CenterWhatsAppSelection(
@@ -214,6 +215,83 @@ void main() {
       expect(studentMessage(attendance, first)['homework'], 'كامل');
       expect(studentMessage(attendance, first)['score'], 0);
       expect(studentMessage(attendance, second)['maximum'], 12);
+
+      final otherHomework = await store.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: session.preparedLessonId,
+          kind: AcademicActivityKind.homework,
+          name: 'واجب آخر',
+          createdAt: classDate,
+        ),
+      );
+      await store.saveAcademic(
+        AcademicRecord(
+          studentId: first.id,
+          sessionId: session.id,
+          activityId: otherHomework.id,
+          homework: HomeworkStatus.missing,
+          updatedAt: classDate,
+        ),
+      );
+      expect(studentMessage(report(), first)['homework'], 'كامل');
+      expect(
+        studentMessage(report(homeworkId: otherHomework.id), first)['homework'],
+        'لم يعمل',
+      );
+      final ambiguous = CenterReports.build(
+        store,
+        CenterReportKind.attendance,
+        CenterReportFilter(sessionId: session.id),
+      );
+      expect(studentMessage(ambiguous, first)['homework'], 'لم يُراجع');
+    },
+  );
+
+  test(
+    'followup defaults never overwrite saved homework exceptions or require opening the homework page',
+    () async {
+      for (final status in HomeworkStatus.values) {
+        await store.saveAcademic(
+          AcademicRecord(
+            studentId: second.id,
+            sessionId: session.id,
+            activityId: homework.id,
+            homework: status,
+            updatedAt: classDate,
+          ),
+        );
+        final before = store
+            .academicRecordsForSession(session.id)
+            .map((record) => record.toJson())
+            .toList();
+        final snapshot = report();
+        final expected = status == HomeworkStatus.notReviewed
+            ? HomeworkStatus.complete
+            : status;
+        expect(
+          snapshot.whatsAppRecords.singleWhere(
+            (row) => row['studentId'] == second.id,
+          )['homework'],
+          homeworkLabel(expected),
+        );
+        expect(
+          store
+              .academicRecordsForSession(session.id)
+              .map((record) => record.toJson())
+              .toList(),
+          before,
+        );
+      }
+      final noSelection = CenterWhatsAppReports.build(
+        store,
+        CenterWhatsAppSelection(groupId: group.id, sessionId: session.id),
+      );
+      expect(
+        noSelection.whatsAppRecords.singleWhere(
+          (row) => row['studentId'] == first.id,
+        )['homework'],
+        'كامل',
+      );
     },
   );
 
@@ -232,6 +310,12 @@ void main() {
           (row) => row['studentId'] == unrecorded.id,
         )['attendance'],
         attendanceLabel(AttendanceStatus.absent),
+      );
+      expect(
+        report().whatsAppRecords.firstWhere(
+          (row) => row['studentId'] == unrecorded.id,
+        )['homework'],
+        'لم يُراجع',
       );
       expect(report().whatsAppRecords, hasLength(3));
     },

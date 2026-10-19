@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		json.NewEncoder(os.Stdout).Encode(map[string]any{"ready": false, "error": "gateway_start_failed"})
+		json.NewEncoder(os.Stdout).Encode(startupDiagnostic(err))
 		os.Exit(1)
 	}
 }
@@ -18,7 +18,7 @@ func main() {
 func run() error {
 	config, err := readConfig(os.Stdin)
 	if err != nil {
-		return err
+		return &startupError{"config", err}
 	}
 	gateway, err := newGateway(config)
 	if err != nil {

@@ -249,7 +249,7 @@ void main() {
   );
 
   test(
-    'named homework does not copy results from another homework or create legacy empty rows',
+    'named homework defaults attendees to complete without copying other homework exceptions',
     () {
       final all = report(CenterReportKind.homework);
       expect(all.rows, hasLength(4));
@@ -258,7 +258,7 @@ void main() {
         all.rows
             .where((row) => row.last == homeworkA.name)
             .map((row) => row[all.columns.indexOf('حالة الواجب')]),
-        ['كامل', 'لم يُراجع'],
+        ['كامل', 'كامل'],
       );
       final done = report(
         CenterReportKind.homework,
@@ -267,7 +267,10 @@ void main() {
           homeworkStatus: HomeworkStatus.complete,
         ),
       );
-      expect(done.rows.single[0], first.code);
+      expect(
+        done.rows.map((row) => row[0]),
+        unorderedEquals([first.code, second.code]),
+      );
       expect(
         report(
           CenterReportKind.homework,
@@ -275,8 +278,8 @@ void main() {
             activityId: homeworkB.id,
             homeworkStatus: HomeworkStatus.complete,
           ),
-        ).rows,
-        isEmpty,
+        ).rows.single[0],
+        second.code,
       );
       final missing = report(
         CenterReportKind.homework,

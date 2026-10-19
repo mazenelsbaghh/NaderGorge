@@ -407,6 +407,10 @@ func reportParameters(report M, rawMappings any, count int, template M) ([]strin
 	if !ok || len(mappings) != count {
 		return nil, fail("حدد بيانات كل متغير في القالب", 400)
 	}
+	bindings, reason := templateBindings(template)
+	if reason != "" {
+		return nil, fail(reason, 400)
+	}
 	attempt := report["attempt"].(M)
 	exam := report["exam"].(M)["config"].(M)
 	fields := M{"name": attempt["name"], "code": attempt["code"], "score": fmt.Sprint(attempt["score"]), "maximum": fmt.Sprint(attempt["maximum"]), "result": fmt.Sprintf("%v من %v", attempt["score"], attempt["maximum"]), "exam": exam["title"]}
@@ -418,7 +422,7 @@ func reportParameters(report M, rawMappings any, count int, template M) ([]strin
 		}
 	}
 	parameters := []string{}
-	for _, raw := range mappings {
+	for index, raw := range mappings {
 		mapping, ok := raw.(map[string]any)
 		if !ok {
 			return nil, fail("تعيين المتغير غير صالح", 400)
@@ -426,6 +430,9 @@ func reportParameters(report M, rawMappings any, count int, template M) ([]strin
 		parameter := str(fields[str(mapping["source"])])
 		if mapping["source"] == "homework" {
 			parameter = templateHomeworkValue(template, parameter)
+		}
+		if mapping["source"] == "month" {
+			parameter = templateMonthValue(template, bindings[index], parameter)
 		}
 		if str(mapping["source"]) == "literal" {
 			parameter = str(mapping["text"])

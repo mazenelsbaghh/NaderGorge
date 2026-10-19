@@ -13,6 +13,18 @@ void reportProblem(
   }
 }
 
+void reportLan(
+  String operation,
+  String stage, {
+  Object? error,
+  Map<String, int> metrics = const {},
+}) {
+  final log = ProblemLog.current;
+  if (log != null) {
+    unawaited(log.recordLan(operation, stage, error: error, metrics: metrics));
+  }
+}
+
 /// Keep Flutter's existing presentation and the engine's error policy intact.
 VoidCallback installProblemHandlers() {
   final previousFlutter = FlutterError.onError;

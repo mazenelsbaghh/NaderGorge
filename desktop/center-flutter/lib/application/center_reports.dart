@@ -7,6 +7,7 @@ import '../shared/performance_trace.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
+import '../domain/homework_status.dart';
 import '../domain/models.dart';
 import 'center_store.dart';
 
@@ -993,7 +994,9 @@ class _ReportContext {
     AttendanceStatus? presence,
     AcademicActivityKind? kind,
   }) {
-    AcademicRecord? related(AcademicActivityKind kind) {
+    ({AcademicRecord? record, bool ambiguous}) related(
+      AcademicActivityKind kind,
+    ) {
       final named = <AcademicRecord>[
         for (final candidate
             in activitiesBySession[(session.id, kind)] ??
@@ -1001,16 +1004,26 @@ class _ReportContext {
           ?academicByActivity[(student.id, session.id, candidate.id)],
       ];
       // A historical combined record must not mask the named assessment.
-      if (named.isNotEmpty) return named.length == 1 ? named.single : null;
-      return academicByPair[(student.id, session.id)];
+      if (named.isNotEmpty) {
+        return (
+          record: named.length == 1 ? named.single : null,
+          ambiguous: named.length > 1,
+        );
+      }
+      return (
+        record: academicByPair[(student.id, session.id)],
+        ambiguous: false,
+      );
     }
 
     final exam = (kind ?? activity?.kind) == AcademicActivityKind.exam
         ? academic
-        : related(AcademicActivityKind.exam);
-    final homework = (kind ?? activity?.kind) == AcademicActivityKind.homework
-        ? academic
+        : related(AcademicActivityKind.exam).record;
+    final homeworkScope =
+        (kind ?? activity?.kind) == AcademicActivityKind.homework
+        ? (record: academic, ambiguous: false)
         : related(AcademicActivityKind.homework);
+    final homework = homeworkScope.record;
     final examActivity = (kind ?? activity?.kind) == AcademicActivityKind.exam
         ? activity
         : activities[exam?.activityId];
@@ -1040,7 +1053,12 @@ class _ReportContext {
           ? exam?.maxScore ?? examActivity?.maxScore
           : null,
       'homework': _homeworkLabel(
-        homework?.homework ?? HomeworkStatus.notReviewed,
+        effectiveHomeworkStatus(
+          homework?.homework,
+          attended:
+              !homeworkScope.ambiguous &&
+              actualAttendancePairs.contains((student.id, session.id)),
+        ),
       ),
       'attendance': presence == null
           ? 'راجع تقرير الحضور'
@@ -1892,12 +1910,26 @@ class _ReportContext {
   }
 
   CenterReportData homeworkReport() {
+    HomeworkStatus statusFor(
+      ({
+        Student student,
+        LessonSession session,
+        AcademicRecord? academic,
+        AcademicActivity? activity,
+      })
+      row,
+    ) => effectiveHomeworkStatus(
+      row.academic?.homework,
+      attended: actualAttendancePairs.contains((
+        row.student.id,
+        row.session.id,
+      )),
+    );
     final matches = _academicRows(AcademicActivityKind.homework)
         .where(
           (row) =>
               filter.homeworkStatus == null ||
-              (row.academic?.homework ?? HomeworkStatus.notReviewed) ==
-                  filter.homeworkStatus,
+              statusFor(row) == filter.homeworkStatus,
         )
         .toList();
     return CenterReportData(
@@ -1944,9 +1976,7 @@ class _ReportContext {
               _groupLabel(row.session.groupId),
               row.session.number,
               _sessionTimeLabel(row.session),
-              _homeworkLabel(
-                row.academic?.homework ?? HomeworkStatus.notReviewed,
-              ),
+              _homeworkLabel(statusFor(row)),
               row.academic?.notes ?? '',
               row.activity?.name ?? 'رصد سابق بدون اسم',
             ],
@@ -1954,12 +1984,11 @@ class _ReportContext {
           .toList(),
       summary: {
         for (final status in HomeworkStatus.values)
-          _homeworkLabel(
-            status,
-          ): '${matches.where((row) => (row.academic?.homework ?? HomeworkStatus.notReviewed) == status).length}',
+          _homeworkLabel(status):
+              '${matches.where((row) => statusFor(row) == status).length}',
       },
       caption:
-          'الفترة حسب موعد الحصة الفعلية، وكل صف يخص الواجب المسمى وحده؛ الحصص المشتركة تشمل الحاضرين والمعوّضين فعليًا والنتائج المحفوظة. السجلات القديمة بدون اسم منفصلة. لا تعني «لم يُراجع» أن الطالب لم يعمل الواجب؛ الرصد فقط يحدد حالته.',
+          'الفترة حسب موعد الحصة الفعلية، وكل صف يخص الواجب المسمى وحده؛ الحاضر والمعوّض يُعتبر عامل الواجب تلقائيًا ما لم تُسجل له حالة أخرى. السجلات القديمة بدون اسم منفصلة. عدم تسجيل الحضور لا يثبت عمل الواجب أو عدم عمله.',
     );
   }
 

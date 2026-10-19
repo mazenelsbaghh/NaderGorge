@@ -228,13 +228,17 @@ class _RemoteCenterStore extends CenterStore {
     try {
       _apply(response);
       return true;
-    } on FormatException {
+    } on FormatException catch (error) {
+      reportLan('lan.refresh', 'apply', error: error);
       // Recover malformed snapshots through an authoritative full read.
-    } on TypeError {
+    } on TypeError catch (error) {
+      reportLan('lan.refresh', 'apply', error: error);
       // A malformed row must not partially mutate the current snapshot.
-    } on CenterException {
+    } on CenterException catch (error) {
+      reportLan('lan.refresh', 'apply', error: error);
       // Unsupported schemas need full recovery, including after a commit.
-    } on ArgumentError {
+    } on ArgumentError catch (error) {
+      reportLan('lan.refresh', 'apply', error: error);
       // Invalid row enum values also require full recovery.
     }
     return false;

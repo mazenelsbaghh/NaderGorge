@@ -51,6 +51,74 @@ void main() {
   }
 
   test(
+    'LAN retries stay bounded and recovery retains redacted OS reasons',
+    () async {
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await log.recordLan(
+          'lan.health',
+          'connect',
+          error: SocketException(secret, osError: const OSError(secret, 10060)),
+          metrics: {'durationMs': attempt, 'port': 43873, secret: 123},
+        );
+      }
+      await log.recordLan(
+        'lan.health',
+        'complete',
+        metrics: {'httpStatus': 200},
+      );
+      await log.recordLan(
+        'lan.health',
+        'connect',
+        error: const SocketException(secret, osError: OSError(secret, 10061)),
+      );
+      final rows = (await exported()).skip(1).toList();
+      expect(rows, hasLength(3));
+      expect(rows.map((row) => row['outcome']), [
+        'failed',
+        'completed',
+        'failed',
+      ]);
+      expect(rows[1]['metrics']['repeats'], 4);
+      expect(rows.first['errors'], [
+        {'type': 'SocketException', 'code': 10060},
+      ]);
+      expect(rows.last['errors'], [
+        {'type': 'SocketException', 'code': 10061},
+      ]);
+      expect(jsonEncode(rows), isNot(contains(secret)));
+    },
+  );
+
+  test(
+    'edited LAN logs cannot export arbitrary stages, strings or numeric payloads',
+    () async {
+      await log.recordLan('lan.host_exit', 'exit', metrics: {'exitCode': -15});
+      final file = File(path.join(diagnostics.path, 'problems.jsonl'));
+      final entry =
+          jsonDecode((await file.readAsLines()).single) as Map<String, dynamic>;
+      entry['message'] = secret;
+      entry['metrics'] = {
+        'exitCode': 3221225477,
+        'durationMs': secret,
+        secret: 123,
+      };
+      await file.writeAsString('${jsonEncode(entry)}\n');
+      await file.writeAsString(
+        '${jsonEncode({...entry, 'stage': secret})}\n',
+        mode: FileMode.append,
+      );
+      await file.writeAsString(
+        '${jsonEncode({...entry, 'operation': secret})}\n',
+        mode: FileMode.append,
+      );
+      final rows = (await exported()).skip(1).toList();
+      expect(rows, hasLength(1));
+      expect(rows.single['metrics'], {'exitCode': 3221225477});
+      expect(jsonEncode(rows), isNot(contains(secret)));
+    },
+  );
+
+  test(
     'numeric domain reason survives export without exposing its message',
     () async {
       await log.record(

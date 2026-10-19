@@ -228,6 +228,14 @@ class LanController extends ChangeNotifier {
   Future<void> initialize() => _exclusive(() async {
     if (_configuration != null) return;
     _configuration = await _settings.read();
+    reportLan(
+      'lan.initialize',
+      'initialize',
+      metrics: {
+        'mode': _configuration!.mode.index,
+        'paired': _configuration!.deviceToken?.isNotEmpty == true ? 1 : 0,
+      },
+    );
     if (clientOnly) {
       final paired =
           _configuration!.endpoint != null &&
@@ -426,10 +434,12 @@ class LanController extends ChangeNotifier {
     try {
       await _verifyConnection(waitForChanges: waitForChanges);
       _status = LanConnectionStatus.connected;
+      reportLan('lan.connection', 'connected');
       return;
     } catch (error, stackTrace) {
       reportProblem(error, stackTrace, operation: 'lan.connection');
       _status = LanConnectionStatus.disconnected;
+      reportLan('lan.connection', 'disconnected', error: error);
     }
     if (!recoverAddress) return;
     final saved = _configuration!.endpoint!;
@@ -447,6 +457,14 @@ class LanController extends ChangeNotifier {
               endpoint.certificateSha256 == saved.certificateSha256,
         )
         .firstOrNull;
+    reportLan(
+      'lan.address_recovery',
+      'address_match',
+      metrics: {
+        'hosts': discovered.length,
+        'matches': matching == null ? 0 : 1,
+      },
+    );
     if (matching == null ||
         (matching.address == saved.address && matching.port == saved.port)) {
       return;
@@ -458,9 +476,11 @@ class LanController extends ChangeNotifier {
       );
       await _verifyConnection();
       _status = LanConnectionStatus.connected;
+      reportLan('lan.address_recovery', 'address_changed');
     } catch (error, stackTrace) {
       reportProblem(error, stackTrace, operation: 'lan.connection');
       _status = LanConnectionStatus.disconnected;
+      reportLan('lan.address_recovery', 'address_changed', error: error);
     }
   }
 

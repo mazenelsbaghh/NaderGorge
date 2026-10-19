@@ -133,6 +133,14 @@ class ProblemLog {
     'diagnostics.copy_path',
     'diagnostics.export',
     'lan.initialize',
+    'lan.health',
+    'lan.pair',
+    'lan.tls',
+    'lan.discovery',
+    'lan.control',
+    'lan.request',
+    'lan.snapshot',
+    'lan.address_recovery',
     'lan.host_start',
     'lan.host_exit',
     'lan.connection',
@@ -193,6 +201,9 @@ class ProblemLog {
     'FileSystemException',
     'OSError',
     'SocketException',
+    'HandshakeException',
+    'TlsException',
+    'ProcessException',
     'HttpException',
     'TimeoutException',
     'FormatException',
@@ -334,6 +345,50 @@ class ProblemLog {
   };
   final _performanceLastAt = <String, DateTime>{};
   final _performanceRepeats = <String, int>{};
+  static const _lanStages = {
+    'initialize',
+    'spawn',
+    'ready',
+    'exit',
+    'config',
+    'identity',
+    'pairing_storage',
+    'tcp_bind',
+    'udp_bind',
+    'discovery',
+    'adapter',
+    'connect',
+    'certificate',
+    'response',
+    'http_status',
+    'receive',
+    'decode',
+    'snapshot',
+    'apply',
+    'complete',
+    'connected',
+    'disconnected',
+    'address_match',
+    'address_changed',
+  };
+  static const _lanMetrics = {
+    'durationMs',
+    'port',
+    'httpStatus',
+    'hosts',
+    'adapters',
+    'matches',
+    'paired',
+    'mode',
+    'pinMatches',
+    'requiresPairing',
+    'outcomeUnknown',
+    'expectedExit',
+    'repeats',
+  };
+  final _lanLastAt = <String, DateTime>{};
+  final _lanSignatures = <String, String>{};
+  final _lanRepeats = <String, int>{};
 
   String get directoryPath => _directory.path;
   String? get writeFailure => _failure.value;
@@ -415,6 +470,54 @@ class ProblemLog {
     for (final name in allowed)
       if (metrics[name] is int && (metrics[name] as int) >= 0)
         name: (metrics[name] as int).clamp(0, 86400000000),
+  };
+
+  /// Fixed stages and numeric metadata keep LAN traces safe to share with support.
+  Future<void> recordLan(
+    String operation,
+    String stage, {
+    Object? error,
+    Map<String, int> metrics = const {},
+  }) {
+    if (!_operations.contains(operation) ||
+        !operation.startsWith('lan.') ||
+        !_lanStages.contains(stage)) {
+      return Future<void>.value();
+    }
+    final errors = error == null ? null : _errorChain(error);
+    final safeMetrics = _safeLanMetrics(metrics);
+    final signature = jsonEncode([
+      stage,
+      errors,
+      {...safeMetrics}..remove('durationMs'),
+    ]);
+    final now = DateTime.now().toUtc();
+    final previous = _lanLastAt[operation];
+    if (_lanSignatures[operation] == signature &&
+        previous != null &&
+        now.difference(previous) < const Duration(seconds: 30)) {
+      _lanRepeats[operation] = (_lanRepeats[operation] ?? 0) + 1;
+      return Future<void>.value();
+    }
+    _lanLastAt[operation] = now;
+    _lanSignatures[operation] = signature;
+    final entry = _event('lan', operation)
+      ..['stage'] = stage
+      ..['outcome'] = error == null ? 'completed' : 'failed'
+      ..['metrics'] = {
+        ...safeMetrics,
+        'repeats': _lanRepeats.remove(operation) ?? 0,
+      };
+    if (errors != null) entry['errors'] = errors;
+    return _enqueue(() => _writeSafely(entry));
+  }
+
+  static Map<String, int> _safeLanMetrics(Map metrics) => {
+    ..._safeMetrics(metrics, _lanMetrics),
+    if (metrics['exitCode'] is int &&
+        (metrics['exitCode'] as int) >= -2147483648 &&
+        (metrics['exitCode'] as int) <= 4294967295)
+      'exitCode': metrics['exitCode'] as int,
   };
 
   Future<void> flush() => _tail;
@@ -613,6 +716,8 @@ class ProblemLog {
         DatabaseException() => current.getResultCode(),
         FileSystemException() => current.osError?.errorCode,
         SocketException() => current.osError?.errorCode,
+        TlsException() => current.osError?.errorCode,
+        ProcessException() => current.errorCode,
         OSError() => current.errorCode,
         _ => null,
       };
@@ -633,6 +738,9 @@ class ProblemLog {
     DatabaseException() => 'DatabaseException',
     FileSystemException() => 'FileSystemException',
     SocketException() => 'SocketException',
+    HandshakeException() => 'HandshakeException',
+    TlsException() => 'TlsException',
+    ProcessException() => 'ProcessException',
     HttpException() => 'HttpException',
     OSError() => 'OSError',
     TimeoutException() => 'TimeoutException',
@@ -673,7 +781,7 @@ class ProblemLog {
   static Map<String, Object?>? _sanitizedSavedEntry(Object? decoded) {
     if (decoded is! Map ||
         decoded['schema'] != 1 ||
-        !['session', 'error', 'performance'].contains(decoded['kind'])) {
+        !['session', 'error', 'performance', 'lan'].contains(decoded['kind'])) {
       return null;
     }
     final id = decoded['id'],
@@ -744,7 +852,24 @@ class ProblemLog {
         ),
       });
     }
-    if (decoded['kind'] == 'error') {
+    if (decoded['kind'] == 'lan') {
+      if (!_lanStages.contains(decoded['stage']) ||
+          !['completed', 'failed'].contains(decoded['outcome']) ||
+          operation is! String ||
+          !operation.startsWith('lan.') ||
+          !_operations.contains(operation)) {
+        return null;
+      }
+      entry.addAll({
+        'stage': decoded['stage'],
+        'outcome': decoded['outcome'],
+        'metrics': _safeLanMetrics(
+          decoded['metrics'] is Map ? decoded['metrics'] as Map : {},
+        ),
+      });
+    }
+    if (decoded['kind'] == 'error' ||
+        decoded['kind'] == 'lan' && decoded['outcome'] == 'failed') {
       final errors = decoded['errors'];
       if (errors is! List || errors.isEmpty) return null;
       entry['errors'] = errors

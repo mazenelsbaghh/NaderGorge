@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:massar_center/domain/models.dart';
+import 'package:massar_center/shared/problem_reporting.dart';
 import 'package:massar_center/lan/lan_transport.dart';
 import 'package:path/path.dart' as path;
 
@@ -30,7 +31,25 @@ class LanHostReady {
   );
   factory LanHostReady.fromJson(Map<String, dynamic> json) {
     if (json['ready'] != true || json['protocol'] != 1) {
-      throw const CenterException('تعذر تشغيل خدمة الربط المحلي.');
+      if (json['error'] == 'gateway_start_failed') {
+        reportLan(
+          'lan.host_start',
+          json['stage'] is String ? json['stage'] as String : 'ready',
+          error: CenterException(
+            'LAN gateway startup failed',
+            diagnosticCode: json['osCode'] is int
+                ? json['osCode'] as int
+                : null,
+          ),
+        );
+      }
+      throw CenterException(switch (json['stage']) {
+        'tcp_bind' || 'udp_bind' =>
+          'تعذر فتح منفذ الربط. اقفل نسخ مسار الأخرى على هذا الجهاز ثم شغّل السيرفر مجددًا. لو استمرت المشكلة صدّر سجل الربط.',
+        'identity' || 'pairing_storage' =>
+          'تعذر قراءة أو حفظ هوية الربط. صدّر سجل الربط لمراجعة صلاحيات ملفات البرنامج.',
+        _ => 'تعذر تشغيل خدمة الربط المحلي. صدّر سجل الربط لمعرفة السبب.',
+      });
     }
     final ready = LanHostReady(
       hostId: json['hostId'] as String,
@@ -77,15 +96,18 @@ class LanHostProcess {
       );
     }
     _starting = true;
+    final watch = Stopwatch()..start();
+    var stage = 'spawn';
     try {
       final child = await Process.start(
         executablePath,
         const [],
         runInShell: false,
       );
+      stage = 'ready';
       _process = child;
       final ready = Completer<LanHostReady>();
-      _watchExit(child, ready);
+      _watchExit(child);
       unawaited(child.stderr.drain<void>());
       final output = child.stdout
           .transform(utf8.decoder)
@@ -105,7 +127,9 @@ class LanHostProcess {
               } on Object catch (error, stackTrace) {
                 ready.completeError(
                   CenterException(
-                    'تعذر قراءة حالة خدمة الربط المحلي.',
+                    error is CenterException
+                        ? error.message
+                        : 'تعذر قراءة حالة خدمة الربط المحلي.',
                     cause: error,
                     stackTrace: stackTrace,
                   ),
@@ -119,6 +143,16 @@ class LanHostProcess {
                     'تعذر قراءة حالة خدمة الربط المحلي.',
                     cause: error,
                     stackTrace: stackTrace,
+                  ),
+                );
+              }
+            },
+            onDone: () {
+              // stdout carries the final startup reason before the child exits.
+              if (!ready.isCompleted) {
+                ready.completeError(
+                  const CenterException(
+                    'توقفت خدمة الربط المحلي قبل بدء الاتصال.',
                   ),
                 );
               }
@@ -145,11 +179,26 @@ class LanHostProcess {
           throw const CenterException('توقفت خدمة الربط المحلي أثناء تشغيلها.');
         }
         _control = LanTransport(started.endpoint, upstreamSecret);
+        await _control!.health();
+        reportLan(
+          'lan.host_start',
+          'ready',
+          metrics: {
+            'port': started.port,
+            'durationMs': watch.elapsedMilliseconds,
+          },
+        );
         return started;
       } finally {
         await output.cancel();
       }
     } on Object catch (error, stackTrace) {
+      reportLan(
+        'lan.host_start',
+        stage,
+        error: error,
+        metrics: {'durationMs': watch.elapsedMilliseconds, 'port': port},
+      );
       await stop();
       if (error is CenterException) rethrow;
       throw CenterException(
@@ -162,18 +211,24 @@ class LanHostProcess {
     }
   }
 
-  void _watchExit(Process child, Completer<LanHostReady> ready) {
+  void _watchExit(Process child) {
     unawaited(
       child.exitCode.then((code) {
+        reportLan(
+          'lan.host_exit',
+          'exit',
+          error: _stopping == null
+              ? const CenterException('LAN child exited unexpectedly')
+              : null,
+          metrics: {
+            'exitCode': code,
+            'expectedExit': _stopping != null ? 1 : 0,
+          },
+        );
         if (identical(_process, child)) {
           _process = null;
           _control?.close();
           _control = null;
-        }
-        if (!ready.isCompleted) {
-          ready.completeError(
-            const CenterException('توقفت خدمة الربط المحلي قبل بدء الاتصال.'),
-          );
         }
         if (!_exitCodes.isClosed) _exitCodes.add(code);
       }),

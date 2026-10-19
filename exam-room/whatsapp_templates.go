@@ -12,6 +12,25 @@ var fixedAttendancePhrase = regexp.MustCompile(`(?:^|\s)حضر\s+(?:المحاض
 var parentFixedAttendancePhrase = regexp.MustCompile(`(?:^|\s)حضر\s+\{\{`)
 var fixedAbsencePhrase = regexp.MustCompile(`(?:^|\s)(?:لم\s+يحضر|غائب\s+عن)\s+(?:المحاضرة|الحصة)(?:\s|$)`)
 
+func templateMonthValue(template, field M, month string) string {
+	parts, _ := templateComponents(template)
+	text := str(parts[strings.ToUpper(str(field["scope"]))]["text"])
+	prefix := regexp.MustCompile(`الشهر(\s*)\{\{\s*` + regexp.QuoteMeta(str(field["position"])) + `\s*\}\}`)
+	match := prefix.FindStringSubmatch(text)
+	if match == nil {
+		return month
+	}
+	month = strings.TrimSpace(month)
+	if strings.HasPrefix(month, "الشهر ") {
+		month = strings.TrimSpace(strings.TrimPrefix(month, "الشهر "))
+	}
+	// Some approved templates join the fixed word directly to the placeholder.
+	if month != "" && match[1] == "" {
+		return " " + month
+	}
+	return month
+}
+
 func templateHomeworkValue(template M, value string) string {
 	if name := str(template["name"]); name != "parent_follow_center" && name != "parent__follow_center" {
 		return value

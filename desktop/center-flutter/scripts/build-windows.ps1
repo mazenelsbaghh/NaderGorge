@@ -213,6 +213,16 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "LAN gateway compilation failed." }
     }
     finally { Pop-Location }
+    $PreviousLanTestExecutable = $env:MASSAR_LAN_TEST_EXECUTABLE
+    try {
+        $env:MASSAR_LAN_TEST_EXECUTABLE = Join-Path $ReleaseDirectory 'massar-lan-host.exe'
+        & flutter test test/lan_services_test.dart test/lan_background_refresh_test.dart test/lan_snapshot_transfer_test.dart test/client_only_startup_test.dart --reporter expanded | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows host/client LAN integration checks failed.' }
+    }
+    finally { $env:MASSAR_LAN_TEST_EXECUTABLE = $PreviousLanTestExecutable }
+    if (-not $ClientOnly) {
+        & (Join-Path $PSScriptRoot 'tests/test-lan-firewall-windows.ps1') -GatewayExecutable (Join-Path $ReleaseDirectory 'massar-lan-host.exe')
+    }
     $ExamRuntime = Build-ExamRuntime $ExamRoot $ReleaseDirectory $NativeVerification $AppVersion
     Copy-VisualCppRuntime $ReleaseDirectory
     $Manifest = [ordered]@{
@@ -230,6 +240,14 @@ try {
         seedSha256 = if ($ClientOnly) { $null } else { (Get-FileHash $SeedSource -Algorithm SHA256).Hash.ToLowerInvariant() }
     }
     $Manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ReleaseDirectory "build-manifest.json") -Encoding utf8
+    foreach ($Helper in @('repair-lan-firewall.ps1', 'repair-lan-firewall.cmd')) {
+        $Target = Join-Path $ReleaseDirectory $Helper
+        if ($ClientOnly) {
+            if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target }
+        } else {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot $Helper) -Destination $Target
+        }
+    }
     Assert-RunnerIdentity
     Assert-NoRuntimeData $ReleaseDirectory
     $Destination = Join-Path $AppRoot $OutputDirectory

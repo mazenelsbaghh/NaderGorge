@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../shared/performance_trace.dart';
+import '../shared/problem_reporting.dart';
 import 'lan_snapshot_transfer.dart';
 import 'dart:io';
 
@@ -81,10 +82,21 @@ class LanTransport {
   LanTransport(this.endpoint, this.deviceToken) {
     _client = HttpClient(context: SecurityContext(withTrustedRoots: false));
     _client.connectionTimeout = const Duration(seconds: 8);
-    _client.badCertificateCallback = (certificate, host, port) =>
-        host == endpoint.address &&
-        port == endpoint.port &&
-        endpoint.verify(certificate);
+    _client.badCertificateCallback = (certificate, host, port) {
+      final matches =
+          host == endpoint.address &&
+          port == endpoint.port &&
+          endpoint.verify(certificate);
+      reportLan(
+        'lan.tls',
+        'certificate',
+        error: matches
+            ? null
+            : const CenterException('LAN certificate rejected'),
+        metrics: {'pinMatches': matches ? 1 : 0, 'port': endpoint.port},
+      );
+      return matches;
+    };
   }
 
   final LanEndpoint endpoint;
@@ -104,6 +116,11 @@ class LanTransport {
 
   void _verifyIdentity(Map<String, dynamic> response) {
     if (response['protocol'] != 1 || response['hostId'] != endpoint.hostId) {
+      reportLan(
+        'lan.connection',
+        'identity',
+        error: const CenterException('LAN host identity mismatch'),
+      );
       throw const CenterException(
         'هوية جهاز السنتر لا تطابق الجهاز المحفوظ. أعد الربط بعد مراجعة الجهاز.',
       );
@@ -182,10 +199,16 @@ class LanTransport {
       path == '/api/command' ? 'lan.command' : 'lan.refresh',
       budgetMs: metadata.waitForChanges ? 15000 : 300,
     );
+    final watch = Stopwatch()..start();
+    final operation = _diagnosticOperation(path);
+    var stage = 'connect';
+    Object? failure;
+    final metrics = <String, int>{'port': endpoint.port};
     HttpClientRequest? waitingRequest;
     try {
       final request = await _client.openUrl(method, endpoint.uri(path));
       trace.stage('connect');
+      stage = 'response';
       if (metadata.waitForChanges) {
         waitingRequest = request;
         _stateWait = request;
@@ -214,8 +237,10 @@ class LanTransport {
       final response = await request.close().timeout(
         const Duration(seconds: 20),
       );
+      metrics['httpStatus'] = response.statusCode;
       trace.stage('response');
       if (response.statusCode >= 300 && response.statusCode < 400) {
+        stage = 'http_status';
         await response.drain<void>();
         if (path == '/api/command') {
           throw const LanConnectionException(
@@ -225,6 +250,7 @@ class LanTransport {
         }
         throw const CenterException('تم رفض تحويل الاتصال إلى جهاز آخر.');
       }
+      stage = 'receive';
       final bytes = BytesBuilder(copy: false);
       await for (final chunk in response.timeout(const Duration(seconds: 20))) {
         if (bytes.length + chunk.length > maxResponseBytes) {
@@ -236,6 +262,7 @@ class LanTransport {
         bytes.add(chunk);
       }
       if (response.statusCode >= 500) {
+        stage = 'http_status';
         throw LanConnectionException(
           path == '/api/command'
               ? 'تعذر التأكد من نتيجة العملية على جهاز السنتر. راجع سجل الطالب قبل محاولة التسجيل أو الدفع من جديد.'
@@ -246,6 +273,7 @@ class LanTransport {
       trace.stage('receive');
       trace.counts['bytes'] = bytes.length;
       final received = bytes.takeBytes();
+      stage = 'decode';
       final decoded = received.length > 256 * 1024
           ? await compute(_decodeLanResponse, received)
           : _decodeLanResponse(received);
@@ -254,7 +282,9 @@ class LanTransport {
         throw const FormatException('Invalid LAN response');
       }
       if (response.statusCode == 401) {
+        stage = 'http_status';
         final requiresPairing = decoded['error'] == 'device_not_paired';
+        metrics['requiresPairing'] = requiresPairing ? 1 : 0;
         throw LanAuthorizationException(
           requiresPairing
               ? 'هذا الجهاز غير مربوط أو تم إلغاء ربطه. أعد الربط من جهاز السنتر.'
@@ -263,6 +293,7 @@ class LanTransport {
         );
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        stage = 'http_status';
         const messages = {
           'pairing_rejected': 'كود الربط غير صحيح أو انتهت صلاحيته.',
           'pairing_rate_limited':
@@ -282,11 +313,17 @@ class LanTransport {
         );
       }
       if (decoded.containsKey('snapshotTransfer')) {
+        stage = 'snapshot';
         if (path.startsWith('/api/state-chunk/')) {
           throw const FormatException('Nested snapshot transfer');
         }
         try {
-          return await _readSnapshotTransfer(decoded, metadata.staffSession);
+          final snapshot = await _readSnapshotTransfer(
+            decoded,
+            metadata.staffSession,
+          );
+          stage = 'complete';
+          return snapshot;
         } on LanAuthorizationException {
           rethrow;
         } catch (error, stack) {
@@ -298,11 +335,13 @@ class LanTransport {
           );
         }
       }
+      stage = 'complete';
       return decoded;
-    } on CenterException {
+    } on CenterException catch (error) {
+      failure = error;
       rethrow;
     } on Object catch (error, stackTrace) {
-      throw LanConnectionException(
+      final connectionFailure = LanConnectionException(
         path == '/api/command'
             ? 'انقطع الاتصال؛ لم يمكن التأكد من نتيجة العملية. راجع سجل الطالب قبل محاولة التسجيل أو الدفع من جديد.'
             : 'تعذر الاتصال بجهاز السنتر. تأكد أن الجهاز والشبكة يعملان.',
@@ -310,11 +349,30 @@ class LanTransport {
         cause: error,
         stackTrace: stackTrace,
       );
+      failure = connectionFailure;
+      throw connectionFailure;
     } finally {
+      metrics['durationMs'] = watch.elapsedMilliseconds;
+      if (failure is LanConnectionException) {
+        metrics['outcomeUnknown'] = failure.outcomeUnknown ? 1 : 0;
+      }
+      reportLan(operation, stage, error: failure, metrics: metrics);
       if (identical(_stateWait, waitingRequest)) _stateWait = null;
-      trace.finish();
+      trace.finish(failed: failure != null);
     }
   }
+
+  static String _diagnosticOperation(String path) => switch (path) {
+    '/health' => 'lan.health',
+    '/pair' => 'lan.pair',
+    '/api/login' => 'lan.login',
+    '/api/logout' => 'lan.logout',
+    '/api/state' => 'lan.refresh',
+    '/api/command' || '/api/cancel-command' => 'lan.command',
+    _ when path.startsWith('/api/state-chunk/') => 'lan.snapshot',
+    _ when path.startsWith('/control/') => 'lan.control',
+    _ => 'lan.request',
+  };
 
   Future<Map<String, dynamic>> _readSnapshotTransfer(
     Map<String, dynamic> envelope,

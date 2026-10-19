@@ -1,3 +1,4 @@
+import '../domain/homework_status.dart';
 import '../domain/models.dart';
 import '../shared/formatters.dart';
 import 'center_reports.dart';
@@ -117,12 +118,14 @@ abstract final class CenterWhatsAppReports {
         'maximum': examRecord?.maxScoreKnown == true
             ? examRecord!.maxScore
             : null,
-        'homework': homework == null && !legacyHomework
-            ? 'لم يحدد واجب'
-            : homeworkLabel(
-                homeworkRecords[student.id]?.homework ??
-                    HomeworkStatus.notReviewed,
-              ),
+        'homework': homeworkLabel(
+          effectiveHomeworkStatus(
+            homeworkRecords[student.id]?.homework,
+            attended:
+                presence == AttendanceStatus.present ||
+                presence == AttendanceStatus.makeup,
+          ),
+        ),
         'attendance': presence == null
             ? 'لم يُسجل حضور'
             : attendanceLabel(presence),
@@ -149,7 +152,7 @@ abstract final class CenterWhatsAppReports {
             '${messages.where((row) => row['score'] != null).length}',
       },
       caption:
-          'حالة الحضور والواجب كما هي مسجلة. عدم تسجيل الحضور لا يعني الغياب، والدرجة الفارغة لا تعني صفرًا.',
+          'الحاضر والمعوّض يُعتبر عامل الواجب تلقائيًا ما لم تُسجل له حالة أخرى. عدم تسجيل الحضور لا يعني الغياب، والدرجة الفارغة لا تعني صفرًا.',
     );
   }
 

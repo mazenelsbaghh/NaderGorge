@@ -55,15 +55,15 @@ type pairedDeviceKey struct{}
 
 func newGateway(config Config) (*Gateway, error) {
 	if err := config.validate(); err != nil {
-		return nil, err
+		return nil, &startupError{"config", err}
 	}
 	identity, err := loadIdentity(config.DataDir)
 	if err != nil {
-		return nil, err
+		return nil, &startupError{"identity", err}
 	}
 	pairing, err := loadPairing(config.DataDir)
 	if err != nil {
-		return nil, err
+		return nil, &startupError{"pairing_storage", err}
 	}
 	gateway := &Gateway{config: config, identity: identity, pairing: pairing}
 	gateway.configureProxy()
@@ -120,13 +120,13 @@ func (g *Gateway) configureProxy() {
 func (g *Gateway) start() (Ready, error) {
 	listener, err := net.Listen("tcp4", net.JoinHostPort("0.0.0.0", portText(configuredPort(g.config.Port, defaultPort))))
 	if err != nil {
-		return Ready{}, err
+		return Ready{}, &startupError{"tcp_bind", err}
 	}
 	g.listener = listener
 	discovery, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero, Port: configuredPort(g.config.DiscoveryPort, defaultDiscoveryPort)})
 	if err != nil {
 		listener.Close()
-		return Ready{}, err
+		return Ready{}, &startupError{"udp_bind", err}
 	}
 	g.discovery = discovery
 	go g.serveDiscovery()

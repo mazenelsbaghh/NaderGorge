@@ -8,6 +8,7 @@ import 'package:massar_center/lan/lan_discovery.dart';
 import 'package:massar_center/lan/lan_host_process.dart';
 import 'package:massar_center/lan/lan_settings.dart';
 import 'package:massar_center/lan/lan_transport.dart';
+import 'package:massar_center/shared/problem_log.dart';
 
 void main() {
   Directory? buildDirectory;
@@ -48,6 +49,59 @@ void main() {
     directory = await Directory.systemTemp.createTemp('massar-lan-services-');
   });
   tearDown(() async => directory.delete(recursive: true));
+
+  for (final protocol in ['tcp', 'udp']) {
+    test(
+      'occupied $protocol port exports gateway startup stage and OS cause',
+      () async {
+        final tcp = protocol == 'tcp'
+            ? await ServerSocket.bind(InternetAddress.anyIPv4, 0)
+            : null;
+        final tcpConnections = tcp?.listen((socket) => socket.destroy());
+        final udp = protocol == 'udp'
+            ? await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0)
+            : null;
+        final log = ProblemLog(Directory('${directory.path}/diagnostics'));
+        final gateway = LanHostProcess(executablePath: executable);
+        ProblemLog.current = log;
+        addTearDown(() async {
+          await gateway.dispose();
+          await tcpConnections?.cancel();
+          await tcp?.close();
+          udp?.close();
+          ProblemLog.current = null;
+          await log.flush();
+        });
+        await expectLater(
+          gateway.start(
+            dataDirectory: directory.path,
+            upstreamUrl: 'http://127.0.0.1:1',
+            upstreamSecret: 'synthetic-upstream-secret-not-for-diagnostics',
+            name: 'Private host name',
+            port: tcp?.port ?? 0,
+            discoveryPort: udp?.port ?? 0,
+          ),
+          throwsA(isA<CenterException>()),
+        );
+        final report = await log.exportText();
+        final events = const LineSplitter()
+            .convert(report)
+            .map((line) => jsonDecode(line) as Map<String, dynamic>);
+        final failure = events.singleWhere(
+          (event) => event['stage'] == '${protocol}_bind',
+        );
+        expect(failure['outcome'], 'failed');
+        expect(failure['errors'][0]['code'], isPositive);
+        for (final secret in [
+          directory.path,
+          'Private host name',
+          'synthetic-upstream-secret',
+        ]) {
+          expect(report, isNot(contains(secret)));
+        }
+      },
+    );
+  }
 
   test(
     'settings restart keeps identity and serial saves preserve paired credentials',
@@ -331,8 +385,53 @@ void main() {
     );
 
     test(
+      'host moved to another Arabic folder keeps paired client access',
+      () async {
+        // October 2026: each host update was extracted into a different folder.
+        final newFolder = await Directory(
+          '${directory.path}/نسخة الهوست الجديدة',
+        ).create();
+        final relocated = await File(executable).copy(
+          '${newFolder.path}/massar-lan-host${Platform.isWindows ? '.exe' : ''}',
+        );
+        if (!Platform.isWindows) {
+          expect(
+            (await Process.run('chmod', ['700', relocated.path])).exitCode,
+            0,
+          );
+        }
+        await gateway.dispose();
+        gateway = LanHostProcess(executablePath: relocated.path);
+        final restarted = await gateway.start(
+          dataDirectory: directory.path,
+          upstreamUrl: 'http://127.0.0.1:${upstream.port}',
+          upstreamSecret: secret,
+          name: ready.name,
+          port: ready.port,
+          discoveryPort: discoveryPort,
+        );
+        expect(restarted.hostId, ready.hostId);
+        expect(restarted.certificateSha256, ready.certificateSha256);
+        expect((await paired!.get('/api/state'))['ok'], true);
+        expect(lastDevice, 'test-device');
+        final discovered = await LanDiscovery.search(
+          timeout: const Duration(milliseconds: 250),
+          discoveryPort: discoveryPort,
+          targets: [InternetAddress.loopbackIPv4],
+        );
+        expect(discovered.single.hostId, ready.hostId);
+      },
+    );
+
+    test(
       'wrong pin and redirects cannot send credentials to another host',
       () async {
+        final log = ProblemLog(Directory('${directory.path}/diagnostics'));
+        ProblemLog.current = log;
+        addTearDown(() async {
+          ProblemLog.current = null;
+          await log.flush();
+        });
         final wrong = LanTransport(
           LanEndpoint(
             hostId: ready.hostId,
@@ -370,6 +469,43 @@ void main() {
         );
         expect(redirectVisits, 0);
         expect(commandCount, 0);
+        final report = await log.exportText();
+        final events = const LineSplitter()
+            .convert(report)
+            .map((line) => jsonDecode(line) as Map<String, dynamic>)
+            .toList();
+        expect(
+          events,
+          contains(
+            isA<Map>()
+                .having((row) => row['operation'], 'TLS check', 'lan.tls')
+                .having(
+                  (row) => row['metrics']['pinMatches'],
+                  'rejected pin',
+                  0,
+                ),
+          ),
+        );
+        expect(
+          events,
+          contains(
+            isA<Map>()
+                .having((row) => row['stage'], 'HTTP failure', 'http_status')
+                .having(
+                  (row) => row['metrics']['httpStatus'],
+                  'gateway rejection',
+                  502,
+                ),
+          ),
+        );
+        for (final credential in [
+          'secret-never-forwarded',
+          ready.hostId,
+          ready.certificateSha256,
+          secret,
+        ]) {
+          expect(report, isNot(contains(credential)));
+        }
       },
     );
 
