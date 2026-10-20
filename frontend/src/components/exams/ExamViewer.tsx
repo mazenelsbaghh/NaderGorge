@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useId, useRef } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +31,7 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { PartialAssessmentResultSummary } from '@/components/assessment/PartialAssessmentResultSummary';
 import { normalizeQuestionRichText } from '@/lib/question-text';
+import { useExamDraft } from '@/hooks/use-exam-draft';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -742,7 +743,7 @@ function QuestionCard({
                 onAnswer(q.id, selectedText);
               }
             }}
-            disabled={false}
+            disabled={loading}
           />
         ) : q.type === 'Essay' ? (
           <div>
@@ -754,6 +755,7 @@ function QuestionCard({
               className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
               placeholder="اكتب إجابتك هنا..."
               value={answers[q.id] || ''}
+              disabled={loading}
               onChange={(e) => onAnswer(q.id, e.target.value)}
             />
           </div>
@@ -776,6 +778,7 @@ function QuestionCard({
                     name={`q-${q.id}`}
                     value={opt.id}
                     checked={isSelected}
+                    disabled={loading}
                     onChange={() => onAnswer(q.id, opt.id)}
                     className="sr-only"
                     aria-label={opt.text}
@@ -827,9 +830,10 @@ export function ExamViewer({
   resultReturnHref?: string;
   resultReturnLabel?: string;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const draft = useExamDraft(examId, attempt);
+  const answers = draft.answers;
+  const draftRestored = draft.ready;
   const draftId = `${attempt.attemptId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
-  const [draftRestored, setDraftRestored] = useState(false);
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false);
@@ -854,9 +858,7 @@ export function ExamViewer({
     return () => setFocusMode(false);
   }, [setFocusMode]);
 
-  // Restore draft answers from localStorage
   useEffect(() => {
-    setAnswers({});
     setSkipped(new Set());
     setHiddenOptions(new Set());
     setHasUsedFiftyFifty(false);
@@ -867,17 +869,6 @@ export function ExamViewer({
     setTotalScore(attempt.totalScore);
     setError('');
     setResult(null);
-
-    try {
-      const saved = localStorage.getItem('exam_answers_' + draftId);
-      if (saved) {
-        setAnswers(JSON.parse(saved));
-      }
-      localStorage.removeItem('exam_audio_answers_' + draftId);
-    } catch {
-      // ignore JSON parse or localStorage errors
-    }
-    setDraftRestored(true);
   }, [attempt.totalScore, draftId]);
 
   const [orderedQuestions, setOrderedQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
@@ -887,32 +878,16 @@ export function ExamViewer({
     }
   }, [attempt.questions]);
 
-  const handleAnswer = useCallback((qId: string, value: string) => {
-    if (!value) {
-      setAnswers((prev) => {
-        const next = { ...prev };
-        delete next[qId];
-        try {
-          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
-        } catch { /* ignore */ }
-        return next;
-      });
-    } else {
-      setAnswers((prev) => {
-        const next = { ...prev, [qId]: value };
-        try {
-          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
-        } catch { /* ignore */ }
-        return next;
-      });
-    }
-  }, [draftId]);
+  const handleAnswer = (questionId: string, answer: string) => {
+    if (!submittingRef.current && !loading) draft.edit(questionId, answer);
+  };
 
   const handleSwap = async (qId: string) => {
     if (hasUsedSwap) return;
     try {
       setLoading(true);
       setError('');
+      await draft.flush();
       const res = await examService.swapQuestion(examId, attempt.attemptId, qId);
       if (res.data.data) {
         setHasUsedSwap(true);
@@ -926,14 +901,7 @@ export function ExamViewer({
            return next;
         });
 
-        setAnswers(prev => {
-          const next = {...prev};
-          delete next[qId];
-          try {
-            localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
-          } catch { /* ignore */ }
-          return next;
-        });
+        draft.edit(qId, '');
         setSkipped(prev => { const next = new Set(prev); next.delete(qId); return next; });
       }
     } catch (err: unknown) {
@@ -973,14 +941,16 @@ export function ExamViewer({
     });
 
     try {
-      const res = await examService.submitExam(examId, attempt.attemptId, submissions, attempt.revisionId);
-      try {
-        localStorage.removeItem('exam_answers_' + draftId);
-        localStorage.removeItem('exam_audio_answers_' + draftId);
-      } catch { /* ignore */ }
+      const savedVersion = await draft.flush();
+      const res = await examService.submitExam(examId, attempt.attemptId, submissions, attempt.revisionId, savedVersion);
+      draft.finish();
       setResult(res.data.data);
     } catch (err: unknown) {
-      const apiError = err as { response?: { data?: { message?: string } } };
+      const apiError = err as { response?: { data?: { message?: string; errors?: string[] } } };
+      if (apiError.response?.data?.errors?.includes('EXAM_DRAFT_CONFLICT')) {
+        // Refresh publishes its own recovery state while preserving any unsaved local edits.
+        await draft.refresh().catch(() => {});
+      }
       setError(apiError.response?.data?.message || 'تعذر تأكيد تسليم الامتحان. إجاباتك ما زالت موجودة؛ تحقق من اتصالك ثم حاول مرة أخرى.');
     } finally {
       submittingRef.current = false;
@@ -1026,6 +996,24 @@ export function ExamViewer({
           />
         </div>
       )}
+
+      <div className="mb-4 rounded-2xl border border-border bg-card p-4 text-sm" role="status" aria-live="polite">
+        {draft.status === 'loading' && 'جارٍ استرجاع إجاباتك المحفوظة…'}
+        {draft.status === 'pending' && 'إجاباتك تنتظر الحفظ…'}
+        {draft.status === 'saving' && 'جارٍ حفظ إجاباتك على السيرفر…'}
+        {draft.status === 'saved' && (draft.savedAt ? 'تم حفظ إجاباتك على السيرفر' : 'الحفظ التلقائي جاهز؛ ابدأ الحل')}
+        {draft.status === 'offline' && (draft.message || 'تعذر تأكيد الحفظ. سنعيد المحاولة عند عودة الاتصال.')}
+        {draft.status === 'closed' && (draft.message || 'هذه المحاولة أُغلقت. أعد فتح الامتحان لمراجعة حالتها.')}
+        {draft.status === 'conflict' && (
+          <div className="space-y-3">
+            <p>توجد إجابات أحدث من صفحة أو جهاز آخر. اختر النسخة التي تريد المتابعة بها.</p>
+            <button type="button" className="min-h-11 rounded-xl border px-3" onClick={draft.useServerAnswers}>استخدم المحفوظ على السيرفر</button>{' '}
+            <button type="button" className="min-h-11 rounded-xl border px-3" onClick={draft.keepPageAnswers}>احفظ إجابات هذه الصفحة</button>
+          </div>
+        )}
+        {draft.status === 'offline' && <button type="button" onClick={draft.retry} className="ms-3 min-h-11 underline">إعادة محاولة الحفظ</button>}
+        {draft.localWarning && <p className="mt-2">تعذر حفظ نسخة على هذا الجهاز؛ تأكد من ظهور تأكيد الحفظ على السيرفر قبل المغادرة.</p>}
+      </div>
 
       {/* ─── Exam header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
@@ -1144,7 +1132,7 @@ export function ExamViewer({
               revealedHintId={revealedHintId}
               examId={examId}
               attemptId={attempt.attemptId}
-              loading={loading}
+              loading={loading || !draftRestored || draft.status === 'closed'}
               onAnswer={handleAnswer}
               onSkip={() => {
                 setSkipped((prev) => new Set([...prev, currentQ.id]));

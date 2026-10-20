@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
+using NaderGorge.Application.Features.Exams;
+using NaderGorge.Application.Common;
 using System.Security.Claims;
 using NaderGorge.API.Filters;
 using NaderGorge.API.Extensions;
@@ -79,14 +81,37 @@ public class ExamsController : ControllerBase
 
     [HttpPost("{id:guid}/submit/{attemptId:guid}")]
     [Idempotent]
-    public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers, [FromQuery] Guid? revisionId = null)
+    public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers, [FromQuery] Guid? revisionId = null, [FromQuery] long? draftVersion = null)
     {
-        var response = await _mediator.Send(new SubmitExamCommand(id, attemptId, GetUserId(), answers, revisionId));
+        var response = await _mediator.Send(new SubmitExamCommand(id, attemptId, GetUserId(), answers, revisionId, draftVersion));
 
         if (!response.Success)
             return BadRequest(response); // Exam not found handled via fail
 
         return Ok(response);
+    }
+
+    [HttpGet("{id:guid}/attempts/{attemptId:guid}/draft")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> GetDraft(Guid id, Guid attemptId, [FromQuery] Guid? revisionId, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new GetExamDraftQuery(new(id, attemptId, GetUserId(), revisionId)), ct);
+        return DraftResponse(response);
+    }
+
+    [HttpPut("{id:guid}/attempts/{attemptId:guid}/draft")]
+    public async Task<IActionResult> SaveDraft(Guid id, Guid attemptId, [FromBody] SaveExamDraftRequest draft, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new SaveExamDraftCommand(new(id, attemptId, GetUserId(), draft.RevisionId), draft), ct);
+        return DraftResponse(response);
+    }
+
+    private IActionResult DraftResponse(ApiResponse<ExamDraftDto> response)
+    {
+        if (response.Success) return Ok(response);
+        if (response.Errors?.Contains("NOT_FOUND") == true) return NotFound(response);
+        if (response.Errors?.Contains("EXAM_DRAFT_INVALID") == true) return BadRequest(response);
+        return Conflict(response);
     }
 
     [HttpGet("attempts/{attemptId:guid}/grading-status")]

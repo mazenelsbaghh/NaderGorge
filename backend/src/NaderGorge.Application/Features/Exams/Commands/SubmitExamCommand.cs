@@ -9,7 +9,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers, Guid? RevisionId = null) : IRequest<ApiResponse<ExamResultDto>>;
+public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers, Guid? RevisionId = null, long? DraftVersion = null) : IRequest<ApiResponse<ExamResultDto>>;
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
@@ -131,6 +131,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         {
             return await new Queries.GetExamAttemptResultQueryHandler(_db)
                 .Handle(new(request.AttemptId, request.UserId), ct);
+        }
+
+        if (request.DraftVersion.HasValue)
+        {
+            var saved = await ExamDraftState.Submission(_db, request,
+                AssessmentDefinitionSnapshot.FromExam(exam), ct);
+            if (!saved.Success) return ApiResponse<ExamResultDto>.Fail(saved.Message!, saved.Errors);
+            request = request with { Answers = saved.Data! };
         }
 
         var evaluationTimestamp = DateTime.UtcNow;

@@ -13273,6 +13273,33 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("student_exam_attempts", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamDraft", b =>
+                {
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RevisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AnswersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("LastMutationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AttemptId", "RevisionId");
+
+                    b.ToTable("student_exam_drafts", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentFacingAcademicScope", b =>
                 {
                     b.Property<Guid>("Id")
@@ -18829,6 +18856,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamDraft", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.StudentExamAttempt", "Attempt")
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attempt");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentFacingAcademicScope", b =>

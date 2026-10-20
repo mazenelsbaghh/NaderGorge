@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route, type WebSocketRoute } from '@playwright/test';
-import type { ActiveExamAttemptDto, ExamResultDto } from '../../src/services/exam-service';
+import type { ActiveExamAttemptDto, ExamResultDto, ExamDraftDto } from '../../src/services/exam-service';
 import type { StartHomeworkAttemptDto, HomeworkResultDto } from '../../src/services/homework-service';
 
 const assessmentId = '97000000-0000-0000-0000-000000000001';
@@ -12,6 +12,18 @@ async function studentSession(page: Page) {
     localStorage.setItem('user', JSON.stringify(authUser));
   }, user);
   await page.route('**/api/**', route => reply(route, []));
+  const drafts = new Map<string, ExamDraftDto>();
+  await page.route(/\/api\/exams\/[^/]+\/attempts\/[^/]+\/draft(?:\?.*)?$/, route => {
+    const key = new URL(route.request().url()).pathname;
+    let saved = drafts.get(key) ?? { version: 0, answers: {}, isClosed: false };
+    if (route.request().method() === 'PUT') {
+      const request = route.request().postDataJSON();
+      if (request.expectedVersion !== saved.version) return reply(route, saved, 409);
+      saved = { ...saved, version: saved.version + 1, answers: request.answers, lastMutationId: request.mutationId, savedAt: new Date().toISOString() };
+      drafts.set(key, saved);
+    }
+    return reply(route, saved);
+  });
   await page.route('**/api/student/welcome/claim', route => reply(route, null));
   await page.route('**/api/auth/session', route => reply(route, { user, authorizationVersion: 1 }));
   await page.route('**/api/public/settings', route => route.fulfill({ json: { maintenanceMode: false } }));
@@ -401,3 +413,86 @@ for (const [routeName, label] of [['exams', 'الامتحان'], ['homework', '�
     expect(starts).toBe(1);
   });
 }
+
+async function autosaveExam(page: Page) {
+  await studentSession(page);
+  const attempt = { ...examAttempt('autosave-attempt'), durationMinutes: undefined };
+  await page.route(`**/api/exams/${assessmentId}/latest-result`, route => reply(route, null, 404));
+  await page.route(`**/api/exams/${assessmentId}/start`, route => reply(route, attempt));
+  await page.goto(`/student/exams/${assessmentId}`);
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+  await expect(page.getByText('الحفظ التلقائي جاهز؛ ابدأ الحل', { exact: true })).toBeVisible();
+}
+
+test('autosaved answers survive reopening with all local exam copies removed', async ({ page }) => {
+  await autosaveExam(page);
+  await page.getByText('الإجابة الأولى', { exact: true }).click();
+  await expect(page.getByText('تم حفظ إجاباتك على السيرفر', { exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) if (key.startsWith('exam_')) localStorage.removeItem(key);
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'نعم، دخول الامتحان', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'الإجابة الأولى', exact: true })).toBeChecked();
+  await expect(page.getByText('تم حفظ إجاباتك على السيرفر', { exact: true })).toBeVisible();
+});
+
+test('offline edits remain visible and cannot submit until the server confirms them', async ({ page }) => {
+  await autosaveExam(page);
+  const draftUrl = `**/api/exams/${assessmentId}/attempts/autosave-attempt/draft`;
+  await page.route(draftUrl, route => route.abort('connectionfailed'));
+  let submissions = 0;
+  await page.route(`**/api/exams/${assessmentId}/submit/autosave-attempt*`, route => {
+    submissions++;
+    expect(new URL(route.request().url()).searchParams.get('draftVersion')).toBe('1');
+    return reply(route, { ...failedExam, attemptId: 'autosave-attempt' });
+  });
+  await page.getByText('الإجابة الثانية', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'إعادة محاولة الحفظ' })).toBeVisible();
+  await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'تعذر تأكيد تسليم' })).toBeVisible();
+  expect(submissions).toBe(0);
+  await expect(page.getByRole('radio', { name: 'الإجابة الثانية', exact: true })).toBeChecked();
+  await page.unroute(draftUrl);
+  await page.getByRole('button', { name: 'إعادة محاولة الحفظ' }).click();
+  await expect(page.getByText('تم حفظ إجاباتك على السيرفر', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'إعادة الامتحان', exact: true })).toBeVisible();
+  expect(submissions).toBe(1);
+});
+
+test('a newer answer from another page requires an explicit choice and is never overwritten silently', async ({ page }) => {
+  await autosaveExam(page);
+  let writes = 0;
+  await page.route(`**/api/exams/${assessmentId}/attempts/autosave-attempt/draft`, route => {
+    writes++;
+    return reply(route, { version: 1, answers: { 'question-1': 'option-2' }, isClosed: false, savedAt: new Date().toISOString() }, 409);
+  });
+  await page.getByText('الإجابة الأولى', { exact: true }).click();
+  await page.getByRole('button', { name: 'استخدم المحفوظ على السيرفر', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'الإجابة الثانية', exact: true })).toBeChecked();
+  await expect(page.getByText('تم حفظ إجاباتك على السيرفر', { exact: true })).toBeVisible();
+  expect(writes).toBe(1);
+});
+
+test('an unchanged old page refreshes newer server answers when submission rejects its version', async ({ page }) => {
+  await autosaveExam(page);
+  await page.getByText('الإجابة الأولى', { exact: true }).click();
+  await expect(page.getByText('تم حفظ إجاباتك على السيرفر', { exact: true })).toBeVisible();
+  await page.route(`**/api/exams/${assessmentId}/attempts/autosave-attempt/draft`, route =>
+    reply(route, { version: 2, answers: { 'question-1': 'option-2' }, isClosed: false, savedAt: new Date().toISOString() }));
+  let submissions = 0;
+  await page.route(`**/api/exams/${assessmentId}/submit/autosave-attempt*`, route => {
+    submissions++;
+    if (new URL(route.request().url()).searchParams.get('draftVersion') === '1')
+      return route.fulfill({ status: 400, json: { success: false, errors: ['EXAM_DRAFT_CONFLICT'], message: 'راجع الإجابات الأحدث قبل التسليم' } });
+    return reply(route, { ...failedExam, attemptId: 'autosave-attempt' });
+  });
+  await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'الإجابة الثانية', exact: true })).toBeChecked();
+  await expect(page.getByRole('alert').filter({ hasText: 'راجع الإجابات الأحدث' })).toBeVisible();
+  expect(submissions).toBe(1);
+  await page.getByRole('button', { name: 'تسليم وإنهاء', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'إعادة الامتحان', exact: true })).toBeVisible();
+  expect(submissions).toBe(2);
+});

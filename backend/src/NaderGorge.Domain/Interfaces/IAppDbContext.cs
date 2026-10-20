@@ -92,6 +92,7 @@ public interface IAppDbContext
     DbSet<ExamQuestion> ExamQuestions { get; }
     DbSet<StudentExamAttempt> StudentExamAttempts { get; }
     DbSet<StudentAnswer> StudentAnswers { get; }
+    DbSet<StudentExamDraft> StudentExamDrafts { get; }
     DbSet<EssaySubmission> EssaySubmissions { get; }
     DbSet<PlatformSetting> PlatformSettings { get; }
 

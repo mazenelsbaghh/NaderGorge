@@ -31,6 +31,7 @@ public class AppDbContext : DbContext, IAppDbContext
     }
 
     public DbSet<AutoRepairIncident> AutoRepairIncidents => Set<AutoRepairIncident>();
+    public DbSet<StudentExamDraft> StudentExamDrafts => Set<StudentExamDraft>();
     public DbSet<ExamWhatsAppDeliveryEvent> ExamWhatsAppDeliveryEvents => Set<ExamWhatsAppDeliveryEvent>();
     public DbSet<AutoRepairControl> AutoRepairControls => Set<AutoRepairControl>();
     public DbSet<AutoRepairLogReceipt> AutoRepairLogReceipts => Set<AutoRepairLogReceipt>();
@@ -1487,6 +1488,15 @@ public class AppDbContext : DbContext, IAppDbContext
         });
 
         // StudentExamAttempt
+        modelBuilder.Entity<StudentExamDraft>(e =>
+        {
+            e.ToTable("student_exam_drafts");
+            e.HasKey(d => new { d.AttemptId, d.RevisionId });
+            e.Property(d => d.AnswersJson).HasColumnType("jsonb");
+            e.Property(d => d.Version).IsConcurrencyToken();
+            e.HasOne(d => d.Attempt).WithMany().HasForeignKey(d => d.AttemptId);
+        });
+
         modelBuilder.Entity<StudentExamAttempt>(e =>
         {
             e.ToTable("student_exam_attempts");

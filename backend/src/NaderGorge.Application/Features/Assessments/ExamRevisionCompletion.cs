@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Exams.Commands;
+using NaderGorge.Application.Features.Exams;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -46,12 +47,19 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         {
             db.ClearTrackedChanges();
             await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, retryCt);
+            await ExamDraftState.Lock(db, new(request.ExamId, request.AttemptId, request.UserId, request.RevisionId), retryCt);
             var attempt = await db.StudentExamAttempts.Include(a => a.Answers).SingleOrDefaultAsync(a =>
                 a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, retryCt);
             var definition = ReadPending(attempt);
             if (definition is null || definition.CompletionStartedAt is null || request.RevisionId is null
                 || request.RevisionId != definition.RevisionId)
                 return ApiResponse<bool>.Fail("أعد فتح الامتحان لتحميل الأسئلة المطلوبة للاستكمال.");
+            if (request.DraftVersion.HasValue)
+            {
+                var saved = await ExamDraftState.Submission(db, request, definition, retryCt);
+                if (!saved.Success) return ApiResponse<bool>.Fail(saved.Message!, saved.Errors);
+                request = request with { Answers = saved.Data! };
+            }
             var required = definition.Revision!.Answers.Where(a => a.RequiresCompletion && !a.Excluded)
                 .Select(a => a.QuestionId).ToHashSet();
             if (request.Answers.Select(a => a.ExamQuestionId).Distinct().Count() != request.Answers.Count

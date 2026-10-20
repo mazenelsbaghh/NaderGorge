@@ -48,6 +48,21 @@ export interface AnswerSubmissionDto {
   selectedText?: string;
 }
 
+export interface ExamDraftDto {
+  version: number;
+  lastMutationId?: string | null;
+  savedAt?: string | null;
+  answers: Record<string, string>;
+  isClosed: boolean;
+}
+
+export interface SaveExamDraftRequest {
+  expectedVersion: number;
+  mutationId: string;
+  answers: Record<string, string>;
+  revisionId?: string | null;
+}
+
 export type PartialExamResultDto = PartialAssessmentResultDto;
 
 export interface ExamResultDto {
@@ -125,6 +140,14 @@ async function recoverSubmittedAttempt(attemptId: string, submissionError: unkno
 }
 
 export const examService = {
+  getDraft: (examId: string, attemptId: string, revisionId?: string | null) =>
+    apiClient.get<{ data: ExamDraftDto }>(`/exams/${examId}/attempts/${attemptId}/draft`, {
+      params: { revisionId }, suppressErrorToast: true, timeout: 15000,
+    }),
+  saveDraft: (examId: string, attemptId: string, draft: SaveExamDraftRequest) =>
+    apiClient.put<{ data: ExamDraftDto }>(`/exams/${examId}/attempts/${attemptId}/draft`, draft, {
+      suppressErrorToast: true, timeout: 15000,
+    }),
   useFiftyFifty: (examId: string, attemptId: string, questionId: string) =>
     apiClient.get<{ data: string[] }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`),
   swapQuestion: (examId: string, attemptId: string, questionId: string) =>
@@ -142,9 +165,9 @@ export const examService = {
     apiClient.get<{ data: ExamAttemptGradingStatusDto }>(`/exams/attempts/${attemptId}/grading-status`),
   getAttemptResult: (attemptId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/attempts/${attemptId}/result`),
-  submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[], revisionId?: string | null) => {
+  submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[], revisionId?: string | null, draftVersion?: number) => {
     const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers, {
-      params: { revisionId }, suppressErrorToast: true,
+      params: { revisionId, draftVersion }, suppressErrorToast: true,
     }).catch(error => recoverSubmittedAttempt(attemptId, error));
     if (response.data.data?.attemptId !== attemptId)
       throw new Error('تعذر تأكيد تسليم الامتحان. إجاباتك ما زالت موجودة؛ حاول مرة أخرى.');
