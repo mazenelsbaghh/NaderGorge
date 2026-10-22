@@ -22,6 +22,29 @@ export default function TeacherCodesPageClient() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [codeSearch, setCodeSearch] = useState<{
+    query: string;
+    status: "loading" | "success" | "error";
+    groups: CodeGroupDto[];
+  } | null>(null);
+  const [searchRetry, setSearchRetry] = useState(0);
+  const searchTerm = searchQuery.trim();
+
+  useEffect(() => {
+    if (!searchTerm) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setCodeSearch({ query: searchTerm, status: "loading", groups: [] });
+      void adminService.listCodeGroups({ search: searchTerm }).then((matches) => {
+        if (active) setCodeSearch({ query: searchTerm, status: "success", groups: matches ?? [] });
+      }).catch((error: unknown) => {
+        if (!active) return;
+        devConsole.error(error);
+        setCodeSearch({ query: searchTerm, status: "error", groups: [] });
+      });
+    }, 350);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [searchTerm, searchRetry]);
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
@@ -71,15 +94,22 @@ export default function TeacherCodesPageClient() {
   }, [packages]);
 
   const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups;
-    const q = searchQuery.toLowerCase().trim();
-    return groups.filter((g) => 
+    if (!searchTerm) return groups;
+    const q = searchTerm.toLowerCase();
+    const matches = codeSearch?.query === searchTerm && codeSearch.status === "success" ? codeSearch.groups : [];
+    const matchedIds = new Set(matches.map(group => group.id));
+    const candidates = new Map([...groups, ...matches].map(group => [group.id, group]));
+    return [...candidates.values()].filter((g) =>
+      matchedIds.has(g.id) ||
       g.name.toLowerCase().includes(q) || 
       g.id.toLowerCase().includes(q) ||
       (g.packageId && (packageNameMap[g.packageId] || g.packageId).toLowerCase().includes(q)) ||
       (g.lessonId && g.lessonId.toLowerCase().includes(q))
     );
-  }, [groups, searchQuery, packageNameMap]);
+  }, [groups, searchTerm, codeSearch, packageNameMap]);
+
+  const searchPending = Boolean(searchTerm && (codeSearch?.query !== searchTerm || codeSearch.status === "loading"));
+  const searchFailed = codeSearch?.query === searchTerm && codeSearch.status === "error";
 
   const totalCodes = groups.reduce((sum, group) => sum + group.codeCount, 0);
   const usedCodes = groups.reduce((sum, group) => sum + group.usedCount, 0);
@@ -135,16 +165,16 @@ export default function TeacherCodesPageClient() {
       align: "left",
       render: (g) => (
         <div className="flex items-center justify-end gap-2">
-          <Link href={`/teacher/codes/${g.id}`} passHref legacyBehavior>
-            <NeumorphButton
-              type="button"
-              intent="icon"
-              size="icon"
-              title="عرض التفاصيل والطباعة"
-            >
+          <NeumorphButton
+            asChild
+            intent="icon"
+            size="icon"
+            title="عرض التفاصيل والطباعة"
+          >
+            <Link href={`/teacher/codes/${g.id}`} aria-label={`فتح مجموعة ${g.name || "بدون اسم"}`}>
               <Eye className="h-5 w-5" />
-            </NeumorphButton>
-          </Link>
+            </Link>
+          </NeumorphButton>
         </div>
       ),
     },
@@ -182,16 +212,28 @@ export default function TeacherCodesPageClient() {
       <AdminSearchToolbar
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
+        placeholder="ابحث بالكود أو السيريال أو اسم المجموعة أو الباقة..."
       />
+
+      {searchPending && <p role="status" className="mb-4 text-sm text-[var(--admin-muted)]">جارٍ البحث في أكوادك…</p>}
+      {searchFailed && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-sm text-[var(--admin-text)]">
+          <span>تعذر البحث بالكود أو السيريال. أعد المحاولة.</span>
+          <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => setSearchRetry(retry => retry + 1)}>
+            إعادة المحاولة
+          </NeumorphButton>
+        </div>
+      )}
 
       {/* Code Groups Table */}
       <AdminDataTable
         data={filteredGroups}
         columns={groupColumns}
-        loading={loading}
+        loading={loading || (searchPending && filteredGroups.length === 0)}
         rowKey={(g) => g.id}
-        emptyMessage="لا توجد مجموعات أكواد للمدرس بعد."
+        emptyMessage={searchFailed ? "نتائج البحث بالكود أو السيريال غير متاحة الآن."
+          : searchTerm ? "لا توجد مجموعات تطابق البحث. أدخل الكود أو السيريال بالكامل."
+            : "لا توجد مجموعات أكواد للمدرس بعد."}
       />
     </TeacherPage>
   );
