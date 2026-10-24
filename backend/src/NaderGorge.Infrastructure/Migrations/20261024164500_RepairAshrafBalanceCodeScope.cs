@@ -51,7 +51,7 @@ public sealed class RepairAshrafBalanceCodeScope : Migration
                         WHERE "CodeGroupId" = group_id AND "IsConsumed")
                     ORDER BY b."Id" FOR UPDATE;
 
-                -- Reject stale evidence instead of guessing what another recharge or purchase funded.
+                -- Additional spending may reduce the remainder; new funding or refunds require a fresh review.
                 IF (SELECT count(*) FROM access_codes WHERE "CodeGroupId" = group_id) <> 100
                     OR (SELECT count(*) FROM access_codes WHERE "CodeGroupId" = group_id AND "IsConsumed") <> 55
                     OR (SELECT count(DISTINCT "ConsumedByUserId") FROM access_codes
@@ -79,9 +79,10 @@ public sealed class RepairAshrafBalanceCodeScope : Migration
                 IF (SELECT count(*) FROM ashraf_scope_review) <> 55
                     OR EXISTS (SELECT 1 FROM ashraf_scope_review
                         WHERE source_credits <> 1 OR other_credits <> 0 OR ledger_balance <> remaining
-                            OR remaining NOT IN (0, 850))
-                    OR (SELECT count(*) FROM ashraf_scope_review WHERE remaining = 850) <> 3
-                    OR (SELECT sum(debits) FROM ashraf_scope_review) <> 44500
+                            OR remaining < 0 OR remaining > 850)
+                    OR (SELECT count(*) FROM ashraf_scope_review WHERE remaining > 0) > 3
+                    OR (SELECT sum(remaining) FROM ashraf_scope_review) > 2550
+                    OR (SELECT sum(debits) FROM ashraf_scope_review) < 44500
                     OR (SELECT sum(refunds) FROM ashraf_scope_review) <> 300 THEN
                     RAISE EXCEPTION 'Code scope repair ledger changed; no funds were moved';
                 END IF;
@@ -131,7 +132,7 @@ public sealed class RepairAshrafBalanceCodeScope : Migration
                     moved := moved + student.remaining;
                 END LOOP;
 
-                IF moved <> 2550 THEN RAISE EXCEPTION 'Code scope repair conservation failed'; END IF;
+                IF moved > 2550 THEN RAISE EXCEPTION 'Code scope repair conservation failed'; END IF;
                 UPDATE code_groups SET "TeacherId" = teacher_id, "UpdatedAt" = CURRENT_TIMESTAMP WHERE "Id" = group_id;
                 INSERT INTO audit_logs
                     ("Id", "Action", "EntityType", "EntityId", "ActorType", "RequestId", "Reason",
@@ -140,7 +141,8 @@ public sealed class RepairAshrafBalanceCodeScope : Migration
                     'Owner-authorized correction; reviewed 55 redemptions; preserve historical spending',
                     jsonb_build_object('teacherId', NULL, 'generalBalanceToMove', moved)::text,
                     jsonb_build_object('teacherId', teacher_id, 'teacherBalanceMoved', moved,
-                        'reviewedCodes', 55, 'unchangedSpentCodes', 52, 'unusedCodes', 45)::text, CURRENT_TIMESTAMP);
+                        'reviewedCodes', 55, 'unchangedSpentCodes',
+                        (SELECT count(*) FROM ashraf_scope_review WHERE remaining = 0), 'unusedCodes', 45)::text, CURRENT_TIMESTAMP);
                 DROP TABLE ashraf_scope_review;
             END $repair$;
             """);

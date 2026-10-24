@@ -133,13 +133,15 @@ DECLARE
   new_count bigint;
   added bigint;
   expected bigint;
+  movement_count bigint := (SELECT count(*) FROM massar_gate_scope.movements);
+  movement_amount numeric := (SELECT coalesce(sum(amount),0) FROM massar_gate_scope.movements);
   applying boolean := (SELECT apply FROM massar_gate_scope.state);
   teacher_id constant uuid := '73cf9e05-d068-4a0c-b8e6-dcba16554417';
   group_id constant uuid := 'b134dca5-5ddb-4b01-a061-e9a56b6ac23a';
 BEGIN
   IF applying THEN
-    IF (SELECT count(*) FROM massar_gate_scope.movements)<>3
-      OR (SELECT sum(amount) FROM massar_gate_scope.movements)<>2550 THEN
+    IF movement_count>3 OR movement_amount>2550
+      OR EXISTS (SELECT 1 FROM massar_gate_scope.movements WHERE amount<=0 OR amount>850) THEN
       RAISE EXCEPTION 'Code scope gate: reviewed movements changed';
     END IF;
     UPDATE massar_gate_scope.code_groups old SET "TeacherId"=teacher_id,"UpdatedAt"=current."UpdatedAt"
@@ -157,7 +159,7 @@ BEGIN
     EXECUTE format('SELECT count(*) FROM massar_gate_scope.%I',table_name) INTO old_count;
     EXECUTE format('SELECT count(*) FROM %I',table_name) INTO new_count;
     expected:=CASE WHEN NOT applying OR table_name IN ('code_groups','access_codes','student_balances') THEN 0
-      WHEN table_name='audit_logs' THEN 1 ELSE 3 END;
+      WHEN table_name='audit_logs' THEN 1 ELSE movement_count END;
     IF new_count-old_count<>expected THEN
       RAISE EXCEPTION 'Code scope gate: unexpected row growth in %',table_name;
     END IF;
@@ -169,7 +171,7 @@ BEGIN
       WHERE t."TransactionType"='CodeScopeCorrection' AND t."Amount"=-m.amount AND t."BalanceAfter"=0
         AND t."PerformedByUserId" IS NULL
         AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.balance_transactions old WHERE old."Id"=t."Id");
-    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact general debits'; END IF;
+    IF added<>movement_count THEN RAISE EXCEPTION 'Code scope gate: missing exact general debits'; END IF;
     SELECT count(*) INTO added FROM gift_issuances g JOIN massar_gate_scope.movements m ON g."RequestId"=m.code_id
       JOIN code_groups batch ON batch."Id"=group_id
       WHERE g."TeacherId"=teacher_id AND g."TargetType"=5 AND g."Amount"=m.amount
@@ -177,13 +179,13 @@ BEGIN
         AND g."PackageId" IS NULL AND g."TermId" IS NULL AND g."ContentSectionId" IS NULL
         AND g."LessonId" IS NULL AND g."LessonVideoId" IS NULL AND g."ExamId" IS NULL AND g."MaxUses" IS NULL
         AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.gift_issuances old WHERE old."Id"=g."Id");
-    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact teacher issuances'; END IF;
+    IF added<>movement_count THEN RAISE EXCEPTION 'Code scope gate: missing exact teacher issuances'; END IF;
     SELECT count(*) INTO added FROM gift_recipients r JOIN gift_issuances g ON g."Id"=r."GiftIssuanceId"
       JOIN massar_gate_scope.movements m ON m.code_id=g."RequestId" AND r."StudentId"=m.student_id
       WHERE r."Status"=3 AND r."OutcomeCode"='GRANTED' AND r."UsesConsumed"=0 AND r."RevokedAt" IS NULL
         AND r."RevokedByUserId" IS NULL AND r."RevocationReason" IS NULL
         AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.gift_recipients old WHERE old."Id"=r."Id");
-    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact recipients'; END IF;
+    IF added<>movement_count THEN RAISE EXCEPTION 'Code scope gate: missing exact recipients'; END IF;
     SELECT count(*) INTO added FROM promotional_balance_allocations p
       JOIN gift_recipients r ON r."Id"=p."GiftRecipientId" JOIN gift_issuances g ON g."Id"=r."GiftIssuanceId"
       JOIN massar_gate_scope.movements m ON m.code_id=g."RequestId" AND p."StudentId"=m.student_id
@@ -191,18 +193,18 @@ BEGIN
         AND p."ConsumedAmount"=0 AND p."ExpiredAmount"=0 AND p."RevokedAmount"=0 AND p."PurchaseCount"=0
         AND p."Status"=0 AND p."ExpiresAt" IS NULL AND p."MaxPurchaseCount" IS NULL
         AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.promotional_balance_allocations old WHERE old."Id"=p."Id");
-    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing conserved teacher allocations'; END IF;
+    IF added<>movement_count THEN RAISE EXCEPTION 'Code scope gate: missing conserved teacher allocations'; END IF;
     SELECT count(*) INTO added FROM outbox_events e JOIN massar_gate_scope.movements m ON e."TargetUserId"=m.student_id::text
       WHERE e."Type"='BalanceChanged' AND e."ProcessedAt" IS NULL AND e."RetryCount"=0 AND NOT e."IsDeadLetter"
         AND e."PayloadJson"::jsonb=jsonb_build_object('currentBalance',0,'scopedTeacherId',teacher_id,
           'scopedTeacherName','أشرف بكر','promotionalAmount',m.amount,'repairReference','ashraf-code-scope-20261024')
         AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.outbox_events old WHERE old."Id"=e."Id");
-    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing balance notifications'; END IF;
+    IF added<>movement_count THEN RAISE EXCEPTION 'Code scope gate: missing balance notifications'; END IF;
     SELECT count(*) INTO added FROM audit_logs a WHERE a."EntityId"=group_id AND a."EntityType"='CodeGroup'
       AND a."Action"='RepairCodeBalanceScope' AND a."ActorType"='System' AND a."PerformedByUserId" IS NULL
       AND a."RequestId"='ashraf-code-scope-20261024'
-      AND a."NewValues"::jsonb=jsonb_build_object('teacherId',teacher_id,'teacherBalanceMoved',2550,
-        'reviewedCodes',55,'unchangedSpentCodes',52,'unusedCodes',45)
+      AND a."NewValues"::jsonb=jsonb_build_object('teacherId',teacher_id,'teacherBalanceMoved',movement_amount,
+        'reviewedCodes',55,'unchangedSpentCodes',55-movement_count,'unusedCodes',45)
       AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.audit_logs old WHERE old."Id"=a."Id");
     IF added<>1 THEN RAISE EXCEPTION 'Code scope gate: missing correction audit'; END IF;
   END IF;

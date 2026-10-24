@@ -35,6 +35,52 @@ public sealed class AshrafCodeScopeMigrationPostgresTests
         Assert.Equal(1m, await Scalar(connection, transaction, "SELECT count(*) FROM code_groups WHERE \"TeacherId\"='73cf9e05-d068-4a0c-b8e6-dcba16554417'"));
     }
 
+    // A student spent 850 EGP during the first release preparation on 2026-10-24.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(125)]
+    public async Task SpendingAfterReview_TransfersOnlyActualRemainderWithoutUndoingPurchase(int remainder)
+    {
+        await using var connection = await OpenTestConnection();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await Seed(connection, transaction);
+        await using (var spending = new NpgsqlCommand("""
+            UPDATE student_balances SET "CurrentBalance"=@remainder WHERE "UserId"=md5('student54')::uuid;
+            INSERT INTO balance_transactions ("Id","StudentBalanceId","Amount","TransactionType")
+            VALUES (gen_random_uuid(),md5('student54')::uuid,@remainder-850,'ContentPurchase');
+            """, connection, transaction))
+        {
+            spending.Parameters.AddWithValue("remainder", remainder);
+            await spending.ExecuteNonQueryAsync();
+        }
+        await Execute(connection, transaction, GateSql("CODE_SCOPE_SNAPSHOT_SQL"));
+        await Execute(connection, transaction, MigrationSql());
+        await Execute(connection, transaction, GateSql("CODE_SCOPE_VALIDATION_SQL"));
+        Assert.Equal(1700m + remainder, await Scalar(connection, transaction, "SELECT sum(\"AvailableAmount\") FROM promotional_balance_allocations"));
+        Assert.Equal(0m, await Scalar(connection, transaction, "SELECT sum(\"CurrentBalance\") FROM student_balances"));
+        Assert.Equal(45350m - remainder, await Scalar(connection, transaction, "SELECT -sum(\"Amount\") FROM balance_transactions WHERE \"TransactionType\"='ContentPurchase'"));
+    }
+
+    [Fact]
+    public async Task EntireRemainderSpent_RepairsOwnershipWithoutCreatingAnyBalanceCredit()
+    {
+        await using var connection = await OpenTestConnection();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await Seed(connection, transaction);
+        await Execute(connection, transaction, """
+            INSERT INTO balance_transactions ("Id","StudentBalanceId","Amount","TransactionType")
+              SELECT gen_random_uuid(),"Id",-"CurrentBalance",'ContentPurchase'
+              FROM student_balances WHERE "CurrentBalance">0;
+            UPDATE student_balances SET "CurrentBalance"=0;
+            """);
+        await Execute(connection, transaction, GateSql("CODE_SCOPE_SNAPSHOT_SQL"));
+        await Execute(connection, transaction, MigrationSql());
+        await Execute(connection, transaction, GateSql("CODE_SCOPE_VALIDATION_SQL"));
+        Assert.Equal(0m, await Scalar(connection, transaction, "SELECT count(*) FROM gift_issuances"));
+        Assert.Equal(0m, await Scalar(connection, transaction, "SELECT count(*) FROM balance_transactions WHERE \"TransactionType\"='CodeScopeCorrection'"));
+        Assert.Equal(1m, await Scalar(connection, transaction, "SELECT count(*) FROM code_groups WHERE \"TeacherId\"='73cf9e05-d068-4a0c-b8e6-dcba16554417'"));
+    }
+
     [Theory]
     [InlineData("UPDATE student_balances SET \"CurrentBalance\"=1 WHERE \"UserId\"=md5('student1')::uuid;")]
     [InlineData("UPDATE balance_transactions SET \"Amount\"=851 WHERE \"ReferenceId\"=md5('code1')::uuid AND \"TransactionType\"='CodeRedemption';")]
@@ -53,9 +99,9 @@ public sealed class AshrafCodeScopeMigrationPostgresTests
     }
 
     [Theory]
-    [InlineData("UPDATE student_balances SET \"CurrentBalance\"=0 WHERE \"UserId\"=md5('student54')::uuid; INSERT INTO balance_transactions (\"Id\",\"StudentBalanceId\",\"Amount\",\"TransactionType\") VALUES (gen_random_uuid(),md5('student54')::uuid,-850,'ContentPurchase');")]
     [InlineData("DELETE FROM balance_transactions WHERE \"TransactionType\"='CodeRedemption' AND \"ReferenceId\"=md5('code1')::uuid;")]
-    [InlineData("INSERT INTO balance_transactions (\"Id\",\"StudentBalanceId\",\"Amount\",\"TransactionType\") VALUES (gen_random_uuid(),md5('student1')::uuid,1,'CodeRedemption');")]
+    [InlineData("INSERT INTO balance_transactions (\"Id\",\"StudentBalanceId\",\"Amount\",\"TransactionType\") VALUES (gen_random_uuid(),md5('student1')::uuid,1,'CodeRedemption'),(gen_random_uuid(),md5('student1')::uuid,-1,'ContentPurchase');")]
+    [InlineData("INSERT INTO balance_transactions (\"Id\",\"StudentBalanceId\",\"Amount\",\"TransactionType\") VALUES (gen_random_uuid(),md5('student1')::uuid,1,'Refund'),(gen_random_uuid(),md5('student1')::uuid,-1,'ContentPurchase');")]
     [InlineData("UPDATE access_codes SET \"IsConsumed\"=true,\"ConsumedByUserId\"=md5('student56')::uuid WHERE \"Id\"=md5('code56')::uuid;")]
     public async Task ChangedReview_RejectsWholeCorrectionWithoutRechargingOrDebitingAnyone(string change)
     {
