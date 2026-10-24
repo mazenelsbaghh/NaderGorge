@@ -102,6 +102,114 @@ FROM "__EFMigrationsHistory";
 # Model the exact reviewed code-collection backfill on private expected tables.
 # Compare complete historical rows and the multiset of added rows before allowing
 # the older funding guard to accept these additions. No production table is written.
+CODE_SCOPE_SNAPSHOT_SQL = r"""
+CREATE SCHEMA massar_gate_scope;
+DO $snapshot$
+DECLARE table_name text;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY['code_groups','access_codes','student_balances','balance_transactions',
+    'gift_issuances','gift_recipients','promotional_balance_allocations','outbox_events','audit_logs'] LOOP
+    EXECUTE format('CREATE TABLE massar_gate_scope.%I AS TABLE %I',table_name,table_name);
+  END LOOP;
+END $snapshot$;
+CREATE TABLE massar_gate_scope.movements AS
+SELECT c."Id" code_id,b."Id" balance_id,b."UserId" student_id,b."CurrentBalance" amount
+FROM code_groups g JOIN access_codes c ON c."CodeGroupId"=g."Id" AND c."IsConsumed"
+JOIN student_balances b ON b."UserId"=c."ConsumedByUserId" AND b."CurrentBalance">0
+WHERE g."Id"='b134dca5-5ddb-4b01-a061-e9a56b6ac23a' AND g."TeacherId" IS NULL
+  AND NOT EXISTS (SELECT 1 FROM audit_logs WHERE "EntityId"=g."Id"
+    AND "Action"='RepairCodeBalanceScope' AND "RequestId"='ashraf-code-scope-20261024');
+CREATE TABLE massar_gate_scope.state AS SELECT EXISTS (
+  SELECT 1 FROM code_groups WHERE "Id"='b134dca5-5ddb-4b01-a061-e9a56b6ac23a'
+    AND "TeacherId" IS NULL) apply;
+"""
+
+CODE_SCOPE_VALIDATION_SQL = r"""
+DO $validation$
+DECLARE
+  table_name text;
+  changed bigint;
+  old_count bigint;
+  new_count bigint;
+  added bigint;
+  expected bigint;
+  applying boolean := (SELECT apply FROM massar_gate_scope.state);
+  teacher_id constant uuid := '73cf9e05-d068-4a0c-b8e6-dcba16554417';
+  group_id constant uuid := 'b134dca5-5ddb-4b01-a061-e9a56b6ac23a';
+BEGIN
+  IF applying THEN
+    IF (SELECT count(*) FROM massar_gate_scope.movements)<>3
+      OR (SELECT sum(amount) FROM massar_gate_scope.movements)<>2550 THEN
+      RAISE EXCEPTION 'Code scope gate: reviewed movements changed';
+    END IF;
+    UPDATE massar_gate_scope.code_groups old SET "TeacherId"=teacher_id,"UpdatedAt"=current."UpdatedAt"
+      FROM code_groups current WHERE old."Id"=group_id AND current."Id"=old."Id";
+    UPDATE massar_gate_scope.student_balances old SET "CurrentBalance"=0,"Version"=old."Version"+1,
+      "UpdatedAt"=current."UpdatedAt" FROM student_balances current,massar_gate_scope.movements m
+      WHERE old."Id"=m.balance_id AND current."Id"=old."Id";
+  END IF;
+
+  FOREACH table_name IN ARRAY ARRAY['code_groups','access_codes','student_balances','balance_transactions',
+    'gift_issuances','gift_recipients','promotional_balance_allocations','outbox_events','audit_logs'] LOOP
+    EXECUTE format('SELECT count(*) FROM massar_gate_scope.%I old LEFT JOIN %I current USING ("Id")
+      WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)',table_name,table_name) INTO changed;
+    IF changed<>0 THEN RAISE EXCEPTION 'Code scope gate: historical rows changed in %',table_name; END IF;
+    EXECUTE format('SELECT count(*) FROM massar_gate_scope.%I',table_name) INTO old_count;
+    EXECUTE format('SELECT count(*) FROM %I',table_name) INTO new_count;
+    expected:=CASE WHEN NOT applying OR table_name IN ('code_groups','access_codes','student_balances') THEN 0
+      WHEN table_name='audit_logs' THEN 1 ELSE 3 END;
+    IF new_count-old_count<>expected THEN
+      RAISE EXCEPTION 'Code scope gate: unexpected row growth in %',table_name;
+    END IF;
+  END LOOP;
+
+  IF applying THEN
+    SELECT count(*) INTO added FROM balance_transactions t JOIN massar_gate_scope.movements m
+      ON t."ReferenceId"=m.code_id AND t."StudentBalanceId"=m.balance_id
+      WHERE t."TransactionType"='CodeScopeCorrection' AND t."Amount"=-m.amount AND t."BalanceAfter"=0
+        AND t."PerformedByUserId" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.balance_transactions old WHERE old."Id"=t."Id");
+    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact general debits'; END IF;
+    SELECT count(*) INTO added FROM gift_issuances g JOIN massar_gate_scope.movements m ON g."RequestId"=m.code_id
+      JOIN code_groups batch ON batch."Id"=group_id
+      WHERE g."TeacherId"=teacher_id AND g."TargetType"=5 AND g."Amount"=m.amount
+        AND g."IssuedByUserId"=batch."CreatedByUserId" AND g."Status"=0 AND g."ExpiresAt" IS NULL
+        AND g."PackageId" IS NULL AND g."TermId" IS NULL AND g."ContentSectionId" IS NULL
+        AND g."LessonId" IS NULL AND g."LessonVideoId" IS NULL AND g."ExamId" IS NULL AND g."MaxUses" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.gift_issuances old WHERE old."Id"=g."Id");
+    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact teacher issuances'; END IF;
+    SELECT count(*) INTO added FROM gift_recipients r JOIN gift_issuances g ON g."Id"=r."GiftIssuanceId"
+      JOIN massar_gate_scope.movements m ON m.code_id=g."RequestId" AND r."StudentId"=m.student_id
+      WHERE r."Status"=3 AND r."OutcomeCode"='GRANTED' AND r."UsesConsumed"=0 AND r."RevokedAt" IS NULL
+        AND r."RevokedByUserId" IS NULL AND r."RevocationReason" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.gift_recipients old WHERE old."Id"=r."Id");
+    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing exact recipients'; END IF;
+    SELECT count(*) INTO added FROM promotional_balance_allocations p
+      JOIN gift_recipients r ON r."Id"=p."GiftRecipientId" JOIN gift_issuances g ON g."Id"=r."GiftIssuanceId"
+      JOIN massar_gate_scope.movements m ON m.code_id=g."RequestId" AND p."StudentId"=m.student_id
+      WHERE p."TeacherId"=teacher_id AND p."OriginalAmount"=m.amount AND p."AvailableAmount"=m.amount
+        AND p."ConsumedAmount"=0 AND p."ExpiredAmount"=0 AND p."RevokedAmount"=0 AND p."PurchaseCount"=0
+        AND p."Status"=0 AND p."ExpiresAt" IS NULL AND p."MaxPurchaseCount" IS NULL
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.promotional_balance_allocations old WHERE old."Id"=p."Id");
+    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing conserved teacher allocations'; END IF;
+    SELECT count(*) INTO added FROM outbox_events e JOIN massar_gate_scope.movements m ON e."TargetUserId"=m.student_id::text
+      WHERE e."Type"='BalanceChanged' AND e."ProcessedAt" IS NULL AND e."RetryCount"=0 AND NOT e."IsDeadLetter"
+        AND e."PayloadJson"::jsonb=jsonb_build_object('currentBalance',0,'scopedTeacherId',teacher_id,
+          'scopedTeacherName','أشرف بكر','promotionalAmount',m.amount,'repairReference','ashraf-code-scope-20261024')
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.outbox_events old WHERE old."Id"=e."Id");
+    IF added<>3 THEN RAISE EXCEPTION 'Code scope gate: missing balance notifications'; END IF;
+    SELECT count(*) INTO added FROM audit_logs a WHERE a."EntityId"=group_id AND a."EntityType"='CodeGroup'
+      AND a."Action"='RepairCodeBalanceScope' AND a."ActorType"='System' AND a."PerformedByUserId" IS NULL
+      AND a."RequestId"='ashraf-code-scope-20261024'
+      AND a."NewValues"::jsonb=jsonb_build_object('teacherId',teacher_id,'teacherBalanceMoved',2550,
+        'reviewedCodes',55,'unchangedSpentCodes',52,'unusedCodes',45)
+      AND NOT EXISTS (SELECT 1 FROM massar_gate_scope.audit_logs old WHERE old."Id"=a."Id");
+    IF added<>1 THEN RAISE EXCEPTION 'Code scope gate: missing correction audit'; END IF;
+  END IF;
+END $validation$;
+DROP SCHEMA massar_gate_scope CASCADE;
+"""
+
 CODE_COLLECTION_SNAPSHOT_SQL = r"""
 CREATE SCHEMA massar_gate_codes;
 CREATE TABLE massar_gate_codes.state AS SELECT
@@ -704,6 +812,7 @@ financial_events_hash() {{
 psql_restore <<'SQL'
 {FUNDING_SNAPSHOT_SQL}
 {CODE_COLLECTION_SNAPSHOT_SQL}
+{CODE_SCOPE_SNAPSHOT_SQL}
 SQL
 psql_restore <<'SQL'
 {REFUND_ROLE_SNAPSHOT_SQL}
@@ -725,7 +834,9 @@ psql_restore -c "
       '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
       'teacher_profiles','teacher_subjects','subjects','thanaweya_results',
       'teacher_financial_agreements','teacher_financial_events','teacher_financial_allocations',
-      'financial_journal_entries','financial_journal_lines','financial_accounts'
+      'financial_journal_entries','financial_journal_lines','financial_accounts',
+      'code_groups','student_balances','balance_transactions','gift_issuances',
+      'gift_recipients','promotional_balance_allocations','outbox_events','audit_logs'
     )
   order by tablename;" > "$pre_unaffected_tables"
 pre_unaffected_hash="$(unaffected_counts_hash)"
@@ -792,6 +903,7 @@ test "$(
 psql_restore <<'SQL'
 {REFUND_ROLE_VALIDATION_SQL}
 {CODE_COLLECTION_VALIDATION_SQL}
+{CODE_SCOPE_VALIDATION_SQL}
 SQL
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
