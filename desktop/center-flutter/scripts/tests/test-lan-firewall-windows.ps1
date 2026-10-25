@@ -55,7 +55,7 @@ try {
         throw 'Repeating the repair must retain the same two rules.'
     }
     $Block = 'MassarFirewallTest-' + [Guid]::NewGuid().ToString('N')
-    New-NetFirewallRule -Name $Block -Program $Program -Direction Inbound -Action Block -Enabled True | Out-Null
+    New-NetFirewallRule -Name $Block -DisplayName $Block -Program $Program -Direction Inbound -Action Block -Enabled True | Out-Null
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair -CheckOnly
     if ($LASTEXITCODE -ne 12 -or (Get-NetFirewallRule -Name $Block).Action -ne 'Block') {
         throw 'Preflight must preserve and report explicit administrator blocks.'
