@@ -40,6 +40,7 @@ part 'center_store_history.dart';
 part 'center_store_students.dart';
 part 'center_store_months.dart';
 part 'center_store_data_repair.dart';
+part 'center_store_prepaid_coverage.dart';
 part 'center_store_center_fees.dart';
 part 'center_store_study_months.dart';
 part 'center_store_academic_import.dart';
@@ -338,6 +339,7 @@ class CenterStore extends ChangeNotifier {
       await store._applyBundledDataRepair();
       await store._migrateStudyMonths();
       await store._applyHistoricalAcademicImport();
+      await store._repairPrepaidAttendance();
       // Legacy logical snapshots may omit fields that the model supplies.
       // Trust deltas only when the loaded bytes already have the canonical shape.
       if (store._stateEncoder.encode(store._state) == row.single['payload']) {
@@ -2158,6 +2160,9 @@ class CenterStore extends ChangeNotifier {
     }
   }
 
+  Future<void> recordAttendanceWithCredit(EntryRequest request) =>
+      _recordAttendanceWithCredit(request);
+
   Future<void> recordAttendance(EntryRequest request) {
     final reviewed = List<String>.unmodifiable(
       request.acknowledgedAttendanceIds,
@@ -2166,140 +2171,133 @@ class CenterStore extends ChangeNotifier {
     return _change(
       'attendance_record',
       'تسجيل حضور الطالب دون تحصيل',
-      () async {
-        _require(canCollect);
-        _requireReceptionEntry(request);
-        final student = _student(request.studentId);
-        _requireActiveStudent(student);
-        final session = _session(request.sessionId);
-        if (session.status != SessionStatus.open) {
-          throw const CenterException(
-            'الحصة مغلقة أو ملغاة.',
-            diagnosticCode: 1201,
-          );
-        }
-        final previous = _activeAttendances
-            .where(
-              (e) => e.studentId == student.id && e.sessionId == session.id,
-            )
-            .firstOrNull;
-        if (previous != null && previous.status != AttendanceStatus.absent) {
-          return;
-        }
-        _requireAttendanceReview(request, reviewed);
-        String? originalId;
-        final sourceId = request.makeupSourceGroupId;
-        if (sourceId != null) {
-          if (request.originalAttendanceId != null ||
-              !eligibleMakeupSourceGroups(
-                student.id,
-                session.id,
-              ).any((e) => e.id == sourceId)) {
-            throw const CenterException(
-              'اختر مجموعة الطالب الأصلية بنفس المادة والصف.',
-            );
-          }
-        } else if (request.mode == EntryMode.makeup) {
-          if (!eligibleMakeups(
-            student.id,
-            session.id,
-          ).any((e) => e.id == request.originalAttendanceId)) {
-            throw const CenterException('اختر غيابًا محسوبًا صالحًا للتعويض.');
-          }
-          originalId = request.originalAttendanceId;
-        } else if (!student.groupIds.contains(session.groupId)) {
-          throw const CenterException(
-            'الطالب من مجموعة أخرى؛ حدد مجموعته الأصلية للتعويض.',
-          );
-        }
-        if (previous != null && (sourceId != null || originalId != null)) {
-          throw const CenterException(
-            'صحح الغياب المحفوظ بدل إنشاء تعويض جديد.',
-          );
-        }
-        if (previous != null &&
-            _activeAttendances.any(
-              (e) => e.originalAttendanceId == previous.id,
-            )) {
-          throw const CenterException(
-            'تم التعويض عن الغياب؛ ألغِ التعويض أولًا.',
-          );
-        }
-        final retained = _sessionPayment(student.id, session.id);
-        if (retained != null &&
-            retained.groupId != (sourceId ?? session.groupId)) {
-          throw const CenterException('الدفع المحفوظ يخص مجموعة مختلفة.');
-        }
-        if (student.centerOnly &&
-            (previous?.packageId != null ||
-                retained != null ||
-                originalId != null)) {
-          throw const CenterException(
-            'للحضور دفع أو رصيد محفوظ؛ صحح السجل السابق قبل تغيير نظامه.',
-          );
-        }
-        if (student.packageMember &&
-            (previous?.packageId != null ||
-                originalId != null ||
-                retained != null)) {
-          throw const CenterException(
-            'للحضور رصيد أو دفع سابق؛ صحح السجل قبل استخدام علامة باكدج.',
-          );
-        }
-        var entry = AttendanceRecord(
-          id: _uuid.v4(),
-          studentId: student.id,
-          sessionId: session.id,
-          status: sourceId != null || originalId != null
-              ? AttendanceStatus.makeup
-              : AttendanceStatus.present,
-          recordedAt: DateTime.now(),
-          packageId: previous?.packageId,
-          originalAttendanceId: originalId,
-          makeupSourceGroupId: sourceId,
-          fixedDiscountPercent: student.discountPercent,
-          packageMember: student.packageMember,
-          centerFeeOnly: student.centerOnly,
-          centerFeeAmount: student.centerOnly ? student.centerFeeAmount : 0,
-          paymentPending:
-              !student.packageMember &&
-              retained == null &&
-              previous?.packageId == null &&
-              originalId == null &&
-              (student.centerOnly ||
-                  sourceId != null ||
-                  session.kind != SessionKind.free),
-        );
-        final exemption = request.mode == EntryMode.package
-            ? null
-            : _automaticAttendanceExemption(student, session, entry);
-        if (exemption != null) {
-          _state.payments.add(exemption);
-          entry = entry.copyWith(paymentPending: false);
-        }
-        _state.attendances.add(entry);
-        if (previous != null) {
-          _state.corrections.add(
-            CorrectionRecord(
-              id: _uuid.v4(),
-              action: CorrectionAction.absencePresent,
-              studentId: student.id,
-              sessionId: session.id,
-              attendanceId: previous.id,
-              replacementAttendanceId: entry.id,
-              packageId: entry.packageId,
-              reason: 'تسجيل حضور مستقل بعد إعادة فتح الحصة',
-              staffId: currentUser!.id,
-              createdAt: DateTime.now(),
-            ),
-          );
-        }
-        recorded = true;
-      },
+      () async => recorded = _recordAttendance(request, reviewed),
       commitWhen: () => recorded,
       auditDescription: () =>
           'تسجيل حضور — كود ${_student(request.studentId).code} — حصة ${_session(request.sessionId).number}${reviewed.isEmpty ? '' : ' — مراجعة التسجيلات ${reviewed.join(', ')}'}',
     );
+  }
+
+  bool _recordAttendance(EntryRequest request, List<String> reviewed) {
+    _require(canCollect);
+    _requireReceptionEntry(request);
+    final student = _student(request.studentId);
+    _requireActiveStudent(student);
+    final session = _session(request.sessionId);
+    if (session.status != SessionStatus.open) {
+      throw const CenterException(
+        'الحصة مغلقة أو ملغاة.',
+        diagnosticCode: 1201,
+      );
+    }
+    final previous = _activeAttendances
+        .where((e) => e.studentId == student.id && e.sessionId == session.id)
+        .firstOrNull;
+    if (previous != null && previous.status != AttendanceStatus.absent) {
+      return false;
+    }
+    _requireAttendanceReview(request, reviewed);
+    String? originalId;
+    final sourceId = request.makeupSourceGroupId;
+    if (sourceId != null) {
+      if (request.originalAttendanceId != null ||
+          !eligibleMakeupSourceGroups(
+            student.id,
+            session.id,
+          ).any((e) => e.id == sourceId)) {
+        throw const CenterException(
+          'اختر مجموعة الطالب الأصلية بنفس المادة والصف.',
+        );
+      }
+    } else if (request.mode == EntryMode.makeup) {
+      if (!eligibleMakeups(
+        student.id,
+        session.id,
+      ).any((e) => e.id == request.originalAttendanceId)) {
+        throw const CenterException('اختر غيابًا محسوبًا صالحًا للتعويض.');
+      }
+      originalId = request.originalAttendanceId;
+    } else if (!student.groupIds.contains(session.groupId)) {
+      throw const CenterException(
+        'الطالب من مجموعة أخرى؛ حدد مجموعته الأصلية للتعويض.',
+      );
+    }
+    if (previous != null && (sourceId != null || originalId != null)) {
+      throw const CenterException('صحح الغياب المحفوظ بدل إنشاء تعويض جديد.');
+    }
+    if (previous != null &&
+        _activeAttendances.any((e) => e.originalAttendanceId == previous.id)) {
+      throw const CenterException('تم التعويض عن الغياب؛ ألغِ التعويض أولًا.');
+    }
+    final retained = _sessionPayment(student.id, session.id);
+    if (retained != null && retained.groupId != (sourceId ?? session.groupId)) {
+      throw const CenterException('الدفع المحفوظ يخص مجموعة مختلفة.');
+    }
+    if (student.centerOnly &&
+        (previous?.packageId != null ||
+            retained != null ||
+            originalId != null)) {
+      throw const CenterException(
+        'للحضور دفع أو رصيد محفوظ؛ صحح السجل السابق قبل تغيير نظامه.',
+      );
+    }
+    if (student.packageMember &&
+        (previous?.packageId != null ||
+            originalId != null ||
+            retained != null)) {
+      throw const CenterException(
+        'للحضور رصيد أو دفع سابق؛ صحح السجل قبل استخدام علامة باكدج.',
+      );
+    }
+    var entry = AttendanceRecord(
+      id: _uuid.v4(),
+      studentId: student.id,
+      sessionId: session.id,
+      status: sourceId != null || originalId != null
+          ? AttendanceStatus.makeup
+          : AttendanceStatus.present,
+      recordedAt: DateTime.now(),
+      packageId: previous?.packageId,
+      originalAttendanceId: originalId,
+      makeupSourceGroupId: sourceId,
+      fixedDiscountPercent: student.discountPercent,
+      packageMember: student.packageMember,
+      centerFeeOnly: student.centerOnly,
+      centerFeeAmount: student.centerOnly ? student.centerFeeAmount : 0,
+      paymentPending:
+          !student.packageMember &&
+          retained == null &&
+          previous?.packageId == null &&
+          originalId == null &&
+          (student.centerOnly ||
+              sourceId != null ||
+              session.kind != SessionKind.free),
+    );
+    final exemption = request.mode == EntryMode.package
+        ? null
+        : _automaticAttendanceExemption(student, session, entry);
+    if (exemption != null) {
+      _state.payments.add(exemption);
+      entry = entry.copyWith(paymentPending: false);
+    }
+    _state.attendances.add(entry);
+    if (previous != null) {
+      _state.corrections.add(
+        CorrectionRecord(
+          id: _uuid.v4(),
+          action: CorrectionAction.absencePresent,
+          studentId: student.id,
+          sessionId: session.id,
+          attendanceId: previous.id,
+          replacementAttendanceId: entry.id,
+          packageId: entry.packageId,
+          reason: 'تسجيل حضور مستقل بعد إعادة فتح الحصة',
+          staffId: currentUser!.id,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+    return true;
   }
 
   int? _automaticExemptionAmount(
@@ -4811,6 +4809,34 @@ bool _followsMakeupPurchaseSession(
     target.startsAtKnown &&
     !_precedes(target, purchase);
 
+bool _isPrepaidCoverageCorrection(
+  CorrectionRecord correction,
+  Map<String, AttendanceRecord> attendances,
+) {
+  if (correction.action != CorrectionAction.entryCorrected ||
+      correction.voidsPayment ||
+      correction.voidsPackage ||
+      correction.paymentId != null) {
+    return false;
+  }
+  final original = attendances[correction.attendanceId];
+  final replacement = attendances[correction.replacementAttendanceId];
+  if (original == null ||
+      replacement == null ||
+      !original.paymentPending ||
+      original.packageId != null ||
+      replacement.packageId == null ||
+      replacement.paymentPending ||
+      correction.packageId != replacement.packageId) {
+    return false;
+  }
+  final expected = original.toJson()
+    ..['id'] = replacement.id
+    ..['packageId'] = replacement.packageId
+    ..remove('paymentPending');
+  return mapEquals(expected, replacement.toJson());
+}
+
 /// Validates both foreign keys and financial invariants before every disk commit
 /// and before accepting an imported backup. No partially valid snapshot is used.
 void validateState(CenterState state) {
@@ -6153,7 +6179,20 @@ void validateState(CenterState state) {
       refunds: refundsBySession[closing.sessionId] ?? const [],
     );
     SessionFinancialSummary? historical;
-    if (reopenedClosings.contains(closing.id)) {
+    final laterSessionCorrections = state.corrections
+        .where(
+          (correction) =>
+              correction.sessionId == closing.sessionId &&
+              correction.createdAt.isAfter(closing.createdAt),
+        )
+        .toList();
+    // Coverage repairs change the live classification, never a saved cash closing.
+    final onlyCoverageChanged =
+        laterSessionCorrections.isNotEmpty &&
+        laterSessionCorrections.every(
+          (correction) => _isPrepaidCoverageCorrection(correction, attendance),
+        );
+    if (reopenedClosings.contains(closing.id) || onlyCoverageChanged) {
       final priorCorrections = state.corrections
           .where((e) => !e.createdAt.isAfter(closing.createdAt))
           .toList();

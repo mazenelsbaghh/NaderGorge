@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_store.dart';
+import 'package:massar_center/data/center_state.dart';
 import 'package:massar_center/domain/models.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -158,6 +160,172 @@ void main() {
       expect(store.payments, hasLength(1));
       expect(store.eligibleRemainingFor(student.id, unrelated.id), 0);
       expect(jsonEncode(store.closings.single.toJson()), closing);
+    },
+  );
+
+  for (final backupFails in [false, true]) {
+    test(
+      'October unpaid lessons 3 and 4 recover prepaid coverage once${backupFails ? ' after a blocked recovery backup is fixed' : ' on upgrade'}',
+      () async {
+        final first = await lesson(visitedGroup.id, 1, 4);
+        final second = await lesson(visitedGroup.id, 2, 3);
+        final pendingLessons = [
+          for (var number = 3; number <= 5; number++)
+            await lesson(originalGroup.id, number, 5 - number),
+        ];
+        await buyDuringVisit(first);
+        await store.closeSession(first.id);
+        await store.collectAndAttend(
+          entry(second, sourceGroupId: originalGroup.id),
+        );
+        await store.closeSession(second.id);
+        for (final session in pendingLessons) {
+          await store.recordAttendance(entry(session));
+          await store.closeSession(session.id);
+          await store.finalizeSession(sessionId: session.id, actualCash: 0);
+        }
+        final package = store.packages.single;
+        final originalPayment = store.payments.single.toJson();
+        final originalAttendance = store.allAttendances
+            .map((row) => row.toJson())
+            .toList();
+        final originalClosings = store.allClosings
+            .map((row) => row.toJson())
+            .toList();
+        expect(package.remaining, 2);
+        final databasePath = store.databasePath;
+        await store.close();
+        final backups = Directory('${directory.path}/backups');
+        if (backupFails) {
+          await backups.delete(recursive: true);
+          await File(backups.path).writeAsString('blocked backup directory');
+          await expectLater(
+            CenterStore.open(directory: directory.path),
+            throwsA(isA<CenterException>()),
+          );
+          final database = await databaseFactoryFfi.openDatabase(databasePath);
+          try {
+            final rows = await database.query('state');
+            final unchanged =
+                jsonDecode(rows.single['payload'] as String) as Map;
+            expect(unchanged['attendances'], originalAttendance);
+            expect((unchanged['packages'] as List).single['remaining'], 2);
+          } finally {
+            await database.close();
+          }
+          await File(backups.path).delete();
+        }
+        store = await CenterStore.open(directory: directory.path);
+        await store.signIn('manager', 'test-manager-123');
+        expect(store.packages.single.id, package.id);
+        expect(store.packages.single.remaining, 0);
+        for (final session in pendingLessons.take(2)) {
+          expect(store.attendanceNeedsPayment(student.id, session.id), isFalse);
+          expect(
+            store.paymentStatusFor(student.id, session.id).status,
+            StudentPaymentStatus.paidPackage,
+          );
+        }
+        expect(
+          store.attendanceNeedsPayment(student.id, pendingLessons.last.id),
+          isTrue,
+        );
+        expect(
+          store.allAttendances
+              .take(originalAttendance.length)
+              .map((row) => row.toJson())
+              .toList(),
+          originalAttendance,
+        );
+        expect(store.payments.single.toJson(), originalPayment);
+        expect(store.allPayments, hasLength(1));
+        expect(
+          store.allClosings.map((row) => row.toJson()).toList(),
+          originalClosings,
+        );
+        expect(
+          store.corrections.where(
+            (row) =>
+                pendingLessons
+                    .take(2)
+                    .any((session) => session.id == row.sessionId) &&
+                row.packageId == package.id &&
+                row.action == CorrectionAction.entryCorrected,
+          ),
+          hasLength(2),
+        );
+        final recoveryFiles = await backups
+            .list()
+            .where((file) => file.path.contains('before-prepaid-coverage-'))
+            .toList();
+        expect(recoveryFiles, hasLength(1));
+        final recovered =
+            jsonDecode(await File(recoveryFiles.single.path).readAsString())
+                as Map;
+        expect(recovered['data']['attendances'], originalAttendance);
+        final currentBackup =
+            jsonDecode(await File(await store.createBackup()).readAsString())
+                as Map;
+        final altered = CenterState.fromJson(
+          Map<String, dynamic>.from(currentBackup['data'] as Map),
+        );
+        final repaired = store.attendances.firstWhere(
+          (row) => row.sessionId == pendingLessons.first.id,
+        );
+        final index = altered.attendances.indexWhere(
+          (row) => row.id == repaired.id,
+        );
+        altered.attendances[index] = repaired.copyWith(
+          fixedDiscountPercent: 50,
+        );
+        expect(
+          () => validateState(altered),
+          throwsA(isA<CenterException>()),
+          reason:
+              'Preserving a cash closing must not hide unrelated attendance edits.',
+        );
+        await store.close();
+        store = await CenterStore.open(directory: directory.path);
+        await store.signIn('manager', 'test-manager-123');
+        expect(store.packages.single.remaining, 0);
+        expect(store.allPayments, hasLength(1));
+        expect(
+          store.audit.where((row) => row.action == 'attendance_prepaid_repair'),
+          hasLength(1),
+        );
+      },
+    );
+  }
+
+  test(
+    'attendance and prepaid consumption roll back together when a previous lesson remains open',
+    () async {
+      final previous = await lesson(originalGroup.id, 1, 1);
+      final current = await lesson(originalGroup.id, 2, -1);
+      await store.startSession(previous.id);
+      await store.renewPackage(
+        PackageRequest(studentId: student.id, groupId: originalGroup.id),
+      );
+      final payment = store.payments.single.toJson();
+      final auditCount = store.audit.length;
+      await expectLater(
+        store.recordAttendanceWithCredit(entry(current)),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.allAttendances, isEmpty);
+      expect(store.packages.single.remaining, 4);
+      expect(store.audit, hasLength(auditCount));
+      await store.closeSession(previous.id);
+      await store.recordAttendanceWithCredit(entry(current));
+      expect(store.attendanceNeedsPayment(student.id, current.id), isFalse);
+      expect(store.packages.single.remaining, 3);
+      await store.recordAttendanceWithCredit(entry(current));
+      expect(store.packages.single.remaining, 3);
+      expect(
+        store.attendances.where((row) => row.sessionId == current.id),
+        hasLength(1),
+      );
+      expect(store.payments.single.toJson(), payment);
     },
   );
 

@@ -31,9 +31,15 @@ Iterable<String> studentIdentifiers(Student student) {
   final code = normalizeStudentIdentifier(student.code);
   return [
     student.code,
-    // Five-digit codes keep their printed zero, but accept the other four digits.
+    // Short forms omit only leading zeros from the five-digit printed code.
     // Other lengths, nonnumeric codes and the full barcode retain exact identity.
-    if (RegExp(r'^0[0-9]{4}$').hasMatch(code)) code.substring(1),
+    if (RegExp(r'^0[0-9]{4}$').hasMatch(code))
+      for (
+        var start = 1;
+        start < code.length && code[start - 1] == '0';
+        start++
+      )
+        code.substring(start),
     if (student.barcode.trim().isNotEmpty) student.barcode,
   ];
 }

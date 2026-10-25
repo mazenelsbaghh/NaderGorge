@@ -1949,6 +1949,40 @@ void main() {
   );
 
   test(
+    'a lost prepaid attendance reply leaves attendance and credit committed once on the host',
+    () async {
+      await h.remote.renewPackage(
+        PackageRequest(
+          studentId: h.student.id,
+          groupId: h.group.id,
+          sessionId: h.lesson.id,
+        ),
+      );
+      final payment = h.host.payments.single.toJson();
+      final request = EntryRequest(
+        studentId: h.student.id,
+        sessionId: h.lesson.id,
+        mode: EntryMode.package,
+      );
+      h.loseNextCommandReply = true;
+      await expectLater(
+        h.remote.recordAttendanceWithCredit(request),
+        throwsA(isA<LanConnectionException>()),
+      );
+      expect(h.host.attendances, hasLength(1));
+      expect(h.host.attendanceNeedsPayment(h.student.id, h.lesson.id), isFalse);
+      expect(h.host.packages.single.remaining, 3);
+      await h.remote.refreshRemote();
+      await h.remote.recordAttendanceWithCredit(request);
+      expect(h.remote.attendances, hasLength(1));
+      expect(h.host.packages.single.remaining, 3);
+      expect(h.host.payments.single.toJson(), payment);
+      expect(h.host.allPayments, hasLength(1));
+      expect(await h.pendingFile.exists(), isFalse);
+    },
+  );
+
+  test(
     'changing connection is blocked until uncertain payment is settled',
     () async {
       h.loseNextCommandReply = true;

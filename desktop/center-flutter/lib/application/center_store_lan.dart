@@ -454,18 +454,22 @@ extension CenterStoreLanHost on CenterStore {
           ),
         );
       case 'record_attendance':
-        await recordAttendance(
-          EntryRequest(
-            studentId: a['studentId'] as String,
-            sessionId: a['sessionId'] as String,
-            mode: EntryMode.values.byName(a['mode'] as String),
-            originalAttendanceId: a['originalAttendanceId'] as String?,
-            makeupSourceGroupId: a['makeupSourceGroupId'] as String?,
-            acknowledgedAttendanceIds: List<String>.from(
-              a['acknowledgedAttendanceIds'] as List? ?? const [],
-            ),
+      case 'record_attendance_with_credit':
+        final entry = EntryRequest(
+          studentId: a['studentId'] as String,
+          sessionId: a['sessionId'] as String,
+          mode: EntryMode.values.byName(a['mode'] as String),
+          originalAttendanceId: a['originalAttendanceId'] as String?,
+          makeupSourceGroupId: a['makeupSourceGroupId'] as String?,
+          acknowledgedAttendanceIds: List<String>.from(
+            a['acknowledgedAttendanceIds'] as List? ?? const [],
           ),
         );
+        if (operation == 'record_attendance_with_credit') {
+          await recordAttendanceWithCredit(entry);
+        } else {
+          await recordAttendance(entry);
+        }
       case 'collectAndAttend':
         await collectAndAttend(
           EntryRequest(

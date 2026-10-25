@@ -1696,16 +1696,10 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           : null,
       acknowledgedAttendanceIds: acknowledgedAttendanceIds,
     );
-    await _run(() async {
-      await store.recordAttendance(request);
-      await _settleExistingPackageCoverage(request);
-    }, 'تم حفظ الحضور. حالة الدفع ظاهرة في سجل الطالب.');
-  }
-
-  Future<bool> _settleExistingPackageCoverage(EntryRequest request) async {
-    final coverage = _existingPackageCoverageRequest(request);
-    if (coverage == null) return false;
-    return _settleRecordedAttendance(coverage);
+    await _run(
+      () => store.recordAttendanceWithCredit(request),
+      'تم حفظ الحضور. حالة الدفع ظاهرة في سجل الطالب.',
+    );
   }
 
   EntryRequest? _existingPackageCoverageRequest(EntryRequest request) {

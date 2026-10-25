@@ -907,6 +907,18 @@ class _RemoteCenterStore extends CenterStore {
     'expectedNetAmount': r.expectedNetAmount,
   });
   @override
+  Future<void> recordAttendanceWithCredit(EntryRequest r) =>
+      _send('record_attendance_with_credit', {
+        'studentId': r.studentId,
+        'sessionId': r.sessionId,
+        'mode': r.mode.name,
+        'originalAttendanceId': r.originalAttendanceId,
+        'makeupSourceGroupId': r.makeupSourceGroupId,
+        'acknowledgedAttendanceIds': List<String>.unmodifiable(
+          r.acknowledgedAttendanceIds,
+        ),
+      });
+  @override
   Future<void> recordAttendance(EntryRequest r) => _send('record_attendance', {
     'studentId': r.studentId,
     'sessionId': r.sessionId,
