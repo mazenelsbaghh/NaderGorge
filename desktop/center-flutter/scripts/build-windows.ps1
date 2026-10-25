@@ -149,7 +149,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows host/client LAN integration checks failed.' }
     }
     finally { $env:MASSAR_LAN_TEST_EXECUTABLE = $PreviousLanTestExecutable }
-    & flutter test test/features/lan_settings_page_test.dart --plain-name 'Windows host repairs inside' --reporter expanded | Out-Host
+    & flutter test test/features/lan_settings_page_test.dart --plain-name 'Windows host ' --reporter expanded | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'In-app host network repair UI checks failed.' }
     if (-not $ClientOnly) {
         & (Join-Path $PSScriptRoot 'tests/test-lan-firewall-windows.ps1') -GatewayExecutable $LanExecutable

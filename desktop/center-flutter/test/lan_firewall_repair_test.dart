@@ -67,7 +67,7 @@ $rules = @(Get-NetFirewallApplicationFilter -PolicyStore PersistentStore | Where
       final manifest = File(p.join(folder.path, 'build-manifest.json'));
       await manifest.writeAsString('{"role":"client"}');
       await expectLater(
-        LanFirewallRepair.repair(applicationDirectory: folder.path),
+        LanFirewallRepair.ensureReady(applicationDirectory: folder.path),
         throwsA(
           isA<CenterException>().having(
             (e) => e.diagnosticCode,
@@ -83,13 +83,32 @@ $rules = @(Get-NetFirewallApplicationFilter -PolicyStore PersistentStore | Where
         0,
       );
       await manifest.writeAsString('{"role":"host"}');
-      await LanFirewallRepair.repair(applicationDirectory: folder.path);
-      await LanFirewallRepair.repair(applicationDirectory: folder.path);
+      await LanFirewallRepair.ensureReady(applicationDirectory: folder.path);
+      await LanFirewallRepair.ensureReady(applicationDirectory: folder.path);
       expect(
         int.parse(
           (await runPowerShell('$filters\nWrite-Output \$rules.Count')).trim(),
         ),
         2,
+      );
+      await runPowerShell(
+        '$filters\n\$rules[0] | Set-NetFirewallRule -Enabled False',
+      );
+      await expectLater(
+        LanFirewallRepair.ensureReady(applicationDirectory: folder.path),
+        throwsA(
+          isA<CenterException>().having(
+            (e) => e.diagnosticCode,
+            'modified administrator rule is preserved',
+            13,
+          ),
+        ),
+      );
+      expect(
+        (await runPowerShell(
+          '$filters\nWrite-Output @(\$rules | Where-Object Enabled -eq False).Count',
+        )).trim(),
+        '1',
       );
       await helper.writeAsString('exit 12');
       await expectLater(

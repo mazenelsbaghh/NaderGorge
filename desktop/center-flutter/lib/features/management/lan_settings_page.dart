@@ -588,8 +588,19 @@ class _LanSettingsPageState extends State<LanSettingsPage> {
       if (controller.supportsNetworkRepair) ...[
         const SizedBox(height: 8),
         const Text(
-          'لو الجهاز الآخر لا يتصل بعد تحديث الهوست، اضغط «إصلاح صلاحيات الشبكة» ووافق على طلب المسؤول من ويندوز.',
+          'عند تشغيل السيرفر، نفحص سماح الشبكة لهذه النسخة تلقائيًا. لو ناقص، وافق على طلب المسؤول من ويندوز. لن يتكرر الطلب ما دامت الصلاحيات سليمة.',
         ),
+        if (controller.networkPreparationError != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              controller.networkPreparationError!,
+              key: const Key('lan-network-preparation-error'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
         if (_networkRepairMessage != null) ...[
           const SizedBox(height: 8),
           Semantics(

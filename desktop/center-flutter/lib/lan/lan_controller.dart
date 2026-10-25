@@ -30,11 +30,13 @@ class LanController extends ChangeNotifier {
     this.clientOnly = false,
     this.homeworkHotspot,
     Future<void> Function()? repairNetwork,
+    Future<void> Function()? prepareNetwork,
   }) : _settings =
            settings ?? LanSettings(File(localStore.databasePath).parent),
        _hostProcess = hostProcess ?? LanHostProcess(),
        _searchHosts = searchHosts ?? (() => LanDiscovery.search()),
        _repairNetwork = repairNetwork ?? LanFirewallRepair.repair,
+       _prepareNetwork = prepareNetwork ?? LanFirewallRepair.ensureReady,
        _activeStore = localStore;
 
   final CenterStore localStore;
@@ -103,6 +105,9 @@ class LanController extends ChangeNotifier {
   final LanSettings _settings;
   final LanHostProcess _hostProcess;
   final Future<void> Function() _repairNetwork;
+  final Future<void> Function() _prepareNetwork;
+  String? _networkPreparationError;
+  String? get networkPreparationError => _networkPreparationError;
   bool get supportsNetworkRepair =>
       !clientOnly && defaultTargetPlatform == TargetPlatform.windows;
 
@@ -110,6 +115,7 @@ class LanController extends ChangeNotifier {
     _requireHostStaff();
     try {
       await _repairNetwork();
+      _networkPreparationError = null;
       reportLan('lan.control', 'config');
     } catch (error) {
       reportLan('lan.control', 'config', error: error);
@@ -207,7 +213,10 @@ class LanController extends ChangeNotifier {
       clientOnly
           ? 'هذا جهاز فرعي؛ اربطه بالجهاز الرئيسي'
           : 'هذا الجهاز يعمل مستقلًا',
-    LanConnectionStatus.hosting => 'السيرفر يعمل على هذا الجهاز',
+    LanConnectionStatus.hosting =>
+      _networkPreparationError == null
+          ? 'السيرفر يعمل على هذا الجهاز'
+          : 'السيرفر يعمل؛ صلاحيات الشبكة تحتاج مراجعة',
     LanConnectionStatus.connecting => 'جارٍ الاتصال بالجهاز الرئيسي…',
     LanConnectionStatus.connected =>
       activeStore.currentUser == null
@@ -554,6 +563,7 @@ class LanController extends ChangeNotifier {
 
   Future<void> _startHost(LanConfiguration candidate) async {
     await _stopHostResources();
+    await _prepareHostNetwork();
     final bridge = await CenterStoreHostBridge.start(localStore);
     try {
       final ready = await _hostProcess.start(
@@ -583,6 +593,21 @@ class LanController extends ChangeNotifier {
     } catch (_) {
       await bridge.close();
       rethrow;
+    }
+  }
+
+  Future<void> _prepareHostNetwork() async {
+    _networkPreparationError = null;
+    if (!supportsNetworkRepair) return;
+    try {
+      await _prepareNetwork();
+      reportLan('lan.control', 'config');
+    } catch (error, stackTrace) {
+      // Keep local reception and existing allowances usable after a denied UAC.
+      _networkPreparationError = error is CenterException
+          ? error.message
+          : 'تعذر تجهيز صلاحيات الشبكة. اضغط إصلاح صلاحيات الشبكة وأعد المحاولة.';
+      reportProblem(error, stackTrace, operation: 'lan.host_start');
     }
   }
 

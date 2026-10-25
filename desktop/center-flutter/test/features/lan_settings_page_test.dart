@@ -89,6 +89,7 @@ void main() {
     bool clientOnly = false,
     Future<Map<String, dynamic>> Function(Map<String, dynamic>)? hotspot,
     Future<void> Function()? repairNetwork,
+    Future<void> Function()? prepareNetwork,
   }) async {
     directory = await Directory.systemTemp.createTemp('massar-lan-controller-');
     hostStore = await CenterStore.open(directory: '${directory.path}/host');
@@ -144,6 +145,7 @@ void main() {
       homeworkHotspot: hotspot,
       hostProcess: hostWorker,
       repairNetwork: repairNetwork,
+      prepareNetwork: prepareNetwork ?? () async {},
       searchHosts: () async => [],
     );
     client = LanController(
@@ -353,6 +355,55 @@ void main() {
     await host.startHost(name: 'الجهاز الرئيسي للاختبار');
     discovered = [host.hostReady!.endpoint];
   }
+
+  testLanWidgets(
+    'Windows host prepares its new folder automatically and retries on saved startup after UAC cancellation',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      var preparations = 0;
+      Future<void> prepare() async {
+        preparations++;
+        if (preparations == 1) throw LanFirewallRepair.failure(20);
+      }
+
+      await realAsync(
+        tester,
+        () => setUpFixture(clientOnly: true, prepareNetwork: prepare),
+      );
+      await realAsync(tester, startFixture);
+      expect(preparations, 1);
+      expect(host.status, LanConnectionStatus.hosting);
+      expect(
+        host.networkPreparationError,
+        contains('اتلغى طلب صلاحية المسؤول'),
+      );
+      await open(tester, host);
+      expect(
+        find.byKey(const Key('lan-network-preparation-error')),
+        findsOneWidget,
+      );
+      await realAsync(tester, () async {
+        await client.pairHost(host.hostReady!.endpoint, host.pairingCode!);
+        await client.testConnection();
+        expect(client.status, LanConnectionStatus.connected);
+        await host.close();
+        host.dispose();
+        hostStore.signOut();
+        host = LanController(
+          localStore: hostStore,
+          hostProcess: _TestHostProcess(binary),
+          prepareNetwork: prepare,
+        );
+        await host.initialize();
+      });
+      expect(preparations, 2);
+      expect(host.status, LanConnectionStatus.hosting);
+      expect(host.networkPreparationError, isNull);
+      expect(hostStore.currentUser, isNull);
+      expect(hostStore.students.single.code, 'HOST');
+      expect(localStore.isClientWorkspace, isTrue);
+    },
+  );
 
   testLanWidgets(
     'Windows host repairs inside the page and can restart a stopped saved host',

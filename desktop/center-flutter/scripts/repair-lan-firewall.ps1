@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-#Requires -RunAsAdministrator
+param([switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $Program = Join-Path $PSScriptRoot 'massar-lan-host.exe'
@@ -39,6 +39,7 @@ function Add-LanAllowance([string]$Protocol, [int]$Port, [string]$Name) {
         }
         return
     }
+    if ($CheckOnly) { throw 'HOST_ALLOWANCE_MISSING' }
     New-NetFirewallRule -PolicyStore PersistentStore -Name $Name -DisplayName "Massar LAN $Protocol $Port" `
         -Group $Group -Direction Inbound -Action Allow -Enabled True -Profile Any `
         -Program $Program -Protocol $Protocol -LocalPort $Port -RemoteAddress LocalSubnet `
@@ -49,6 +50,13 @@ function Add-LanAllowance([string]$Protocol, [int]$Port, [string]$Name) {
 try {
     # Firewall permissions belong to this package path even before its server starts.
     Assert-HostPackage
+    if (-not $CheckOnly) {
+        $Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $Principal = [Security.Principal.WindowsPrincipal]::new($Identity)
+        if (-not $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw 'ADMINISTRATOR_REQUIRED'
+        }
+    }
     $Filters = @(Get-NetFirewallApplicationFilter -PolicyStore ActiveStore |
         Where-Object { $_.Program -eq $Program })
     $Blocks = @()
@@ -68,6 +76,10 @@ try {
     } finally { $Hasher.Dispose() }
     Add-LanAllowance 'TCP' 43873 "MassarCenterLAN-$PathId-TCP"
     Add-LanAllowance 'UDP' 43874 "MassarCenterLAN-$PathId-UDP"
+    if ($CheckOnly) {
+        Write-Host 'Host folder LAN allowances verified.'
+        exit 0
+    }
     Write-Host 'LAN allowances applied to THIS host folder for local subnets only.'
     Write-Host 'Close older Massar copies. Open massar_center.exe from THIS folder.'
     Write-Host 'Start the host server in Link devices, then retry from the secondary.'
@@ -85,7 +97,8 @@ try {
     $KnownReasons = @('PLACE_FILES_IN_NEW_HOST_FOLDER', 'HOST_BUILD_MANIFEST_NOT_FOUND',
         'USE_ON_HOST_NOT_SECONDARY',
         'EXISTING_RULE_IDENTITY_MISMATCH', 'EXISTING_REPAIR_RULE_CHANGED',
-        'EXPLICIT_HOST_BLOCK_REQUIRES_REVIEW')
+        'EXPLICIT_HOST_BLOCK_REQUIRES_REVIEW', 'HOST_ALLOWANCE_MISSING',
+        'ADMINISTRATOR_REQUIRED')
     if ($Reason -in $KnownReasons) { Write-Host ('Reason: ' + $Reason) }
     else { Write-Host ('Windows operation failed. Error code: ' + $Failure.HResult) }
     if ($RollbackFailed) { Write-Host 'ROLLBACK_INCOMPLETE: review the Massar Center LAN folder repair firewall group.' }
@@ -97,6 +110,8 @@ try {
         'EXPLICIT_HOST_BLOCK_REQUIRES_REVIEW' { exit 12 }
         'EXISTING_RULE_IDENTITY_MISMATCH' { exit 13 }
         'EXISTING_REPAIR_RULE_CHANGED' { exit 13 }
+        'HOST_ALLOWANCE_MISSING' { exit 15 }
+        'ADMINISTRATOR_REQUIRED' { exit 16 }
         default { exit $Failure.HResult }
     }
 }

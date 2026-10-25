@@ -33,6 +33,27 @@ try {
 """;
 
   static Future<void> repair({String? applicationDirectory}) async {
+    final repairScript = await _repairScript(applicationDirectory);
+    final child = await _startLauncher();
+    unawaited(child.stdout.drain<void>());
+    unawaited(child.stderr.drain<void>());
+    child.stdin.write(base64Encode(utf8.encode(repairScript.absolute.path)));
+    await child.stdin.close();
+    final exitCode = await child.exitCode;
+    if (exitCode != 0) throw failure(exitCode);
+    final verified = await _check(repairScript);
+    if (verified != 0) throw failure(verified);
+  }
+
+  static Future<void> ensureReady({String? applicationDirectory}) async {
+    final repairScript = await _repairScript(applicationDirectory);
+    final exitCode = await _check(repairScript);
+    if (exitCode == 0) return;
+    if (exitCode != 15) throw failure(exitCode);
+    await repair(applicationDirectory: applicationDirectory);
+  }
+
+  static Future<File> _repairScript(String? applicationDirectory) async {
     if (!Platform.isWindows) {
       throw const CenterException('إصلاح صلاحيات الشبكة متاح على ويندوز.');
     }
@@ -43,20 +64,35 @@ try {
       ),
     );
     if (!await repairScript.exists()) throw failure(10);
-    final child = await _startLauncher();
+    return repairScript;
+  }
+
+  static Future<int> _check(File repairScript) async {
+    final child = await _startPowerShell([
+      '-File',
+      repairScript.absolute.path,
+      '-CheckOnly',
+    ]);
     unawaited(child.stdout.drain<void>());
     unawaited(child.stderr.drain<void>());
-    child.stdin.write(base64Encode(utf8.encode(repairScript.absolute.path)));
     await child.stdin.close();
-    final exitCode = await child.exitCode;
-    if (exitCode != 0) throw failure(exitCode);
+    try {
+      return await child.exitCode.timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      child.kill();
+      throw failure(22);
+    }
   }
 
   static Future<Process> _startLauncher() async {
-    final windowsRoot = Platform.environment['SystemRoot'] ?? r'C:\Windows';
     final utf16 = [
       for (final unit in _launcher.codeUnits) ...[unit & 255, unit >> 8],
     ];
+    return _startPowerShell(['-EncodedCommand', base64Encode(utf16)]);
+  }
+
+  static Future<Process> _startPowerShell(List<String> arguments) {
+    final windowsRoot = Platform.environment['SystemRoot'] ?? r'C:\Windows';
     return Process.start(
       p.join(
         windowsRoot,
@@ -68,10 +104,11 @@ try {
       [
         '-NoProfile',
         '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
         '-WindowStyle',
         'Hidden',
-        '-EncodedCommand',
-        base64Encode(utf16),
+        ...arguments,
       ],
       runInShell: false,
       environment: {
@@ -100,6 +137,10 @@ try {
       'قواعد الشبكة الموجودة اتعدلت يدويًا. صدّر سجل مشكلة الربط لمراجعتها.',
     14 =>
       'لم يكتمل الإصلاح أو التراجع عن التغييرات. صدّر سجل مشكلة الربط لمراجعة الإعدادات.',
+    15 =>
+      'سماح الشبكة لهذه النسخة غير مكتمل. اضغط إصلاح صلاحيات الشبكة ووافق على طلب ويندوز.',
+    16 =>
+      'ضبط سماح الشبكة يحتاج صلاحية المسؤول من ويندوز. أعد الإصلاح ووافق على الطلب.',
     20 =>
       'اتلغى طلب صلاحية المسؤول. اضغط إصلاح صلاحيات الشبكة مجددًا ووافق على طلب ويندوز لإتمامه.',
     22 =>

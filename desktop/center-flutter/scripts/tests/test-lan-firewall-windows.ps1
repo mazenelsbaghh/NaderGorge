@@ -22,6 +22,10 @@ try {
         throw 'Secondary package must not create host firewall rules.'
     }
     '{"role":"host"}' | Set-Content -LiteralPath $Manifest
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair -CheckOnly
+    if ($LASTEXITCODE -ne 15 -or @(Get-FixtureRules).Count -ne 0) {
+        throw 'Read-only preflight must detect missing folder permissions without creating rules.'
+    }
     # The reported incident had no running gateway: permissions must work before startup.
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair
     if ($LASTEXITCODE -ne 0) { throw 'Host folder firewall repair failed.' }
@@ -42,11 +46,21 @@ try {
     if (@(Compare-Object @('TCP:43873', 'UDP:43874') $ActualPorts).Count -ne 0) {
         throw 'Unexpected host firewall ports.'
     }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair -CheckOnly
+    if ($LASTEXITCODE -ne 0 -or @(Compare-Object $RuleNames @((Get-FixtureRules).Name)).Count -ne 0) {
+        throw 'Read-only preflight must accept healthy permissions without modifying rules.'
+    }
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair
     if ($LASTEXITCODE -ne 0 -or @(Compare-Object $RuleNames @((Get-FixtureRules).Name)).Count -ne 0) {
         throw 'Repeating the repair must retain the same two rules.'
     }
-    Write-Host 'Windows firewall checks passed: host-only, stopped gateway, local subnet scope, repeat repair.'
+    $Block = 'MassarFirewallTest-' + [Guid]::NewGuid().ToString('N')
+    New-NetFirewallRule -Name $Block -Program $Program -Direction Inbound -Action Block -Enabled True | Out-Null
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Repair -CheckOnly
+    if ($LASTEXITCODE -ne 12 -or (Get-NetFirewallRule -Name $Block).Action -ne 'Block') {
+        throw 'Preflight must preserve and report explicit administrator blocks.'
+    }
+    Write-Host 'Windows firewall checks passed: host-only, read-only preflight, stopped gateway, local subnet scope, repeat repair, explicit block preserved.'
 } finally {
     # This unique temporary executable path belongs only to this test invocation.
     Get-FixtureRules | Remove-NetFirewallRule
