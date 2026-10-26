@@ -76,14 +76,13 @@ export default function PackagesPageClient() {
     queryKey: queryKeys.student.quickAccess(userBoundary),
     queryFn: quickAccessQueryFn,
     staleTime: 30_000,
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && activeTab !== 'packages',
   });
   const packages = packagesQuery.data ?? [];
   const quickAccess = quickAccessQuery.data ?? [];
   const loading =
     !userId ||
-    (packagesQuery.data === undefined && packagesQuery.error === null) ||
-    (quickAccessQuery.data === undefined && quickAccessQuery.error === null);
+    (packagesQuery.data === undefined && packagesQuery.error === null);
   const hasLoadError = Boolean(packagesQuery.error || quickAccessQuery.error);
   const refetch = () => {
     void Promise.all([
@@ -109,9 +108,8 @@ export default function PackagesPageClient() {
   }
 
   if (
-    hasLoadError &&
-    packagesQuery.data === undefined &&
-    quickAccessQuery.data === undefined
+    packagesQuery.error &&
+    packagesQuery.data === undefined
   ) {
     return (
       <div
@@ -201,7 +199,7 @@ export default function PackagesPageClient() {
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs ${isActive ? 'bg-white/15' : 'bg-[var(--admin-card-soft)]'}`}
                 >
-                  {count}
+                  {tabAccessKind && quickAccessQuery.data === undefined ? '…' : count}
                 </span>
               </button>
             );
@@ -218,6 +216,14 @@ export default function PackagesPageClient() {
             emptyDescription="أي باقة تشتريها أو تفتحها بكود ستظهر هنا فقط إذا كانت ما زالت مطابقة لمرحلتك وصفك وموادك الحالية."
             getHref={(packageId) => `/student/packages/${packageId}`}
           />
+        ) : quickAccessQuery.data === undefined ? (
+          quickAccessQuery.error ? (
+            <p role="alert" className="rounded-xl border border-[var(--admin-border)] p-5 text-[var(--admin-text)]">
+              تعذر تحميل {activeTabMeta.label}. اضغط إعادة المحاولة بالأعلى.
+            </p>
+          ) : (
+            <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" role="status" aria-label={`جارٍ تحميل ${activeTabMeta.label}`} />
+          )
         ) : (
           <QuickAccessGrid
             title={activeTabMeta.label}

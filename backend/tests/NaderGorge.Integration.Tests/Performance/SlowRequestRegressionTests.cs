@@ -25,6 +25,44 @@ namespace NaderGorge.Integration.Tests.Performance;
 public sealed class SlowRequestRegressionTests(ITestOutputHelper output)
 {
     [Fact]
+    public async Task QuickAccessVideoTypeGrant_KeepsQueriesBoundedAndExcludesArchivedAndWrongGradeVideos()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var small = await MeasureQuickAccessAsync(fixture, 4);
+        var large = await MeasureQuickAccessAsync(fixture, 40);
+        Assert.InRange(large, 1, small + 2);
+    }
+
+    private async Task<int> MeasureQuickAccessAsync(PostgresLiveSupportFixture fixture, int count)
+    {
+        var graph = await SeedAsync(fixture.Db, count);
+        graph.Videos[0].ArchiveMode = ContentArchiveMode.HiddenFromEveryone;
+        fixture.Db.StudentFacingAcademicScopes.Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.LessonVideo, OwnerId = graph.Videos[1].Id,
+            ScopeLevel = AcademicScopeLevel.GradeAllSubjects,
+            EducationStage = EducationStage.Secondary, GradeLevel = GradeLevel.FirstSecondary
+        });
+        fixture.Db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            User = graph.Student, GrantType = CodeType.Video, VideoTypeId = graph.Videos[0].VideoTypeId,
+            PackageId = graph.Section.Term.PackageId, IsActive = true, GrantedAt = DateTime.UtcNow
+        });
+        await fixture.Db.SaveChangesAsync();
+        var counter = new QueryCounter();
+        await using var db = Open(fixture, counter);
+        var response = await new GetQuickAccessQueryHandler(db, new AcademicScopeService(db), new ContentArchiveAccessService(db))
+            .Handle(new GetQuickAccessQuery(graph.Student.Id), default);
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(count - 2, response.Data!.Count);
+        Assert.DoesNotContain(response.Data, item => item.Url.EndsWith(graph.Videos[0].Id.ToString()));
+        Assert.DoesNotContain(response.Data, item => item.Url.EndsWith(graph.Videos[1].Id.ToString()));
+        output.WriteLine($"Quick access ({count} videos): {counter.Count} queries");
+        return counter.Count;
+    }
+
+    [Fact]
     public async Task LessonLists_KeepQueryCountBoundedAsOwnedLessonsGrow()
     {
         await using var fixture = new PostgresLiveSupportFixture();

@@ -106,6 +106,8 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   function canRecoverAuthorization(status){
     if(!canRenew())return false;
     if((relayAttempted||provider==='vcdn')&&status===401)return relayAuthRecoveries++<2;
+    // The relay signs every upstream request afresh; another renewal cannot repair its 403.
+    if(relayAttempted&&status===403)return false;
     return status===403&&directAuthRecoveries++<2;
   }
   function renewalDueAt(){
@@ -193,7 +195,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
   var lastInteractionAt=-Infinity;
   function relayInteraction(event){var now=Date.now();if(event.type==='pointermove'&&now-lastInteractionAt<200)return;lastInteractionAt=now;post('playerInteraction');}
   ['pointerover','pointermove','pointerdown','touchstart','keydown'].forEach(function(name){document.addEventListener(name,relayInteraction,{passive:true});});
-  function hlsErrorMessage(status){if(provider==='vcdn')return 'تعذر تحميل بث VCDN'+(status?' (حالة '+status+')':'')+'. تأكد من جاهزية الفيديو وإتاحة البث لهذا النطاق.';if(status===401||status===403)return 'Bunny رفض رابط HLS ('+status+'). راجع CDN Token Authentication Key وAllowed Domains.';if(status===404)return 'ملف HLS غير موجود على Bunny (404). راجع CDN hostname وانتظر اكتمال ترميز الفيديو.';if(status===0)return relayAttempted?'تعذر تحميل الفيديو عبر المنصة أيضًا. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.':'تعذر تحميل الفيديو من Bunny على هذا الجهاز. جرّب شبكة أخرى ثم أعد المحاولة.';return status?'تعذر تحميل Bunny HLS (حالة '+status+').':'تعذر تحميل بث Bunny HLS.';}
+  function hlsErrorMessage(status){if(provider==='vcdn')return 'تعذر تحميل بث VCDN'+(status?' (حالة '+status+')':'')+'. تأكد من جاهزية الفيديو وإتاحة البث لهذا النطاق.';if(status===401||status===403)return 'خدمة الفيديو رفضت طلب التشغيل. أعد المحاولة لاحقًا، وإذا استمرت المشكلة تواصل مع الدعم.';if(status===404)return 'ملف الفيديو غير متاح حاليًا. أعد المحاولة لاحقًا أو تواصل مع الدعم.';if(status===0)return relayAttempted?'تعذر تحميل الفيديو عبر المنصة أيضًا. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.':'تعذر تحميل الفيديو على هذا الجهاز. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.';return 'تعذر تحميل الفيديو حاليًا. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.';}
   function nativePlaybackError(){return 'تعذر تشغيل الفيديو على مشغل الجهاز. لم يحدد المتصفح سبب التعطل. أعد المحاولة، وإذا تكرر توقف التشغيل تواصل مع الدعم.';}
   // Receiving an incomplete segment advances its byte counter before the media clock can move.
   function downloadAdvanced(){var loaded=Number(activeDownload&&activeDownload.stats.loaded)||0;var advanced=loaded>observedDownloadBytes;observedDownloadBytes=loaded;if(advanced)downloadProgressObserved=true;return advanced;}
@@ -288,7 +290,7 @@ ${options.vcdnPlatformSession ? '<script src="/vendor/vcdn/vcdn-hls-transport.js
       if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance){relayAuthRecoveries=0;directAuthRecoveries=0;loadProgress('fragment_loaded',20000);}});
       hls.on(window.Hls.Events.LEVEL_SWITCHED,function(){emitQuality();});
       var instance=hls;
-      hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&recoverHlsMedia())return;var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&canRecoverAuthorization(status)){renewalRestart=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();requestSourceRenewal();return;}if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&(tryRelay(status)||recoverRelayNetwork(status)))return;failHls(status,hlsErrorMessage(status)+' ['+phase+']',phase);});
+      hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&recoverHlsMedia())return;var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&canRecoverAuthorization(status)){renewalRestart=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();requestSourceRenewal();return;}if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&(tryRelay(status)||recoverRelayNetwork(status)))return;failHls(status,hlsErrorMessage(status),phase);});
     }catch(e){failHls(0,'تعذر بدء مشغل HLS على هذا الجهاز. حدّث المتصفح وAndroid System WebView ثم أعد المحاولة.','hlsjs_bootstrap');}
   }else if(vcdnPlatformSession){
     failHls(0,'بث VCDN يحتاج متصفحًا يدعم مشغل HLS. حدّث Safari أو Chrome ثم أعد المحاولة.','vcdn_transport_unsupported');

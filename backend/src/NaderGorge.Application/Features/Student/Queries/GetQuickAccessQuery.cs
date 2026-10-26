@@ -39,6 +39,7 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
         var now = DateTime.UtcNow;
 
         var grants = await _db.StudentAccessGrants
+            .AsNoTracking()
             .Include(g => g.AccessCode)
                 .ThenInclude(c => c!.CodeGroup)
             .Where(g => g.UserId == request.UserId && g.IsActive &&
@@ -194,11 +195,15 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
                     })
                     .ToListAsync(ct);
 
+                var videoIds = videos.Select(video => video.Id).ToArray();
+                var viewableVideoIds = await _archiveAccess.GetViewableLessonVideoIdsAsync(
+                    request.UserId, videoIds, ct);
+                var eligibleVideoIds = await _academicScope.GetEligibleLessonVideoIdsForStudentAsync(
+                    videoIds, request.UserId, ct);
+
                 foreach (var video in videos)
                 {
-                    if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
-                        continue;
-                    if (!await IsEligibleAsync(StudentFacingScopeOwnerType.LessonVideo, video.Id, request.UserId, ct))
+                    if (!viewableVideoIds.Contains(video.Id) || !eligibleVideoIds.Contains(video.Id))
                         continue;
 
                     var url = $"/student/packages/{video.PackageId}/lessons/{video.LessonId}?videoId={video.Id}";

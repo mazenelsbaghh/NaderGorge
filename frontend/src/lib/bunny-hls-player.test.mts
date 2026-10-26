@@ -330,7 +330,8 @@ test('2026-09-03 Bunny HLS 403 stops loading with its real cause and never falls
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
   assert.equal(errorMessage?.data?.code, 403);
   assert.equal(errorMessage?.data?.phase, 'manifestLoadError');
-  assert.match(errorMessage?.data?.message ?? '', /Token Authentication Key/);
+  assert.match(errorMessage?.data?.message ?? '', /خدمة الفيديو رفضت طلب التشغيل/);
+  assert.doesNotMatch(errorMessage?.data?.message ?? '', /Token Authentication|Allowed Domains|manifestLoadError/);
   assert.equal(player.hls()?.startLoadCalls, 0);
   assert.equal(player.hls()?.destroyCalls, 1);
   assert.equal(player.messages.some((message) => message.data?.provider === 'bunny'), false);
@@ -536,7 +537,7 @@ test('2026-09-04 Apple native HTTP 403 preserves the confirmed Bunny rejection',
   const error = player.messages.find(message => message.type === 'error');
   assert.equal(error?.data?.code, 403);
   assert.equal(error?.data?.phase, 'native_manifest_http');
-  assert.match(error?.data?.message ?? '', /Token Authentication Key/);
+  assert.match(error?.data?.message ?? '', /خدمة الفيديو رفضت طلب التشغيل/);
   assert.equal(player.messages.some(message => message.type === 'ready'), false);
   assert.equal(player.nativeRequests(), 1);
 });
@@ -824,6 +825,18 @@ test('a signature capped at the watch-session end stays usable and cannot trigge
   assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
   player.command('sourceRenewalFailed', { status: 404 });
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+});
+
+test('2026-10-27 relay upstream 403 stops without repeatedly renewing an already fresh signature', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', signedPlaylist(300));
+  player.emitFatalNetworkError(0);
+  player.emitFatalNetworkError(403);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 0);
+  const error = player.messages.find(message => message.type === 'error');
+  assert.equal(error?.data?.code, 403);
+  assert.equal(error?.data?.phase, 'relay_manifestLoadError');
+  assert.equal(player.hlsInstances.length, 2);
+  assert.equal(player.hlsInstances[1].destroyCalls, 1);
 });
 
 test('relay JWT expiry requests a parent auth refresh and resumes the same player with bounded retries', async () => {

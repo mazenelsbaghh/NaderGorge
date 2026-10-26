@@ -35,6 +35,7 @@ const CompactRegistrationInstructionsDialog = dynamic(
 export default function StudentDashboardClient() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user?.id);
+  const studentName = useAuthStore((state) => state.user?.fullName);
   const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
   const userBoundary = userId ?? 'pending';
   const dashboardQueryFn = useCallback(
@@ -66,10 +67,6 @@ export default function StudentDashboardClient() {
   });
   const data = dashboardQuery.data;
   const quickAccessItems = quickAccessQuery.data ?? [];
-  const loading =
-    !userId ||
-    (dashboardQuery.data === undefined && dashboardQuery.error === null) ||
-    (quickAccessQuery.data === undefined && quickAccessQuery.error === null);
   const loadError =
     dashboardQuery.error || quickAccessQuery.error
       ? 'تعذر تحميل لوحة الطالب. تحقق من الاتصال ثم أعد المحاولة.'
@@ -126,39 +123,8 @@ export default function StudentDashboardClient() {
     setShowInstructionsOnboard(false);
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6" aria-label="جارٍ تحميل لوحة الطالب">
-        <div className="h-20 animate-pulse rounded-xl bg-[var(--admin-card-strong)]" />
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
-          <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
-          <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
-        </div>
-        <div className="h-72 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
-      </div>
-    );
-  }
-
-  if (!data && loadError) {
-    return (
-      <div
-        role="alert"
-        className="mx-auto flex max-w-xl flex-col items-center gap-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-500/30 dark:bg-red-500/10"
-      >
-        <p className="font-bold text-red-700 dark:text-red-200">{loadError}</p>
-        <button
-          type="button"
-          onClick={refetchDashboard}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)]"
-        >
-          إعادة المحاولة
-        </button>
-      </div>
-    );
-  }
-
   const d: DashboardDto = data ?? {
-    studentName: 'طالب',
+    studentName: studentName ?? 'طالب',
     activePackages: [],
     resumePoint: undefined,
     upcomingExams: [],
@@ -176,7 +142,7 @@ export default function StudentDashboardClient() {
           role="alert"
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
         >
-          <span>{loadError} يتم عرض آخر بيانات متاحة.</span>
+          <span>{loadError} {data ? 'يتم عرض آخر بيانات متاحة.' : 'يمكنك استخدام الأقسام التي تم تحميلها.'}</span>
           <button
             type="button"
             onClick={refetchDashboard}
@@ -196,7 +162,7 @@ export default function StudentDashboardClient() {
         </div>
       ) : <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" aria-label="جارٍ تحميل تقدّم المشاهدة" />}
 
-      {lessonsQuery.data?.length === 0 && (
+      {data && lessonsQuery.data?.length === 0 && quickAccessQuery.data !== undefined && (
         <StudentGettingStartedPanel
           data={d}
           hasDirectContentAccess={quickAccessItems.length > 0}
@@ -233,7 +199,11 @@ export default function StudentDashboardClient() {
         </details>
       )}
 
-      <QuickAccessPanel accessItems={quickAccessItems} />
+      {quickAccessQuery.data !== undefined ? (
+        <QuickAccessPanel accessItems={quickAccessItems} />
+      ) : !quickAccessQuery.error ? (
+        <div className="h-28 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" role="status" aria-label="جارٍ تحميل الوصول السريع" />
+      ) : null}
 
       <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
         <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
@@ -253,7 +223,7 @@ export default function StudentDashboardClient() {
         </div>
       </details>
 
-      {showInstructionsOnboard && !d.resumePoint ? (
+      {showInstructionsOnboard && data && !data.resumePoint ? (
         <CompactRegistrationInstructionsDialog
           open
           onClose={handleCloseOnboard}
