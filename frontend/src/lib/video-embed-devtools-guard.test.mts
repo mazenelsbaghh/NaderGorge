@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 
-import { createDevToolsSuspensionScript } from './video-embed-devtools-guard.ts';
+import { createDevToolsSuspensionScript, installVideoInspectionGuard } from './video-embed-devtools-guard.ts';
 
 interface KeyboardEventLike {
   key: string;
@@ -78,6 +78,9 @@ for (const shortcut of [
   { name: 'Ctrl+Shift+K', key: 'k', ctrlKey: true, shiftKey: true },
   { name: 'Meta+Option+I', key: 'i', metaKey: true, altKey: true },
   { name: 'Meta+Shift+C', key: 'c', metaKey: true, shiftKey: true },
+  { name: 'Ctrl+U', key: 'u', ctrlKey: true },
+  { name: 'Meta+U', key: 'u', metaKey: true },
+  { name: 'Meta+Option+U', key: 'u', metaKey: true, altKey: true },
 ]) {
   test(`${shortcut.name} suspends the isolated player once`, () => {
     const playback = runGuard();
@@ -105,4 +108,25 @@ test('ordinary keyboard shortcuts keep playback active', () => {
   assert.equal(playback.hookCalls, 0);
   assert.deepEqual(playback.locations, []);
   assert.deepEqual(playback.messages, []);
+});
+
+test('page inspection guard suspends on every attempt and removes its listener on cleanup', () => {
+  const target = new EventTarget();
+  let suspensions = 0;
+  const cleanup = installVideoInspectionGuard(target as unknown as Window, () => { suspensions += 1; });
+  const press = (key: string) => {
+    const event = new Event('keydown', { cancelable: true });
+    Object.defineProperty(event, 'key', { value: key });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  assert.equal(press(' '), false);
+  assert.equal(suspensions, 0);
+  assert.equal(press('F12'), true);
+  assert.equal(press('F12'), true);
+  assert.equal(suspensions, 2);
+  cleanup();
+  assert.equal(press('F12'), false);
+  assert.equal(suspensions, 2);
 });

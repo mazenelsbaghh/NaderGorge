@@ -1,6 +1,7 @@
 'use client';
 
 import { youtubeQualityFullscreenGeometry, youtubeQualityPreviewGeometry, YOUTUBE_QUALITY_GEAR_CLIP } from '@/lib/youtube-quality-preview';
+import { installVideoInspectionGuard } from '@/lib/video-embed-devtools-guard';
 import { devConsole } from '@/utils/dev-console';
 import { formatPlayerTime } from '@/lib/player-time';
 import { isVideoLearningComplete } from '@/lib/student-learning-progress';
@@ -318,6 +319,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const cleanFullscreen = fullscreenActive && !showControls && !nativeQualityMenuOpen && !qualityShadowsVisible;
   const loadingSessionRef = useRef(false);
   const securitySuspendedRef = useRef(false);
+  const inspectionResumeRef = useRef<{ time: number; rate: number; trackingEnabled: boolean } | null>(null);
   const domShieldsCleanupRef = useRef<(() => void) | null>(null);
   const reloadSessionRef = useRef<(() => void) | null>(null);
   const reloadActiveEmbedRef = useRef<(() => void) | null>(null);
@@ -849,6 +851,54 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     return () => clearTimeout(timer);
   }, [isLocalPreview, status]);
 
+  const cancelRecoveryForInspection = useCallback(() => {
+    youtubeStartupRecoveryRef.current?.cancel();
+    embedReadinessWatchdogRef.current?.cancel();
+    embedReadinessWatchdogRef.current = null;
+    for (const timer of [playFallbackTimeoutRef, bunnyRecoveryTimerRef, progressRetryTimerRef]) {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (trackingInterval.current) clearInterval(trackingInterval.current);
+    trackingInterval.current = null;
+  }, []);
+
+  const removeInspectedVideoSurface = useCallback(() => {
+    domShieldsCleanupRef.current?.();
+    domShieldsCleanupRef.current = null;
+    const playerIframe = iframeRef.current;
+    iframeRef.current = null;
+    if (playerIframe) {
+      playerIframe.removeAttribute('src');
+      playerIframe.src = 'about:blank';
+      playerIframe.remove();
+    }
+    containerRef.current?.replaceChildren();
+  }, []);
+
+  const suspendPlaybackForInspection = useCallback(() => {
+    if (securitySuspendedRef.current) return;
+    inspectionResumeRef.current = {
+      time: currentTimeRef.current, rate: playbackRateRef.current, trackingEnabled: trackingEnabledRef.current,
+    };
+    accrueTrackedPlaybackRef.current();
+    void flushTrackedProgressRef.current({ drain: true });
+    securitySuspendedRef.current = true;
+    cancelRecoveryForInspection();
+    removeInspectedVideoSurface();
+    trackingEnabledRef.current = false;
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    setIsBuffering(false);
+    setShowControls(true);
+    setNativeQualityMenuOpen(false);
+    showPersistentPlayerShadows();
+    setStatus('protected');
+    setErrorMessage('أغلق أدوات المطوّر، ثم اضغط «متابعة المشاهدة» للرجوع إلى نفس موضع الفيديو.');
+  }, [cancelRecoveryForInspection, removeInspectedVideoSurface, showPersistentPlayerShadows]);
+
+  useEffect(() => installVideoInspectionGuard(window, suspendPlaybackForInspection), [suspendPlaybackForInspection]);
+
   // ── PostMessage listener ──
   // Receives events from the embedded video page
   useEffect(() => {
@@ -932,41 +982,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'playerInteraction':
           handlePlayerInteraction();
           break;
-        case 'securityViolation': {
-          securitySuspendedRef.current = true;
-          youtubeStartupRecoveryRef.current?.cancel();
-          domShieldsCleanupRef.current?.();
-          domShieldsCleanupRef.current = null;
-          trackingEnabledRef.current = false;
-          progressSegmentsRef.current = [];
-          fixedProgressRequestsRef.current = [];
-          if (trackingInterval.current) {
-            clearInterval(trackingInterval.current);
-            trackingInterval.current = null;
-          }
-          embedReadinessWatchdogRef.current?.cancel();
-          embedReadinessWatchdogRef.current = null;
-          if (playFallbackTimeoutRef.current) {
-            clearTimeout(playFallbackTimeoutRef.current);
-            playFallbackTimeoutRef.current = null;
-          }
-          const playerIframe = iframeRef.current;
-          iframeRef.current = null;
-          if (playerIframe) {
-            playerIframe.removeAttribute('src');
-            playerIframe.src = 'about:blank';
-            playerIframe.remove();
-          }
-          containerRef.current?.replaceChildren();
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          setIsBuffering(false);
-          setShowControls(true);
-          showPersistentPlayerShadows();
-          setStatus('protected');
-          setErrorMessage('تم إيقاف تشغيل الفيديو لحماية المحتوى. أغلق أدوات المطوّر ثم أعد تحميل الصفحة للمتابعة.');
+        case 'securityViolation':
+          suspendPlaybackForInspection();
           break;
-        }
         case 'providerLoaded': {
           const loadedProvider = String(msg.data?.provider || '').toLowerCase();
           if (loadedProvider === 'bunny') {
@@ -1020,6 +1038,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               );
               bunnyRecoveryResumeTimeRef.current = 0;
             }
+          }
+          const inspectionResume = inspectionResumeRef.current;
+          if (inspectionResume) {
+            inspectionResumeRef.current = null;
+            sendCommand('seekTo', { time: inspectionResume.time, seconds: inspectionResume.time });
+            sendCommand('setPlaybackRate', { rate: inspectionResume.rate });
+            sendCommand('play');
           }
           if (embedProvider === 'bunny') {
             setIsBuffering(false);
@@ -1239,7 +1264,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLocalPreview, isLocalHlsPreview, localHlsPreviewEndpoint, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, recoverYouTubeStartup, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
+  }, [isLocalPreview, isLocalHlsPreview, localHlsPreviewEndpoint, youtubeQualityEnabled, applyStableDuration, consumeActiveSession, handlePlayerInteraction, recoverYouTubeStartup, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows, suspendPlaybackForInspection]);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
@@ -1532,7 +1557,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           if (!res) break;
           acknowledgeProgressResponse(sessionId, progressRequest.sequence, res.data.data);
         } catch (err) {
-          if (!isCurrentVideoSession(sessionId, activeSessionIdRef.current)) return;
+          if (securitySuspendedRef.current || !isCurrentVideoSession(sessionId, activeSessionIdRef.current)) return;
           const retryDelay = videoProgressRetryDelayMs(err, Date.now());
           if (retryDelay > 0) {
             progressRetryAtRef.current = Date.now() + retryDelay;
@@ -1833,6 +1858,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         return;
       }
       const response = await createVideoSessionWithRetry(lessonVideoId);
+      if (securitySuspendedRef.current) return;
       const session = response.data.data;
       trackingEnabledRef.current = !session.isPreview;
       activeSessionIdRef.current = session.sessionId;
@@ -1901,6 +1927,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setEmbedRequest({ sessionId: session.sessionId, youTubeQualityEnabled: providerName === 'youtube' && session.youTubeQualityEnabled === true });
 
     } catch (err: any) {
+      if (securitySuspendedRef.current) return;
       const errors = err.response?.data?.errors || [];
       if (errors.includes('WATCH_LIMIT_REACHED')) {
         setStatus('locked');
@@ -1931,6 +1958,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   reloadSessionRef.current = () => { void loadVideo(); };
   reloadActiveEmbedRef.current = () => {
+    if (securitySuspendedRef.current) return;
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) {
       reloadSessionRef.current?.();
@@ -1938,6 +1966,21 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
     setStatus('loading');
     setEmbedRequest(previous => ({ ...previous, sessionId }));
+  };
+
+  const resumeAfterInspection = () => {
+    if (!securitySuspendedRef.current || !inspectionResumeRef.current) return;
+    securitySuspendedRef.current = false;
+    setErrorMessage('');
+    setStatus('loading');
+    trackingEnabledRef.current = inspectionResumeRef.current?.trackingEnabled ?? false;
+    youtubeStartupRecoveryRef.current = null;
+    const sessionExpired = sessionExpiresAtRef.current > 0 && sessionExpiresAtRef.current <= Date.now();
+    if (!activeSessionIdRef.current || sessionExpired) {
+      void loadVideo();
+      return;
+    }
+    reloadActiveEmbedRef.current?.();
   };
 
   // Fast session responses can arrive before React commits the loading surface.
@@ -2455,10 +2498,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <p className="max-w-md text-gray-300">{errorMessage}</p>
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={inspectionResumeRef.current ? resumeAfterInspection : () => window.location.reload()}
           className="mt-6 min-h-11 rounded-md bg-[var(--admin-primary)] px-6 font-bold text-[var(--admin-primary-contrast)] transition-opacity hover:opacity-90"
         >
-          أعد تحميل الصفحة بعد إغلاق أدوات المطوّر
+          {inspectionResumeRef.current ? 'متابعة المشاهدة' : 'إعادة تحميل الصفحة'}
         </button>
       </div>
     );
