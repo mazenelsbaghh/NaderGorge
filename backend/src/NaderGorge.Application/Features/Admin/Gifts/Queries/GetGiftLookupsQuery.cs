@@ -88,17 +88,17 @@ public sealed class GetGiftTargetsLookupQueryHandler : IRequestHandler<GetGiftTa
         List<GiftLookupDto> rows = request.TargetType switch
         {
             GiftTargetType.Package => await _db.Packages.AsNoTracking()
-                .Where(x => x.IsActive && x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId) && (search == null || x.Name.ToLower().Contains(search)))
+                .Where(x => (x.IsActive || x.ShowWhenUnavailable) && x.ArchiveMode == ContentArchiveMode.None && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId) && (search == null || x.Name.ToLower().Contains(search)))
                 .OrderBy(x => x.Name).Take(50).Select(x => new GiftLookupDto(x.Id, x.Name, x.Teacher.User.FullName, null, null)).ToListAsync(ct),
             GiftTargetType.Term => await _db.Terms.AsNoTracking()
-                .Where(x => x.Package.IsActive && x.Package.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
+                .Where(x => (x.Package.IsActive || x.Package.ShowWhenUnavailable) && x.Package.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
                     (!x.IsSystemContainer || x.Package.ContentMode == PackageContentMode.SectionWithLessons) &&
                     (!request.TeacherId.HasValue || x.Package.TeacherId == request.TeacherId) &&
                     (search == null || x.Title.ToLower().Contains(search) || x.Package.Name.ToLower().Contains(search)))
                 .OrderBy(x => x.Package.Name).ThenBy(x => x.Order).Take(50)
                 .Select(x => new GiftLookupDto(x.Id, x.IsSystemContainer ? x.Package.Name : x.Title, x.Package.Name, null, null)).ToListAsync(ct),
             GiftTargetType.ContentSection => await _db.ContentSections.AsNoTracking()
-                .Where(x => x.Term.Package.IsActive && x.Term.Package.ArchiveMode == ContentArchiveMode.None && x.Term.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
+                .Where(x => (x.Term.Package.IsActive || x.Term.Package.ShowWhenUnavailable) && x.Term.Package.ArchiveMode == ContentArchiveMode.None && x.Term.ArchiveMode == ContentArchiveMode.None && x.ArchiveMode == ContentArchiveMode.None &&
                     (!x.IsSystemContainer || x.Term.Package.ContentMode == PackageContentMode.LessonsOnly) &&
                     (!request.TeacherId.HasValue || x.Term.Package.TeacherId == request.TeacherId) &&
                     (search == null || x.Title.ToLower().Contains(search) || x.Term.Title.ToLower().Contains(search) || x.Term.Package.Name.ToLower().Contains(search)))
