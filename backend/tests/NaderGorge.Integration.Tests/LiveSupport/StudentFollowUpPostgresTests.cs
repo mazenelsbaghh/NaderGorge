@@ -13,7 +13,7 @@ using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.Integration.Tests.LiveSupport;
 
-public sealed class StudentFollowUpPostgresTests
+public sealed partial class StudentFollowUpPostgresTests
 {
     private static readonly DateTime Now = new(2026, 10, 18, 16, 0, 0, DateTimeKind.Utc);
 

@@ -35,7 +35,8 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
         Validate(filter);
         if (!await db.Packages.AnyAsync(p => p.Id == filter.PackageId && p.TeacherId == filter.TeacherId, ct))
             throw new ArgumentException("اختر كورسًا تابعًا للمدرس المحدد.");
-        var lessonIds = filter.LessonIds.Distinct().ToArray();
+        var lessonIds = filter.StudentId.HasValue && filter.LessonIds.Length == 0
+            ? await CourseLessonIdsAsync(filter.PackageId, ct) : filter.LessonIds.Distinct().ToArray();
         var ownedIds = await db.Lessons.Where(l => lessonIds.Contains(l.Id)
                 && l.ContentSection.Term.PackageId == filter.PackageId)
             .Select(l => l.Id).ToListAsync(ct);
@@ -62,8 +63,10 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
     {
         if (filter.TeacherId == Guid.Empty || filter.PackageId == Guid.Empty)
             throw new ArgumentException("اختر المدرس والكورس أولًا.");
-        if (filter.LessonIds is null || filter.LessonIds.Length is < 1 or > 20)
+        if (filter.LessonIds is null || filter.LessonIds.Length > 20 || (filter.LessonIds.Length == 0 && !filter.StudentId.HasValue))
             throw new ArgumentException("اختر من حصة إلى 20 حصة في الكشف الواحد.");
+        if (filter.StudentId == Guid.Empty || filter.Attendance is not ("All" or "present" or "absent"))
+            throw new ArgumentException("اختر طالبًا أو حالة حضور صحيحة.");
         if (filter.Page < 1 || filter.Page > 1_000_000 || filter.PageSize is < 1 or > 100)
             throw new ArgumentException("رقم الصفحة أو حجمها غير صالح.");
         if (filter.MinimumDays is < 0 or > 3650 || filter.Search?.Length > 100)
@@ -74,6 +77,7 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
 
     private static bool MatchesFilter(StudentFollowUpRow row, StudentFollowUpFilter filter) =>
         (filter.State == "All" || (filter.State == "Incomplete" ? row.State != "Completed" : row.State == filter.State))
+        && (filter.Attendance == "All" || (filter.Attendance == "absent" ? row.State == "NotStarted" : row.State != "NotStarted"))
         && (filter.MinimumDays == 0 || (row.State != "Completed" && row.DaysWaiting >= filter.MinimumDays));
 
     private async Task<List<VideoRow>> LoadVideosAsync(Guid[] lessonIds, CancellationToken ct) =>
@@ -83,7 +87,9 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
             && v.Lesson.ContentSection.ArchiveMode != ContentArchiveMode.HiddenFromEveryone
             && v.Lesson.ContentSection.Term.ArchiveMode != ContentArchiveMode.HiddenFromEveryone
             && v.Lesson.ContentSection.Term.Package.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
-            .Select(v => new VideoRow(v.Id, v.LessonId, v.Lesson.Title, v.Lesson.ContentSection.Term.PackageId,
+            .OrderBy(v => v.Lesson.ContentSection.Term.CreatedAt).ThenBy(v => v.Lesson.ContentSection.Order)
+            .ThenBy(v => v.Lesson.Order).ThenBy(v => v.Order).ThenBy(v => v.Id)
+            .Select(v => new VideoRow(v.Id, v.Title, v.LessonId, v.Lesson.Title, v.Lesson.ContentSection.Term.PackageId,
                 v.Lesson.ContentSection.Term.Package.Name, v.Lesson.ContentSection.TermId, v.Lesson.ContentSectionId,
                 v.VideoTypeId, v.StudentOpenedAtUtc,
                 db.VideoPlaybackSessions.Where(s => s.LessonVideoId == v.Id && s.HasRegisteredView
@@ -111,6 +117,7 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
                     && (ids.Contains(g.LessonVideoId ?? Guid.Empty) || types.Contains(g.VideoTypeId ?? Guid.Empty)))));
         if (filter.Stage.HasValue) query = query.Where(g => g.User.StudentProfile!.EducationStage == filter.Stage);
         if (filter.Grade.HasValue) query = query.Where(g => g.User.StudentProfile!.GradeLevel == filter.Grade);
+        if (filter.StudentId.HasValue) query = query.Where(g => g.UserId == filter.StudentId);
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var search = filter.Search.Trim();
@@ -123,7 +130,7 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
             g.AccessCode == null ? null : g.AccessCode.CodeGroup.TeacherId, g.GrantedAt)).ToListAsync(ct);
     }
 
-    private sealed record VideoRow(Guid Id, Guid LessonId, string LessonTitle, Guid PackageId, string PackageName,
+    private sealed record VideoRow(Guid Id, string Title, Guid LessonId, string LessonTitle, Guid PackageId, string PackageName,
         Guid TermId, Guid SectionId, Guid TypeId, DateTime? OpenedAt, DateTime? FirstPlaybackAt, int? Duration);
     private sealed record GrantRow(Guid UserId, string Name, string Phone, string? ParentPhone,
         EducationStage Stage, GradeLevel Grade, CodeType Type, Guid? PackageId, Guid? TermId, Guid? SectionId,

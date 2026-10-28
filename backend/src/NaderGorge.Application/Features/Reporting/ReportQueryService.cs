@@ -14,6 +14,7 @@ public interface IReportQueryService
     Task<bool> CanAccessTeacherReportsAsync(Guid actorUserId, CancellationToken ct);
     Task<bool> CanAccessTeacherFinanceAsync(Guid actorUserId, CancellationToken ct);
     Task<ReportFilterOptionsDto> GetFilterOptionsAsync(Guid actorUserId, bool isTeacher, CancellationToken ct);
+    Task<Guid?> GetReportScopeTeacherIdAsync(Guid actorUserId, bool isTeacher, CancellationToken ct);
 }
 
 public sealed class ReportQueryService : IReportQueryService
@@ -71,7 +72,7 @@ public sealed class ReportQueryService : IReportQueryService
         return new ReportFilterOptionsDto(CreateFilterOptions(teacherNames, packageNames, videoNames));
     }
 
-    private async Task<Guid?> GetReportScopeTeacherIdAsync(Guid actorUserId, bool isTeacher, CancellationToken ct)
+    public async Task<Guid?> GetReportScopeTeacherIdAsync(Guid actorUserId, bool isTeacher, CancellationToken ct)
     {
         if (!isTeacher) return null;
         var scope = await ResolveTeacherScopeAsync(actorUserId, ct);

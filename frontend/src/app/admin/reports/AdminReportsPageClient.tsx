@@ -2,7 +2,7 @@
 
 import { RefreshCw } from 'lucide-react';
 import { AdminPage } from '@/components/admin';
-import { AdvancedReportsCenter } from '@/components/reports/AdvancedReportsCenter';
+import { ReportsWorkspace } from '@/components/reports/ReportsWorkspace';
 
 export default function AdminReportsPageClient() {
   return (
@@ -10,10 +10,10 @@ export default function AdminReportsPageClient() {
       activePath="/admin/reports"
       sectionLabel="مركز القرارات"
       pageTitle="مركز التقارير"
-      subtitle="ابنِ أي تقرير من بيانات المنصة، ادمج فلاتر و/أو، ثم راجع الرسم والجدول أو صدّره كاملًا."
+      subtitle="راجع حضور حصة محددة أو مشاهدة طالب، وابنِ تقاريرك المتقدمة من مكان واحد."
       headerAccessory={<span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-black text-[var(--admin-primary)]"><RefreshCw className="h-3.5 w-3.5" /> توقيت القاهرة</span>}
     >
-      <AdvancedReportsCenter audience="admin" />
+      <ReportsWorkspace audience="admin" />
     </AdminPage>
   );
 }

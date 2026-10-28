@@ -6,7 +6,12 @@ public sealed record StudentFollowUpFilter(
     Guid TeacherId, Guid PackageId, Guid[] LessonIds,
     EducationStage? Stage = null, GradeLevel? Grade = null,
     string State = "Incomplete", int MinimumDays = 0, string? Search = null,
-    int Page = 1, int PageSize = 20);
+    int Page = 1, int PageSize = 20, Guid? StudentId = null, string Attendance = "All");
+
+public sealed record FollowUpStudentSearch(Guid TeacherId, Guid PackageId, string Search);
+public sealed record FollowUpStudent(Guid Id, string Name, string Phone);
+public sealed record FollowUpStudentChoices(IReadOnlyList<FollowUpStudent> Students, bool HasMore);
+public sealed record FollowUpVideo(Guid Id, string Title, string State, int? ProgressPercentage, DateTime? LastWatchedAtUtc);
 
 public sealed record FollowUpTeacher(Guid Id, string Name);
 public sealed record FollowUpGrade(int Stage, int Grade);
@@ -24,7 +29,10 @@ public sealed record StudentFollowUpRow(
     string Stage, string Grade, Guid LessonId, string LessonTitle, string PackageName,
     string State, int CompletedVideos, int TotalVideos, int? ProgressPercentage,
     DateTime? AvailableSinceUtc, int? DaysWaiting, string AvailabilitySource,
-    DateTime? LastWatchedAtUtc);
+    DateTime? LastWatchedAtUtc)
+{
+    public IReadOnlyList<FollowUpVideo> Videos { get; init; } = [];
+}
 
 public sealed record StudentFollowUpReport(
     IReadOnlyList<StudentFollowUpRow> Rows, int TotalRows, int TotalStudents,
@@ -36,6 +44,7 @@ public interface IStudentFollowUpReader
 {
     Task<StudentFollowUpOptions> OptionsAsync(Guid? teacherId, Guid? packageId, bool includeTeachers, CancellationToken ct);
     Task<StudentFollowUpReport> ReadAsync(StudentFollowUpFilter filter, bool export, CancellationToken ct);
+    Task<FollowUpStudentChoices> SearchStudentsAsync(FollowUpStudentSearch search, CancellationToken ct);
 }
 
 public interface IStudentFollowUpExporter

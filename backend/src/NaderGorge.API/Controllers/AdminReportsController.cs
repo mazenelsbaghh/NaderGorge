@@ -13,7 +13,7 @@ namespace NaderGorge.API.Controllers;
 [Route("api/admin/reports")]
 [Authorize(Roles = "Admin,Supervisor,Staff")]
 [HasPermission("reports.manage")]
-public class AdminReportsController : ControllerBase
+public partial class AdminReportsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IReportExportService _exporter;

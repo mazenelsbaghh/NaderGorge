@@ -8,12 +8,15 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Features.Teacher;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
 public class GetStudentProfileDetailQuery : IRequest<StudentProfileExtendedDto>
 {
     public Guid UserId { get; set; }
+    public Guid? TeacherId { get; init; }
+    public bool IncludeTeacherFinance { get; init; }
 
     public GetStudentProfileDetailQuery(Guid userId)
     {
@@ -32,6 +35,14 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
     public async Task<StudentProfileExtendedDto> Handle(GetStudentProfileDetailQuery request, CancellationToken cancellationToken)
     {
+        var scopedGrants = request.TeacherId is { } teacherId
+            ? TeacherStudentProfileScope.Grants(_context, teacherId) : _context.StudentAccessGrants.AsNoTracking();
+        if (request.TeacherId.HasValue && !await scopedGrants.AnyAsync(grant => grant.UserId == request.UserId, cancellationToken))
+            throw new KeyNotFoundException("الطالب غير موجود ضمن طلابك.");
+        var teacherUserId = request.TeacherId.HasValue
+            ? await _context.TeacherProfiles.Where(teacher => teacher.Id == request.TeacherId).Select(teacher => (Guid?)teacher.UserId).SingleAsync(cancellationToken)
+            : null;
+        var includeFinance = !request.TeacherId.HasValue || request.IncludeTeacherFinance;
         var user = await _context.Users
             .Include(u => u.StudentProfile)
             .Include(u => u.Devices)
@@ -45,13 +56,13 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         }
 
         var gamification = await _context.StudentGamifications
-            .FirstOrDefaultAsync(g => g.StudentId == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(g => !request.TeacherId.HasValue && g.StudentId == request.UserId, cancellationToken);
 
         var rankPosition = gamification != null ? await _context.StudentGamifications
             .CountAsync(g => g.TotalPoints > gamification.TotalPoints, cancellationToken) + 1 : 0;
 
         // Load ALL grants (Package, Term, Month, Lesson) with proper names
-        var allGrants = await _context.StudentAccessGrants
+        var allGrants = await scopedGrants
             .AsNoTracking()
             .Where(g => g.UserId == request.UserId)
             .Include(g => g.CancelledByUser)
@@ -190,7 +201,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var purchaseEffects = await _context.SalesFinancialEffects
             .AsNoTracking()
-            .Where(effect => effect.StudentId == request.UserId)
+            .Where(effect => includeFinance && effect.StudentId == request.UserId
+                && (!request.TeacherId.HasValue || effect.TeacherId == request.TeacherId))
             .Select(effect => new
             {
                 effect.PurchaseOperationId,
@@ -343,7 +355,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     : grant.GiftRecipientId.HasValue
                         ? "Gift"
                         : "Balance",
-                Price = price,
+                Price = includeFinance ? price : 0,
                 PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
                 TeacherId = resolvedTeacherId,
                 TeacherName = resolvedTeacherName,
@@ -360,7 +372,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var overrides = await _context.VideoOverrides
             .Include(o => o.LessonVideo)
             .Include(o => o.PerformedByUser)
-            .Where(o => o.UserId == request.UserId)
+            .Where(o => o.UserId == request.UserId && (!request.TeacherId.HasValue
+                || o.LessonVideo.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId))
             .OrderByDescending(o => o.CreatedAt)
             .Select(o => new VideoOverrideDto
             {
@@ -390,7 +403,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         }).OrderByDescending(d => d.LastActiveAt).ToList();
 
         var watchActivities = await _context.VideoWatchEvents
-            .Where(v => v.UserId == request.UserId)
+            .Where(v => v.UserId == request.UserId && (!request.TeacherId.HasValue
+                || v.LessonVideo.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId))
             .Include(v => v.LessonVideo)
                 .ThenInclude(video => video.Lesson)
                     .ThenInclude(lesson => lesson.ContentSection)
@@ -420,6 +434,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var watchedVideosCount = watchActivities.Count;
         var activityLessonIds = await GetActivityLessonIdsAsync(request.UserId, cancellationToken);
         activityLessonIds = activityLessonIds.Concat(watchActivities.Select(activity => activity.LessonId)).Distinct().ToList();
+        if (request.TeacherId.HasValue)
+            activityLessonIds = await _context.Lessons.Where(lesson => activityLessonIds.Contains(lesson.Id)
+                && lesson.ContentSection.Term.Package.TeacherId == request.TeacherId).Select(lesson => lesson.Id).ToListAsync(cancellationToken);
         if (activityLessonIds.Count > 0)
         {
             var unwatchedActivities = await _context.LessonVideos
@@ -456,7 +473,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             watchActivities.Select(activity => activity.LessonVideoId).ToArray(),
             cancellationToken)).ToDictionary(progress => progress.VideoId);
         var playbackSessions = await _context.VideoPlaybackSessions.AsNoTracking()
-            .Where(session => session.UserId == request.UserId && session.AcceptedWallSeconds > 0)
+            .Where(session => session.UserId == request.UserId && session.AcceptedWallSeconds > 0
+                && (!request.TeacherId.HasValue || session.LessonVideo.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId))
             .OrderByDescending(session => session.CreatedAt)
             .Select(session => new
             {
@@ -489,7 +507,10 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var examAttemptsRaw = await _context.StudentExamAttempts
             .AsNoTracking()
-            .Where(attempt => attempt.UserId == request.UserId)
+            .Where(attempt => attempt.UserId == request.UserId && (!request.TeacherId.HasValue
+                || attempt.Exam.CreatedByTeacherId == request.TeacherId
+                || (attempt.Exam.LessonVideo != null && attempt.Exam.LessonVideo.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId)
+                || _context.Lessons.Any(lesson => lesson.ExamId == attempt.ExamId && lesson.ContentSection.Term.Package.TeacherId == request.TeacherId)))
             .Select(attempt => new
             {
                 attempt.Id,
@@ -544,7 +565,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var homeworkSubmissionsRaw = await _context.HomeworkSubmissions
             .AsNoTracking()
-            .Where(submission => submission.StudentId == request.UserId)
+            .Where(submission => submission.StudentId == request.UserId && (!request.TeacherId.HasValue
+                || _context.Lessons.Any(lesson => lesson.Id == submission.Homework.LessonId
+                    && lesson.ContentSection.Term.Package.TeacherId == request.TeacherId)))
             .Select(submission => new
             {
                 submission.Id,
@@ -585,7 +608,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
-            .Where(a => a.EntityType == "User" && a.EntityId == request.UserId)
+            .Where(a => a.EntityType == "User" && a.EntityId == request.UserId
+                && (!request.TeacherId.HasValue || a.PerformedByUserId == teacherUserId))
             .OrderByDescending(a => a.CreatedAt)
             .Take(50)
             .Select(a => new AuditLogDto
@@ -604,7 +628,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .ToListAsync(cancellationToken);
 
         var balance = await _context.StudentBalances
-            .FirstOrDefaultAsync(b => b.UserId == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(b => !request.TeacherId.HasValue && b.UserId == request.UserId, cancellationToken);
 
         var balanceTransactions = new List<StudentBalanceTransactionDto>();
         if (balance != null)
@@ -631,7 +655,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var promotionalUsages = await _context.PromotionalBalanceUsages
             .AsNoTracking()
-            .Where(x => x.Allocation.StudentId == request.UserId)
+            .Where(x => includeFinance && x.Allocation.StudentId == request.UserId
+                && (!request.TeacherId.HasValue || x.Allocation.TeacherId == request.TeacherId))
             .Select(x => new
             {
                 x.Id,
@@ -682,7 +707,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var rechargeRequests = await _context.RechargeRequests
             .AsNoTracking()
-            .Where(x => x.UserId == request.UserId)
+            .Where(x => includeFinance && x.UserId == request.UserId
+                && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId))
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new StudentRechargeRequestDto
             {
@@ -703,7 +729,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var now = DateTime.UtcNow;
         var promotionalBalancesRaw = await _context.PromotionalBalanceAllocations
             .AsNoTracking()
-            .Where(x => x.StudentId == request.UserId && x.AvailableAmount > 0 && (x.ExpiresAt == null || x.ExpiresAt > now))
+            .Where(x => includeFinance && x.StudentId == request.UserId && x.AvailableAmount > 0 && (x.ExpiresAt == null || x.ExpiresAt > now)
+                && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId))
             .Select(x => new
             {
                 x.TeacherId,
@@ -754,7 +781,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Governorate = user.StudentProfile?.Governorate,
             Address = user.StudentProfile?.Address,
             StudentCode = user.StudentProfile?.StudentCode,
-            ParentTrackingCode = user.StudentProfile?.ParentTrackingCode,
+            ParentTrackingCode = request.TeacherId.HasValue ? null : user.StudentProfile?.ParentTrackingCode,
             IsProfileComplete = user.IsProfileComplete,
 
             // ── Academic fields ──────────────────────────────────────────
@@ -779,7 +806,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 RecentBadges = new List<string>()
             } : null,
             Packages = packages,
-            Devices = devices,
+            Devices = request.TeacherId.HasValue ? [] : devices,
             Overrides = overrides,
             WatchTracking = new WatchTrackingSummaryDto
             {
@@ -798,7 +825,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             AuditTrail = auditLogs,
             Notes = await _context.StudentNotes
                 .Include(n => n.Admin)
-                .Where(n => n.StudentId == request.UserId)
+                .Where(n => n.StudentId == request.UserId && (!request.TeacherId.HasValue || n.AdminId == teacherUserId))
                 .OrderByDescending(n => n.IsPinned)
                 .ThenByDescending(n => n.CreatedAt)
                 .Select(n => new StudentNoteDto

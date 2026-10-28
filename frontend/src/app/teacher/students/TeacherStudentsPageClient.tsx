@@ -54,7 +54,7 @@ export default function TeacherStudentsPageClient() {
             <User className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-bold text-[var(--admin-text)]">{s.fullName}</div>
+            <Link href={`/teacher/students/${s.id}`} className="font-bold text-[var(--admin-text)] underline-offset-4 hover:underline">{s.fullName}</Link>
             <div className="flex items-center gap-1 text-xs text-[var(--admin-muted)] mt-0.5">
               <Phone className="h-3 w-3" />
               <span>{s.phoneNumber}</span>
@@ -162,7 +162,7 @@ export default function TeacherStudentsPageClient() {
                 <article key={`card-${student.id}`} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-lg font-black text-[var(--admin-text)]">{student.fullName}</h3>
+                      <h3 className="truncate text-lg font-black text-[var(--admin-text)]"><Link href={`/teacher/students/${student.id}`} className="underline-offset-4 hover:underline">{student.fullName}</Link></h3>
                       <p className="mt-1 flex items-center gap-1 text-xs font-bold text-[var(--admin-muted)]">
                         <Phone className="h-3.5 w-3.5" />
                         {student.phoneNumber}
@@ -183,6 +183,7 @@ export default function TeacherStudentsPageClient() {
                   <div className="mt-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-xs font-bold text-[var(--admin-muted)]">
                     آخر باقة: <span className="text-[var(--admin-primary)]">{student.activatedPackageName}</span>، عدد الصلاحيات: {student.activeGrantCount}، آخر تفعيل: {student.lastActivationAt ? new Date(student.lastActivationAt).toLocaleDateString("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo' }) : "—"}
                   </div>
+                  <Link href={`/teacher/students/${student.id}`} className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)]" aria-label={`عرض ملف الطالب ${student.fullName}`}>عرض ملف الطالب</Link>
                 </article>
               ))}
             </section>

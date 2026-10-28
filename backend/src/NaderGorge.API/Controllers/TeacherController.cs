@@ -20,7 +20,7 @@ namespace NaderGorge.API.Controllers;
 [ApiController]
 [Route("api/teacher")]
 [Authorize(Roles = "Teacher")]
-public class TeacherController : ControllerBase
+public partial class TeacherController : ControllerBase
 {
     private static class TeacherStaffPermissions
     {

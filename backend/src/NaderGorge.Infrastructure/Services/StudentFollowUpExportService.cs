@@ -18,9 +18,13 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
         sheet.Cell(2, 1).Value = $"وقت الإنشاء (القاهرة): {CairoTime.ToLocal(report.GeneratedAtUtc):yyyy-MM-dd HH:mm}";
         sheet.Cell(3, 1).Value = $"الحالة: {StateLabel(filter.State)}، مدة التأخير: {filter.MinimumDays} يوم أو أكثر، عدد الطلاب: {report.TotalStudents}";
         sheet.Cell(4, 1).Value = "التأخير من الأحدث بين إتاحة الفيديو والحصول على صلاحية المشاهدة. تاريخ الحصة ليس بداية التأخير.";
-        string[] headers = ["اسم الطالب", "موبايل الطالب", "رقم ولي الأمر", "الصف", "الكورس", "الحصة", "المشاهدة", "أجزاء مكتملة", "عدد الأجزاء", "نسبة التقدم", "بداية الإتاحة للطالب (القاهرة)", "أيام الانتظار", "مصدر تاريخ الإتاحة", "آخر مشاهدة (القاهرة)"];
+        string[] headers = ["اسم الطالب", "موبايل الطالب", "رقم ولي الأمر", "الصف", "الكورس", "الحصة", "المشاهدة", "أجزاء مكتملة", "عدد الأجزاء", "نسبة التقدم", "بداية الإتاحة للطالب (القاهرة)", "أيام الانتظار", "مصدر تاريخ الإتاحة", "آخر مشاهدة (القاهرة)", "الحضور"];
         for (var column = 0; column < headers.Length; column++) sheet.Cell(6, column + 1).Value = headers[column];
         for (var index = 0; index < report.Rows.Count; index++) WriteRow(sheet, index + 7, report.Rows[index]);
+        for (var index = 0; index < report.Rows.Count; index++)
+            sheet.Cell(index + 7, 15).Value = report.Rows[index].State == "NotStarted" ? "غائب" : "حاضر";
+        sheet.Cell(5, 1).Value = "الحضور يعني بدء مشاهدة فيديو واحد على الأقل في الحصة، حسب النشاط المسجل.";
+        if (filter.StudentId.HasValue) WriteVideos(workbook, report);
         sheet.Range(6, 1, Math.Max(6, report.Rows.Count + 6), headers.Length).SetAutoFilter();
         sheet.Row(6).Style.Font.Bold = true;
         sheet.Row(6).Style.Fill.BackgroundColor = XLColor.FromHtml("#EEF1F4");
@@ -32,10 +36,31 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
         {
             Action = "StudentFollowUpExported", EntityType = "StudentFollowUp", PerformedByUserId = actorId,
             NewValues = JsonSerializer.Serialize(new { filter.TeacherId, filter.PackageId, filter.LessonIds,
-                filter.Stage, filter.Grade, filter.State, filter.MinimumDays, report.TotalRows, report.TotalStudents })
+                filter.Stage, filter.Grade, filter.State, filter.MinimumDays, filter.StudentId, filter.Attendance, report.TotalRows, report.TotalStudents })
         });
         await db.SaveChangesAsync(ct);
         return stream.ToArray();
+    }
+
+    private static void WriteVideos(XLWorkbook workbook, StudentFollowUpReport report)
+    {
+        var sheet = workbook.Worksheets.Add("تفاصيل الفيديوهات");
+        sheet.RightToLeft = true;
+        string[] headers = ["الطالب", "الموبايل", "الكورس", "الحصة", "الفيديو", "المشاهدة", "نسبة التقدم", "آخر مشاهدة (القاهرة)"];
+        for (var column = 0; column < headers.Length; column++) sheet.Cell(1, column + 1).Value = headers[column];
+        var rowNumber = 2;
+        foreach (var lesson in report.Rows)
+            foreach (var video in lesson.Videos)
+            {
+                object?[] cells = [lesson.StudentName, lesson.Phone, lesson.PackageName, lesson.LessonTitle, video.Title,
+                    StateLabel(video.State), video.ProgressPercentage is { } percent ? $"{percent}%" : "المدة غير مسجلة", DateLabel(video.LastWatchedAtUtc)];
+                for (var column = 0; column < cells.Length; column++) sheet.Cell(rowNumber, column + 1).Value = XLCellValue.FromObject(cells[column]);
+                rowNumber++;
+            }
+        sheet.Row(1).Style.Font.Bold = true;
+        sheet.SheetView.FreezeRows(1);
+        sheet.Range(1, 1, Math.Max(1, rowNumber - 1), headers.Length).SetAutoFilter();
+        sheet.Columns().AdjustToContents(12, 45);
     }
 
     private static void WriteRow(IXLWorksheet sheet, int row, StudentFollowUpRow data)

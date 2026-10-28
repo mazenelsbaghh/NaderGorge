@@ -29,6 +29,7 @@ const statusLabels: Record<string, string> = {
   PendingReview: 'بانتظار التصحيح',
   Graded: 'تم التصحيح',
   Missed: 'لم يسلّم',
+  ManualReconciliationRequired: 'تحتاج مراجعة يدوية',
 };
 
 function formatNumber(value: number) {
@@ -140,15 +141,16 @@ function HistorySection({ title, description, items, kind, onDelete, deleting }:
   </section>;
 }
 
-export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [], studentName, onAttemptDeleted }: {
+export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [], studentName, onAttemptDeleted, readOnly = false }: {
   examHistory?: StudentProfileExtendedDto['examHistory'];
   homeworkHistory?: StudentProfileExtendedDto['homeworkHistory'];
   studentName: string;
-  onAttemptDeleted: (kind: 'exam' | 'homework', attemptId: string) => void;
+  onAttemptDeleted?: (kind: 'exam' | 'homework', attemptId: string) => void;
+  readOnly?: boolean;
 }) {
   const user = useAuthStore(state => state.user);
-  const canDeleteExam = Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('exams.manage'));
-  const canDeleteHomework = Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('content.manage'));
+  const canDeleteExam = !readOnly && Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('exams.manage'));
+  const canDeleteHomework = !readOnly && Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('content.manage'));
   const [pendingDelete, setPendingDelete] = useState<{ kind: 'exam' | 'homework'; item: AssessmentHistoryItem } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const mutationRef = useRef(false);
@@ -162,7 +164,7 @@ export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [
         ? await adminService.deleteExamAttempt(item.assessmentId, item.id, reason)
         : await adminService.deleteHomeworkAttempt(item.assessmentId, item.id);
       if (!response.success) throw new Error(response.message || 'تعذر حذف المحاولة.');
-      onAttemptDeleted(kind, item.id);
+      onAttemptDeleted?.(kind, item.id);
       setPendingDelete(null);
       toast.success('تم حذف المحاولة وإجاباتها.');
     } catch (failure) {

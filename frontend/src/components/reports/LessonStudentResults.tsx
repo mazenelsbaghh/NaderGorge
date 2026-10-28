@@ -1,0 +1,25 @@
+'use client';
+
+import type { LessonStudentReport, ReportVideo } from '@/services/lesson-student-report-service';
+
+const labels = { NotStarted: 'لم يبدأ المشاهدة', Started: 'بدأ ولم يكمل', Completed: 'مكتمل' };
+const progress = (percentage: number | null) => percentage === null ? 'المدة غير مسجلة' : `${percentage}%`;
+function VideoStatus({ video }: { video: ReportVideo }) {
+  return <li className="flex flex-wrap items-center justify-between gap-3 py-3"><span className="min-w-0 break-words font-bold">{video.title}</span><span className="flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>{labels[video.state]}</span><span className="tabular-nums">{progress(video.progressPercentage)}</span></span></li>;
+}
+export function LessonStudentResults({ report, busy, mode, onPage }: {
+  report: LessonStudentReport | null; busy: boolean; mode: 'lesson' | 'student'; onPage: (page: number) => void;
+}) {
+  if (busy) return <p role="status" className="py-10 text-center text-[var(--admin-muted)]">جاري تحميل التقرير…</p>;
+  if (!report) return <p className="py-10 text-center text-sm text-[var(--admin-muted)]">{mode === 'lesson' ? 'اختر الكورس والحصة ثم اضغط «عرض التقرير».' : 'اختر الكورس، وابحث عن الطالب وحدده، ثم اضغط «عرض التقرير».'}</p>;
+  const pages = Math.max(1, Math.ceil(report.totalRows / report.pageSize));
+  return <>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-bold text-[var(--admin-text)]">{mode === 'lesson' ? 'كشف الحضور والغياب' : 'مشاهدة الطالب'}{mode === 'student' && report.rows[0] && <span className="mr-2 text-sm">{report.rows[0].studentName} · <bdi>{report.rows[0].phone}</bdi></span>}</h3><p className="text-sm text-[var(--admin-muted)]">{report.totalStudents} طالب · {report.totalRows} سجل حصة</p></div>
+    <dl className="flex flex-wrap gap-x-6 gap-y-3 border-y border-[var(--admin-border)] py-4 text-sm text-[var(--admin-text)]">{(mode === 'lesson' ? [['حاضر', report.started + report.completed], ['غائب', report.notStarted]] : [['حصص مكتملة', report.completed], ['بدأ ولم يكمل', report.started], ['لم يبدأ', report.notStarted]]).map(([label, count]) => <div key={label} className="flex gap-2"><dt>{label}</dt><dd className="font-bold tabular-nums">{count}</dd></div>)}</dl>
+    {report.rows.length === 0 ? <p role="status" className="py-8 text-center text-sm text-[var(--admin-muted)]">لا توجد نتائج مطابقة. جرّب كل حالات الحضور أو المشاهدة، أو اختر حصة أخرى.</p>
+      : mode === 'student' ? <div className="space-y-5">{report.rows.map(lesson => <article key={`${lesson.studentId}-${lesson.lessonId}`} className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-[var(--admin-text)]"><header className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--admin-border)] pb-3"><h4 className="font-bold">{lesson.lessonTitle}</h4><span className="text-sm">{labels[lesson.state]} · {progress(lesson.progressPercentage)}</span></header><ul className="divide-y divide-[var(--admin-border)]">{lesson.videos.map(video => <VideoStatus key={video.id} video={video} />)}</ul></article>)}</div>
+        : <div className="overflow-x-auto rounded-xl border border-[var(--admin-border)]"><table className="w-full min-w-[600px] text-right text-sm text-[var(--admin-text)]"><caption className="sr-only">حضور وغياب الطلاب في الحصة المحددة</caption><thead className="bg-[var(--admin-card-soft)]"><tr>{['الطالب', 'الحصة', 'الحضور', 'المشاهدة', 'التقدم'].map(heading => <th key={heading} scope="col" className="px-4 py-3 font-bold">{heading}</th>)}</tr></thead><tbody className="divide-y divide-[var(--admin-border)] bg-[var(--admin-card)]">{report.rows.map(lesson => <tr key={`${lesson.studentId}-${lesson.lessonId}`}><th scope="row" className="px-4 py-4 font-normal"><span className="block font-bold">{lesson.studentName}</span><bdi className="mt-1 block text-xs text-[var(--admin-muted)]">{lesson.phone}</bdi></th><td className="px-4 py-4">{lesson.lessonTitle}</td><td className="px-4 py-4 font-bold">{lesson.state === 'NotStarted' ? 'غائب' : 'حاضر'}</td><td className="px-4 py-4">{labels[lesson.state]}</td><td className="px-4 py-4 tabular-nums">{progress(lesson.progressPercentage)}</td></tr>)}</tbody></table></div>}
+    {mode === 'student' && <p className="text-xs leading-6 text-[var(--admin-muted)]">فلتر المشاهدة يحدد الحصص المعروضة. داخل كل حصة تظهر كل فيديوهاتها المتاحة للطالب، حتى تعرف ما شاهده وما تبقّى.</p>}
+    {pages > 1 && <nav aria-label="صفحات تقرير الحصص والطلاب" className="flex items-center justify-between gap-3 text-sm text-[var(--admin-text)]"><button type="button" disabled={report.page <= 1} onClick={() => onPage(report.page - 1)} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-4 disabled:opacity-40">السابق</button><span>صفحة {report.page} من {pages}</span><button type="button" disabled={report.page >= pages} onClick={() => onPage(report.page + 1)} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-4 disabled:opacity-40">التالي</button></nav>}
+  </>;
+}

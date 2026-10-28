@@ -50,10 +50,18 @@ public sealed partial class StudentFollowUpReader
                     progress.WatchedSeconds > 0 || watch?.HasLegacyActivity == true || session?.Started == true,
                     new[] { watch?.LastWatchedAt, session?.LastPlayedAt }.Max()));
             }
-            rows.AddRange(parts.GroupBy(p => p.Video.LessonId).Select(lesson => LessonRow(identity, lesson.ToArray())));
+            rows.AddRange(parts.GroupBy(p => p.Video.LessonId).Select(lesson =>
+            {
+                var row = LessonRow(identity, lesson.ToArray());
+                return filter.StudentId.HasValue ? row with { Videos = lesson.Select(VideoProgress).ToArray() } : row;
+            }));
         }
         return rows;
     }
+
+    private static FollowUpVideo VideoProgress(PartProgress part) => new(part.Video.Id, part.Video.Title,
+        part.Progress.IsCompleted ? "Completed" : part.Started ? "Started" : "NotStarted",
+        StudentWatchProgressReader.CalculatePercent([part.Progress]), part.Started ? part.LastWatchedAt : null);
 
     private StudentFollowUpRow LessonRow(GrantRow student, PartProgress[] parts)
     {
