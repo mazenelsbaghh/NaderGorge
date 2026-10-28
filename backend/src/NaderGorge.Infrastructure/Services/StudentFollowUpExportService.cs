@@ -78,7 +78,7 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
     private static string StateLabel(string state) => state switch
     { "Completed" => "مكتمل", "Started" => "بدأ المشاهدة", "NotStarted" => "لم يبدأ في السجل", "Incomplete" => "لم يكتمل في السجل", _ => "الكل" };
 
-    private static string GradeLabel(string grade) => grade switch
+    internal static string GradeLabel(string grade) => grade switch
     {
         "FirstSecondary" => "الأول الثانوي", "SecondSecondary" => "الثاني الثانوي", "SecondaryGrade3" => "الثالث الثانوي",
         "FirstBaccalaureate" => "الأول بكالوريا", "SecondBaccalaureate" => "الثاني بكالوريا",

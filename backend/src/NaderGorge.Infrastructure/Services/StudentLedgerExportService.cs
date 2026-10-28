@@ -10,7 +10,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
 
-public sealed class StudentLedgerExportService : IStudentLedgerExportService
+public sealed partial class StudentLedgerExportService : IStudentLedgerExportService
 {
     private const string ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     private const int StudentIdentityColumnCount = 9;
@@ -48,7 +48,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
             .Where(profile => profile.Id == teacherId)
             .Select(profile => new { profile.Id, profile.User.FullName })
             .SingleOrDefaultAsync(ct) ?? throw new ArgumentException("المدرس غير موجود.");
-        var packages = await LoadPackagesAsync(teacherId, ct);
+        var packages = await LoadPackagesAsync(teacherId, null, ct);
         var packageIds = packages.Select(package => package.Id).ToHashSet();
         var grants = await LoadGrantsAsync(teacherId, ct);
         var studentIds = await LoadStudentIdsAsync(teacherId, grants, ct);
@@ -68,8 +68,8 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         return new ReportExportDto(bytes, ContentType, $"student-ledger-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx");
     }
 
-    private async Task<List<Package>> LoadPackagesAsync(Guid teacherId, CancellationToken ct) =>
-        await _db.Packages.AsNoTracking().Where(package => package.TeacherId == teacherId)
+    private async Task<List<Package>> LoadPackagesAsync(Guid teacherId, Guid? packageId, CancellationToken ct) =>
+        await _db.Packages.AsNoTracking().Where(package => package.TeacherId == teacherId && (!packageId.HasValue || package.Id == packageId))
             .Include(package => package.Terms).ThenInclude(term => term.Sections).ThenInclude(section => section.Lessons).ThenInclude(lesson => lesson.Videos)
             .OrderBy(package => package.Name).ToListAsync(ct);
 
@@ -82,6 +82,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
              (grant.LessonId.HasValue && _db.Lessons.Any(lesson => lesson.Id == grant.LessonId && lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
              (grant.LessonVideoId.HasValue && _db.LessonVideos.Any(video => video.Id == grant.LessonVideoId && video.Lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
              (grant.GrantType == CodeType.Video && grant.VideoTypeId.HasValue &&
+              (grant.AccessCode == null || grant.AccessCode.CodeGroup.TeacherId == null || grant.AccessCode.CodeGroup.TeacherId == teacherId) &&
               _db.LessonVideos.Any(video => video.VideoTypeId == grant.VideoTypeId && video.Lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
              (grant.ExamId.HasValue && _db.Exams.Any(exam => exam.Id == grant.ExamId && exam.CreatedByTeacherId == teacherId))))
             .Select(grant => new GrantRow(grant.UserId, grant.GrantType, grant.PackageId, grant.TermId, grant.ContentSectionId, grant.LessonId,
