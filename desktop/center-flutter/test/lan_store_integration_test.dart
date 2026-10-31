@@ -1263,7 +1263,7 @@ void main() {
         h.host.registerStudent(draft('الأول')),
         h.remote.registerStudent(draft('الثاني')),
       ]);
-      expect(result.map((e) => e.code).toSet(), hasLength(2));
+      expect(result.map((e) => e.code).toSet(), {'1000', '1002'});
       expect(h.host.students.map((e) => e.code).toSet(), hasLength(3));
       await h.remote.refreshRemote();
       expect(h.remote.students, hasLength(3));

@@ -49,8 +49,8 @@ void main() {
   test(
     'concurrent registrations allocate unique persisted numeric codes rather than draft codes or preview reservations',
     () async {
-      expect(store.nextStudentCode, '1001');
-      expect(store.nextStudentCode, '1001');
+      expect(store.nextStudentCode, '1000');
+      expect(store.nextStudentCode, '1000');
       final created = await Future.wait(
         List.generate(
           6,
@@ -60,12 +60,12 @@ void main() {
         ),
       );
       expect(created.map((student) => student.code).toSet(), {
+        '1000',
         '1001',
         '1002',
         '1003',
         '1004',
         '1005',
-        '1006',
       });
       expect(created.map((student) => student.id).toSet(), hasLength(6));
       for (final student in created) {
@@ -75,11 +75,11 @@ void main() {
         expect(persisted.toJson(), student.toJson());
         expect(persisted.name, student.name);
       }
-      expect(store.nextStudentCode, '1007');
+      expect(store.nextStudentCode, '1006');
       await reopen();
-      expect(store.nextStudentCode, '1007');
+      expect(store.nextStudentCode, '1006');
       final next = await store.registerStudent(draft('بعد الفتح'));
-      expect(next.code, '1007');
+      expect(next.code, '1006');
       expect(
         store.students.map((student) => student.code).toSet(),
         hasLength(7),
@@ -88,11 +88,11 @@ void main() {
   );
 
   test(
-    'mixed legacy codes remain unchanged and Arabic/Persian/leadingzero numerics advance the allocator through backup and restart',
+    'mixed legacy codes remain unchanged while registration fills gaps through backup and restart',
     () async {
       const codes = [
         'LEGACY-9',
-        '1001',
+        '1000',
         '٠٠٢٠٠٠',
         '۲۰۰۱',
         '0002002',
@@ -104,7 +104,7 @@ void main() {
       final preserved = store.students
           .map((student) => student.toJson())
           .toList();
-      expect(store.nextStudentCode, '2003');
+      expect(store.nextStudentCode, '1001');
       final backup = await store.createBackup(
         destination: '${directory.path}/mixed-legacy.json',
       );
@@ -119,13 +119,76 @@ void main() {
       final registered = await store.registerStudent(
         draft('جديد', code: 'manual-invalid'),
       );
-      expect(registered.code, '2003');
+      expect(registered.code, '1001');
       await store.saveStudent(draft('كود فارغ', code: '   '));
-      expect(store.students.last.code, '2004');
+      expect(store.students.last.code, '1002');
       expect(
         store.students.take(codes.length).map((student) => student.code),
         codes,
       );
+    },
+  );
+
+  test(
+    'four digit gaps skip legacy aliases, barcodes and suspended students before extending a high sequence',
+    () async {
+      for (final code in ['1000', '01001', '١٠٠٣', '99999999999999999999999']) {
+        await store.saveStudent(draft('قديم $code', code: code));
+      }
+      await store.saveStudent(
+        draft('باركود محجوز', code: 'LEGACY-A').copyWith(barcode: ' ۱۰۰۲ '),
+      );
+      await store.suspendStudent(
+        studentId: store.students.first.id,
+        reason: 'إيقاف تجريبي',
+      );
+      final original = store.students
+          .map((student) => student.toJson())
+          .toList();
+      expect(store.nextStudentCode, '1004');
+      final registered = await store.registerStudent(draft('ملء الفراغ'));
+      expect(registered.code, '1004');
+      expect(
+        store.students.take(original.length).map((s) => s.toJson()),
+        original,
+      );
+      await reopen();
+      expect(store.nextStudentCode, '1005');
+    },
+  );
+
+  test(
+    'last four digit gap is filled before extending the sequence past a reserved barcode',
+    () async {
+      final backupPath = await store.createBackup(
+        destination: '${directory.path}/four-digit-capacity.json',
+      );
+      final backup = jsonDecode(await File(backupPath).readAsString()) as Map;
+      final backupState = backup['data'] as Map;
+      backupState['students'] = [
+        for (var code = 1000; code < 9999; code++)
+          draft(
+            'قديم $code',
+            code: '$code',
+          ).copyWith(id: 'legacy-$code').toJson(),
+        draft(
+          'تسلسل سابق',
+          code: '10001',
+        ).copyWith(id: 'extended', barcode: '١٠٠٠٢').toJson(),
+      ];
+      backupState['enrollments'] = {
+        for (final student in backupState['students'] as List)
+          '${student['id']}:${group.id}': student['createdAt'],
+      };
+      await File(backupPath).writeAsString(jsonEncode(backup));
+      await store.restoreBackup(backupPath);
+      await store.signIn('مدير', password);
+      expect(store.nextStudentCode, '9999');
+      expect((await store.registerStudent(draft('آخر فراغ'))).code, '9999');
+      expect(store.nextStudentCode, '10003');
+      expect((await store.registerStudent(draft('رقم جديد'))).code, '10003');
+      await reopen();
+      expect(store.nextStudentCode, '10004');
     },
   );
 
@@ -190,7 +253,7 @@ void main() {
         await expectLater(
           store.saveStudent(
             original.copyWith(
-              code: '1001',
+              code: '1000',
               name: 'غير محفوظ',
               phone: '01099999999',
               notes: 'غير محفوظة',
@@ -200,14 +263,14 @@ void main() {
         );
         expect(store.students.single.toJson(), before);
         expect(store.audit.length, audits);
-        expect(store.nextStudentCode, '1001');
+        expect(store.nextStudentCode, '1000');
         await store.saveStudent(
           original.copyWith(name: 'اسم محدث', phone: '01011111111'),
         );
         expect(store.students.single.name, 'اسم محدث');
         expect(store.students.single.code, 'OLD-CODE');
         final created = await store.registerStudent(draft('طالب جديد'));
-        expect(created.code, '1001');
+        expect(created.code, '1000');
         await reopen();
         expect(store.students.first.code, 'OLD-CODE');
         expect(store.students.first.name, 'اسم محدث');
@@ -236,7 +299,7 @@ void main() {
       );
       expect(store.students.single.toJson(), original.toJson());
       expect(store.audit.length, audits);
-      expect(store.nextStudentCode, '1002');
+      expect(store.nextStudentCode, '1001');
       await store.saveStaff(
         name: 'assistant',
         password: password,
@@ -249,14 +312,14 @@ void main() {
         throwsA(isA<CenterException>()),
       );
       expect(store.audit.length, assistantAudits);
-      expect(store.nextStudentCode, '1002');
+      expect(store.nextStudentCode, '1001');
       store.signOut();
       await expectLater(
         store.registerStudent(draft('بعد الخروج')),
         throwsA(isA<CenterException>()),
       );
       expect(store.students, hasLength(1));
-      expect(store.nextStudentCode, '1002');
+      expect(store.nextStudentCode, '1001');
     },
   );
 
@@ -284,7 +347,7 @@ void main() {
         );
         expect(store.students, isEmpty);
         expect(store.audit.length, audits);
-        expect(store.nextStudentCode, '1001');
+        expect(store.nextStudentCode, '1000');
         final persisted =
             jsonDecode((await db.query('state')).single['payload'] as String)
                 as Map;
@@ -294,13 +357,13 @@ void main() {
         await db.close();
       }
       await reopen();
-      expect(store.nextStudentCode, '1001');
+      expect(store.nextStudentCode, '1000');
       final saved = await store.registerStudent(draft('المحاولة الناجحة'));
-      expect(saved.code, '1001');
+      expect(saved.code, '1000');
       await reopen();
       expect(store.students.single.id, saved.id);
-      expect(store.students.single.code, '1001');
-      expect(store.nextStudentCode, '1002');
+      expect(store.students.single.code, '1000');
+      expect(store.nextStudentCode, '1001');
     },
   );
 }
