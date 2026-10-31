@@ -40,7 +40,7 @@ check_deadline() {
   [ "$LEASE_DEADLINE" -gt "$(date +%s)" ] || fail 'انتهى تصريح تهيئة الشبكة؛ أعد المحاولة من البرنامج. لم يتم تغيير الشبكة.'
 }
 check_deadline
-case "$PORTAL_MODE" in preserve|legacy|https) ;; *) fail 'وضع بوابة الشبكة غير صالح؛ اختر الوضع العادي أو HTTPS من البرنامج.';; esac
+case "$PORTAL_MODE" in preserve|direct|legacy|https|welcome) ;; *) fail 'طريقة الدخول غير صالحة؛ اخترها من البرنامج.';; esac
 [ -n "$ETHERNET_SERVICE" ] || fail 'اسم منفذ Ethernet غير موجود.'
 printf '%s\n' "$ETHERNET_DEVICE" | grep -Eq '^en[0-9]+$' || fail 'منفذ Ethernet غير صالح.'
 [ -x "$DNSMASQ" ] && [ -x "$PROXY_SOURCE" ] || fail 'ملفات تشغيل الشبكة غير مكتملة؛ ثبّت نسخة البرنامج كاملة.'
@@ -194,10 +194,10 @@ if [ "$PORTAL_MODE" = preserve ]; then
   elif [ -d "$CAP_DIR" ] || { [ -f "$DNS_CONFIG" ] && grep -q 'dhcp-option-force=114,' "$DNS_CONFIG"; }; then
     fail 'إعداد شهادة الدخول السابق غير مكتمل؛ اختر شهادة جديدة أو اختر الوضع العادي صراحةً.'
   else
-    PORTAL_MODE=legacy
+    PORTAL_MODE=direct
   fi
 fi
-case "$PORTAL_MODE" in legacy|https) ;; *) fail 'وضع الشبكة السابق غير صالح؛ اختر الوضع العادي أو HTTPS صراحةً.';; esac
+case "$PORTAL_MODE" in direct|legacy|https|welcome) ;; *) fail 'وضع الشبكة السابق غير صالح؛ اختر طريقة الدخول صراحةً.';; esac
 printf '{"mode":"%s"}\n' "$PORTAL_MODE" > "$STAGE/portal-mode.json"
 PORTS=80
 if [ "$PORTAL_MODE" = https ]; then PORTS='80 443'; fi
@@ -257,6 +257,12 @@ cat > "$STAGE/portal.plist" <<PLIST
 <key>Label</key><string>$PROXY_LABEL</string>
 <key>ProgramArguments</key><array><string>$PROXY_BIN</string>
 PLIST
+if [ "$PORTAL_MODE" = direct ]; then
+  printf '<string>--no-captive-portal</string>\n' >> "$STAGE/portal.plist"
+fi
+if [ "$PORTAL_MODE" = welcome ]; then
+  printf '<string>--welcome-portal</string>\n' >> "$STAGE/portal.plist"
+fi
 if [ "$CAPPORT_ENABLED" = 1 ]; then
   # Hostnames accept no XML metacharacters; certificate destinations are fixed.
   cat >> "$STAGE/portal.plist" <<PLIST

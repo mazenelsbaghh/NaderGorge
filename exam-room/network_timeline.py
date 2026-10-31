@@ -11,6 +11,7 @@ import shutil
 import threading
 import time
 import uuid
+from omada_monitor import safe_snapshot as safe_omada_snapshot
 
 
 SAMPLE_SECONDS = 10
@@ -47,7 +48,7 @@ def safe_state(snapshot):
         except (KeyError, TypeError, ValueError):
             continue
     for field, keys in (
-        ('androidProbe', ('ready', 'dnsReady', 'httpRedirectReady', 'studentServiceReady')),
+        ('androidProbe', ('ready', 'dnsReady', 'httpRedirectReady', 'httpConnectivityReady', 'studentServiceReady')),
         ('sleepProtection', ('supported', 'active'))):
         section = snapshot.get(field)
         section = section if isinstance(section, dict) else {}
@@ -62,6 +63,8 @@ def safe_state(snapshot):
             state['dhcpLeases'][key] = leases[key]
     free_bytes = snapshot.get('diskFreeBytes')
     state['diskFreeBytes'] = int(free_bytes) if numeric(free_bytes) else None
+    if isinstance(snapshot.get('omada'), dict):
+        state['omada'] = safe_omada_snapshot(snapshot['omada'])
     return state
 
 

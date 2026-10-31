@@ -58,10 +58,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function O(e, t) {
 		return D(e.type, t, e.props);
 	}
-	function k(e) {
+	function ee(e) {
 		return typeof e == "object" && !!e && e.$$typeof === t;
 	}
-	function ee(e) {
+	function te(e) {
 		var t = {
 			"=": "=0",
 			":": "=2"
@@ -70,9 +70,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			return t[e];
 		});
 	}
-	var A = /\/+/g;
-	function te(e, t) {
-		return typeof e == "object" && e && e.key != null ? ee("" + e.key) : t.toString(36);
+	var k = /\/+/g;
+	function A(e, t) {
+		return typeof e == "object" && e && e.key != null ? te("" + e.key) : t.toString(36);
 	}
 	function ne(e) {
 		switch (e.status) {
@@ -108,13 +108,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				case d: return c = e._init, re(c(e._payload), r, i, a, o);
 			}
 		}
-		if (c) return o = o(e), c = a === "" ? "." + te(e, 0) : a, C(o) ? (i = "", c != null && (i = c.replace(A, "$&/") + "/"), re(o, r, i, "", function(e) {
+		if (c) return o = o(e), c = a === "" ? "." + A(e, 0) : a, C(o) ? (i = "", c != null && (i = c.replace(k, "$&/") + "/"), re(o, r, i, "", function(e) {
 			return e;
-		})) : o != null && (k(o) && (o = O(o, i + (o.key == null || e && e.key === o.key ? "" : ("" + o.key).replace(A, "$&/") + "/") + c)), r.push(o)), 1;
+		})) : o != null && (ee(o) && (o = O(o, i + (o.key == null || e && e.key === o.key ? "" : ("" + o.key).replace(k, "$&/") + "/") + c)), r.push(o)), 1;
 		c = 0;
 		var l = a === "" ? "." : a + ":";
-		if (C(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + te(a, u), c += re(a, r, i, s, o);
-		else if (u = h(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + te(a, u++), c += re(a, r, i, s, o);
+		if (C(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + A(a, u), c += re(a, r, i, s, o);
+		else if (u = h(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + A(a, u++), c += re(a, r, i, s, o);
 		else if (s === "object") {
 			if (typeof e.then == "function") return re(ne(e), r, i, a, o);
 			throw r = String(e), Error("Objects are not valid as a React child (found: " + (r === "[object Object]" ? "object with keys {" + Object.keys(e).join(", ") + "}" : r) + "). If you meant to render a collection of children, use an array instead.");
@@ -128,7 +128,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			return t.call(n, e, i++);
 		}), r;
 	}
-	function M(e) {
+	function ie(e) {
 		if (e._status === -1) {
 			var t = e._result, n = t();
 			n.then(function(t) {
@@ -140,7 +140,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (e._status === 1) return e._result.default;
 		throw e._result;
 	}
-	var ie = typeof reportError == "function" ? reportError : function(e) {
+	var M = typeof reportError == "function" ? reportError : function(e) {
 		if (typeof window == "object" && typeof window.ErrorEvent == "function") {
 			var t = new window.ErrorEvent("error", {
 				bubbles: !0,
@@ -155,26 +155,26 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		console.error(e);
 	};
-	function ae(e) {
+	function N(e) {
 		var t = T.T, n = {};
 		n.types = t === null ? null : t.types, T.T = n;
 		try {
 			var r = e(), i = T.S;
-			i !== null && i(n, r), typeof r == "object" && r && typeof r.then == "function" && r.then(w, ie);
+			i !== null && i(n, r), typeof r == "object" && r && typeof r.then == "function" && r.then(w, M);
 		} catch (e) {
-			ie(e);
+			M(e);
 		} finally {
 			t !== null && n.types !== null && (t.types = n.types), T.T = t;
 		}
 	}
-	function oe(e) {
+	function ae(e) {
 		var t = T.T;
 		if (t !== null) {
 			var n = t.types;
 			n === null ? t.types = [e] : n.indexOf(e) === -1 && n.push(e);
-		} else ae(oe.bind(null, e));
+		} else N(ae.bind(null, e));
 	}
-	var se = {
+	var oe = {
 		map: j,
 		forEach: function(e, t, n) {
 			j(e, function() {
@@ -193,16 +193,16 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}) || [];
 		},
 		only: function(e) {
-			if (!k(e)) throw Error("React.Children.only expected to receive a single React element child.");
+			if (!ee(e)) throw Error("React.Children.only expected to receive a single React element child.");
 			return e;
 		}
 	};
-	e.Activity = f, e.Children = se, e.Component = y, e.Fragment = r, e.Profiler = a, e.PureComponent = x, e.StrictMode = i, e.Suspense = l, e.ViewTransition = p, e.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = T, e.__COMPILER_RUNTIME = {
+	e.Activity = f, e.Children = oe, e.Component = y, e.Fragment = r, e.Profiler = a, e.PureComponent = x, e.StrictMode = i, e.Suspense = l, e.ViewTransition = p, e.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = T, e.__COMPILER_RUNTIME = {
 		__proto__: null,
 		c: function(e) {
 			return T.H.useMemoCache(e);
 		}
-	}, e.addTransitionType = oe, e.cache = function(e) {
+	}, e.addTransitionType = ae, e.cache = function(e) {
 		return function() {
 			return e.apply(null, arguments);
 		};
@@ -249,14 +249,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			$$typeof: c,
 			render: e
 		};
-	}, e.isValidElement = k, e.lazy = function(e) {
+	}, e.isValidElement = ee, e.lazy = function(e) {
 		return {
 			$$typeof: d,
 			_payload: {
 				_status: -1,
 				_result: e
 			},
-			_init: M
+			_init: ie
 		};
 	}, e.memo = function(e, t) {
 		return {
@@ -264,7 +264,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			type: e,
 			compare: t === void 0 ? null : t
 		};
-	}, e.startTransition = ae, e.unstable_useCacheRefresh = function() {
+	}, e.startTransition = N, e.unstable_useCacheRefresh = function() {
 		return T.H.useCacheRefresh();
 	}, e.use = function(e) {
 		return T.H.use(e);
@@ -361,7 +361,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (n(c) !== null) m = !0, S || (S = !0, O());
 			else {
 				var t = n(l);
-				t !== null && A(x, t.startTime - e);
+				t !== null && k(x, t.startTime - e);
 			}
 		}
 	}
@@ -396,7 +396,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							if (d !== null) i = !0;
 							else {
 								var u = n(l);
-								u !== null && A(x, u.startTime - t), i = !1;
+								u !== null && k(x, u.startTime - t), i = !1;
 							}
 						}
 						break a;
@@ -415,14 +415,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		y(D);
 	};
 	else if (typeof MessageChannel < "u") {
-		var k = new MessageChannel(), ee = k.port2;
-		k.port1.onmessage = D, O = function() {
-			ee.postMessage(null);
+		var ee = new MessageChannel(), te = ee.port2;
+		ee.port1.onmessage = D, O = function() {
+			te.postMessage(null);
 		};
 	} else O = function() {
 		_(D, 0);
 	};
-	function A(t, n) {
+	function k(t, n) {
 		C = _(function() {
 			t(e.unstable_now());
 		}, n);
@@ -491,7 +491,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			startTime: a,
 			expirationTime: s,
 			sortIndex: -1
-		}, a > o ? (r.sortIndex = a, t(l, r), n(c) === null && r === n(l) && (h ? (v(C), C = -1) : h = !0, A(x, a - o))) : (r.sortIndex = s, t(c, r), m || p || (m = !0, S || (S = !0, O()))), r;
+		}, a > o ? (r.sortIndex = a, t(l, r), n(c) === null && r === n(l) && (h ? (v(C), C = -1) : h = !0, k(x, a - o))) : (r.sortIndex = s, t(c, r), m || p || (m = !0, S || (S = !0, O()))), r;
 	}, e.unstable_shouldYield = E, e.unstable_wrapCallback = function(e) {
 		var t = f;
 		return function() {
@@ -814,58 +814,58 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		return null;
 	}
-	var D = Object.assign, O = Symbol.for("react.element"), k = Symbol.for("react.transitional.element"), ee = Symbol.for("react.portal"), A = Symbol.for("react.fragment"), te = Symbol.for("react.strict_mode"), ne = Symbol.for("react.profiler"), re = Symbol.for("react.consumer"), j = Symbol.for("react.context"), M = Symbol.for("react.forward_ref"), ie = Symbol.for("react.suspense"), ae = Symbol.for("react.suspense_list"), oe = Symbol.for("react.memo"), se = Symbol.for("react.lazy"), ce = Symbol.for("react.activity"), le = Symbol.for("react.legacy_hidden"), ue = Symbol.for("react.memo_cache_sentinel"), de = Symbol.for("react.view_transition"), fe = Symbol.for("react.recoverable"), pe = Symbol.iterator;
-	function me(e) {
-		return typeof e != "object" || !e ? null : (e = pe && e[pe] || e["@@iterator"], typeof e == "function" ? e : null);
+	var D = Object.assign, O = Symbol.for("react.element"), ee = Symbol.for("react.transitional.element"), te = Symbol.for("react.portal"), k = Symbol.for("react.fragment"), A = Symbol.for("react.strict_mode"), ne = Symbol.for("react.profiler"), re = Symbol.for("react.consumer"), j = Symbol.for("react.context"), ie = Symbol.for("react.forward_ref"), M = Symbol.for("react.suspense"), N = Symbol.for("react.suspense_list"), ae = Symbol.for("react.memo"), oe = Symbol.for("react.lazy"), se = Symbol.for("react.activity"), ce = Symbol.for("react.legacy_hidden"), le = Symbol.for("react.memo_cache_sentinel"), ue = Symbol.for("react.view_transition"), de = Symbol.for("react.recoverable"), fe = Symbol.iterator;
+	function pe(e) {
+		return typeof e != "object" || !e ? null : (e = fe && e[fe] || e["@@iterator"], typeof e == "function" ? e : null);
 	}
-	var he = Symbol.for("react.client.reference");
-	function ge(e) {
+	var me = Symbol.for("react.client.reference");
+	function he(e) {
 		if (e == null) return null;
-		if (typeof e == "function") return e.$$typeof === he ? null : e.displayName || e.name || null;
+		if (typeof e == "function") return e.$$typeof === me ? null : e.displayName || e.name || null;
 		if (typeof e == "string") return e;
 		switch (e) {
-			case A: return "Fragment";
+			case k: return "Fragment";
 			case ne: return "Profiler";
-			case te: return "StrictMode";
-			case ie: return "Suspense";
-			case ae: return "SuspenseList";
-			case ce: return "Activity";
-			case de: return "ViewTransition";
+			case A: return "StrictMode";
+			case M: return "Suspense";
+			case N: return "SuspenseList";
+			case se: return "Activity";
+			case ue: return "ViewTransition";
 		}
 		if (typeof e == "object") switch (e.$$typeof) {
-			case ee: return "Portal";
+			case te: return "Portal";
 			case j: return e.displayName || "Context";
 			case re: return (e._context.displayName || "Context") + ".Consumer";
-			case M:
+			case ie:
 				var t = e.render;
 				return e = e.displayName, e ||= (e = t.displayName || t.name || "", e === "" ? "ForwardRef" : "ForwardRef(" + e + ")"), e;
-			case oe: return t = e.displayName || null, t === null ? ge(e.type) || "Memo" : t;
-			case se:
+			case ae: return t = e.displayName || null, t === null ? he(e.type) || "Memo" : t;
+			case oe:
 				t = e._payload, e = e._init;
 				try {
-					return ge(e(t));
+					return he(e(t));
 				} catch {}
 		}
 		return null;
 	}
-	var _e = Array.isArray, N = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, P = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ve = {
+	var ge = Array.isArray, P = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, F = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, _e = {
 		pending: !1,
 		data: null,
 		method: null,
 		action: null
-	}, ye = [], be = -1;
-	function xe(e) {
+	}, ve = [], ye = -1;
+	function be(e) {
 		return { current: e };
 	}
-	function Se(e) {
-		0 > be || (e.current = ye[be], ye[be] = null, be--);
+	function xe(e) {
+		0 > ye || (e.current = ve[ye], ve[ye] = null, ye--);
 	}
-	function F(e, t) {
-		be++, ye[be] = e.current, e.current = t;
+	function I(e, t) {
+		ye++, ve[ye] = e.current, e.current = t;
 	}
-	var Ce = xe(null), we = xe(null), Te = xe(null), Ee = xe(null);
-	function De(e, t) {
-		switch (F(Te, t), F(we, e), F(Ce, null), t.nodeType) {
+	var Se = be(null), Ce = be(null), we = be(null), Te = be(null);
+	function Ee(e, t) {
+		switch (I(we, t), I(Ce, e), I(Se, null), t.nodeType) {
 			case 9:
 			case 11:
 				e = (e = t.documentElement) && (e = e.namespaceURI) ? up(e) : 0;
@@ -881,34 +881,34 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				default: e = 0;
 			}
 		}
-		Se(Ce), F(Ce, e);
+		xe(Se), I(Se, e);
 	}
-	function Oe() {
-		Se(Ce), Se(we), Se(Te);
+	function De() {
+		xe(Se), xe(Ce), xe(we);
+	}
+	function Oe(e) {
+		var t = e.memoizedState;
+		t !== null && (sh._currentValue = t.memoizedState, I(Te, e)), t = Se.current;
+		var n = dp(t, e.type);
+		t !== n && (I(Ce, e), I(Se, n));
 	}
 	function ke(e) {
-		var t = e.memoizedState;
-		t !== null && (sh._currentValue = t.memoizedState, F(Ee, e)), t = Ce.current;
-		var n = dp(t, e.type);
-		t !== n && (F(we, e), F(Ce, n));
+		Ce.current === e && (xe(Se), xe(Ce)), Te.current === e && (xe(Te), sh._currentValue = _e);
 	}
-	function Ae(e) {
-		we.current === e && (Se(Ce), Se(we)), Ee.current === e && (Se(Ee), sh._currentValue = ve);
-	}
-	var je, Me;
-	function Ne(e) {
-		if (je === void 0) try {
+	var Ae, je;
+	function Me(e) {
+		if (Ae === void 0) try {
 			throw Error();
 		} catch (e) {
 			var t = e.stack.trim().match(/\n( *(at )?)/);
-			je = t && t[1] || "", Me = -1 < e.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < e.stack.indexOf("@") ? "@unknown:0:0" : "";
+			Ae = t && t[1] || "", je = -1 < e.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < e.stack.indexOf("@") ? "@unknown:0:0" : "";
 		}
-		return "\n" + je + e + Me;
+		return "\n" + Ae + e + je;
 	}
-	var Pe = !1;
-	function Fe(e, t) {
-		if (!e || Pe) return "";
-		Pe = !0;
+	var Ne = !1;
+	function Pe(e, t) {
+		if (!e || Ne) return "";
+		Ne = !0;
 		var n = Error.prepareStackTrace;
 		Error.prepareStackTrace = void 0;
 		try {
@@ -979,50 +979,50 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				}
 			}
 		} finally {
-			Pe = !1, Error.prepareStackTrace = n;
+			Ne = !1, Error.prepareStackTrace = n;
 		}
-		return (n = e ? e.displayName || e.name : "") ? Ne(n) : "";
+		return (n = e ? e.displayName || e.name : "") ? Me(n) : "";
 	}
-	function Ie(e, t) {
+	function Fe(e, t) {
 		switch (e.tag) {
 			case 26:
 			case 27:
-			case 5: return Ne(e.type);
-			case 16: return Ne("Lazy");
-			case 13: return e.child !== t && t !== null ? Ne("Suspense Fallback") : Ne("Suspense");
-			case 19: return Ne("SuspenseList");
+			case 5: return Me(e.type);
+			case 16: return Me("Lazy");
+			case 13: return e.child !== t && t !== null ? Me("Suspense Fallback") : Me("Suspense");
+			case 19: return Me("SuspenseList");
 			case 0:
-			case 15: return Fe(e.type, !1);
-			case 11: return Fe(e.type.render, !1);
-			case 1: return Fe(e.type, !0);
-			case 31: return Ne("Activity");
-			case 30: return Ne("ViewTransition");
+			case 15: return Pe(e.type, !1);
+			case 11: return Pe(e.type.render, !1);
+			case 1: return Pe(e.type, !0);
+			case 31: return Me("Activity");
+			case 30: return Me("ViewTransition");
 			default: return "";
 		}
 	}
-	function Le(e) {
+	function Ie(e) {
 		try {
 			var t = "", n = null;
 			do
-				t += Ie(e, n), n = e, e = e.return;
+				t += Fe(e, n), n = e, e = e.return;
 			while (e);
 			return t;
 		} catch (e) {
 			return "\nError generating stack: " + e.message + "\n" + e.stack;
 		}
 	}
-	var Re = Object.prototype.hasOwnProperty, ze = t.unstable_scheduleCallback, Be = t.unstable_cancelCallback, Ve = t.unstable_shouldYield, He = t.unstable_requestPaint, Ue = t.unstable_now, We = t.unstable_getCurrentPriorityLevel, Ge = t.unstable_ImmediatePriority, Ke = t.unstable_UserBlockingPriority, qe = t.unstable_NormalPriority, Je = t.unstable_LowPriority, Ye = t.unstable_IdlePriority, Xe = t.log, Ze = t.unstable_setDisableYieldValue, Qe = null, $e = null;
-	function et(e) {
-		if (typeof Xe == "function" && Ze(e), $e && typeof $e.setStrictMode == "function") try {
-			$e.setStrictMode(Qe, e);
+	var Le = Object.prototype.hasOwnProperty, Re = t.unstable_scheduleCallback, ze = t.unstable_cancelCallback, Be = t.unstable_shouldYield, Ve = t.unstable_requestPaint, He = t.unstable_now, Ue = t.unstable_getCurrentPriorityLevel, We = t.unstable_ImmediatePriority, Ge = t.unstable_UserBlockingPriority, Ke = t.unstable_NormalPriority, qe = t.unstable_LowPriority, Je = t.unstable_IdlePriority, Ye = t.log, Xe = t.unstable_setDisableYieldValue, Ze = null, Qe = null;
+	function $e(e) {
+		if (typeof Ye == "function" && Xe(e), Qe && typeof Qe.setStrictMode == "function") try {
+			Qe.setStrictMode(Ze, e);
 		} catch {}
 	}
-	var tt = Math.clz32 ? Math.clz32 : it, nt = Math.log, rt = Math.LN2;
-	function it(e) {
-		return e >>>= 0, e === 0 ? 32 : 31 - (nt(e) / rt | 0) | 0;
+	var et = Math.clz32 ? Math.clz32 : rt, tt = Math.log, nt = Math.LN2;
+	function rt(e) {
+		return e >>>= 0, e === 0 ? 32 : 31 - (tt(e) / nt | 0) | 0;
 	}
-	var at = 256, ot = 262144, st = 4194304;
-	function ct(e) {
+	var it = 256, at = 262144, ot = 4194304;
+	function st(e) {
 		var t = e & 42;
 		if (t !== 0) return t;
 		switch (e & -e) {
@@ -1060,27 +1060,27 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			default: return e;
 		}
 	}
-	function lt(e, t, n) {
+	function ct(e, t, n) {
 		var r = e.pendingLanes;
 		if (r === 0) return 0;
 		var i = 0, a = e.suspendedLanes, o = e.pingedLanes;
 		e = e.warmLanes;
 		var s = r & 134217727;
-		return s === 0 ? (s = r & ~a, s === 0 ? o === 0 ? n || (n = r & ~e, n !== 0 && (i = ct(n))) : i = ct(o) : i = ct(s)) : (r = s & ~a, r === 0 ? (o &= s, o === 0 ? n || (n = s & ~e, n !== 0 && (i = ct(n))) : i = ct(o)) : i = ct(r)), i === 0 ? 0 : t !== 0 && t !== i && (t & a) === 0 && (a = i & -i, n = t & -t, a >= n || a === 32 && n & 4194048) ? t : i;
+		return s === 0 ? (s = r & ~a, s === 0 ? o === 0 ? n || (n = r & ~e, n !== 0 && (i = st(n))) : i = st(o) : i = st(s)) : (r = s & ~a, r === 0 ? (o &= s, o === 0 ? n || (n = s & ~e, n !== 0 && (i = st(n))) : i = st(o)) : i = st(r)), i === 0 ? 0 : t !== 0 && t !== i && (t & a) === 0 && (a = i & -i, n = t & -t, a >= n || a === 32 && n & 4194048) ? t : i;
 	}
-	function ut(e, t) {
+	function lt(e, t) {
 		return (e.pendingLanes & ~(e.suspendedLanes & ~e.pingedLanes) & t) === 0;
 	}
-	function dt(e, t) {
+	function ut(e, t) {
 		t & 8 && (t |= t & 32);
 		var n = e.entangledLanes;
 		if (n !== 0) for (e = e.entanglements, n &= t; 0 < n;) {
-			var r = 31 - tt(n), i = 1 << r;
+			var r = 31 - et(n), i = 1 << r;
 			t |= e[r], n &= ~i;
 		}
 		return t;
 	}
-	function ft(e, t) {
+	function dt(e, t) {
 		switch (e) {
 			case 1:
 			case 2:
@@ -1116,23 +1116,23 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			default: return -1;
 		}
 	}
-	function pt() {
-		var e = st;
-		return st <<= 1, !(st & 62914560) && (st = 4194304), e;
+	function ft() {
+		var e = ot;
+		return ot <<= 1, !(ot & 62914560) && (ot = 4194304), e;
 	}
-	function mt(e) {
+	function pt(e) {
 		for (var t = [], n = 0; 31 > n; n++) t.push(e);
 		return t;
 	}
-	function ht(e, t) {
+	function mt(e, t) {
 		e.pendingLanes |= t, t !== 268435456 && (e.suspendedLanes = 0, e.pingedLanes = 0, e.warmLanes = 0);
 	}
-	function gt(e, t, n, r, i, a) {
+	function ht(e, t, n, r, i, a) {
 		var o = e.pendingLanes;
 		e.pendingLanes = n, e.suspendedLanes = 0, e.pingedLanes = 0, e.warmLanes = 0, e.expiredLanes &= n, e.entangledLanes &= n, e.errorRecoveryDisabledLanes &= n, e.shellSuspendCounter = 0;
 		var s = e.entanglements, c = e.expirationTimes, l = e.hiddenUpdates;
 		for (n = o & ~n; 0 < n;) {
-			var u = 31 - tt(n), d = 1 << u;
+			var u = 31 - et(n), d = 1 << u;
 			s[u] = 0, c[u] = -1;
 			var f = l[u];
 			if (f !== null) for (l[u] = null, u = 0; u < f.length; u++) {
@@ -1141,25 +1141,25 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}
 			n &= ~d;
 		}
-		r !== 0 && _t(e, r, 0), a !== 0 && i === 0 && e.tag !== 0 && (e.suspendedLanes |= a & ~(o & ~t));
+		r !== 0 && gt(e, r, 0), a !== 0 && i === 0 && e.tag !== 0 && (e.suspendedLanes |= a & ~(o & ~t));
 	}
-	function _t(e, t, n) {
+	function gt(e, t, n) {
 		e.pendingLanes |= t, e.suspendedLanes &= ~t;
-		var r = 31 - tt(t);
+		var r = 31 - et(t);
 		e.entangledLanes |= t, e.entanglements[r] = e.entanglements[r] | 1073741824 | n & 261930;
 	}
-	function vt(e, t) {
+	function _t(e, t) {
 		var n = e.entangledLanes |= t;
 		for (e = e.entanglements; n;) {
-			var r = 31 - tt(n), i = 1 << r;
+			var r = 31 - et(n), i = 1 << r;
 			i & t | e[r] & t && (e[r] |= t), n &= ~i;
 		}
 	}
-	function yt(e, t) {
+	function vt(e, t) {
 		var n = t & -t;
-		return n = n & 42 ? 1 : bt(n), (n & (e.suspendedLanes | t)) === 0 ? n : 0;
+		return n = n & 42 ? 1 : yt(n), (n & (e.suspendedLanes | t)) === 0 ? n : 0;
 	}
-	function bt(e) {
+	function yt(e) {
 		switch (e) {
 			case 2:
 				e = 1;
@@ -1197,32 +1197,32 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		return e;
 	}
-	function xt(e) {
+	function bt(e) {
 		return e &= -e, 2 < e ? 8 < e ? e & 134217727 ? 32 : 268435456 : 8 : 2;
 	}
-	function St() {
-		var e = P.p;
+	function xt() {
+		var e = F.p;
 		return e === 0 ? (e = window.event, e === void 0 ? 32 : Ch(e.type)) : e;
 	}
-	function Ct(e, t) {
-		var n = P.p;
+	function St(e, t) {
+		var n = F.p;
 		try {
-			return P.p = e, t();
+			return F.p = e, t();
 		} finally {
-			P.p = n;
+			F.p = n;
 		}
 	}
-	var wt = Math.random().toString(36).slice(2), I = "__reactFiber$" + wt, Tt = "__reactProps$" + wt, Et = "__reactContainer$" + wt, Dt = "__reactEvents$" + wt, Ot = "__reactListeners$" + wt, kt = "__reactHandles$" + wt, At = "__reactResources$" + wt, jt = "__reactMarker$" + wt, Mt = "__reactLoad$" + wt;
+	var Ct = Math.random().toString(36).slice(2), wt = "__reactFiber$" + Ct, Tt = "__reactProps$" + Ct, Et = "__reactContainer$" + Ct, Dt = "__reactEvents$" + Ct, Ot = "__reactListeners$" + Ct, kt = "__reactHandles$" + Ct, At = "__reactResources$" + Ct, jt = "__reactMarker$" + Ct, Mt = "__reactLoad$" + Ct;
 	function Nt(e) {
-		delete e[I], delete e[Tt], delete e[Ot], delete e[kt];
+		delete e[wt], delete e[Tt], delete e[Ot], delete e[kt];
 	}
 	function Pt(e) {
 		var t;
-		if (t = e[I]) return t;
+		if (t = e[wt]) return t;
 		for (var n = e.parentNode; n;) {
-			if (t = n[Et] || n[I]) {
+			if (t = n[Et] || n[wt]) {
 				if (n = t.alternate, t.child !== null || n !== null && n.child !== null) for (e = fm(e); e !== null;) {
-					if (n = e[I]) return n;
+					if (n = e[wt]) return n;
 					e = fm(e);
 				}
 				return t;
@@ -1232,7 +1232,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return null;
 	}
 	function Ft(e) {
-		if (e = e[I] || e[Et]) {
+		if (e = e[wt] || e[Et]) {
 			var t = e.tag;
 			if (t === 5 || t === 6 || t === 13 || t === 31 || t === 26 || t === 27 || t === 3) return e;
 		}
@@ -1265,7 +1265,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	var Wt = RegExp("^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"), Gt = {}, Kt = {};
 	function qt(e) {
-		return Re.call(Kt, e) ? !0 : Re.call(Gt, e) ? !1 : Wt.test(e) ? Kt[e] = !0 : (Gt[e] = !0, !1);
+		return Le.call(Kt, e) ? !0 : Le.call(Gt, e) ? !1 : Wt.test(e) ? Kt[e] = !0 : (Gt[e] = !0, !1);
 	}
 	var L = !1;
 	function Jt() {
@@ -1423,7 +1423,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (t == null) {
 			if (r != null) {
 				if (n != null) throw Error(i(92));
-				if (_e(r)) {
+				if (ge(r)) {
 					if (1 < r.length) throw Error(i(93));
 					r = r[0];
 				}
@@ -1961,7 +1961,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (n.length !== r.length) return !1;
 		for (r = 0; r < n.length; r++) {
 			var i = n[r];
-			if (!Re.call(t, i) || !Ur(e[i], t[i])) return !1;
+			if (!Le.call(t, i) || !Ur(e[i], t[i])) return !1;
 		}
 		return !0;
 	}
@@ -2132,7 +2132,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var r = e.alternate;
 		r !== null && (r.lanes |= n);
 		for (var i = !1, a = e.return; a !== null;) a.childLanes |= n, r = a.alternate, r !== null && (r.childLanes |= n), a.tag === 22 && (e = a.stateNode, e === null || e._visibility & 1 || (i = !0)), e = a, a = a.return;
-		return e.tag === 3 ? (a = e.stateNode, i && t !== null && (i = 31 - tt(n), e = a.hiddenUpdates, r = e[i], r === null ? e[i] = [t] : r.push(t), t.lane = n | 536870912), a) : null;
+		return e.tag === 3 ? (a = e.stateNode, i && t !== null && (i = 31 - et(n), e = a.hiddenUpdates, r = e[i], r === null ? e[i] = [t] : r.push(t), t.lane = n | 536870912), a) : null;
 	}
 	function ji(e) {
 		if (50 < kd) throw kd = 0, Ad = null, Error(i(185));
@@ -2167,18 +2167,18 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Ri(e, t, n, r, a, o) {
 		var s = 0;
 		if (r = e, typeof r == "function") Fi(r) && (s = 1);
-		else if (typeof r == "string") s = qm(e, n, Ce.current) ? 26 : e === "html" || e === "head" || e === "body" ? 27 : 5;
+		else if (typeof r == "string") s = qm(e, n, Se.current) ? 26 : e === "html" || e === "head" || e === "body" ? 27 : 5;
 		else a: switch (r) {
-			case ce: return e = Pi(31, n, t, a), e.elementType = ce, e.lanes = o, e;
-			case A: return zi(n.children, a, o, t);
-			case te:
+			case se: return e = Pi(31, n, t, a), e.elementType = se, e.lanes = o, e;
+			case k: return zi(n.children, a, o, t);
+			case A:
 				s = 8, a |= 24;
 				break;
 			case ne: return e = Pi(12, n, t, a | 2), e.elementType = ne, e.lanes = o, e;
-			case ie: return e = Pi(13, n, t, a), e.elementType = ie, e.lanes = o, e;
-			case ae: return e = Pi(19, n, t, a), e.elementType = ae, e.lanes = o, e;
-			case le:
-			case de: return e = a | 32, e = Pi(30, n, t, e), e.elementType = de, e.lanes = o, e.stateNode = {
+			case M: return e = Pi(13, n, t, a), e.elementType = M, e.lanes = o, e;
+			case N: return e = Pi(19, n, t, a), e.elementType = N, e.lanes = o, e;
+			case ce:
+			case ue: return e = a | 32, e = Pi(30, n, t, e), e.elementType = ue, e.lanes = o, e.stateNode = {
 				autoName: null,
 				paired: null,
 				clones: null,
@@ -2192,13 +2192,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					case re:
 						s = 9;
 						break a;
-					case M:
+					case ie:
 						s = 11;
 						break a;
-					case oe:
+					case ae:
 						s = 14;
 						break a;
-					case se:
+					case oe:
 						s = 16, r = null;
 						break a;
 				}
@@ -2230,13 +2230,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			return n === void 0 ? (t = {
 				value: e,
 				source: t,
-				stack: Le(t)
+				stack: Ie(t)
 			}, Ui.set(e, t), t) : n;
 		}
 		return {
 			value: e,
 			source: t,
-			stack: Le(t)
+			stack: Ie(t)
 		};
 	}
 	var Gi = [], Ki = 0, qi = null, Ji = 0, Yi = [], Xi = 0, Zi = null, Qi = 1, $i = "";
@@ -2247,12 +2247,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		Yi[Xi++] = Qi, Yi[Xi++] = $i, Yi[Xi++] = Zi, Zi = e;
 		var r = Qi;
 		e = $i;
-		var i = 32 - tt(r) - 1;
+		var i = 32 - et(r) - 1;
 		r &= ~(1 << i), n += 1;
-		var a = 32 - tt(t) + i;
+		var a = 32 - et(t) + i;
 		if (30 < a) {
 			var o = i - i % 5;
-			a = (r & (1 << o) - 1).toString(32), r >>= o, i -= o, Qi = 1 << 32 - tt(t) + i | n << i | r, $i = a + e;
+			a = (r & (1 << o) - 1).toString(32), r >>= o, i -= o, Qi = 1 << 32 - et(t) + i | n << i | r, $i = a + e;
 		} else Qi = 1 << a | n << i | r, $i = e;
 	}
 	function na(e) {
@@ -2271,7 +2271,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function ua(e) {
 		var t = e.stateNode, n = e.type, r = e.memoizedProps;
-		switch (t[I] = e, t[Tt] = r, n) {
+		switch (t[wt] = e, t[Tt] = r, n) {
 			case "dialog":
 				Q("cancel", t), Q("close", t);
 				break;
@@ -2342,12 +2342,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function ha(e) {
 		oa === null ? oa = [e] : oa.push(e);
 	}
-	var ga = xe(null), _a = null, va = null;
+	var ga = be(null), _a = null, va = null;
 	function ya(e, t, n) {
-		F(ga, t._currentValue), t._currentValue = n;
+		I(ga, t._currentValue), t._currentValue = n;
 	}
 	function ba(e) {
-		e._currentValue = ga.current, Se(ga);
+		e._currentValue = ga.current, xe(ga);
 	}
 	function xa(e, t, n) {
 		for (; e !== null;) {
@@ -2405,7 +2405,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					var c = a.type;
 					Ur(a.pendingProps.value, s.value) || (e === null ? e = [c] : e.push(c));
 				}
-			} else if (a === Ee.current) {
+			} else if (a === Te.current) {
 				if (s = a.alternate, s === null) throw Error(i(387));
 				s.memoizedState.memoizedState !== a.memoizedState.memoizedState && (e === null ? e = [sh] : e.push(sh));
 			}
@@ -2528,9 +2528,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			for (r.status = "rejected", r.reason = e, e = 0; e < n.length; e++) (0, n[e])(void 0);
 		}), r;
 	}
-	var Ga = N.S;
-	N.S = function(e, t) {
-		if (gd = Ue(), typeof t == "object" && t && typeof t.then == "function" && Ha(e, t), Ia !== null) for (var n = bf; n !== null;) Fa(n, Ia), n = n.next;
+	var Ga = P.S;
+	P.S = function(e, t) {
+		if (gd = He(), typeof t == "object" && t && typeof t.then == "function" && Ha(e, t), Ia !== null) for (var n = bf; n !== null;) Fa(n, Ia), n = n.next;
 		if (n = e.types, n !== null) {
 			for (var r = bf; r !== null;) Fa(r, n), r = r.next;
 			if (Ba !== 0) {
@@ -2543,13 +2543,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		Ga !== null && Ga(e, t);
 	};
-	var Ka = xe(null);
+	var Ka = be(null);
 	function qa() {
 		var e = Ka.current;
 		return e === null ? K.pooledCache : e;
 	}
 	function Ja(e, t) {
-		t === null ? F(Ka, Ka.current) : F(Ka, t.pool);
+		t === null ? I(Ka, Ka.current) : I(Ka, t.pool);
 	}
 	function Ya() {
 		var e = qa();
@@ -2647,7 +2647,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		function l(e, t, n, r) {
 			var i = n.type;
-			return i === A ? (e = d(e, t, n.props.children, r, n.key), lo(e, n), e) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === se && no(i) === t.type) ? (t = a(t, n.props), lo(t, n), t.return = e, t) : (t = Ri(n.type, n.key, n.props, null, e.mode, r), lo(t, n), t.return = e, t);
+			return i === k ? (e = d(e, t, n.props.children, r, n.key), lo(e, n), e) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === oe && no(i) === t.type) ? (t = a(t, n.props), lo(t, n), t.return = e, t) : (t = Ri(n.type, n.key, n.props, null, e.mode, r), lo(t, n), t.return = e, t);
 		}
 		function u(e, t, n, r) {
 			return t === null || t.tag !== 4 || t.stateNode.containerInfo !== n.containerInfo || t.stateNode.implementation !== n.implementation ? (t = Hi(n, e.mode, r), t.return = e, t) : (t = a(t, n.children || []), t.return = e, t);
@@ -2659,11 +2659,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (typeof t == "string" && t !== "" || typeof t == "number" || typeof t == "bigint") return t = Bi("" + t, e.mode, n), t.return = e, t;
 			if (typeof t == "object" && t) {
 				switch (t.$$typeof) {
-					case k: return n = Ri(t.type, t.key, t.props, null, e.mode, n), lo(n, t), n.return = e, n;
-					case ee: return t = Hi(t, e.mode, n), t.return = e, t;
-					case se: return t = no(t), f(e, t, n);
+					case ee: return n = Ri(t.type, t.key, t.props, null, e.mode, n), lo(n, t), n.return = e, n;
+					case te: return t = Hi(t, e.mode, n), t.return = e, t;
+					case oe: return t = no(t), f(e, t, n);
 				}
-				if (_e(t) || me(t)) return t = zi(t, e.mode, n, null), t.return = e, t;
+				if (ge(t) || pe(t)) return t = zi(t, e.mode, n, null), t.return = e, t;
 				if (typeof t.then == "function") return f(e, co(t), n);
 				if (t.$$typeof === j) return f(e, Da(e, t), n);
 				uo(e, t);
@@ -2675,11 +2675,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (typeof n == "string" && n !== "" || typeof n == "number" || typeof n == "bigint") return i === null ? c(e, t, "" + n, r) : null;
 			if (typeof n == "object" && n) {
 				switch (n.$$typeof) {
-					case k: return n.key === i ? l(e, t, n, r) : null;
-					case ee: return n.key === i ? u(e, t, n, r) : null;
-					case se: return n = no(n), p(e, t, n, r);
+					case ee: return n.key === i ? l(e, t, n, r) : null;
+					case te: return n.key === i ? u(e, t, n, r) : null;
+					case oe: return n = no(n), p(e, t, n, r);
 				}
-				if (_e(n) || me(n)) return i === null ? d(e, t, n, r, null) : null;
+				if (ge(n) || pe(n)) return i === null ? d(e, t, n, r, null) : null;
 				if (typeof n.then == "function") return p(e, t, co(n), r);
 				if (n.$$typeof === j) return p(e, t, Da(e, n), r);
 				uo(e, n);
@@ -2690,11 +2690,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (typeof r == "string" && r !== "" || typeof r == "number" || typeof r == "bigint") return e = e.get(n) || null, c(t, e, "" + r, i);
 			if (typeof r == "object" && r) {
 				switch (r.$$typeof) {
-					case k: return e = e.get(r.key === null ? n : r.key) || null, l(t, e, r, i);
-					case ee: return e = e.get(r.key === null ? n : r.key) || null, u(t, e, r, i);
-					case se: return r = no(r), m(e, t, n, r, i);
+					case ee: return e = e.get(r.key === null ? n : r.key) || null, l(t, e, r, i);
+					case te: return e = e.get(r.key === null ? n : r.key) || null, u(t, e, r, i);
+					case oe: return r = no(r), m(e, t, n, r, i);
 				}
-				if (_e(r) || me(r)) return e = e.get(n) || null, d(t, e, r, i, null);
+				if (ge(r) || pe(r)) return e = e.get(n) || null, d(t, e, r, i, null);
 				if (typeof r.then == "function") return m(e, t, n, co(r), i);
 				if (r.$$typeof === j) return m(e, t, n, Da(t, r), i);
 				uo(t, r);
@@ -2743,18 +2743,18 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}), z && ea(a, g), u;
 		}
 		function _(e, r, o, c) {
-			if (typeof o == "object" && o && o.type === A && o.key === null && o.props.ref === void 0 && (o = o.props.children), typeof o == "object" && o) {
+			if (typeof o == "object" && o && o.type === k && o.key === null && o.props.ref === void 0 && (o = o.props.children), typeof o == "object" && o) {
 				switch (o.$$typeof) {
-					case k:
+					case ee:
 						a: {
 							for (var l = o.key; r !== null;) {
 								if (r.key === l) {
-									if (l = o.type, l === A) {
+									if (l = o.type, l === k) {
 										if (r.tag === 7) {
 											n(e, r.sibling), c = a(r, o.props.children), lo(c, o), c.return = e, e = c;
 											break a;
 										}
-									} else if (r.elementType === l || typeof l == "object" && l && l.$$typeof === se && no(l) === r.type) {
+									} else if (r.elementType === l || typeof l == "object" && l && l.$$typeof === oe && no(l) === r.type) {
 										n(e, r.sibling), c = a(r, o.props), lo(c, o), c.return = e, e = c;
 										break a;
 									}
@@ -2763,10 +2763,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 								}
 								t(e, r), r = r.sibling;
 							}
-							o.type === A ? (c = zi(o.props.children, e.mode, c, o.key), lo(c, o), c.return = e, e = c) : (c = Ri(o.type, o.key, o.props, null, e.mode, c), lo(c, o), c.return = e, e = c);
+							o.type === k ? (c = zi(o.props.children, e.mode, c, o.key), lo(c, o), c.return = e, e = c) : (c = Ri(o.type, o.key, o.props, null, e.mode, c), lo(c, o), c.return = e, e = c);
 						}
 						return s(e);
-					case ee:
+					case te:
 						a: {
 							for (l = o.key; r !== null;) {
 								if (r.key === l) {
@@ -2782,11 +2782,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							c = Hi(o, e.mode, c), c.return = e, e = c;
 						}
 						return s(e);
-					case se: return o = no(o), _(e, r, o, c);
+					case oe: return o = no(o), _(e, r, o, c);
 				}
-				if (_e(o)) return h(e, r, o, c);
-				if (me(o)) {
-					if (l = me(o), typeof l != "function") throw Error(i(150));
+				if (ge(o)) return h(e, r, o, c);
+				if (pe(o)) {
+					if (l = pe(o), typeof l != "function") throw Error(i(150));
 					return o = l.call(o), g(e, r, o, c);
 				}
 				if (typeof o.then == "function") return _(e, r, co(o), c);
@@ -2851,7 +2851,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function bo(e, t, n) {
 		if (t = t.updateQueue, t !== null && (t = t.shared, n & 4194048)) {
 			var r = t.lanes;
-			r &= e.pendingLanes, n |= r, t.lanes = n, vt(e, n);
+			r &= e.pendingLanes, n |= r, t.lanes = n, _t(e, n);
 		}
 	}
 	function xo(e, t) {
@@ -2958,39 +2958,39 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var n = e.callbacks;
 		if (n !== null) for (e.callbacks = null, e = 0; e < n.length; e++) To(n[e], t);
 	}
-	var Do = xe(null), Oo = xe(0);
+	var Do = be(null), Oo = be(0);
 	function ko(e, t) {
-		e = ad, F(Oo, e), F(Do, t), ad = e | t.baseLanes;
+		e = ad, I(Oo, e), I(Do, t), ad = e | t.baseLanes;
 	}
 	function Ao() {
-		F(Oo, ad), F(Do, Do.current);
+		I(Oo, ad), I(Do, Do.current);
 	}
 	function jo() {
-		ad = Oo.current, Se(Do), Se(Oo);
+		ad = Oo.current, xe(Do), xe(Oo);
 	}
-	var Mo = xe(null), No = null;
+	var Mo = be(null), No = null;
 	function Po(e) {
 		var t = e.alternate;
-		F(zo, zo.current & 1), F(Mo, e), No === null && (t === null || Do.current !== null || t.memoizedState !== null) && (No = e);
+		I(zo, zo.current & 1), I(Mo, e), No === null && (t === null || Do.current !== null || t.memoizedState !== null) && (No = e);
 	}
 	function Fo(e) {
-		F(zo, zo.current), F(Mo, e), No === null && (No = e);
+		I(zo, zo.current), I(Mo, e), No === null && (No = e);
 	}
 	function Io(e) {
-		e.tag === 22 ? (F(zo, zo.current), F(Mo, e), No === null && (No = e)) : Lo();
+		e.tag === 22 ? (I(zo, zo.current), I(Mo, e), No === null && (No = e)) : Lo();
 	}
 	function Lo() {
-		F(zo, zo.current), F(Mo, Mo.current);
+		I(zo, zo.current), I(Mo, Mo.current);
 	}
 	function Ro(e) {
-		Se(Mo), No === e && (No = null), Se(zo);
+		xe(Mo), No === e && (No = null), xe(zo);
 	}
-	var zo = xe(0);
+	var zo = be(0);
 	function Bo(e, t) {
-		F(Mo, Mo.current), F(zo, t);
+		I(Mo, Mo.current), I(zo, t);
 	}
 	function Vo(e) {
-		Se(zo), Se(Mo), No === e && (No = null);
+		xe(zo), xe(Mo), No === e && (No = null);
 	}
 	function Ho(e) {
 		for (var t = e; t !== null;) {
@@ -3022,10 +3022,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return !0;
 	}
 	function es(e, t, n, r, i, a) {
-		return Uo = a, B = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, N.H = e === null || e.memoizedState === null ? _c : vc, qo = !1, a = n(r, i), qo = !1, Ko && (a = ns(t, n, r, i)), ts(e), a;
+		return Uo = a, B = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, P.H = e === null || e.memoizedState === null ? _c : vc, qo = !1, a = n(r, i), qo = !1, Ko && (a = ns(t, n, r, i)), ts(e), a;
 	}
 	function ts(e) {
-		N.H = gc;
+		P.H = gc;
 		var t = V !== null && V.next !== null;
 		if (Uo = 0, Wo = V = B = null, Go = !1, Yo = 0, Xo = null, t) throw Error(i(300));
 		e === null || Fc || (e = e.dependencies, e !== null && wa(e) && (Fc = !0));
@@ -3039,12 +3039,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				var o = e.updateQueue;
 				o.lastEffect = null, o.events = null, o.stores = null, o.memoCache != null && (o.memoCache.index = 0);
 			}
-			N.H = yc, o = t(n, r);
+			P.H = yc, o = t(n, r);
 		} while (Ko);
 		return o;
 	}
 	function rs() {
-		var e = N.H, t = e.useState()[0];
+		var e = P.H, t = e.useState()[0];
 		return t = typeof t.then == "function" ? us(t) : t, e = e.useState()[0], (V === null ? null : V.memoizedState) !== e && (B.flags |= 1024), t;
 	}
 	function is() {
@@ -3103,12 +3103,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function us(e) {
 		var t = Yo;
-		return Yo += 1, Xo === null && (Xo = []), e = to(Xo, e, t), t = B, (Wo === null ? t.memoizedState : Wo.next) === null && (t = t.alternate, N.H = t === null || t.memoizedState === null ? _c : vc), e;
+		return Yo += 1, Xo === null && (Xo = []), e = to(Xo, e, t), t = B, (Wo === null ? t.memoizedState : Wo.next) === null && (t = t.alternate, P.H = t === null || t.memoizedState === null ? _c : vc), e;
 	}
 	function ds(e) {
 		if (typeof e == "object" && e) {
 			if (typeof e.then == "function") return us(e);
-			if (e.$$typeof === fe) return;
+			if (e.$$typeof === de) return;
 			if (e.$$typeof === j) return Ea(e);
 		}
 		throw Error(i(438, String(e)));
@@ -3127,7 +3127,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (t ??= {
 			data: [],
 			index: 0
-		}, n === null && (n = ls(), B.updateQueue = n), n.memoCache = t, n = t.data[t.index], n === void 0) for (n = t.data[t.index] = Array(e), r = 0; r < e; r++) n[r] = ue;
+		}, n === null && (n = ls(), B.updateQueue = n), n.memoCache = t, n = t.data[t.index], n === void 0) for (n = t.data[t.index] = Array(e), r = 0; r < e; r++) n[r] = le;
 		return t.index++, n;
 	}
 	function ps(e, t) {
@@ -3255,11 +3255,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (typeof e == "function") {
 			var n = e;
 			if (e = n(), qo) {
-				et(!0);
+				$e(!0);
 				try {
 					n();
 				} finally {
-					et(!1);
+					$e(!1);
 				}
 			}
 		}
@@ -3290,21 +3290,21 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					o.listeners.push(e);
 				}
 			};
-			N.T === null ? o.isTransition = !1 : n(!0), r(o), n = t.pending, n === null ? (o.next = t.pending = o, Es(t, o)) : (o.next = n.next, t.pending = n.next = o);
+			P.T === null ? o.isTransition = !1 : n(!0), r(o), n = t.pending, n === null ? (o.next = t.pending = o, Es(t, o)) : (o.next = n.next, t.pending = n.next = o);
 		}
 	}
 	function Es(e, t) {
 		var n = t.action, r = t.payload, i = e.state;
 		if (t.isTransition) {
-			var a = N.T, o = {};
-			o.types = a === null ? null : a.types, N.T = o;
+			var a = P.T, o = {};
+			o.types = a === null ? null : a.types, P.T = o;
 			try {
-				var s = n(i, r), c = N.S;
+				var s = n(i, r), c = P.S;
 				c !== null && c(o, s), Ds(e, t, s);
 			} catch (n) {
 				ks(e, t, n);
 			} finally {
-				a !== null && o.types !== null && (a.types = o.types), N.T = a;
+				a !== null && o.types !== null && (a.types = o.types), P.T = a;
 			}
 		} else try {
 			a = n(i, r), Ds(e, t, a);
@@ -3502,11 +3502,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var r = n.memoizedState;
 		if (t !== null && $o(t, r[1])) return r[0];
 		if (r = e(), qo) {
-			et(!0);
+			$e(!0);
 			try {
 				e();
 			} finally {
-				et(!1);
+				$e(!1);
 			}
 		}
 		return n.memoizedState = [r, t], r;
@@ -3518,12 +3518,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return Ur(n, t) ? n : Do.current === null ? !(Uo & 106) || Uo & 1073741824 && !(J & 261930) ? (Fc = !0, e.memoizedState = n) : (e = Md(), B.lanes |= e, sd |= e, t) : (e = Qs(e, n, r), Ur(e, t) || (Fc = !0), e);
 	}
 	function ec(e, t, n, r, i) {
-		var a = P.p;
-		P.p = a !== 0 && 8 > a ? a : 8;
-		var o = N.T, s = {};
-		s.types = o === null ? null : o.types, N.T = s, fc(e, !1, t, n);
+		var a = F.p;
+		F.p = a !== 0 && 8 > a ? a : 8;
+		var o = P.T, s = {};
+		s.types = o === null ? null : o.types, P.T = s, fc(e, !1, t, n);
 		try {
-			var c = i(), l = N.S;
+			var c = i(), l = P.S;
 			l !== null && l(s, c), typeof c == "object" && c && typeof c.then == "function" ? dc(e, t, Wa(c, r), jd(e)) : dc(e, t, r, jd(e));
 		} catch (n) {
 			dc(e, t, {
@@ -3532,14 +3532,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				reason: n
 			}, jd());
 		} finally {
-			P.p = a, o !== null && s.types !== null && (o.types = s.types), N.T = o;
+			F.p = a, o !== null && s.types !== null && (o.types = s.types), P.T = o;
 		}
 	}
 	function tc() {}
 	function nc(e, t, n, r) {
 		if (e.tag !== 5) throw Error(i(476));
 		var a = rc(e).queue;
-		ec(e, a, t, ve, n === null ? tc : function() {
+		ec(e, a, t, _e, n === null ? tc : function() {
 			return ic(e), n(r);
 		});
 	}
@@ -3547,15 +3547,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var t = e.memoizedState;
 		if (t !== null) return t;
 		t = {
-			memoizedState: ve,
-			baseState: ve,
+			memoizedState: _e,
+			baseState: _e,
 			baseQueue: null,
 			queue: {
 				pending: null,
 				lanes: 0,
 				dispatch: null,
 				lastRenderedReducer: ps,
-				lastRenderedState: ve
+				lastRenderedState: _e
 			},
 			next: null
 		};
@@ -3662,7 +3662,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function hc(e, t, n) {
 		if (n & 4194048) {
 			var r = t.lanes;
-			r &= e.pendingLanes, n |= r, t.lanes = n, vt(e, n);
+			r &= e.pendingLanes, n |= r, t.lanes = n, _t(e, n);
 		}
 	}
 	var gc = {
@@ -3712,11 +3712,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			t = t === void 0 ? null : t;
 			var r = e();
 			if (qo) {
-				et(!0);
+				$e(!0);
 				try {
 					e();
 				} finally {
-					et(!1);
+					$e(!1);
 				}
 			}
 			return n.memoizedState = [r, t], r;
@@ -3726,11 +3726,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (n !== void 0) {
 				var i = n(t);
 				if (qo) {
-					et(!0);
+					$e(!0);
 					try {
 						n(t);
 					} finally {
-						et(!1);
+						$e(!1);
 					}
 				}
 			} else i = t;
@@ -3779,7 +3779,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			var e = ss(), t = K.identifierPrefix;
 			if (z) {
 				var n = $i, r = Qi;
-				n = (r & ~(1 << 32 - tt(r) - 1)).toString(32) + n, t = "_" + t + "R_" + n, n = Jo++, 0 < n && (t += "H" + n.toString(32)), t += "_";
+				n = (r & ~(1 << 32 - et(r) - 1)).toString(32) + n, t = "_" + t + "R_" + n, n = Jo++, 0 < n && (t += "H" + n.toString(32)), t += "_";
 			} else n = Zo++, t = "_" + t + "r_" + n.toString(32) + "_";
 			return e.memoizedState = t;
 		},
@@ -4116,7 +4116,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				else throw Error(i(558));
 			} else if (Fc || Ca(e, t, n, !1), a = (n & e.childLanes) !== 0, Fc || a) {
 				if (Do.current === null) {
-					if (r = K, r !== null && (s = yt(r, n), s !== 0 && s !== o.retryLane)) throw o.retryLane = s, ki(e, s), Pd(r, e, s), Pc;
+					if (r = K, r !== null && (s = vt(r, n), s !== 0 && s !== o.retryLane)) throw o.retryLane = s, ki(e, s), Pd(r, e, s), Pc;
 					Kd();
 				}
 				t = Wc(e, t, n);
@@ -4247,7 +4247,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		if (Fc || Ca(e, t, c, !1), r = (c & e.childLanes) !== 0, Fc || r) {
 			if (Do.current !== null) return rl(e, t, c);
-			if (r = K, r !== null && (a = yt(r, c), a !== 0 && a !== s.retryLane)) throw s.retryLane = a, ki(e, a), Pd(r, e, a), Pc;
+			if (r = K, r !== null && (a = vt(r, c), a !== 0 && a !== s.retryLane)) throw s.retryLane = a, ki(e, a), Pd(r, e, a), Pc;
 			return om(o) || Kd(), rl(e, t, c);
 		}
 		return om(o) ? (t.flags |= 192, t.child = e.child, null) : (e = s.treeContext, R = lm(o.nextSibling), aa = t, z = !0, oa = null, sa = !1, e !== null && ia(t, e), t = tl(t, a.children), t.flags |= 134221824, t);
@@ -4350,14 +4350,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function pl(e, t, n) {
 		switch (t.tag) {
 			case 3:
-				De(t, t.stateNode.containerInfo), ya(t, Ma, e.memoizedState.cache), pa();
+				Ee(t, t.stateNode.containerInfo), ya(t, Ma, e.memoizedState.cache), pa();
 				break;
 			case 27:
 			case 5:
-				ke(t);
+				Oe(t);
 				break;
 			case 4:
-				De(t, t.stateNode.containerInfo);
+				Ee(t, t.stateNode.containerInfo);
 				break;
 			case 10:
 				ya(t, t.type, t.memoizedProps.value);
@@ -4404,11 +4404,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					else {
 						if (e != null) {
 							var a = e.$$typeof;
-							if (a === M) {
+							if (a === ie) {
 								t.tag = 11, t = Lc(null, t, e, r, n);
 								break a;
 							}
-							if (a === oe) {
+							if (a === ae) {
 								t.tag = 14, t = Rc(null, t, e, r, n);
 								break a;
 							}
@@ -4417,7 +4417,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 								break a;
 							}
 						}
-						throw t = ge(e) || e, Error(i(306, t, ""));
+						throw t = he(e) || e, Error(i(306, t, ""));
 					}
 				}
 				return t;
@@ -4425,7 +4425,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 1: return r = t.type, a = wc(r, t.pendingProps), Yc(e, t, r, a, n);
 			case 3:
 				a: {
-					if (De(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
+					if (Ee(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
 					r = t.pendingProps;
 					var o = t.memoizedState;
 					a = o.element, _o(e, t), wo(t, r, null, n);
@@ -4460,12 +4460,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					t = t.child;
 				}
 				return t;
-			case 26: return Kc(e, t), e === null ? (n = Nm(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : z || (t.stateNode = fp(t.type, t.pendingProps, Te.current, t)) : t.memoizedState = Nm(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
-			case 27: return ke(t), e === null && z && (r = t.stateNode = hm(t.type, t.pendingProps, Te.current), aa = t, sa = !0, a = R, Sp(t.type) ? (um = a, R = lm(r.firstChild)) : R = a), Ic(e, t, t.pendingProps.children, n), Kc(e, t), e === null && (t.flags |= 4194304), t.child;
-			case 5: return e === null && z && ((a = r = R) && (r = rm(r, t.type, t.pendingProps, sa), r === null ? a = !1 : (t.stateNode = r, aa = t, R = lm(r.firstChild), sa = !1, a = !0)), a || la(t)), ke(t), a = t.type, o = t.pendingProps, s = e === null ? null : e.memoizedProps, r = o.children, pp(a, o) ? r = null : s !== null && pp(a, s) && (t.flags |= 32), t.memoizedState !== null && (a = es(e, t, rs, null, null, n), sh._currentValue = a), Kc(e, t), Ic(e, t, r, n), t.child;
+			case 26: return Kc(e, t), e === null ? (n = Nm(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : z || (t.stateNode = fp(t.type, t.pendingProps, we.current, t)) : t.memoizedState = Nm(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
+			case 27: return Oe(t), e === null && z && (r = t.stateNode = hm(t.type, t.pendingProps, we.current), aa = t, sa = !0, a = R, Sp(t.type) ? (um = a, R = lm(r.firstChild)) : R = a), Ic(e, t, t.pendingProps.children, n), Kc(e, t), e === null && (t.flags |= 4194304), t.child;
+			case 5: return e === null && z && ((a = r = R) && (r = rm(r, t.type, t.pendingProps, sa), r === null ? a = !1 : (t.stateNode = r, aa = t, R = lm(r.firstChild), sa = !1, a = !0)), a || la(t)), Oe(t), a = t.type, o = t.pendingProps, s = e === null ? null : e.memoizedProps, r = o.children, pp(a, o) ? r = null : s !== null && pp(a, s) && (t.flags |= 32), t.memoizedState !== null && (a = es(e, t, rs, null, null, n), sh._currentValue = a), Kc(e, t), Ic(e, t, r, n), t.child;
 			case 6: return e === null && z && ((e = n = R) && (n = im(n, t.pendingProps, sa), n === null ? e = !1 : (t.stateNode = n, aa = t, R = null, e = !0)), e || la(t)), null;
 			case 13: return el(e, t, n);
-			case 4: return De(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = po(t, null, r, n) : Ic(e, t, r, n), t.child;
+			case 4: return Ee(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = po(t, null, r, n) : Ic(e, t, r, n), t.child;
 			case 11: return Lc(e, t, t.type, t.pendingProps, n);
 			case 7: return r = t.pendingProps, Kc(e, t), Ic(e, t, r, n), t.child;
 			case 8: return Ic(e, t, t.pendingProps.children, n), t.child;
@@ -4515,7 +4515,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	function vl(e, t) {
-		t !== null && (e.flags |= 4), e.flags & 16384 && (t = e.tag === 22 ? 536870912 : pt(), e.lanes |= t, dd |= t);
+		t !== null && (e.flags |= 4), e.flags & 16384 && (t = e.tag === 22 ? 536870912 : ft(), e.lanes |= t, dd |= t);
 	}
 	function yl(e, t) {
 		if (!z) switch (e.tailMode) {
@@ -4548,30 +4548,30 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 9:
 			case 14: return H(t), null;
 			case 1: return H(t), null;
-			case 3: return n = t.stateNode, r = null, e !== null && (r = e.memoizedState.cache), t.memoizedState.cache !== r && (t.flags |= 2048), ba(Ma), Oe(), n.pendingContext && (n.context = n.pendingContext, n.pendingContext = null), (e === null || e.child === null) && (fa(t) ? hl(t) : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, ma())), H(t), null;
+			case 3: return n = t.stateNode, r = null, e !== null && (r = e.memoizedState.cache), t.memoizedState.cache !== r && (t.flags |= 2048), ba(Ma), De(), n.pendingContext && (n.context = n.pendingContext, n.pendingContext = null), (e === null || e.child === null) && (fa(t) ? hl(t) : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, ma())), H(t), null;
 			case 26:
 				var a = t.type, o = t.memoizedState;
 				return e === null ? (hl(t), o === null ? (H(t), gl(t, a, null, r, n)) : (H(t), _l(t, o))) : o ? o === e.memoizedState ? (H(t), t.flags &= -16777217) : (hl(t), H(t), _l(t, o)) : (e = e.memoizedProps, e !== r && hl(t), H(t), gl(t, a, e, r, n)), null;
 			case 27:
-				if (Ae(t), n = Te.current, a = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && hl(t);
+				if (ke(t), n = we.current, a = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && hl(t);
 				else {
 					if (!r) {
 						if (t.stateNode === null) throw Error(i(166));
 						return H(t), t.subtreeFlags &= -33554433, null;
 					}
-					e = Ce.current, fa(t) ? ua(t, e) : (e = hm(a, r, n), t.stateNode = e, hl(t));
+					e = Se.current, fa(t) ? ua(t, e) : (e = hm(a, r, n), t.stateNode = e, hl(t));
 				}
 				return H(t), t.subtreeFlags &= -33554433, null;
 			case 5:
-				if (Ae(t), a = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && hl(t);
+				if (ke(t), a = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && hl(t);
 				else {
 					if (!r) {
 						if (t.stateNode === null) throw Error(i(166));
 						return H(t), t.subtreeFlags &= -33554433, null;
 					}
-					if (o = Ce.current, fa(t)) ua(t, o);
+					if (o = Se.current, fa(t)) ua(t, o);
 					else {
-						var s = lp(Te.current);
+						var s = lp(we.current);
 						switch (o) {
 							case 1:
 								o = s.createElementNS("http://www.w3.org/2000/svg", a);
@@ -4595,7 +4595,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 								default: o = typeof r.is == "string" ? s.createElement(a, { is: r.is }) : s.createElement(a);
 							}
 						}
-						o[I] = t, o[Tt] = r;
+						o[wt] = t, o[Tt] = r;
 						a: for (s = t.child; s !== null;) {
 							if (s.tag === 5 || s.tag === 6) o.appendChild(s.stateNode);
 							else if (s.tag !== 4 && s.tag !== 27 && s.child !== null) {
@@ -4630,13 +4630,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				if (e && t.stateNode != null) e.memoizedProps !== r && hl(t);
 				else {
 					if (typeof r != "string" && t.stateNode === null) throw Error(i(166));
-					if (e = Te.current, fa(t)) {
+					if (e = we.current, fa(t)) {
 						if (e = t.stateNode, n = t.memoizedProps, r = null, a = aa, a !== null) switch (a.tag) {
 							case 27:
 							case 5: r = a.memoizedProps;
 						}
-						e[I] = t, e = !!(e.nodeValue === n || r !== null && !0 === r.suppressHydrationWarning || ep(e.nodeValue, n)), e || la(t, !0);
-					} else e = lp(e).createTextNode(r), e[I] = t, t.stateNode = e;
+						e[wt] = t, e = !!(e.nodeValue === n || r !== null && !0 === r.suppressHydrationWarning || ep(e.nodeValue, n)), e || la(t, !0);
+					} else e = lp(e).createTextNode(r), e[wt] = t, t.stateNode = e;
 				}
 				return H(t), null;
 			case 31:
@@ -4645,7 +4645,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						if (e === null) {
 							if (!r) throw Error(i(318));
 							if (e = t.memoizedState, e = e === null ? null : e.dehydrated, !e) throw Error(i(557));
-							e[I] = t;
+							e[wt] = t;
 						} else pa(), !(t.flags & 128) && (t.memoizedState = null), t.flags |= 4;
 						H(t), e = !1;
 					} else n = ma(), e !== null && e.memoizedState !== null && (e.memoizedState.hydrationErrors = n), e = !0;
@@ -4659,14 +4659,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						if (e === null) {
 							if (!a) throw Error(i(318));
 							if (a = t.memoizedState, a = a === null ? null : a.dehydrated, !a) throw Error(i(317));
-							a[I] = t;
+							a[wt] = t;
 						} else pa(), !(t.flags & 128) && (t.memoizedState = null), t.flags |= 4;
 						H(t), a = !1;
 					} else a = ma(), e !== null && e.memoizedState !== null && (e.memoizedState.hydrationErrors = a), a = !0;
 					if (!a) return t.flags & 256 ? (Ro(t), t) : (Ro(t), null);
 				}
 				return Ro(t), t.flags & 128 ? (t.lanes = n, t) : (n = r !== null, e = e !== null && e.memoizedState !== null, n && (r = t.child, a = null, r.alternate !== null && r.alternate.memoizedState !== null && r.alternate.memoizedState.cachePool !== null && (a = r.alternate.memoizedState.cachePool.pool), o = null, r.memoizedState !== null && r.memoizedState.cachePool !== null && (o = r.memoizedState.cachePool.pool), o !== a && (r.flags |= 2048)), n !== e && n && (t.child.flags |= 8192), vl(t, t.updateQueue), H(t), null);
-			case 4: return Oe(), e === null && Wf(t.stateNode.containerInfo), t.flags |= 67108864, H(t), null;
+			case 4: return De(), e === null && Wf(t.stateNode.containerInfo), t.flags |= 67108864, H(t), null;
 			case 10: return ba(t.type), H(t), null;
 			case 19:
 				if (Vo(t), r = t.memoizedState, r === null) return H(t), null;
@@ -4680,13 +4680,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							}
 							e = e.sibling;
 						}
-						r.tail !== null && Ue() > _d && (t.flags |= 128, a = !0, yl(r, !1), t.lanes = 4194304);
+						r.tail !== null && He() > _d && (t.flags |= 128, a = !0, yl(r, !1), t.lanes = 4194304);
 					}
 				} else {
 					if (!a) {
 						if (e = Ho(o), e !== null) {
 							if (t.flags |= 128, a = !0, e = e.updateQueue, t.updateQueue = e, vl(t, e), yl(r, !0), r.tail === null && r.tailMode !== "collapsed" && r.tailMode !== "visible" && !o.alternate && !z) return H(t), null;
-						} else 2 * Ue() - r.renderingStartTime > _d && n !== 536870912 && (t.flags |= 128, a = !0, yl(r, !1), t.lanes = 4194304);
+						} else 2 * He() - r.renderingStartTime > _d && n !== 536870912 && (t.flags |= 128, a = !0, yl(r, !1), t.lanes = 4194304);
 					}
 					r.isBackwards ? (o.sibling = t.child, t.child = o) : (e = r.last, e === null ? t.child = o : e.sibling = o, r.last = o);
 				}
@@ -4702,11 +4702,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						}
 						n = !0;
 					}
-					return r.rendering = e, r.tail = e.sibling, r.renderingStartTime = Ue(), e.sibling = null, o = zo.current, o = a ? o & 1 | 2 : o & 1, r.tailMode === "visible" || r.tailMode === "collapsed" || !n || z ? Bo(t, o) : (n = o, F(Mo, t), F(zo, n), No === null && (No = t)), z && ea(t, r.treeForkCount), e;
+					return r.rendering = e, r.tail = e.sibling, r.renderingStartTime = He(), e.sibling = null, o = zo.current, o = a ? o & 1 | 2 : o & 1, r.tailMode === "visible" || r.tailMode === "collapsed" || !n || z ? Bo(t, o) : (n = o, I(Mo, t), I(zo, n), No === null && (No = t)), z && ea(t, r.treeForkCount), e;
 				}
 				return H(t), null;
 			case 22:
-			case 23: return Ro(t), jo(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && vl(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && Se(Ka), null;
+			case 23: return Ro(t), jo(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && vl(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && xe(Ka), null;
 			case 24: return n = null, e !== null && (n = e.memoizedState.cache), t.memoizedState.cache !== n && (t.flags |= 2048), ba(Ma), H(t), null;
 			case 25: return null;
 			case 30: return t.flags |= 33554432, H(t), null;
@@ -4716,10 +4716,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function xl(e, t) {
 		switch (ra(t), t.tag) {
 			case 1: return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 3: return ba(Ma), Oe(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
+			case 3: return ba(Ma), De(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
 			case 26:
 			case 27:
-			case 5: return Ae(t), null;
+			case 5: return ke(t), null;
 			case 31:
 				if (t.memoizedState !== null) {
 					if (Ro(t), t.alternate === null) throw Error(i(340));
@@ -4733,10 +4733,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				}
 				return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
 			case 19: return Vo(t), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, e = t.memoizedState, e !== null && (e.rendering = null, e.tail = null), t.flags |= 4, t) : null;
-			case 4: return Oe(), null;
+			case 4: return De(), null;
 			case 10: return ba(t.type), null;
 			case 22:
-			case 23: return Ro(t), jo(), e !== null && Se(Ka), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
+			case 23: return Ro(t), jo(), e !== null && xe(Ka), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
 			case 24: return ba(Ma), null;
 			case 25: return null;
 			default: return null;
@@ -4745,15 +4745,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Sl(e, t) {
 		switch (ra(t), t.tag) {
 			case 3:
-				ba(Ma), Oe();
+				ba(Ma), De();
 				break;
 			case 26:
 			case 27:
 			case 5:
-				Ae(t);
+				ke(t);
 				break;
 			case 4:
-				Oe();
+				De();
 				break;
 			case 31:
 				t.memoizedState !== null && Ro(t);
@@ -4769,7 +4769,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				break;
 			case 22:
 			case 23:
-				Ro(t), jo(), e !== null && Se(Ka);
+				Ro(t), jo(), e !== null && xe(Ka);
 				break;
 			case 24: ba(Ma);
 		}
@@ -4954,7 +4954,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var t = e.stateNode, n = e.memoizedProps;
 		try {
 			for (var r = e.type, i = t.attributes; i.length;) t.removeAttributeNode(i[0]);
-			np(t, r, n), t[I] = e, t[Tt] = n;
+			np(t, r, n), t[wt] = e, t[Tt] = n;
 		} catch (t) {
 			Z(e, e.return, t);
 		}
@@ -5355,8 +5355,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		for (n = n.child; n !== null;) wu(e, t, n), n = n.sibling;
 	}
 	function wu(e, t, n) {
-		if ($e && typeof $e.onCommitFiberUnmount == "function") try {
-			$e.onCommitFiberUnmount(Qe, n);
+		if (Qe && typeof Qe.onCommitFiberUnmount == "function") try {
+			Qe.onCommitFiberUnmount(Ze, n);
 		} catch {}
 		switch (n.tag) {
 			case 26:
@@ -5505,7 +5505,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 										t = e.type, n = e.memoizedProps, a = o.ownerDocument || o;
 										b: switch (t) {
 											case "title":
-												r = a.getElementsByTagName("title")[0], (!r || r[jt] || r[I] || r.namespaceURI === "http://www.w3.org/2000/svg" || r.hasAttribute("itemprop")) && (r = a.createElement(t), a.head.insertBefore(r, a.querySelector("head > title"))), np(r, t, n), r[I] = e, Rt(r), t = r;
+												r = a.getElementsByTagName("title")[0], (!r || r[jt] || r[wt] || r.namespaceURI === "http://www.w3.org/2000/svg" || r.hasAttribute("itemprop")) && (r = a.createElement(t), a.head.insertBefore(r, a.querySelector("head > title"))), np(r, t, n), r[wt] = e, Rt(r), t = r;
 												break a;
 											case "link":
 												if (o = Gm("link", "href", a).get(t + (n.href || ""))) {
@@ -5527,7 +5527,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 												break;
 											default: throw Error(i(468, t));
 										}
-										r[I] = e, Rt(r), t = r;
+										r[wt] = e, Rt(r), t = r;
 									}
 									e.stateNode = t;
 								}
@@ -5579,7 +5579,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				ku(t, e, n), Mu(e), a & 4 && (t = e.updateQueue, t !== null && (e.updateQueue = null, Ou(e, t)));
 				break;
 			case 13:
-				ku(t, e, n), Mu(e), e.child.flags & 8192 && e.memoizedState !== null != (r !== null && r.memoizedState !== null) && (hd = Ue()), a & 4 && (t = e.updateQueue, t !== null && (e.updateQueue = null, Ou(e, t)));
+				ku(t, e, n), Mu(e), e.child.flags & 8192 && e.memoizedState !== null != (r !== null && r.memoizedState !== null) && (hd = He()), a & 4 && (t = e.updateQueue, t !== null && (e.updateQueue = null, Ou(e, t)));
 				break;
 			case 22:
 				o = e.memoizedState !== null, s = r !== null && r.memoizedState !== null;
@@ -6037,13 +6037,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}, ed = typeof WeakMap == "function" ? WeakMap : Map, G = 0, K = null, q = null, J = 0, Y = 0, td = null, nd = !1, rd = !1, id = !1, ad = 0, od = 0, sd = 0, cd = 0, ld = 0, ud = 0, dd = 0, fd = null, pd = null, md = !1, hd = 0, gd = 0, _d = Infinity, vd = null, yd = null, X = 0, bd = null, xd = null, Sd = 0, Cd = 0, wd = null, Td = null, Ed = null, Dd = null, Od = null, kd = 0, Ad = null;
 	function jd() {
-		return G & 2 && J !== 0 ? J & -J : N.T === null ? St() : Pf();
+		return G & 2 && J !== 0 ? J & -J : P.T === null ? xt() : Pf();
 	}
 	function Md() {
 		if (ud === 0) {
 			if (!(J & 536870912) || z) {
-				var e = ot;
-				ot <<= 1, !(ot & 3932160) && (ot = 262144), ud = e;
+				var e = at;
+				at <<= 1, !(at & 3932160) && (at = 262144), ud = e;
 			} else ud = 536870912;
 		}
 		return e = Mo.current, e !== null && (e.flags |= 32), ud;
@@ -6055,11 +6055,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	function Pd(e, t, n) {
-		(e === K && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) && (Vd(e, 0), Rd(e, J, ud, !1)), ht(e, n), (!(G & 2) || e !== K) && (e === K && (!(G & 2) && (cd |= n), od === 4 && Rd(e, J, ud, !1)), Ef(e));
+		(e === K && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) && (Vd(e, 0), Rd(e, J, ud, !1)), mt(e, n), (!(G & 2) || e !== K) && (e === K && (!(G & 2) && (cd |= n), od === 4 && Rd(e, J, ud, !1)), Ef(e));
 	}
 	function Fd(e, t, n) {
 		if (G & 6) throw Error(i(327));
-		var r = !n && !(t & 127) && (t & e.expiredLanes) === 0 || ut(e, t), a = r ? Yd(e, t) : qd(e, t, !0), o = r;
+		var r = !n && !(t & 127) && (t & e.expiredLanes) === 0 || lt(e, t), a = r ? Yd(e, t) : qd(e, t, !0), o = r;
 		do {
 			if (a === 0) {
 				rd && !r && Rd(e, t, 0, !1);
@@ -6109,8 +6109,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					case 5: break;
 					default: throw Error(i(329));
 				}
-				if ((t & 62914560) === t && (a = hd + 300 - Ue(), 10 < a)) {
-					if (Rd(r, t, ud, !nd), lt(r, 0, !0) !== 0) break a;
+				if ((t & 62914560) === t && (a = hd + 300 - He(), 10 < a)) {
+					if (Rd(r, t, ud, !nd), ct(r, 0, !0) !== 0) break a;
 					Sd = t, r.timeoutHandle = gp(Id.bind(null, r, n, pd, vd, md, t, ud, cd, dd, nd, o, "Throttled", -0, 0), a);
 					break a;
 				}
@@ -6132,7 +6132,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			waitingForImages: !0,
 			waitingForViewTransition: !1,
 			unsuspend: bn
-		}, Hl = null, qu(t, a, d), h && (m = d, h = e.containerInfo, h = (h.nodeType === 9 ? h : h.ownerDocument).__reactViewTransition, h != null && (m.count++, m.waitingForViewTransition = !0, m = nh.bind(m), h.finished.then(m, m))), m = (a & 62914560) === a ? hd - Ue() : (a & 4194048) === a ? gd - Ue() : 0, m = eh(d, m), m !== null)) {
+		}, Hl = null, qu(t, a, d), h && (m = d, h = e.containerInfo, h = (h.nodeType === 9 ? h : h.ownerDocument).__reactViewTransition, h != null && (m.count++, m.waitingForViewTransition = !0, m = nh.bind(m), h.finished.then(m, m))), m = (a & 62914560) === a ? hd - He() : (a & 4194048) === a ? gd - He() : 0, m = eh(d, m), m !== null)) {
 			Sd = a, e.cancelPendingCommit = m(nf.bind(null, e, t, a, n, r, i, o, s, c, l, u, d, null, f, p)), Rd(e, a, o, !l);
 			return;
 		}
@@ -6163,12 +6163,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return !0;
 	}
 	function Rd(e, t, n, r) {
-		t = dt(e, t), t &= ~ld, t &= ~cd, e.suspendedLanes |= t, e.pingedLanes &= ~t, r && (e.warmLanes |= t), r = e.expirationTimes;
+		t = ut(e, t), t &= ~ld, t &= ~cd, e.suspendedLanes |= t, e.pingedLanes &= ~t, r && (e.warmLanes |= t), r = e.expirationTimes;
 		for (var i = t; 0 < i;) {
-			var a = 31 - tt(i), o = 1 << a;
+			var a = 31 - et(i), o = 1 << a;
 			r[a] = -1, i &= ~o;
 		}
-		n !== 0 && _t(e, n, t);
+		n !== 0 && gt(e, n, t);
 	}
 	function zd() {
 		return G & 6 ? !0 : (Df(0, !1), !1);
@@ -6183,22 +6183,22 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function Vd(e, t) {
 		var n = e.timeoutHandle;
-		return n !== -1 && (e.timeoutHandle = -1, _p(n)), n = e.cancelPendingCommit, n !== null && (e.cancelPendingCommit = null, n()), Sd = 0, Bd(), K = e, q = n = Ii(e.current, null), J = t, Y = 0, td = null, nd = !1, rd = ut(e, t), id = !1, dd = ud = ld = cd = sd = od = 0, pd = fd = null, md = !1, ad = dt(e, t), Ei(), n;
+		return n !== -1 && (e.timeoutHandle = -1, _p(n)), n = e.cancelPendingCommit, n !== null && (e.cancelPendingCommit = null, n()), Sd = 0, Bd(), K = e, q = n = Ii(e.current, null), J = t, Y = 0, td = null, nd = !1, rd = lt(e, t), id = !1, dd = ud = ld = cd = sd = od = 0, pd = fd = null, md = !1, ad = ut(e, t), Ei(), n;
 	}
 	function Hd(e, t) {
-		B = null, N.H = gc, t === Xa || t === Qa ? (t = io(), Y = 3) : t === Za ? (t = io(), Y = 4) : Y = t === Pc ? 8 : typeof t == "object" && t && typeof t.then == "function" ? 6 : 1, td = t, q === null && (od = 1, Oc(e, Wi(t, e.current)));
+		B = null, P.H = gc, t === Xa || t === Qa ? (t = io(), Y = 3) : t === Za ? (t = io(), Y = 4) : Y = t === Pc ? 8 : typeof t == "object" && t && typeof t.then == "function" ? 6 : 1, td = t, q === null && (od = 1, Oc(e, Wi(t, e.current)));
 	}
 	function Ud() {
 		var e = Mo.current;
 		return e === null ? !0 : (J & 4194048) === J ? No === null : (J & 62914560) === J || J & 536870912 ? e === No : !1;
 	}
 	function Wd() {
-		var e = N.H;
-		return N.H = gc, e === null ? gc : e;
+		var e = P.H;
+		return P.H = gc, e === null ? gc : e;
 	}
 	function Gd() {
-		var e = N.A;
-		return N.A = $u, e;
+		var e = P.A;
+		return P.A = $u, e;
 	}
 	function Kd() {
 		od = 4, nd || (J & 4194048) !== J && Mo.current !== null || (rd = !0), !(sd & 134217727) && !(cd & 134217727) || K === null || Rd(K, J, ud, !1);
@@ -6237,7 +6237,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				Hd(e, t);
 			}
 		while (1);
-		return t && e.shellSuspendCounter++, va = _a = null, G = r, N.H = i, N.A = a, q === null && (K = null, J = 0, Ei()), o;
+		return t && e.shellSuspendCounter++, va = _a = null, G = r, P.H = i, P.A = a, q === null && (K = null, J = 0, Ei()), o;
 	}
 	function Jd() {
 		for (; q !== null;) Zd(q);
@@ -6246,7 +6246,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var n = G;
 		G |= 2;
 		var r = Wd(), a = Gd();
-		K !== e || J !== t ? (vd = null, _d = Ue() + 500, Vd(e, t)) : rd = ut(e, t);
+		K !== e || J !== t ? (vd = null, _d = He() + 500, Vd(e, t)) : rd = lt(e, t);
 		a: do
 			try {
 				if (Y !== 0 && q !== null) {
@@ -6310,10 +6310,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				Hd(e, t);
 			}
 		while (1);
-		return va = _a = null, N.H = r, N.A = a, G = n, q === null ? (K = null, J = 0, Ei(), od) : 0;
+		return va = _a = null, P.H = r, P.A = a, G = n, q === null ? (K = null, J = 0, Ei(), od) : 0;
 	}
 	function Xd() {
-		for (; q !== null && !Ve();) Zd(q);
+		for (; q !== null && !Be();) Zd(q);
 	}
 	function Zd(e) {
 		var t = ml(e.alternate, e, ad);
@@ -6401,14 +6401,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function rf(e, t, n, r, i, a, o) {
 		var s = t.lanes | t.childLanes;
-		if (Cd = s, s |= Ti, gt(e, n, s, r, i, a), Dd = null, (n & 335544064) === n ? (Od = La(e), r = 10262) : (Od = null, r = 10256), (t.subtreeFlags & r) !== 0 || (t.flags & r) !== 0 ? (e.callbackNode = null, e.callbackPriority = 0, yf(qe, function() {
+		if (Cd = s, s |= Ti, ht(e, n, s, r, i, a), Dd = null, (n & 335544064) === n ? (Od = La(e), r = 10262) : (Od = null, r = 10256), (t.subtreeFlags & r) !== 0 || (t.flags & r) !== 0 ? (e.callbackNode = null, e.callbackPriority = 0, yf(Ke, function() {
 			return ff(), null;
 		})) : (e.callbackNode = null, e.callbackPriority = 0), Vl = !1, r = !!(t.flags & 13878), t.subtreeFlags & 13878 || r) {
-			r = N.T, N.T = null, i = P.p, P.p = 2, a = G, G |= 4;
+			r = P.T, P.T = null, i = F.p, F.p = 2, a = G, G |= 4;
 			try {
 				hu(e, t, n);
 			} finally {
-				G = a, P.p = i, N.T = r;
+				G = a, F.p = i, P.T = r;
 			}
 		}
 		X = 1, Vl ? Ed = Mp(o, e.containerInfo, Od, sf, cf, of, lf, ff, af, null, null) : (sf(), cf(), lf());
@@ -6427,9 +6427,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			X = 0;
 			var e = bd, t = xd, n = Sd, r = !!(t.flags & 13878);
 			if (t.subtreeFlags & 13878 || r) {
-				r = N.T, N.T = null;
-				var i = P.p;
-				P.p = 2;
+				r = P.T, P.T = null;
+				var i = F.p;
+				F.p = 2;
 				var a = G;
 				G |= 4;
 				try {
@@ -6464,7 +6464,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					}
 					gh = !!sp, cp = sp = null;
 				} finally {
-					G = a, P.p = i, N.T = r;
+					G = a, F.p = i, P.T = r;
 				}
 			}
 			e.current = t, X = 2;
@@ -6475,15 +6475,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			X = 0;
 			var e = bd, t = xd, n = !!(t.flags & 8772);
 			if (t.subtreeFlags & 8772 || n) {
-				n = N.T, N.T = null;
-				var r = P.p;
-				P.p = 2;
+				n = P.T, P.T = null;
+				var r = F.p;
+				F.p = 2;
 				var i = G;
 				G |= 4;
 				try {
 					_u(e, t.alternate, t);
 				} finally {
-					G = i, P.p = r, N.T = n;
+					G = i, F.p = r, P.T = n;
 				}
 			}
 			X = 3;
@@ -6493,20 +6493,20 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (X === 4 || X === 3) {
 			X = 0;
 			var e = Ed;
-			Ed = null, He();
+			Ed = null, Ve();
 			var t = bd, n = xd, r = Sd, i = Td, a = (r & 335544064) === r ? 10262 : 10256;
-			if ((n.subtreeFlags & a) !== 0 || (n.flags & a) !== 0 ? X = 5 : (X = 0, xd = bd = null, uf(t, t.pendingLanes)), a = t.pendingLanes, a === 0 && (yd = null), xt(r), n = n.stateNode, $e && typeof $e.onCommitFiberRoot == "function") try {
-				$e.onCommitFiberRoot(Qe, n, void 0, (n.current.flags & 128) == 128);
+			if ((n.subtreeFlags & a) !== 0 || (n.flags & a) !== 0 ? X = 5 : (X = 0, xd = bd = null, uf(t, t.pendingLanes)), a = t.pendingLanes, a === 0 && (yd = null), bt(r), n = n.stateNode, Qe && typeof Qe.onCommitFiberRoot == "function") try {
+				Qe.onCommitFiberRoot(Ze, n, void 0, (n.current.flags & 128) == 128);
 			} catch {}
 			if (i !== null) {
-				n = N.T, a = P.p, P.p = 2, N.T = null;
+				n = P.T, a = F.p, F.p = 2, P.T = null;
 				try {
 					for (var o = t.onRecoverableError, s = 0; s < i.length; s++) {
 						var c = i[s];
 						o(c.value, { componentStack: c.stack });
 					}
 				} finally {
-					N.T = n, P.p = a;
+					P.T = n, F.p = a;
 				}
 			}
 			if (i = Dd, o = Od, Od = null, i !== null && (Dd = null, o === null && (o = []), e !== null)) for (c = 0; c < i.length; c++) n = (0, i[c])(o), n !== void 0 && e.finished.finally(n);
@@ -6523,22 +6523,22 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (X !== 5) return !1;
 		var e = bd, t = Cd;
 		Cd = 0;
-		var n = xt(Sd), r = N.T, a = P.p;
+		var n = bt(Sd), r = P.T, a = F.p;
 		try {
-			P.p = 32 > n ? 32 : n, N.T = null, n = wd, wd = null;
+			F.p = 32 > n ? 32 : n, P.T = null, n = wd, wd = null;
 			var o = bd, s = Sd;
 			if (X = 0, xd = bd = null, Sd = 0, G & 6) throw Error(i(331));
 			var c = G;
-			if (G |= 4, Xu(o.current), Hu(o, o.current, s, n), G = c, Df(0, !1), $e && typeof $e.onPostCommitFiberRoot == "function") try {
-				$e.onPostCommitFiberRoot(Qe, o);
+			if (G |= 4, Xu(o.current), Hu(o, o.current, s, n), G = c, Df(0, !1), Qe && typeof Qe.onPostCommitFiberRoot == "function") try {
+				Qe.onPostCommitFiberRoot(Ze, o);
 			} catch {}
 			return !0;
 		} finally {
-			P.p = a, N.T = r, uf(e, t);
+			F.p = a, P.T = r, uf(e, t);
 		}
 	}
 	function pf(e, t, n) {
-		t = Wi(n, t), t = Ac(e.stateNode, t, 2), e = yo(e, t, 2), e !== null && (ht(e, 2), Ef(e));
+		t = Wi(n, t), t = Ac(e.stateNode, t, 2), e = yo(e, t, 2), e !== null && (mt(e, 2), Ef(e));
 	}
 	function Z(e, t, n) {
 		if (e.tag === 3) pf(e, e, n);
@@ -6550,7 +6550,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (t.tag === 1) {
 				var r = t.stateNode;
 				if (typeof t.type.getDerivedStateFromError == "function" || typeof r.componentDidCatch == "function" && (yd === null || !yd.has(r))) {
-					e = Wi(n, e), n = jc(2), r = yo(t, n, 2), r !== null && (Mc(n, r, t, e), ht(r, 2), Ef(r));
+					e = Wi(n, e), n = jc(2), r = yo(t, n, 2), r !== null && (Mc(n, r, t, e), mt(r, 2), Ef(r));
 					break;
 				}
 			}
@@ -6568,10 +6568,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function hf(e, t, n) {
 		var r = e.pingCache;
-		r !== null && r.delete(t), e.pingedLanes |= e.suspendedLanes & n, e.warmLanes &= ~n, K === e && (J & n) === n && (od === 4 || od === 3 && (J & 62914560) === J && 300 > Ue() - hd ? G & 2 ? ld |= n : Vd(e, 0) : ld |= n, dd === J && (dd = 0)), Ef(e);
+		r !== null && r.delete(t), e.pingedLanes |= e.suspendedLanes & n, e.warmLanes &= ~n, K === e && (J & n) === n && (od === 4 || od === 3 && (J & 62914560) === J && 300 > He() - hd ? G & 2 ? ld |= n : Vd(e, 0) : ld |= n, dd === J && (dd = 0)), Ef(e);
 	}
 	function gf(e, t) {
-		t === 0 && (t = pt()), e = ki(e, t), e !== null && (ht(e, t), Ef(e));
+		t === 0 && (t = ft()), e = ki(e, t), e !== null && (mt(e, t), Ef(e));
 	}
 	function _f(e) {
 		var t = e.memoizedState, n = 0;
@@ -6596,7 +6596,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		r !== null && r.delete(t), gf(e, n);
 	}
 	function yf(e, t) {
-		return ze(e, t);
+		return Re(e, t);
 	}
 	var bf = null, xf = null, Sf = !1, Cf = !1, wf = !1, Tf = 0;
 	function Ef(e) {
@@ -6613,10 +6613,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							if (i === 0) var a = 0;
 							else {
 								var o = r.suspendedLanes, s = r.pingedLanes;
-								a = (1 << 31 - tt(42 | e) + 1) - 1, a &= i & ~(o & ~s), a = a & 201326741 ? a & 201326741 | 1 : a ? a | 2 : 0;
+								a = (1 << 31 - et(42 | e) + 1) - 1, a &= i & ~(o & ~s), a = a & 201326741 ? a & 201326741 | 1 : a ? a | 2 : 0;
 							}
 							a !== 0 && (n = !0, Mf(r, a));
-						} else a = J, a = lt(r, r === K ? a : 0, r.cancelPendingCommit !== null || r.timeoutHandle !== -1), !(a & 3) || ut(r, a) || (n = !0, Mf(r, a));
+						} else a = J, a = ct(r, r === K ? a : 0, r.cancelPendingCommit !== null || r.timeoutHandle !== -1), !(a & 3) || lt(r, a) || (n = !0, Mf(r, a));
 					}
 					r = r.next;
 				}
@@ -6631,7 +6631,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		Cf = Sf = !1;
 		var e = 0;
 		Tf !== 0 && hp() && (e = Tf);
-		for (var t = Ue(), n = null, r = bf; r !== null;) {
+		for (var t = He(), n = null, r = bf; r !== null;) {
 			var i = r.next, a = Af(r, t);
 			a === 0 ? (r.next = null, n === null ? bf = i : n.next = i, i === null && (xf = n)) : (n = r, (e !== 0 || a & 3) && (Cf = !0)), r = i;
 		}
@@ -6639,35 +6639,35 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function Af(e, t) {
 		for (var n = e.suspendedLanes, r = e.pingedLanes, i = e.expirationTimes, a = e.pendingLanes & -62914561; 0 < a;) {
-			var o = 31 - tt(a), s = 1 << o, c = i[o];
-			c === -1 ? ((s & n) === 0 || (s & r) !== 0) && (i[o] = ft(s, t)) : c <= t && (e.expiredLanes |= s), a &= ~s;
+			var o = 31 - et(a), s = 1 << o, c = i[o];
+			c === -1 ? ((s & n) === 0 || (s & r) !== 0) && (i[o] = dt(s, t)) : c <= t && (e.expiredLanes |= s), a &= ~s;
 		}
-		if (t = K, n = J, n = lt(e, e === t ? n : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r = e.callbackNode, n === 0 || e === t && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) return r !== null && r !== null && Be(r), e.callbackNode = null, e.callbackPriority = 0;
-		if (!(n & 3) || ut(e, n)) {
+		if (t = K, n = J, n = ct(e, e === t ? n : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r = e.callbackNode, n === 0 || e === t && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) return r !== null && r !== null && ze(r), e.callbackNode = null, e.callbackPriority = 0;
+		if (!(n & 3) || lt(e, n)) {
 			if (t = n & -n, t === e.callbackPriority) return t;
-			switch (r !== null && Be(r), xt(n)) {
+			switch (r !== null && ze(r), bt(n)) {
 				case 2:
 				case 8:
-					n = Ke;
+					n = Ge;
 					break;
 				case 32:
-					n = qe;
+					n = Ke;
 					break;
 				case 268435456:
-					n = Ye;
+					n = Je;
 					break;
-				default: n = qe;
+				default: n = Ke;
 			}
-			return r = jf.bind(null, e), n = ze(n, r), e.callbackPriority = t, e.callbackNode = n, t;
+			return r = jf.bind(null, e), n = Re(n, r), e.callbackPriority = t, e.callbackNode = n, t;
 		}
-		return r !== null && r !== null && Be(r), e.callbackPriority = 2, e.callbackNode = null, 2;
+		return r !== null && r !== null && ze(r), e.callbackPriority = 2, e.callbackNode = null, 2;
 	}
 	function jf(e, t) {
 		if (X !== 0 && X !== 5) return e.callbackNode = null, e.callbackPriority = 0, null;
 		var n = e.callbackNode;
 		if (df() && e.callbackNode !== n) return null;
 		var r = J;
-		return r = lt(e, e === K ? r : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r === 0 ? null : (Fd(e, r, t), Af(e, Ue()), e.callbackNode != null && e.callbackNode === n ? jf.bind(null, e) : null);
+		return r = ct(e, e === K ? r : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r === 0 ? null : (Fd(e, r, t), Af(e, He()), e.callbackNode != null && e.callbackNode === n ? jf.bind(null, e) : null);
 	}
 	function Mf(e, t) {
 		if (df()) return null;
@@ -6675,13 +6675,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function Nf() {
 		bp(function() {
-			G & 6 ? ze(Ge, Of) : kf();
+			G & 6 ? Re(We, Of) : kf();
 		});
 	}
 	function Pf() {
 		if (Tf === 0) {
 			var e = Ba;
-			e === 0 && (e = at, at <<= 1, !(at & 261888) && (at = 256)), Tf = e;
+			e === 0 && (e = it, it <<= 1, !(it & 261888) && (it = 256)), Tf = e;
 		}
 		return Tf;
 	}
@@ -7583,7 +7583,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return e === 1 && t === "foreignObject" ? 0 : e;
 	}
 	function fp(e, t, n, r) {
-		return n = lp(n).createElement(e), n[I] = r, n[Tt] = t, np(n, e, t), Rt(n), n;
+		return n = lp(n).createElement(e), n[wt] = r, n[Tt] = t, np(n, e, t), Rt(n), n;
 	}
 	function pp(e, t) {
 		return e === "textarea" || e === "noscript" || typeof t.children == "string" || typeof t.children == "number" || typeof t.children == "bigint" || typeof t.dangerouslySetInnerHTML == "object" && t.dangerouslySetInnerHTML !== null && t.dangerouslySetInnerHTML.__html != null;
@@ -8206,8 +8206,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		return e.nodeType === 9 ? e : e.ownerDocument;
 	}
-	var xm = P.d;
-	P.d = {
+	var xm = F.d;
+	F.d = {
 		f: Sm,
 		r: Cm,
 		D: Em,
@@ -8369,7 +8369,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	function Nm(e, t, n, r) {
-		var a = (a = Te.current) ? bm(a) : null;
+		var a = (a = we.current) ? bm(a) : null;
 		if (!a) throw Error(i(446));
 		switch (e) {
 			case "meta":
@@ -8507,7 +8507,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (r.has(e)) return r;
 		for (r.set(e, null), n = n.getElementsByTagName(e), i = 0; i < n.length; i++) {
 			var a = n[i];
-			if (!(a[jt] || a[I] || e === "link" && a.getAttribute("rel") === "stylesheet") && a.namespaceURI !== "http://www.w3.org/2000/svg") {
+			if (!(a[jt] || a[wt] || e === "link" && a.getAttribute("rel") === "stylesheet") && a.namespaceURI !== "http://www.w3.org/2000/svg") {
 				var o = a.getAttribute(t) || "";
 				o = e + o;
 				var s = r.get(o);
@@ -8625,12 +8625,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		$$typeof: j,
 		Provider: null,
 		Consumer: null,
-		_currentValue: ve,
-		_currentValue2: ve,
+		_currentValue: _e,
+		_currentValue2: _e,
 		_threadCount: 0
 	};
 	function ch(e, t, n, r, i, a, o, s, c) {
-		this.tag = 1, this.containerInfo = e, this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.next = this.pendingContext = this.context = this.cancelPendingCommit = null, this.callbackPriority = 0, this.expirationTimes = mt(-1), this.entangledLanes = this.shellSuspendCounter = this.errorRecoveryDisabledLanes = this.expiredLanes = this.warmLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = mt(0), this.hiddenUpdates = mt(null), this.identifierPrefix = r, this.onUncaughtError = i, this.onCaughtError = a, this.onRecoverableError = o, this.pooledCache = null, this.pooledCacheLanes = 0, this.formState = c, this.transitionTypes = null, this.incompleteTransitions = /* @__PURE__ */ new Map();
+		this.tag = 1, this.containerInfo = e, this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.next = this.pendingContext = this.context = this.cancelPendingCommit = null, this.callbackPriority = 0, this.expirationTimes = pt(-1), this.entangledLanes = this.shellSuspendCounter = this.errorRecoveryDisabledLanes = this.expiredLanes = this.warmLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = pt(0), this.hiddenUpdates = pt(null), this.identifierPrefix = r, this.onUncaughtError = i, this.onCaughtError = a, this.onRecoverableError = o, this.pooledCache = null, this.pooledCacheLanes = 0, this.formState = c, this.transitionTypes = null, this.incompleteTransitions = /* @__PURE__ */ new Map();
 	}
 	function lh(e, t, n, r, i, a, o, s, c, l, u, d) {
 		return e = new ch(e, t, n, o, c, l, u, d, s), t = 1, !0 === a && (t |= 24), a = Pi(3, null, null, t), e.current = a, a.stateNode = e, t = Na(), t.refCount++, e.pooledCache = t, t.refCount++, a.memoizedState = {
@@ -8663,30 +8663,30 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function hh(e) {
 		if (e.tag === 13 || e.tag === 31) {
 			var t = jd();
-			t = bt(t);
+			t = yt(t);
 			var n = ki(e, t);
 			n !== null && Pd(n, e, t), ph(e, t);
 		}
 	}
 	var gh = !0;
 	function _h(e, t, n, r) {
-		var i = N.T;
-		N.T = null;
-		var a = P.p;
+		var i = P.T;
+		P.T = null;
+		var a = F.p;
 		try {
-			P.p = 2, yh(e, t, n, r);
+			F.p = 2, yh(e, t, n, r);
 		} finally {
-			P.p = a, N.T = i;
+			F.p = a, P.T = i;
 		}
 	}
 	function vh(e, t, n, r) {
-		var i = N.T;
-		N.T = null;
-		var a = P.p;
+		var i = P.T;
+		P.T = null;
+		var a = F.p;
 		try {
-			P.p = 8, yh(e, t, n, r);
+			F.p = 8, yh(e, t, n, r);
 		} finally {
-			P.p = a, N.T = i;
+			F.p = a, P.T = i;
 		}
 	}
 	function yh(e, t, n, r) {
@@ -8700,14 +8700,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					if (a !== null) switch (a.tag) {
 						case 3:
 							if (a = a.stateNode, a.current.memoizedState.isDehydrated) {
-								var o = ct(a.pendingLanes);
+								var o = st(a.pendingLanes);
 								if (o !== 0) {
 									var s = a;
 									for (s.pendingLanes |= 2, s.entangledLanes |= 2; o;) {
-										var c = 1 << 31 - tt(o);
+										var c = 1 << 31 - et(o);
 										s.entanglements[1] |= c, o &= ~c;
 									}
-									Ef(a), !(G & 6) && (_d = Ue() + 500, Df(0, !1));
+									Ef(a), !(G & 6) && (_d = He() + 500, Df(0, !1));
 								}
 							}
 							break;
@@ -8819,12 +8819,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case "mouseleave":
 			case "pointerenter":
 			case "pointerleave": return 8;
-			case "message": switch (We()) {
-				case Ge: return 2;
-				case Ke: return 8;
-				case qe:
-				case Je: return 32;
-				case Ye: return 268435456;
+			case "message": switch (Ue()) {
+				case We: return 2;
+				case Ge: return 8;
+				case Ke:
+				case qe: return 32;
+				case Je: return 268435456;
 				default: return 32;
 			}
 			default: return 32;
@@ -8881,14 +8881,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (n !== null) {
 				if (t = n.tag, t === 13) {
 					if (t = s(n), t !== null) {
-						e.blockedOn = t, Ct(e.priority, function() {
+						e.blockedOn = t, St(e.priority, function() {
 							hh(n);
 						});
 						return;
 					}
 				} else if (t === 31) {
 					if (t = c(n), t !== null) {
-						e.blockedOn = t, Ct(e.priority, function() {
+						e.blockedOn = t, St(e.priority, function() {
 							hh(n);
 						});
 						return;
@@ -9019,7 +9019,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	Gh.prototype.unstable_scheduleHydration = function(e) {
 		if (e) {
-			var t = St();
+			var t = xt();
 			e = {
 				blockedOn: null,
 				target: e,
@@ -9031,7 +9031,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	};
 	var Kh = n.version;
 	if (Kh !== "19.3.0") throw Error(i(527, Kh, "19.3.0"));
-	P.findDOMNode = function(e) {
+	F.findDOMNode = function(e) {
 		var t = e._reactInternals;
 		if (t === void 0) throw typeof e.render == "function" ? Error(i(188)) : (e = Object.keys(e).join(","), Error(i(268, e)));
 		return e = d(t), e = e === null ? null : p(e), e = e === null ? null : e.stateNode, e;
@@ -9040,13 +9040,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		bundleType: 0,
 		version: "19.3.0",
 		rendererPackageName: "react-dom",
-		currentDispatcherRef: N,
+		currentDispatcherRef: P,
 		reconcilerVersion: "19.3.0"
 	};
 	if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u") {
 		var Jh = __REACT_DEVTOOLS_GLOBAL_HOOK__;
 		if (!Jh.isDisabled && Jh.supportsFiber) try {
-			Qe = Jh.inject(qh), $e = Jh;
+			Ze = Jh.inject(qh), Qe = Jh;
 		} catch {}
 	}
 	e.createRoot = function(e, t) {
@@ -9063,26 +9063,93 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	n(), t.exports = h();
-})), _ = /* @__PURE__ */ c(u(), 1), v = g(), y = (e, t = document) => t.querySelector(e), b = (e) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(e), x = (e) => e < 10 ? "0" + e : String(e), S = (e) => `${x(Math.floor(Math.max(0, e) / 60))}:${x(Math.floor(Math.max(0, e) % 60))}`, C = {
+})), _ = /* @__PURE__ */ o(((e) => {
+	var t = Symbol.for("react.transitional.element"), n = Symbol.for("react.fragment");
+	function r(e, n, r) {
+		var i = null;
+		if (r !== void 0 && (i = "" + r), n.key !== void 0 && (i = "" + n.key), "key" in n) for (var a in r = {}, n) a !== "key" && (r[a] = n[a]);
+		else r = n;
+		return n = r.ref, {
+			$$typeof: t,
+			type: e,
+			key: i,
+			ref: n === void 0 ? null : n,
+			props: r
+		};
+	}
+	e.Fragment = n, e.jsx = r, e.jsxs = r;
+})), v = /* @__PURE__ */ o(((e, t) => {
+	t.exports = _();
+})), y = m(), b = g(), x = /* @__PURE__ */ c(u(), 1), S = v(), C = {
+	busy: !1,
+	message: ""
+}, w = /* @__PURE__ */ new Set(), T = (e) => (w.add(e), () => w.delete(e)), E = () => C, D = (e) => {
+	C = e, w.forEach((e) => e());
+};
+function O() {
+	return (0, x.useSyncExternalStore)(T, E);
+}
+async function ee() {
+	if (!C.busy) {
+		D({
+			busy: !0,
+			message: "جارٍ تسجيل وقت المشكلة وحفظ التقرير…"
+		});
+		try {
+			let e = await window.pywebview.api.capture_network_incident(), t = new Date(e.capturedAt);
+			D({
+				busy: !1,
+				message: (Number.isNaN(t.getTime()) ? "" : `وقت المشكلة: ${t.toLocaleString("ar-EG")}. `) + e.message
+			});
+		} catch {
+			D({
+				busy: !1,
+				message: "تعذر تأكيد حفظ التقرير. أعد المحاولة من برنامج مسار على الماك؛ الامتحان مستمر."
+			});
+		}
+	}
+}
+function te({ disabled: e = !1 }) {
+	let t = O(), [n, r] = (0, x.useState)(!!window.pywebview?.api?.capture_network_incident);
+	return (0, x.useEffect)(() => {
+		let e = () => r(!!window.pywebview?.api?.capture_network_incident);
+		return window.addEventListener("pywebviewready", e), e(), () => window.removeEventListener("pywebviewready", e);
+	}, []), n ? /* @__PURE__ */ (0, S.jsxs)("div", {
+		className: "network-incident-report",
+		children: [/* @__PURE__ */ (0, S.jsx)("button", {
+			className: "button secondary",
+			disabled: e || t.busy,
+			onClick: ee,
+			children: t.busy ? "جارٍ حفظ لوج المشكلة…" : "سجّل المشكلة ونزّل اللوج"
+		}), t.message && /* @__PURE__ */ (0, S.jsx)("p", {
+			className: "help",
+			role: "status",
+			children: t.message
+		})]
+	}) : null;
+}
+//#endregion
+//#region ../web/assets/common.js
+var k = (e, t = document) => t.querySelector(e), A = (e) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(e), ne = (e) => e < 10 ? "0" + e : String(e), re = (e) => `${ne(Math.floor(Math.max(0, e) / 60))}:${ne(Math.floor(Math.max(0, e) % 60))}`, j = {
 	draft: "مسودة",
 	waiting: "قاعة الانتظار مفتوحة",
 	running: "الامتحان جارٍ",
 	closed: "انتهى الامتحان"
-}, w;
-function T(e, t = !1) {
-	let n = y("#toast");
+}, ie;
+function M(e, t = !1) {
+	let n = k("#toast");
 	if (!n.hidden && n.dataset.message === e) return;
 	n.dataset.message = e;
 	let r = document.createElement("span");
 	r.textContent = e;
 	let i = document.createElement("button");
 	i.type = "button", i.className = "toast-close", i.setAttribute("aria-label", "إغلاق الرسالة"), i.textContent = "×", i.onclick = () => {
-		clearTimeout(w), n.hidden = !0;
-	}, n.textContent = "", n.appendChild(r), n.appendChild(i), n.className = `toast${t ? " error" : ""}`, n.hidden = !1, clearTimeout(w), w = setTimeout(() => {
+		clearTimeout(ie), n.hidden = !0;
+	}, n.textContent = "", n.appendChild(r), n.appendChild(i), n.className = `toast${t ? " error" : ""}`, n.hidden = !1, clearTimeout(ie), ie = setTimeout(() => {
 		n.hidden = !0;
 	}, 6e3);
 }
-function E(e, t, n, r = {}) {
+function N(e, t, n, r = {}) {
 	return new Promise((i, a) => {
 		let o = new XMLHttpRequest();
 		o.open(t === void 0 ? "GET" : "POST", e, !0), o.withCredentials = !0, o.timeout = r.timeoutMs || 12e3, o.setRequestHeader("X-Exam-Request", "1"), n && o.setRequestHeader("X-Admin-Token", n), t !== void 0 && o.setRequestHeader("Content-Type", "application/json"), o.onerror = () => a(/* @__PURE__ */ Error("تعذر الوصول لجهاز الامتحان. ابقَ على شبكة الامتحان وحاول مرة أخرى.")), o.ontimeout = () => a(/* @__PURE__ */ Error("انتهت مهلة الاتصال بجهاز الامتحان. حاول مرة أخرى.")), o.onabort = () => a(/* @__PURE__ */ Error("انقطع طلب الاتصال قبل تأكيد الاستلام.")), o.onload = () => {
@@ -9103,10 +9170,10 @@ function E(e, t, n, r = {}) {
 		}, o.send(t === void 0 ? null : JSON.stringify(t));
 	});
 }
-function D(e, t) {
+function ae(e, t) {
 	return typeof e.showModal == "function" ? (e.returnValue = "cancel", e.showModal(), new Promise((t) => e.addEventListener("close", () => t(e.returnValue === "yes"), { once: !0 }))) : Promise.resolve(window.confirm(t));
 }
-async function O(e) {
+async function oe(e) {
 	if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(e);
 	else {
 		let t = document.createElement("textarea");
@@ -9114,13 +9181,13 @@ async function O(e) {
 		let n = document.execCommand("copy");
 		if (t.remove(), !n) throw Error("انسخ الرابط يدويًا من الحقل");
 	}
-	T("تم النسخ");
+	M("تم النسخ");
 }
-function k(e, t) {
+function se(e, t) {
 	let n = URL.createObjectURL(e), r = document.createElement("a");
 	r.href = n, r.download = t, document.body.appendChild(r), r.click(), r.remove(), setTimeout(() => URL.revokeObjectURL(n), 3e4);
 }
-async function ee(e, t) {
+async function ce(e, t) {
 	let n = new Uint8Array(await e.slice(0, 16).arrayBuffer()), r = String.fromCharCode(...n);
 	if (!e.size) throw Error("الملف فارغ؛ لم يتم حفظه. أعد التنزيل.");
 	let i;
@@ -9133,10 +9200,10 @@ async function ee(e, t) {
 	}
 	if (!i) throw Error("الملف غير مكتمل أو غير صالح؛ لم يتم حفظه. أعد التنزيل من البرنامج.");
 }
-async function A(e, t, n) {
+async function le(e, t, n) {
 	let r = t.replace(/[\\/:*?"<>|]/g, "-"), i = window.pywebview?.api?.download_exam_file;
 	if (i) return (await i(e, r, n)).saved;
-	let { token: a } = await E("/api/bootstrap"), o = typeof AbortController == "function" ? new AbortController() : null, s = o ? setTimeout(() => o.abort(), 3e5) : null;
+	let { token: a } = await N("/api/bootstrap"), o = typeof AbortController == "function" ? new AbortController() : null, s = o ? setTimeout(() => o.abort(), 3e5) : null;
 	try {
 		let t = {
 			"X-Exam-Request": "1",
@@ -9159,18 +9226,18 @@ async function A(e, t, n) {
 		}
 		if (s.headers.get("Content-Type")?.split(";")[0] !== n) throw Error("الاستجابة ليست الملف المطلوب؛ لم يتم حفظ ملف غير صالح.");
 		let c = await s.blob();
-		return await ee(c, n), k(c, r), !0;
+		return await ce(c, n), se(c, r), !0;
 	} finally {
 		s && clearTimeout(s);
 	}
 }
-function te(e, t) {
-	let n = y("#confirm-dialog");
-	return y("#confirm-title").textContent = e, y("#confirm-copy").textContent = t, D(n, `${e}\n${t}`);
+function ue(e, t) {
+	let n = k("#confirm-dialog");
+	return k("#confirm-title").textContent = e, k("#confirm-copy").textContent = t, ae(n, `${e}\n${t}`);
 }
 //#endregion
 //#region ../web/assets/qr.js
-var ne;
+var de;
 ((e) => {
 	let t = class t {
 		constructor(e, n, r, a) {
@@ -9860,7 +9927,7 @@ var ne;
 	a.NUMERIC_REGEX = /^[0-9]*$/, a.ALPHANUMERIC_REGEX = /^[A-Z0-9 $%*+.\/:-]*$/, a.ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
 	let o = a;
 	e.QrSegment = a;
-})(ne ||= {}), ((e) => {
+})(de ||= {}), ((e) => {
 	((e) => {
 		let t = class {
 			constructor(e, t) {
@@ -9869,7 +9936,7 @@ var ne;
 		};
 		t.LOW = new t(0, 1), t.MEDIUM = new t(1, 0), t.QUARTILE = new t(2, 3), t.HIGH = new t(3, 2), e.Ecc = t;
 	})(e.QrCode ||= {});
-})(ne ||= {}), ((e) => {
+})(de ||= {}), ((e) => {
 	((e) => {
 		let t = class {
 			constructor(e, t) {
@@ -9901,25 +9968,8 @@ var ne;
 			0
 		]), e.Mode = t;
 	})(e.QrSegment ||= {});
-})(ne ||= {});
-var re = ne.QrCode, j = /* @__PURE__ */ o(((e) => {
-	var t = Symbol.for("react.transitional.element"), n = Symbol.for("react.fragment");
-	function r(e, n, r) {
-		var i = null;
-		if (r !== void 0 && (i = "" + r), n.key !== void 0 && (i = "" + n.key), "key" in n) for (var a in r = {}, n) a !== "key" && (r[a] = n[a]);
-		else r = n;
-		return n = r.ref, {
-			$$typeof: t,
-			type: e,
-			key: i,
-			ref: n === void 0 ? null : n,
-			props: r
-		};
-	}
-	e.Fragment = n, e.jsx = r, e.jsxs = r;
-})), M = (/* @__PURE__ */ o(((e, t) => {
-	t.exports = j();
-})))(), ie = (e) => ({
+})(de ||= {});
+var fe = de.QrCode, pe = (e) => ({
 	kind: e,
 	text: "",
 	points: 2,
@@ -9931,7 +9981,7 @@ var re = ne.QrCode, j = /* @__PURE__ */ o(((e) => {
 	],
 	correct: 0,
 	modelAnswer: ""
-}), ae = {
+}), me = {
 	title: "",
 	instructions: "",
 	minutes: 15,
@@ -9942,69 +9992,69 @@ var re = ne.QrCode, j = /* @__PURE__ */ o(((e) => {
 	questionCount: 1,
 	mcqCount: 1,
 	essayCount: 0,
-	questions: [ie("mcq")]
-}, oe = (e, t) => e.questions.filter((e) => e.kind === t).length, se = (e) => {
-	let t = structuredClone(e || ae);
-	return t.mcqCount == null && t.questionCount === t.questions.length && (t.mcqCount = oe(t, "mcq"), t.essayCount = oe(t, "essay")), t;
+	questions: [pe("mcq")]
+}, he = (e, t) => e.questions.filter((e) => e.kind === t).length, ge = (e) => {
+	let t = structuredClone(e || me);
+	return t.mcqCount == null && t.questionCount === t.questions.length && (t.mcqCount = he(t, "mcq"), t.essayCount = he(t, "essay")), t;
 };
-function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
-	let [i, a] = (0, _.useState)(() => se(e)), [o, s] = (0, _.useState)(!1), c = (e) => {
+function P({ config: e, onSave: t, onCancel: n, onDirty: r }) {
+	let [i, a] = (0, x.useState)(() => ge(e)), [o, s] = (0, x.useState)(!1), c = (e) => {
 		a((t) => {
 			let n = e(structuredClone(t));
 			return n.mcqCount != null && (n.questionCount = n.mcqCount + n.essayCount), n;
 		}), r(!0);
-	}, l = i.mcqCount != null, u = (e) => c((t) => (e ? (t.mcqCount = oe(t, "mcq"), t.essayCount = oe(t, "essay")) : (delete t.mcqCount, delete t.essayCount), t)), d = (e, t) => c((n) => ({
+	}, l = i.mcqCount != null, u = (e) => c((t) => (e ? (t.mcqCount = he(t, "mcq"), t.essayCount = he(t, "essay")) : (delete t.mcqCount, delete t.essayCount), t)), d = (e, t) => c((n) => ({
 		...n,
 		[e]: t
 	})), f = (e, t, n) => c((r) => (r.questions[e][t] = n, r)), p = (e, t, n) => c((r) => (r.questions[e].options[t] = n, r)), m = (e) => {
 		if (i.questions.length >= 100) {
-			T("الحد الأقصى ١٠٠ سؤال", !0);
+			M("الحد الأقصى ١٠٠ سؤال", !0);
 			return;
 		}
 		c((t) => {
-			let n = l ? t[e + "Count"] === oe(t, e) : t.questionCount === t.questions.length;
-			return t.questions.push(ie(e)), n && (l ? t[e + "Count"]++ : t.questionCount++), t;
+			let n = l ? t[e + "Count"] === he(t, e) : t.questionCount === t.questions.length;
+			return t.questions.push(pe(e)), n && (l ? t[e + "Count"]++ : t.questionCount++), t;
 		});
 	}, h = (e) => c((t) => {
 		let n = t.questions[e].kind;
-		return t.questions.splice(e, 1), l ? t[n + "Count"] = Math.min(t[n + "Count"], oe(t, n)) : t.questionCount = Math.min(t.questionCount, t.questions.length), t;
+		return t.questions.splice(e, 1), l ? t[n + "Count"] = Math.min(t[n + "Count"], he(t, n)) : t.questionCount = Math.min(t.questionCount, t.questions.length), t;
 	});
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 		className: "page-heading",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-			/* @__PURE__ */ (0, M.jsx)("span", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
 				className: "context-label",
 				children: "تجهيز الامتحان"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: e ? "تعديل الامتحان" : "امتحان جديد" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: "سمِّ الامتحان وجهّز أسئلته هنا، ثم اختره مع الحصة في قاعة السنتر." })
-		] }), /* @__PURE__ */ (0, M.jsx)("button", {
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: e ? "تعديل الامتحان" : "امتحان جديد" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: "سمِّ الامتحان وجهّز أسئلته هنا، ثم اختره مع الحصة في قاعة السنتر." })
+		] }), /* @__PURE__ */ (0, S.jsx)("button", {
 			className: "button secondary",
 			onClick: n,
 			children: "رجوع للمكتبة"
 		})]
-	}), /* @__PURE__ */ (0, M.jsxs)("form", {
+	}), /* @__PURE__ */ (0, S.jsxs)("form", {
 		id: "exam-editor",
 		onSubmit: async (e) => {
 			if (e.preventDefault(), i.questionCount < 1) {
-				T("اختر سؤالًا واحدًا على الأقل لكل طالب", !0);
+				M("اختر سؤالًا واحدًا على الأقل لكل طالب", !0);
 				return;
 			}
 			s(!0);
 			try {
 				await t(i), r(!1);
 			} catch (e) {
-				T(e.message, !0);
+				M(e.message, !0);
 			} finally {
 				s(!1);
 			}
 		},
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("section", {
+			/* @__PURE__ */ (0, S.jsxs)("section", {
 				className: "panel editor-basics",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("h2", { children: "تفاصيل الامتحان" }),
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, M.jsx)("input", {
+					/* @__PURE__ */ (0, S.jsx)("h2", { children: "تفاصيل الامتحان" }),
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, S.jsx)("input", {
 						name: "title",
 						required: !0,
 						maxLength: "150",
@@ -10012,13 +10062,13 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 						onChange: (e) => d("title", e.target.value),
 						placeholder: "مثلًا: مراجعة الفصل الأول"
 					})] }),
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 						"تعليمات للطلاب ",
-						/* @__PURE__ */ (0, M.jsx)("span", {
+						/* @__PURE__ */ (0, S.jsx)("span", {
 							className: "muted",
 							children: "اختياري"
 						}),
-						/* @__PURE__ */ (0, M.jsx)("textarea", {
+						/* @__PURE__ */ (0, S.jsx)("textarea", {
 							name: "instructions",
 							rows: "2",
 							maxLength: "2000",
@@ -10026,10 +10076,10 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 							onChange: (e) => d("instructions", e.target.value)
 						})
 					] }),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "form-grid",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("label", { children: ["المدة بالدقائق", /* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المدة بالدقائق", /* @__PURE__ */ (0, S.jsx)("input", {
 								name: "minutes",
 								type: "number",
 								min: "1",
@@ -10038,7 +10088,7 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 								value: i.minutes,
 								onChange: (e) => d("minutes", Number(e.target.value))
 							})] }),
-							!l && /* @__PURE__ */ (0, M.jsxs)("label", { children: ["عدد الأسئلة اللي تظهر لكل طالب", /* @__PURE__ */ (0, M.jsx)("input", {
+							!l && /* @__PURE__ */ (0, S.jsxs)("label", { children: ["عدد الأسئلة اللي تظهر لكل طالب", /* @__PURE__ */ (0, S.jsx)("input", {
 								name: "questionCount",
 								type: "number",
 								min: "1",
@@ -10047,120 +10097,120 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 								value: i.questionCount,
 								onChange: (e) => d("questionCount", Number(e.target.value))
 							})] }),
-							/* @__PURE__ */ (0, M.jsxs)("label", { children: ["نظام الوقت", /* @__PURE__ */ (0, M.jsxs)("select", {
+							/* @__PURE__ */ (0, S.jsxs)("label", { children: ["نظام الوقت", /* @__PURE__ */ (0, S.jsxs)("select", {
 								name: "timerMode",
 								value: i.timerMode,
 								onChange: (e) => d("timerMode", e.target.value),
-								children: [/* @__PURE__ */ (0, M.jsx)("option", {
+								children: [/* @__PURE__ */ (0, S.jsx)("option", {
 									value: "shared",
 									children: "نهاية موحدة للجميع"
-								}), /* @__PURE__ */ (0, M.jsx)("option", {
+								}), /* @__PURE__ */ (0, S.jsx)("option", {
 									value: "individual",
 									children: "مدة كاملة لكل طالب"
 								})]
 							})] })
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "check-label",
-						children: [/* @__PURE__ */ (0, M.jsx)("input", {
+						children: [/* @__PURE__ */ (0, S.jsx)("input", {
 							type: "checkbox",
 							checked: l,
 							onChange: (e) => u(e.target.checked)
 						}), "تحديد عدد الاختياري والمقالي كل نوع لوحده"]
 					}),
-					l && /* @__PURE__ */ (0, M.jsxs)("div", {
+					l && /* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "form-grid",
-						children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+						children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 							"عدد الاختياري لكل طالب",
-							/* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsx)("input", {
 								name: "mcqCount",
 								type: "number",
 								min: "0",
-								max: oe(i, "mcq"),
+								max: he(i, "mcq"),
 								required: !0,
 								value: i.mcqCount,
 								onChange: (e) => d("mcqCount", Number(e.target.value))
 							}),
-							/* @__PURE__ */ (0, M.jsxs)("span", {
+							/* @__PURE__ */ (0, S.jsxs)("span", {
 								className: "help",
 								children: [
 									"متاح في البنك: ",
-									b(oe(i, "mcq")),
+									A(he(i, "mcq")),
 									" سؤال اختياري"
 								]
 							})
-						] }), /* @__PURE__ */ (0, M.jsxs)("label", { children: [
+						] }), /* @__PURE__ */ (0, S.jsxs)("label", { children: [
 							"عدد المقالي لكل طالب",
-							/* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsx)("input", {
 								name: "essayCount",
 								type: "number",
 								min: "0",
-								max: oe(i, "essay"),
+								max: he(i, "essay"),
 								required: !0,
 								value: i.essayCount,
 								onChange: (e) => d("essayCount", Number(e.target.value))
 							}),
-							/* @__PURE__ */ (0, M.jsxs)("span", {
+							/* @__PURE__ */ (0, S.jsxs)("span", {
 								className: "help",
 								children: [
 									"متاح في البنك: ",
-									b(oe(i, "essay")),
+									A(he(i, "essay")),
 									" سؤال مقالي"
 								]
 							})
 						] })]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "question-bank-summary",
 						"aria-live": "polite",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("strong", { children: [
+							/* @__PURE__ */ (0, S.jsxs)("strong", { children: [
 								"بنك الأسئلة: ",
-								b(i.questions.length),
+								A(i.questions.length),
 								" سؤال · يظهر لكل طالب: ",
-								b(i.questionCount),
+								A(i.questionCount),
 								" سؤال"
 							] }),
-							l && /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+							l && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 								"اختياري: ",
-								b(i.mcqCount),
+								A(i.mcqCount),
 								" من ",
-								b(oe(i, "mcq")),
+								A(he(i, "mcq")),
 								" · مقالي: ",
-								b(i.essayCount),
+								A(i.essayCount),
 								" من ",
-								b(oe(i, "essay"))
+								A(he(i, "essay"))
 							] }),
-							/* @__PURE__ */ (0, M.jsxs)("p", { children: [l ? "أضف الأسئلة في البنك تحت، ثم حدد العدد المعروض من كل نوع؛ مثلًا ٥ اختياري من ٢٠، و١ مقالي من ٢. صفر يعني عدم عرض أسئلة من هذا النوع." : "تُسحب الأسئلة من البنك كله دون تحديد عدد لكل نوع.", " السحب عشوائي لكل طالب بدون تكرار السؤال داخل محاولته، وأسئلته تظل محفوظة عند الخروج والعودة."] })
+							/* @__PURE__ */ (0, S.jsxs)("p", { children: [l ? "أضف الأسئلة في البنك تحت، ثم حدد العدد المعروض من كل نوع؛ مثلًا ٥ اختياري من ٢٠، و١ مقالي من ٢. صفر يعني عدم عرض أسئلة من هذا النوع." : "تُسحب الأسئلة من البنك كله دون تحديد عدد لكل نوع.", " السحب عشوائي لكل طالب بدون تكرار السؤال داخل محاولته، وأسئلته تظل محفوظة عند الخروج والعودة."] })
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("p", {
+					/* @__PURE__ */ (0, S.jsxs)("p", {
 						className: "help",
 						children: ["في النهاية الموحدة، الطالب المتأخر يأخذ الوقت المتبقي. ", l ? "عند سحب جزء من نوع معين، لازم درجات أسئلة النوع ده تتساوى. ممكن درجة المقالي تختلف عن الاختياري." : "عند سحب جزء من البنك كله، لازم درجات الأسئلة كلها تتساوى."]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "check-row",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("label", {
+							/* @__PURE__ */ (0, S.jsxs)("label", {
 								className: "check-label",
-								children: [/* @__PURE__ */ (0, M.jsx)("input", {
+								children: [/* @__PURE__ */ (0, S.jsx)("input", {
 									type: "checkbox",
 									checked: i.allowLate,
 									onChange: (e) => d("allowLate", e.target.checked)
 								}), "السماح بالدخول بعد البداية"]
 							}),
-							/* @__PURE__ */ (0, M.jsxs)("label", {
+							/* @__PURE__ */ (0, S.jsxs)("label", {
 								className: "check-label",
-								children: [/* @__PURE__ */ (0, M.jsx)("input", {
+								children: [/* @__PURE__ */ (0, S.jsx)("input", {
 									type: "checkbox",
 									checked: i.shuffle,
 									onChange: (e) => d("shuffle", e.target.checked)
 								}), "تغيير ترتيب الأسئلة بين الطلاب"]
 							}),
-							/* @__PURE__ */ (0, M.jsxs)("label", {
+							/* @__PURE__ */ (0, S.jsxs)("label", {
 								className: "check-label",
-								children: [/* @__PURE__ */ (0, M.jsx)("input", {
+								children: [/* @__PURE__ */ (0, S.jsx)("input", {
 									type: "checkbox",
 									checked: i.shuffleOptions !== !1,
 									onChange: (e) => d("shuffleOptions", e.target.checked)
@@ -10170,36 +10220,36 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top questions-heading",
-				children: [/* @__PURE__ */ (0, M.jsxs)("h2", { children: ["بنك الأسئلة ", /* @__PURE__ */ (0, M.jsxs)("span", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("h2", { children: ["بنك الأسئلة ", /* @__PURE__ */ (0, S.jsxs)("span", {
 					className: "muted",
 					children: [
 						"(",
-						b(i.questions.length),
+						A(i.questions.length),
 						")"
 					]
-				})] }), /* @__PURE__ */ (0, M.jsx)("span", {
+				})] }), /* @__PURE__ */ (0, S.jsx)("span", {
 					className: "muted",
 					children: "الإجابات النموذجية تظهر للإدارة فقط"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("div", {
+			/* @__PURE__ */ (0, S.jsx)("div", {
 				id: "question-list",
-				children: i.questions.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("section", {
+				children: i.questions.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("section", {
 					className: "question-editor",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("div", {
+						/* @__PURE__ */ (0, S.jsxs)("div", {
 							className: "section-top",
-							children: [/* @__PURE__ */ (0, M.jsxs)("h3", { children: [
+							children: [/* @__PURE__ */ (0, S.jsxs)("h3", { children: [
 								"السؤال ",
-								b(t + 1),
+								A(t + 1),
 								" ",
-								/* @__PURE__ */ (0, M.jsx)("span", {
+								/* @__PURE__ */ (0, S.jsx)("span", {
 									className: "badge quiet",
 									children: e.kind === "mcq" ? "اختيار من متعدد" : "مقالي"
 								})
-							] }), /* @__PURE__ */ (0, M.jsx)("button", {
+							] }), /* @__PURE__ */ (0, S.jsx)("button", {
 								type: "button",
 								className: "text-button danger-text",
 								disabled: i.questions.length === 1,
@@ -10207,16 +10257,16 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 								children: "حذف السؤال"
 							})]
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("div", {
+						/* @__PURE__ */ (0, S.jsxs)("div", {
 							className: "question-fields",
-							children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["نص السؤال", /* @__PURE__ */ (0, M.jsx)("textarea", {
+							children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["نص السؤال", /* @__PURE__ */ (0, S.jsx)("textarea", {
 								required: !0,
 								rows: "2",
 								maxLength: "5000",
 								value: e.text,
 								onChange: (e) => f(t, "text", e.target.value),
 								placeholder: "اكتب السؤال هنا…"
-							})] }), /* @__PURE__ */ (0, M.jsxs)("label", { children: ["الدرجة", /* @__PURE__ */ (0, M.jsx)("input", {
+							})] }), /* @__PURE__ */ (0, S.jsxs)("label", { children: ["الدرجة", /* @__PURE__ */ (0, S.jsx)("input", {
 								type: "number",
 								min: "1",
 								max: "100",
@@ -10225,27 +10275,27 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 								onChange: (e) => f(t, "points", Number(e.target.value))
 							})] })]
 						}),
-						e.kind === "mcq" ? /* @__PURE__ */ (0, M.jsxs)("fieldset", {
+						e.kind === "mcq" ? /* @__PURE__ */ (0, S.jsxs)("fieldset", {
 							className: "options-editor",
-							children: [/* @__PURE__ */ (0, M.jsx)("legend", { children: "الاختيارات · حدد الإجابة الصحيحة" }), e.options.map((n, r) => /* @__PURE__ */ (0, M.jsxs)("label", {
+							children: [/* @__PURE__ */ (0, S.jsx)("legend", { children: "الاختيارات · حدد الإجابة الصحيحة" }), e.options.map((n, r) => /* @__PURE__ */ (0, S.jsxs)("label", {
 								className: "option-editor",
-								children: [/* @__PURE__ */ (0, M.jsx)("input", {
+								children: [/* @__PURE__ */ (0, S.jsx)("input", {
 									type: "radio",
 									name: `correct-${t}`,
 									checked: e.correct === r,
 									onChange: () => f(t, "correct", r),
 									"aria-label": `الاختيار الصحيح ${r + 1}`
-								}), /* @__PURE__ */ (0, M.jsx)("input", {
+								}), /* @__PURE__ */ (0, S.jsx)("input", {
 									className: "option-text",
 									value: n,
 									maxLength: "1000",
 									required: !0,
 									onChange: (e) => p(t, r, e.target.value),
 									"aria-label": `نص الاختيار ${r + 1}`,
-									placeholder: `الاختيار ${b(r + 1)}`
+									placeholder: `الاختيار ${A(r + 1)}`
 								})]
 							}, r))]
-						}) : /* @__PURE__ */ (0, M.jsxs)("label", { children: ["الإجابة النموذجية ومعايير التصحيح", /* @__PURE__ */ (0, M.jsx)("textarea", {
+						}) : /* @__PURE__ */ (0, S.jsxs)("label", { children: ["الإجابة النموذجية ومعايير التصحيح", /* @__PURE__ */ (0, S.jsx)("textarea", {
 							rows: "3",
 							maxLength: "10000",
 							required: !0,
@@ -10256,23 +10306,23 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 					]
 				}, e.id || t))
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "add-questions",
-				children: [/* @__PURE__ */ (0, M.jsx)("button", {
+				children: [/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					type: "button",
 					onClick: () => m("mcq"),
 					children: "＋ سؤال اختيارات"
-				}), /* @__PURE__ */ (0, M.jsx)("button", {
+				}), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					type: "button",
 					onClick: () => m("essay"),
 					children: "＋ سؤال مقالي"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "editor-footer",
-				children: [/* @__PURE__ */ (0, M.jsx)("p", { children: "الطلاب لن يروا هذا الامتحان حتى تختاره مع حصة وتفتح القاعة." }), /* @__PURE__ */ (0, M.jsx)("button", {
+				children: [/* @__PURE__ */ (0, S.jsx)("p", { children: "الطلاب لن يروا هذا الامتحان حتى تختاره مع حصة وتفتح القاعة." }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button",
 					type: "submit",
 					disabled: o,
@@ -10284,17 +10334,17 @@ function ce({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 }
 //#endregion
 //#region src/networkStatus.js
-var le = null, ue = /* @__PURE__ */ new Set();
-function de(e) {
-	le = e, ue.forEach((e) => e());
+var F = null, _e = /* @__PURE__ */ new Set();
+function ve(e) {
+	F = e, _e.forEach((e) => e());
 }
-function fe(e) {
-	return ue.add(e), () => ue.delete(e);
+function ye(e) {
+	return _e.add(e), () => _e.delete(e);
 }
-function pe() {
-	return (0, _.useSyncExternalStore)(fe, () => le);
+function be() {
+	return (0, x.useSyncExternalStore)(ye, () => F);
 }
-function me(e) {
+function xe(e) {
 	let t = e?.capport;
 	if (t?.appliedMode !== "https" || !["ready", "expiring"].includes(t?.state)) return "";
 	let n = t.installed?.hostname;
@@ -10302,21 +10352,21 @@ function me(e) {
 }
 //#endregion
 //#region src/ExamHealth.jsx
-function he() {
-	let [e, t] = (0, _.useState)(null), [n, r] = (0, _.useState)(!1);
-	if ((0, _.useEffect)(() => {
+function I() {
+	let [e, t] = (0, x.useState)(null), [n, r] = (0, x.useState)(!1);
+	if ((0, x.useEffect)(() => {
 		let e = !0, n, i = !1, a = async () => {
 			let o = window.pywebview?.api;
 			if (i || !o?.exam_health) return;
 			i = !0, clearTimeout(n);
 			let s = setTimeout(() => {
-				e && (r(!0), de(null));
+				e && (r(!0), ve(null));
 			}, 15e3);
 			try {
 				let n = await o.exam_health();
-				e && (t(n), de(n), r(!1));
+				e && (t(n), ve(n), r(!1));
 			} catch {
-				e && (r(!0), de(null));
+				e && (r(!0), ve(null));
 			} finally {
 				clearTimeout(s), i = !1, e && (n = setTimeout(a, 1e4));
 			}
@@ -10331,21 +10381,21 @@ function he() {
 		"expiring",
 		"error",
 		"unreachable"
-	].includes(e?.capport?.state) && i.push(e.capport.detail), ["warning", "invalid"].includes(e?.dhcpLeases?.status) && i.push(e.dhcpLeases.detail), e?.sleepProtection?.supported && !e.sleepProtection.active && i.push("حماية الماك من النوم غير مفعلة؛ اتركه مستيقظًا وراجع الإعدادات."), /* @__PURE__ */ (0, M.jsxs)("aside", {
+	].includes(e?.capport?.state) && i.push(e.capport.detail), ["warning", "invalid"].includes(e?.dhcpLeases?.status) && i.push(e.dhcpLeases.detail), e?.sleepProtection?.supported && !e.sleepProtection.active && i.push("حماية الماك من النوم غير مفعلة؛ اتركه مستيقظًا وراجع الإعدادات."), /* @__PURE__ */ (0, S.jsxs)("aside", {
 		className: "notice",
 		role: i.length ? "alert" : "status",
 		"aria-label": "حالة جهاز الامتحان",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("strong", { children: i.length ? "تنبيه جهاز الامتحان" : "جهاز الامتحان جاهز" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: i.length ? i.join(" ") : "خدمات الشبكة المباشرة تعمل، وحماية النوم: " + (e?.sleepProtection?.active ? "مفعلة" : "غير متاحة") + "." }),
-			i.length > 0 && /* @__PURE__ */ (0, M.jsx)("p", { children: "رجّع الاتصال قبل متابعة الامتحان، وراجع حالة حفظ الطلاب؛ إعادة تهيئة الشبكة توقف الاتصال مؤقتًا." })
+			/* @__PURE__ */ (0, S.jsx)("strong", { children: i.length ? "تنبيه جهاز الامتحان" : "جهاز الامتحان جاهز" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: i.length ? i.join(" ") : "خدمات الشبكة المباشرة تعمل، وحماية النوم: " + (e?.sleepProtection?.active ? "مفعلة" : "غير متاحة") + "." }),
+			i.length > 0 && /* @__PURE__ */ (0, S.jsx)("p", { children: "رجّع الاتصال قبل متابعة الامتحان، وراجع حالة حفظ الطلاب؛ إعادة تهيئة الشبكة توقف الاتصال مؤقتًا." })
 		]
 	});
 }
 //#endregion
 //#region src/RecoverAnswers.jsx
-function ge({ attempt: e, exam: t, request: n, refresh: r }) {
-	let [i, a] = (0, _.useState)(null), [o, s] = (0, _.useState)(""), [c, l] = (0, _.useState)(!1);
+function Se({ attempt: e, exam: t, request: n, refresh: r }) {
+	let [i, a] = (0, x.useState)(null), [o, s] = (0, x.useState)(""), [c, l] = (0, x.useState)(!1);
 	if (!e.submitted_at || e.cancelled_at) return null;
 	let u = async (n) => {
 		let r = n.target.files[0];
@@ -10364,26 +10414,26 @@ function ge({ attempt: e, exam: t, request: n, refresh: r }) {
 				version: e.recoveryVersion
 			});
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		}
 	}, d = (e, t) => t == null || t === "" ? "لم يجب" : e.kind === "mcq" ? e.options[t] || "اختيار غير صالح" : String(t);
-	return /* @__PURE__ */ (0, M.jsxs)("details", {
+	return /* @__PURE__ */ (0, S.jsxs)("details", {
 		className: "panel",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("summary", { children: "استرجاع إجابات لم تصل من موبايل الطالب" }),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("summary", { children: "استرجاع إجابات لم تصل من موبايل الطالب" }),
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "اطلب من الطالب تنزيل «نسخة احتياطية للإجابات». الملف ليس دليلًا على وقت كتابة الإجابة؛ راجع الفروق قبل اعتماده. لا يتغير وقت التسليم الأصلي."
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("label", { children: ["ملف الإجابات من الطالب", /* @__PURE__ */ (0, M.jsx)("input", {
+			/* @__PURE__ */ (0, S.jsxs)("label", { children: ["ملف الإجابات من الطالب", /* @__PURE__ */ (0, S.jsx)("input", {
 				type: "file",
 				accept: "application/json,.json",
 				onChange: u,
 				disabled: c
 			})] }),
-			i && /* @__PURE__ */ (0, M.jsxs)("form", {
+			i && /* @__PURE__ */ (0, S.jsxs)("form", {
 				onSubmit: async (t) => {
-					if (t.preventDefault(), await te("اعتماد الإجابات المسترجعة؟", "الملف قابل للتعديل، ووقت كتابته غير مُثبت. اعتمد الفروق فقط بعد التحقق مع الطالب. سيتحدث تصحيح الاختياري وتُعاد مراجعة المقالي المتغير.")) {
+					if (t.preventDefault(), await ue("اعتماد الإجابات المسترجعة؟", "الملف قابل للتعديل، ووقت كتابته غير مُثبت. اعتمد الفروق فقط بعد التحقق مع الطالب. سيتحدث تصحيح الاختياري وتُعاد مراجعة المقالي المتغير.")) {
 						l(!0);
 						try {
 							await n(`/api/attempts/${e.id}/recover-answers`, {
@@ -10391,9 +10441,9 @@ function ge({ attempt: e, exam: t, request: n, refresh: r }) {
 								expectedVersion: i.version,
 								reason: o,
 								confirmed: !0
-							}), a(null), s(""), await r(), T("تم اعتماد الاسترجاع وحفظ الورقة السابقة في سجل المراجعة.");
+							}), a(null), s(""), await r(), M("تم اعتماد الاسترجاع وحفظ الورقة السابقة في سجل المراجعة.");
 						} catch (e) {
-							T(e.message, !0);
+							M(e.message, !0);
 						} finally {
 							l(!1);
 						}
@@ -10402,36 +10452,36 @@ function ge({ attempt: e, exam: t, request: n, refresh: r }) {
 				children: [
 					i.changes.map((n) => {
 						let r = t.config.questions.find((e) => e.id === n);
-						return /* @__PURE__ */ (0, M.jsxs)("article", {
+						return /* @__PURE__ */ (0, S.jsxs)("article", {
 							className: "review-question",
 							children: [
-								/* @__PURE__ */ (0, M.jsx)("h3", { children: r.text }),
-								/* @__PURE__ */ (0, M.jsxs)("p", { children: [
-									/* @__PURE__ */ (0, M.jsx)("strong", { children: "المحفوظ على الماك:" }),
+								/* @__PURE__ */ (0, S.jsx)("h3", { children: r.text }),
+								/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+									/* @__PURE__ */ (0, S.jsx)("strong", { children: "المحفوظ على الماك:" }),
 									" ",
 									d(r, e.answers[n])
 								] }),
-								/* @__PURE__ */ (0, M.jsxs)("p", { children: [
-									/* @__PURE__ */ (0, M.jsx)("strong", { children: "نسخة الطالب:" }),
+								/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+									/* @__PURE__ */ (0, S.jsx)("strong", { children: "نسخة الطالب:" }),
 									" ",
 									d(r, i.backup.answers[n])
 								] })
 							]
 						}, n);
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: ["سبب اعتماد الاسترجاع", /* @__PURE__ */ (0, M.jsx)("textarea", {
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: ["سبب اعتماد الاسترجاع", /* @__PURE__ */ (0, S.jsx)("textarea", {
 						required: !0,
 						minLength: "5",
 						maxLength: "1000",
 						value: o,
 						onChange: (e) => s(e.target.value)
 					})] }),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						disabled: c || i.version !== e.recoveryVersion,
 						children: c ? "جارٍ الاعتماد…" : "راجعت الفروق وأعتمد الاسترجاع"
 					}),
-					i.version !== e.recoveryVersion && /* @__PURE__ */ (0, M.jsx)("p", {
+					i.version !== e.recoveryVersion && /* @__PURE__ */ (0, S.jsx)("p", {
 						role: "alert",
 						children: "تغيرت الورقة؛ اختر الملف مرة أخرى لمراجعة أحدث الفروق."
 					})
@@ -10442,12 +10492,14 @@ function ge({ attempt: e, exam: t, request: n, refresh: r }) {
 }
 //#endregion
 //#region src/PortalConfiguration.jsx
-var _e = {
+var Ce = {
+	direct: "دخول بالرابط بدون نافذة تلقائية",
+	welcome: "شاشة ترحيب بزر ابدأ",
 	legacy: "دخول محلي بدون شهادة",
 	https: "دخول آمن بشهادة"
 };
-function N({ status: e, disabled: t, refresh: n }) {
-	let r = e?.capport, i = r?.desiredMode, a = r?.appliedMode, [o, s] = (0, _.useState)("exam.massar-academy.net"), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(!1), [f, p] = (0, _.useState)(""), m = async (e) => {
+function we({ status: e, disabled: t, refresh: n }) {
+	let r = e?.capport, i = r?.desiredMode, a = r?.appliedMode, [o, s] = (0, x.useState)("exam.massar-academy.net"), [c, l] = (0, x.useState)(!1), [u, d] = (0, x.useState)(!1), [f, p] = (0, x.useState)(""), m = async (e) => {
 		d(!0), p("");
 		try {
 			await window.pywebview.api.select_portal_mode(e), await n(), p("تم حفظ الاختيار. طبّقه بزر تحديث تجهيز الماك بعد إغلاق القاعات.");
@@ -10457,62 +10509,82 @@ function N({ status: e, disabled: t, refresh: n }) {
 			d(!1);
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("details", {
+	return /* @__PURE__ */ (0, S.jsxs)("details", {
 		className: "notice",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("summary", { children: "طريقة دخول الطلاب" }),
-			/* @__PURE__ */ (0, M.jsxs)("p", { children: ["المطبّق حاليًا على الشبكة: ", /* @__PURE__ */ (0, M.jsx)("strong", { children: _e[a] || "لم يتم التأكد من الإعداد" })] }),
-			/* @__PURE__ */ (0, M.jsxs)("fieldset", {
+			/* @__PURE__ */ (0, S.jsx)("summary", { children: "طريقة دخول الطلاب" }),
+			/* @__PURE__ */ (0, S.jsxs)("p", { children: ["المطبّق حاليًا على الشبكة: ", /* @__PURE__ */ (0, S.jsx)("strong", { children: Ce[a] || "لم يتم التأكد من الإعداد" })] }),
+			/* @__PURE__ */ (0, S.jsxs)("fieldset", {
 				disabled: t || c || u,
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("legend", { children: "الطريقة المختارة للتجهيز" }),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsx)("legend", { children: "الطريقة المختارة للتجهيز" }),
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "multiple-rooms-option",
-						children: [/* @__PURE__ */ (0, M.jsx)("input", {
+						children: [/* @__PURE__ */ (0, S.jsx)("input", {
+							type: "radio",
+							name: "portal-mode",
+							value: "welcome",
+							checked: i === "welcome",
+							onChange: () => m("welcome")
+						}), /* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "شاشة ترحيب بزر ابدأ" }), /* @__PURE__ */ (0, S.jsx)("small", { children: "يظهر الترحيب أولًا؛ بعد الضغط تُجاب فحوص HTTP المدعومة بنجاح لهذا الموبايل. يفتح الطالب Chrome أو Safari على 10.77.0.1." })] })]
+					}),
+					/* @__PURE__ */ (0, S.jsxs)("label", {
+						className: "multiple-rooms-option",
+						children: [/* @__PURE__ */ (0, S.jsx)("input", {
+							type: "radio",
+							name: "portal-mode",
+							value: "direct",
+							checked: i === "direct",
+							onChange: () => m("direct")
+						}), /* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "دخول بالرابط بدون نافذة تلقائية — موصى به" }), /* @__PURE__ */ (0, S.jsx)("small", { children: "يفتح الطالب رابط الامتحان أو QR في المتصفح. يوقف تحويلات الدخول من الماك ويجيب فحوص HTTP الشائعة محليًا، بدون شهادة." })] })]
+					}),
+					/* @__PURE__ */ (0, S.jsxs)("label", {
+						className: "multiple-rooms-option",
+						children: [/* @__PURE__ */ (0, S.jsx)("input", {
 							type: "radio",
 							name: "portal-mode",
 							value: "legacy",
 							checked: i === "legacy",
 							onChange: () => m("legacy")
-						}), /* @__PURE__ */ (0, M.jsxs)("span", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "دخول محلي بدون شهادة" }), /* @__PURE__ */ (0, M.jsx)("small", { children: "يعمل بعنوان 10.77.0.1 ويحاول إظهار إشعار الدخول بالطريقة التقليدية. لا يحتاج شهادة أو تجديدًا." })] })]
+						}), /* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "دخول محلي بدون شهادة" }), /* @__PURE__ */ (0, S.jsx)("small", { children: "يعمل بعنوان 10.77.0.1 ويحاول إظهار إشعار الدخول بالطريقة التقليدية. لا يحتاج شهادة أو تجديدًا." })] })]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "multiple-rooms-option",
-						children: [/* @__PURE__ */ (0, M.jsx)("input", {
+						children: [/* @__PURE__ */ (0, S.jsx)("input", {
 							type: "radio",
 							name: "portal-mode",
 							value: "https",
 							checked: i === "https",
 							onChange: () => m("https")
-						}), /* @__PURE__ */ (0, M.jsxs)("span", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "دخول آمن بشهادة" }), /* @__PURE__ */ (0, M.jsx)("small", { children: "يضيف طريقة الاكتشاف المعيارية للأجهزة الداعمة، ويحتاج شهادة موثوقة صالحة وتجديدها قبل انتهائها." })] })]
+						}), /* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "دخول آمن بشهادة" }), /* @__PURE__ */ (0, S.jsx)("small", { children: "يضيف طريقة الاكتشاف المعيارية للأجهزة الداعمة، ويحتاج شهادة موثوقة صالحة وتجديدها قبل انتهائها." })] })]
 					})
 				]
 			}),
-			r?.pendingModeChange && /* @__PURE__ */ (0, M.jsx)("p", {
+			r?.pendingModeChange && /* @__PURE__ */ (0, S.jsx)("p", {
 				role: "status",
 				children: "الاختيار المحفوظ لم يُطبّق بعد. أغلق القاعات ثم اضغط «تحديث تجهيز الماك». حفظ الاختيار وحده لا يغيّر إعداد الشبكة أو رابط الدخول."
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				role: "status",
 				children: r?.detail || "جارٍ قراءة طريقة دخول الطلاب."
 			}),
-			i === "https" && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-				r?.pendingCertificateChange && /* @__PURE__ */ (0, M.jsx)("p", {
+			i === "https" && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				r?.pendingCertificateChange && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "الشهادة المحفوظة تنتظر التطبيق بزر «تحديث تجهيز الماك» بعد إغلاق القاعات. البوابة الحالية تستمر بشهادتها المطبّقة."
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("p", { children: [
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: [
 					"اسم الموقع يوجّه الطلاب إلى الماك داخل واي فاي الامتحان. عنوان كابل الامتحان ثابت: ",
-					/* @__PURE__ */ (0, M.jsx)("b", {
+					/* @__PURE__ */ (0, S.jsx)("b", {
 						dir: "ltr",
 						children: "10.77.0.1"
 					}),
 					"."
 				] }),
-				/* @__PURE__ */ (0, M.jsx)("p", { children: "إصدار الشهادة وتجديدها يحتاجان إنترنت وإثبات ملكية الدومين. صفحة الامتحان تعمل محليًا. افحص ساعة الموبايلات وتاريخ انتهاء الشهادة؛ التجديد ليس تلقائيًا." }),
-				r?.installed && a === "https" && /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+				/* @__PURE__ */ (0, S.jsx)("p", { children: "إصدار الشهادة وتجديدها يحتاجان إنترنت وإثبات ملكية الدومين. صفحة الامتحان تعمل محليًا. افحص ساعة الموبايلات وتاريخ انتهاء الشهادة؛ التجديد ليس تلقائيًا." }),
+				r?.installed && a === "https" && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 					"العنوان المُجهز: ",
-					/* @__PURE__ */ (0, M.jsxs)("b", {
+					/* @__PURE__ */ (0, S.jsxs)("b", {
 						dir: "ltr",
 						children: [
 							"https://",
@@ -10520,20 +10592,20 @@ function N({ status: e, disabled: t, refresh: n }) {
 							"/"
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsx)("br", {}),
+					/* @__PURE__ */ (0, S.jsx)("br", {}),
 					"انتهاء الشهادة: ",
 					new Date(r.installed.expiresAt).toLocaleDateString("ar-EG")
 				] }),
-				r?.candidate && /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+				r?.candidate && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 					"الشهادة المحفوظة: ",
-					/* @__PURE__ */ (0, M.jsx)("b", {
+					/* @__PURE__ */ (0, S.jsx)("b", {
 						dir: "ltr",
 						children: r.candidate.hostname
 					}),
 					" · تنتهي ",
 					new Date(r.candidate.expiresAt).toLocaleDateString("ar-EG")
 				] }),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["عنوان شبكة الامتحان", /* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["عنوان شبكة الامتحان", /* @__PURE__ */ (0, S.jsx)("input", {
 					dir: "ltr",
 					value: o,
 					onChange: (e) => s(e.target.value),
@@ -10541,11 +10613,11 @@ function N({ status: e, disabled: t, refresh: n }) {
 					spellCheck: !1,
 					placeholder: "exam.massar-academy.net"
 				})] }),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "اختار شهادة عامة موثوقة وكاملة fullchain.pem، ثم المفتاح المطابق privkey.pem. شهادة Cloudflare Origin وحدها لا تصلح للموبايلات."
 				}),
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					disabled: t || c || u || !o.trim(),
 					onClick: async () => {
@@ -10562,22 +10634,26 @@ function N({ status: e, disabled: t, refresh: n }) {
 					children: c ? "جارٍ اختيار وفحص الشهادة…" : "اختيار شهادة البوابة وتجديدها"
 				})
 			] }),
-			i === "legacy" && /* @__PURE__ */ (0, M.jsx)("p", { children: "الدخول المحلي لا تنتهي صلاحيته بانتهاء شهادة. أي شهادة محفوظة تظل موجودة إذا اخترت تفعيل الدخول الآمن لاحقًا." }),
-			f && /* @__PURE__ */ (0, M.jsx)("p", {
+			i === "direct" && /* @__PURE__ */ (0, S.jsx)("p", { children: "أوقف Portal في إعدادات شبكة الطلاب على Omada أيضًا. قد يظل الموبايل يعرض «بلا إنترنت» لأن بعض فحوصه تحتاج HTTPS حقيقيًا. اختر البقاء متصلًا وأوقف التحويل التلقائي لبيانات الهاتف أثناء الامتحان." }),
+			i === "welcome" && /* @__PURE__ */ (0, S.jsx)("p", { children: "اترك Portal الداخلي في Omada مقفولًا لتجنب وجود بوابتين. الماك يعرض الترحيب. بعد «ابدأ» يمكن أن تُغلق نافذة الشبكة، لكن بعض الموبايلات تحتاج اختيار «البقاء متصلًا / استخدام بدون إنترنت» وفتح المتصفح يدويًا. لا يوجد إنترنت فعلي أو ضمان لفتح Chrome تلقائيًا." }),
+			(i === "legacy" || i === "direct") && /* @__PURE__ */ (0, S.jsx)("p", { children: "الدخول المحلي لا تنتهي صلاحيته بانتهاء شهادة. أي شهادة محفوظة تظل موجودة إذا اخترت تفعيل الدخول الآمن لاحقًا." }),
+			f && /* @__PURE__ */ (0, S.jsx)("p", {
 				role: "status",
 				children: f
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
-				children: "الطريقتان تعملان داخل واي فاي الامتحان بلا إنترنت. ظهور الإشعار يعتمد على الموبايل في الحالتين؛ اختبر الأجهزة واحتفظ بالرابط والرمز للدخول."
+				children: "كل الطرق تعمل داخل واي فاي الامتحان بلا إنترنت. سلوك إشعار الشبكة يعتمد على الموبايل؛ اختبر الأجهزة واحتفظ بالرابط والرمز للدخول."
 			})
 		]
 	});
 }
 //#endregion
 //#region src/NetworkDiagnostics.jsx
-var P = {
+var Te = {
 	probe: "فحص الدخول التلقائي",
+	welcome_page: "فتح شاشة الترحيب",
+	welcome_accept: "ضغط ابدأ في الترحيب",
 	student_page: "فتح صفحة الطالب",
 	room_connection: "الاتصال بالقاعة",
 	student_join: "طلب دخول طالب",
@@ -10586,7 +10662,7 @@ var P = {
 	asset_error: "تعذّر تحميل ملف الصفحة",
 	student_session: "تعذّر تحديث حالة الطالب",
 	capport: "اكتشاف البوابة المعيارية"
-}, ve = {
+}, Ee = {
 	request_canceled: "الطلب اتلغى أو اتقطع من جهة الاتصال",
 	connection_refused: "خادم الامتحان رفض الاتصال",
 	descriptor_limit: "نفدت اتصالات النظام المتاحة",
@@ -10594,21 +10670,29 @@ var P = {
 	connection_closed: "الاتصال اتقفل قبل اكتمال الرد",
 	timeout: "انتهت مهلة الاتصال",
 	transport_error: "خطأ اتصال يحتاج مراجعة السجل"
-};
-function ye(e) {
+}, De = (e) => Number.isFinite(e) ? e.toLocaleString("ar-EG", { maximumFractionDigits: 1 }) : "غير متاح";
+function Oe(e) {
+	let t = /* @__PURE__ */ new Set();
+	return (e || []).filter((e) => {
+		if (e.kind === "user_marker") return !0;
+		let n = e.state?.omada?.sampledAt;
+		return !n || t.has(n) ? !1 : (t.add(n), !0);
+	}).slice(-120).reverse();
+}
+function ke(e) {
 	let t = new Date(e);
 	return e && !Number.isNaN(t.getTime()) ? t.toLocaleString("ar-EG") : "غير متاح";
 }
-function be() {
-	let [e, t] = (0, _.useState)(null), [n, r] = (0, _.useState)(!1), [i, a] = (0, _.useState)(""), [o, s] = (0, _.useState)(!1), [c, l] = (0, _.useState)(""), u = (0, _.useRef)(!1), d = async (e) => {
-		if (!u.current) {
+function Ae() {
+	let [e, t] = (0, x.useState)(null), [n, r] = (0, x.useState)(!1), [i, a] = (0, x.useState)(""), [o, s] = (0, x.useState)(!1), [c, l] = (0, x.useState)(""), u = (0, x.useRef)(!1), d = O(), f = async (e) => {
+		if (!(u.current || d.busy)) {
 			u.current = !0, r(!0), a("");
 			try {
 				let n = window.pywebview?.api;
 				if (e === "read") t(await n.network_diagnostics()), s(!1);
 				else {
-					let r = await (e === "mark" ? n.mark_network_incident() : n.export_network_diagnostics());
-					a(r.message || (r.ok ? "تم." : "تعذر إكمال الطلب.")), e === "mark" && r.ok && (t(await n.network_diagnostics()), s(!1));
+					let e = await n.export_network_diagnostics();
+					a(e.message || (e.ok ? "تم." : "تعذر إكمال الطلب."));
 				}
 			} catch {
 				e !== "export" && s(!0), a("تعذر قراءة أو حفظ التقرير. حاول مرة أخرى من برنامج مسار على الماك.");
@@ -10616,136 +10700,166 @@ function be() {
 				u.current = !1, r(!1);
 			}
 		}
-	}, f = e?.networkTimeline, p = f?.recording, m = Array.isArray(e?.events) ? e.events : [], h = e?.backendDiagnostics, g = h?.snapshot?.recorder, v = g && (g.persistence !== "ready" || g.dropped > 0 || g.writeFailures > 0 || g.clientRejectedBatches > 0), y = h?.historical === !0, b = !h || h.status === "unavailable" || y;
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	}, p = e?.networkTimeline, m = p?.recording, h = Array.isArray(e?.events) ? e.events : [], g = e?.backendDiagnostics, _ = g?.snapshot?.recorder, v = _ && (_.persistence !== "ready" || _.dropped > 0 || _.writeFailures > 0 || _.clientRejectedBatches > 0), y = g?.historical === !0, b = !g || g.status === "unavailable" || y;
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "notice network-diagnostics",
 		"aria-label": "تشخيص الاتصال والأخطاء",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("strong", { children: "تشخيص الاتصال والأخطاء" }),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("strong", { children: "تشخيص الاتصال والأخطاء" }),
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
-				children: "التسجيل يعمل تلقائيًا في الخلفية أثناء فتح البرنامج، حتى لو خرجت من شاشة الإعدادات. عند حدوث مشكلة اضغط «سجّل وقت المشكلة»، ثم نزّل التقرير وأرسله للدعم. لا يحتاج إنترنت."
+				children: "التسجيل يعمل تلقائيًا في الخلفية أثناء فتح البرنامج. عند حدوث مشكلة اضغط «سجّل المشكلة ونزّل اللوج»؛ ضغطة واحدة تسجّل الوقت وتحفظ التقرير فورًا في Downloads. الزر موجود أيضًا أعلى كل شاشة. لا يحتاج إنترنت."
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "actions",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)(te, { disabled: n }),
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
-						disabled: n,
-						onClick: () => d("mark"),
-						children: "سجّل وقت المشكلة"
-					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
-						className: "button secondary",
-						disabled: n,
-						onClick: () => d("export"),
+						disabled: n || d.busy,
+						onClick: () => f("export"),
 						children: "تنزيل تقرير التشخيص"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button ghost",
-						disabled: n,
-						onClick: () => d("read"),
+						disabled: n || d.busy,
+						onClick: () => f("read"),
 						children: "تحديث السجل"
 					})
 				]
 			}),
-			i && /* @__PURE__ */ (0, M.jsx)("p", {
+			i && /* @__PURE__ */ (0, S.jsx)("p", {
 				role: "status",
 				children: i
 			}),
-			e && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-				o && /* @__PURE__ */ (0, M.jsx)("p", {
+			e && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				o && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "المعروض آخر قراءة سابقة؛ تعذر تحديثها ولا تؤكد أن التسجيل يعمل الآن."
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "network-setup-status",
 					"aria-label": "حالة تسجيل التشخيص",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("span", { children: ["سجل الهاب والعناوين: ", /* @__PURE__ */ (0, M.jsx)("b", { children: o ? "قراءة سابقة" : f?.status === "ok" && p?.active ? "يسجل" : f?.status === "partial" ? "السجل غير مكتمل" : "لم يتم التأكد" })] }),
-						/* @__PURE__ */ (0, M.jsxs)("span", { children: ["سجل خادم الامتحان: ", /* @__PURE__ */ (0, M.jsx)("b", { children: o ? "قراءة سابقة" : y && h?.status === "partial" ? "متاح من سجل سابق" : b ? "غير متاح في هذا الفحص" : v || h?.status === "partial" ? "السجل غير مكتمل" : "متاح" })] }),
-						/* @__PURE__ */ (0, M.jsxs)("span", { children: ["سجل بوابة الدخول: ", /* @__PURE__ */ (0, M.jsx)("b", { children: o ? "قراءة سابقة" : e.loggingInstalled ? "موجود" : "لم يُنشأ بعد" })] })
+						/* @__PURE__ */ (0, S.jsxs)("span", { children: ["سجل الهاب والعناوين: ", /* @__PURE__ */ (0, S.jsx)("b", { children: o ? "قراءة سابقة" : p?.status === "ok" && m?.active ? "يسجل" : p?.status === "partial" ? "السجل غير مكتمل" : "لم يتم التأكد" })] }),
+						/* @__PURE__ */ (0, S.jsxs)("span", { children: ["سجل خادم الامتحان: ", /* @__PURE__ */ (0, S.jsx)("b", { children: o ? "قراءة سابقة" : y && g?.status === "partial" ? "متاح من سجل سابق" : b ? "غير متاح في هذا الفحص" : v || g?.status === "partial" ? "السجل غير مكتمل" : "متاح" })] }),
+						/* @__PURE__ */ (0, S.jsxs)("span", { children: ["سجل بوابة الدخول: ", /* @__PURE__ */ (0, S.jsx)("b", { children: o ? "قراءة سابقة" : e.loggingInstalled ? "موجود" : "لم يُنشأ بعد" })] })
 					]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("p", {
+				/* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "help",
 					children: [
 						"آخر فحص مسجل للهاب: ",
-						ye(p?.lastSampleAt),
+						ke(m?.lastSampleAt),
 						". آخر قراءة للتقرير: ",
-						ye(e.capturedAt),
+						ke(e.capturedAt),
 						"."
 					]
 				}),
-				(!f || f.status !== "ok" || p?.writeFailureCount > 0) && /* @__PURE__ */ (0, M.jsx)("p", {
+				(!p || p.status !== "ok" || m?.writeFailureCount > 0) && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "تعذر تأكيد اكتمال تسجيل حالة الشبكة. التقرير يوضح الأجزاء المتاحة وأخطاء التسجيل؛ راجع أيضًا المساحة الحرة على الماك."
 				}),
-				b && /* @__PURE__ */ (0, M.jsx)("p", {
+				b && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "لم نتمكن من قراءة سجل الخادم الآن. يمكنك تنزيل بقية التقرير؛ هذا لا يثبت أن الخادم كان متوقفًا وقت المشكلة."
 				}),
-				h?.historical && h?.status === "partial" && /* @__PURE__ */ (0, M.jsx)("p", {
+				g?.historical && g?.status === "partial" && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "التقرير يتضمن أحداث الخادم المحفوظة سابقًا، مع توقيت كل حدث؛ وهي لا تؤكد حالته الحالية."
 				}),
-				v && /* @__PURE__ */ (0, M.jsx)("p", {
+				v && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "حصل تعثّر في تسجيل بعض الأحداث بسبب ضغط التسجيل أو خطأ كتابة. التقرير يتضمن أعداد الأحداث والدفعات المتأثرة وحالة التخزين."
 				}),
-				!e.loggingInstalled && /* @__PURE__ */ (0, M.jsx)("p", {
+				!e.loggingInstalled && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "إذا لم يظهر سجل البوابة بعد استخدام هاتف، حدّث تجهيز الماك بعد انتهاء الامتحان وإغلاق القاعات."
 				}),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "التقرير يجمع تغيّرات الهاب وعنوان الماك وخدمة توزيع العناوين، وطلبات الدخول والحفظ والأخطاء التي وصلت من المتصفح. أحداث الهاتف غير المتصل تصل بعد رجوع الاتصال إذا أمكن تشغيل الصفحة وحفظ السجل محليًا."
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("details", { children: [
-					/* @__PURE__ */ (0, M.jsx)("summary", { children: "طلبات بوابة الدخول" }),
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: ["تصفية بعنوان الموبايل", /* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("details", { children: [
+					/* @__PURE__ */ (0, S.jsx)("summary", { children: "عدد المتصلين وحالة Omada وقت المشكلة" }),
+					/* @__PURE__ */ (0, S.jsx)("p", {
+						className: "help",
+						children: "آخر ١٢٠ قراءة وعلامة مشكلة. الأوقات من الماك، والقيم غير المتاحة تظل مجهولة. التقرير المُنزّل يحتوي العدادات والفروق للحزم والفقد والأخطاء لكل تردد وللكابل."
+					}),
+					/* @__PURE__ */ (0, S.jsx)("div", {
+						style: {
+							overflowX: "auto",
+							maxHeight: 360
+						},
+						children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "الوقت" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "٢.٤ GHz" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "٥ GHz" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "المعالج / الذاكرة" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "القراءة" })
+						] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: Oe(p?.events).map((e, t) => {
+							let n = e.state?.omada;
+							if (e.kind === "user_marker") return /* @__PURE__ */ (0, S.jsxs)("tr", { children: [/* @__PURE__ */ (0, S.jsx)("td", { children: ke(e.time) }), /* @__PURE__ */ (0, S.jsx)("td", {
+								colSpan: "4",
+								children: /* @__PURE__ */ (0, S.jsx)("strong", { children: "وقت المشكلة الذي حددته" })
+							})] }, `marker-${t}`);
+							let r = (e) => n?.radios?.find((t) => t.band === e), i = ["ready", "partial"].includes(n?.state);
+							return /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, S.jsx)("td", { children: ke(n?.sampledAt) }),
+								/* @__PURE__ */ (0, S.jsx)("td", { children: i ? De(r("2.4")?.clients) : "غير متاح" }),
+								/* @__PURE__ */ (0, S.jsx)("td", { children: i ? De(r("5")?.clients) : "غير متاح" }),
+								/* @__PURE__ */ (0, S.jsx)("td", { children: i ? `${De(n.cpuPercent)}٪ / ${De(n.memoryPercent)}٪` : "غير متاح" }),
+								/* @__PURE__ */ (0, S.jsxs)("td", { children: [n?.state === "ready" ? "متاحة" : n?.state === "partial" ? "غير مكتملة" : "تعذر التحقق", n?.radios?.some((e) => e.counterReset) && " · أُعيد ضبط العدادات أو تشغيل الجهاز"] })
+							] }, `${n?.sampledAt}-${t}`);
+						}) })] })
+					}),
+					!Oe(p?.events).length && /* @__PURE__ */ (0, S.jsx)("p", { children: "لا توجد قراءات Omada بعد. اربط الجهاز من إعدادات البرنامج قبل الامتحان." })
+				] }),
+				/* @__PURE__ */ (0, S.jsxs)("details", { children: [
+					/* @__PURE__ */ (0, S.jsx)("summary", { children: "طلبات بوابة الدخول" }),
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: ["تصفية بعنوان الموبايل", /* @__PURE__ */ (0, S.jsx)("input", {
 						value: c,
 						onChange: (e) => l(e.target.value),
 						placeholder: "10.77.0.20",
 						dir: "ltr"
 					})] }),
-					/* @__PURE__ */ (0, M.jsx)("p", {
+					/* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "آخر ٢٠٠ طلب مسجل. رد 302 يعني تجهيز التحويل؛ رد 200 لا يثبت وحده أن الهاتف استلم الرد كاملًا. الطلب الصادر من الماك نفسه قد يكون فحص البرنامج."
 					}),
-					/* @__PURE__ */ (0, M.jsx)("div", {
+					/* @__PURE__ */ (0, S.jsx)("div", {
 						style: {
 							overflowX: "auto",
 							maxHeight: 320
 						},
-						children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, M.jsx)("th", { children: "الوقت" }),
-							/* @__PURE__ */ (0, M.jsx)("th", { children: "الجهاز" }),
-							/* @__PURE__ */ (0, M.jsx)("th", { children: "الطلب" }),
-							/* @__PURE__ */ (0, M.jsx)("th", { children: "الرد" })
-						] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: m.filter((e) => !c || e.ip === c.trim()).slice(-200).reverse().map((e, t) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-							/* @__PURE__ */ (0, M.jsx)("td", { children: ye(e.time) }),
-							/* @__PURE__ */ (0, M.jsx)("td", {
+						children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "الوقت" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "الجهاز" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "الطلب" }),
+							/* @__PURE__ */ (0, S.jsx)("th", { children: "الرد" })
+						] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: h.filter((e) => !c || e.ip === c.trim()).slice(-200).reverse().map((e, t) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, S.jsx)("td", { children: ke(e.time) }),
+							/* @__PURE__ */ (0, S.jsx)("td", {
 								dir: "ltr",
 								children: e.ip
 							}),
-							/* @__PURE__ */ (0, M.jsx)("td", { children: P[e.kind] || "طلب آخر" }),
-							/* @__PURE__ */ (0, M.jsxs)("td", { children: [
+							/* @__PURE__ */ (0, S.jsx)("td", { children: Te[e.kind] || "طلب آخر" }),
+							/* @__PURE__ */ (0, S.jsxs)("td", { children: [
 								e.status,
 								" · ",
 								e.durationMs,
 								"ms",
-								e.proxyError && /* @__PURE__ */ (0, M.jsx)("small", {
+								e.proxyError && /* @__PURE__ */ (0, S.jsx)("small", {
 									style: { display: "block" },
-									children: ve[e.proxyError] || "خطأ اتصال غير مصنّف"
+									children: Ee[e.proxyError] || "خطأ اتصال غير مصنّف"
 								})
 							] })
 						] }, `${e.time}-${t}`)) })] })
 					}),
-					!m.length && /* @__PURE__ */ (0, M.jsx)("p", { children: "لا توجد طلبات مسجلة بعد. عدم وصول طلب يحتاج فحص اتصال الهاتف بالشبكة." })
+					!h.length && /* @__PURE__ */ (0, S.jsx)("p", { children: "لا توجد طلبات مسجلة بعد. عدم وصول طلب يحتاج فحص اتصال الهاتف بالشبكة." })
 				] })
 			] }),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "السجلات محدودة الحجم وتستبدل الأقدم تلقائيًا. التقرير لا يضم أسماء الطلاب أو أرقامهم أو أكوادهم أو إجاباتهم؛ يتضمن عناوين الشبكة المحلية. لا تغيّر متصفح الطالب أو تمسح بياناته أثناء وجود إجابات لم تصل بعد."
 			})
@@ -10753,14 +10867,181 @@ function be() {
 	});
 }
 //#endregion
+//#region src/OmadaStatistics.jsx
+var je = {
+	not_configured: "لم يتم الربط",
+	ready: "القراءة تعمل",
+	partial: "البيانات غير مكتملة",
+	unreachable: "الجهاز لا يستجيب",
+	stale: "القراءة قديمة؛ القيم الحالية غير مؤكدة",
+	auth_required: "أعد ربط بيانات الدخول",
+	certificate_changed: "تغيرت شهادة الجهاز؛ راجع الربط",
+	device_changed: "الجهاز المتصل مختلف",
+	unsupported: "الإصدار غير مدعوم",
+	error: "تعذر قراءة إعداد الربط"
+}, Me = (e) => Number.isFinite(e) ? e.toLocaleString("ar-EG", { maximumFractionDigits: 1 }) : "غير متاح", Ne = (e) => Number.isFinite(e) ? (e / 1e6).toLocaleString("ar-EG", { maximumFractionDigits: 3 }) : "غير متاح";
+function Pe({ status: e, refresh: t, disabled: n }) {
+	let r = e?.omada, [i, a] = (0, x.useState)(null), o = i ?? r?.host ?? "10.77.0.2", [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)(!1), [p, m] = (0, x.useState)("");
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
+		className: "notice",
+		"aria-label": "إحصائيات Omada أثناء الامتحان",
+		children: [
+			/* @__PURE__ */ (0, S.jsx)("strong", { children: "إحصائيات Omada أثناء الامتحان" }),
+			r?.configured && /* @__PURE__ */ (0, S.jsxs)("p", { children: ["عنوان الربط المحفوظ: ", /* @__PURE__ */ (0, S.jsx)("b", {
+				dir: "ltr",
+				children: r.host
+			})] }),
+			/* @__PURE__ */ (0, S.jsxs)("p", {
+				role: "status",
+				children: [je[r?.state] || "لم يتم التأكد من القراءة", r?.sampledAt && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [" · آخر محاولة قراءة: ", new Date(r.sampledAt).toLocaleTimeString("ar-EG")] })]
+			}),
+			/* @__PURE__ */ (0, S.jsx)("p", {
+				className: "help",
+				children: "يسجل البرنامج كل ٣٠ ثانية أثناء فتحه، حتى خارج شاشة الإعدادات. التوقيت من الماك؛ أعداد المتصلين من نقطة الوصول، والحجوزات من DHCP معروضة منفصلة."
+			}),
+			r?.lastGoodAt && !["ready", "partial"].includes(r.state) && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
+				"آخر قراءة متاحة كانت ",
+				new Date(r.lastGoodAt).toLocaleString("ar-EG"),
+				"؛ الأعداد الحالية غير مؤكدة."
+			] }),
+			["ready", "partial"].includes(r?.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+					"المعالج: ",
+					Me(r.cpuPercent),
+					"٪ · الذاكرة: ",
+					Me(r.memoryPercent),
+					"٪"
+				] }),
+				/* @__PURE__ */ (0, S.jsx)("div", {
+					style: { overflowX: "auto" },
+					children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "التردد" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "المتصلون" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "القناة" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "استقبال / إرسال Mbps" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "فقد / أخطاء منذ القراءة السابقة" })
+					] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: (r.radios || []).map((e) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+							e.band,
+							" GHz",
+							e.enabled === !1 && " · متوقف"
+						] }),
+						/* @__PURE__ */ (0, S.jsx)("td", { children: Me(e.clients) }),
+						/* @__PURE__ */ (0, S.jsx)("td", { children: Me(e.channel) }),
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+							Ne(e.rxBitsPerSecond),
+							" / ",
+							Ne(e.txBitsPerSecond)
+						] }),
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+							Me(e.delta?.rx_dropped),
+							" / ",
+							Me(e.delta?.tx_dropped),
+							" فقد · ",
+							Me(e.delta?.rx_errors),
+							" / ",
+							Me(e.delta?.tx_errors),
+							" أخطاء",
+							e.counterReset && " · أُعيد ضبط العدادات"
+						] })
+					] }, e.band)) })] })
+				}),
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+					"كابل الشبكة: استقبال ",
+					Ne(r.lan?.rxBitsPerSecond),
+					" / إرسال ",
+					Ne(r.lan?.txBitsPerSecond),
+					" Mbps"
+				] }),
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+					"سرعة وصلة الكابل: ",
+					Me(r.lan?.linkMbps),
+					" Mbps",
+					r.lan?.fullDuplex === !0 ? " · Full Duplex" : r.lan?.fullDuplex === !1 ? " · Half Duplex" : ""
+				] }),
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: [
+					"فقد حزم الكابل: استقبال ",
+					Me(r.lan?.delta?.rx_dropped),
+					" / إرسال ",
+					Me(r.lan?.delta?.tx_dropped),
+					" · الأخطاء: استقبال ",
+					Me(r.lan?.delta?.rx_errors),
+					" / إرسال ",
+					Me(r.lan?.delta?.tx_errors)
+				] }),
+				/* @__PURE__ */ (0, S.jsx)("p", {
+					className: "help",
+					children: "نسبة انشغال القناة اللاسلكية غير متاحة من واجهة الجهاز التي يدعمها الربط. سرعة نقل البيانات وحدها لا تقيس التداخل أو تثبت سبب المشكلة."
+				})
+			] }),
+			/* @__PURE__ */ (0, S.jsxs)("details", { children: [
+				/* @__PURE__ */ (0, S.jsx)("summary", { children: "ربط صفحة إدارة الجهاز" }),
+				/* @__PURE__ */ (0, S.jsx)("p", { children: "استخدم حساب إدارة الجهاز نفسه. الربط يقرأ الإحصائيات فقط، ولا يغير الترددات أو DHCP. يُحفظ اسم المستخدم ومشتق تسجيل الدخول وبصمة الشهادة محليًا بصلاحية خاصة؛ لا تدخل بيانات الربط في تقرير التشخيص." }),
+				/* @__PURE__ */ (0, S.jsx)("form", {
+					onSubmit: async (e) => {
+						e.preventDefault(), f(!0), m("جارٍ التحقق من الجهاز وقراءة الإحصائيات…");
+						try {
+							let e = await window.pywebview.api.configure_omada_monitor(o, s, l);
+							m(e.message), e.ok && (u(""), await t(!0));
+						} catch {
+							m("تعذر الربط. راجع العنوان وبيانات الدخول.");
+						} finally {
+							f(!1);
+						}
+					},
+					children: /* @__PURE__ */ (0, S.jsxs)("fieldset", {
+						disabled: n || d,
+						children: [
+							/* @__PURE__ */ (0, S.jsxs)("label", { children: ["عنوان Omada المحلي", /* @__PURE__ */ (0, S.jsx)("input", {
+								required: !0,
+								value: o,
+								onChange: (e) => a(e.target.value),
+								dir: "ltr",
+								placeholder: "10.77.0.2"
+							})] }),
+							/* @__PURE__ */ (0, S.jsxs)("label", { children: ["اسم مستخدم الإدارة", /* @__PURE__ */ (0, S.jsx)("input", {
+								required: !0,
+								value: s,
+								onChange: (e) => c(e.target.value),
+								autoComplete: "off",
+								dir: "ltr"
+							})] }),
+							/* @__PURE__ */ (0, S.jsxs)("label", { children: ["كلمة سر إدارة الجهاز", /* @__PURE__ */ (0, S.jsx)("input", {
+								required: !0,
+								type: "password",
+								value: l,
+								onChange: (e) => u(e.target.value),
+								autoComplete: "off"
+							})] }),
+							/* @__PURE__ */ (0, S.jsx)("button", {
+								className: "button secondary",
+								disabled: !l || !s || d,
+								children: d ? "جارٍ الربط…" : "التحقق وحفظ الربط على هذا الماك"
+							})
+						]
+					})
+				}),
+				/* @__PURE__ */ (0, S.jsx)("p", {
+					className: "help",
+					children: "جهّز الربط قبل الامتحان. إعادة تسجيل دخول الإدارة قد تنهي جلسة أخرى على بعض الإصدارات. بعد تغير العنوان أو الشهادة أو كلمة السر، أعد الربط هنا."
+				})
+			] }),
+			p && /* @__PURE__ */ (0, S.jsx)("p", {
+				role: "status",
+				children: p
+			})
+		]
+	});
+}
+//#endregion
 //#region src/NetworkSetup.jsx
-function xe() {
-	let e = pe(), t = me(e), n = t || "http://10.77.0.1/", [r, i] = (0, _.useState)(!!window.pywebview?.api?.network_status), [a, o] = (0, _.useState)(!1), [s, c] = (0, _.useState)(!1), l = (0, _.useRef)(!1), [u, d] = (0, _.useState)(""), f = async (e = !1) => {
+function Fe() {
+	let e = be(), t = xe(e), n = t || "http://10.77.0.1/", [r, i] = (0, x.useState)(!!window.pywebview?.api?.network_status), [a, o] = (0, x.useState)(!1), [s, c] = (0, x.useState)(!1), l = (0, x.useRef)(!1), [u, d] = (0, x.useState)(""), f = async (e = !1) => {
 		let t = window.pywebview?.api;
 		if (t?.network_status && !l.current) {
 			l.current = !0, c(!0);
 			try {
-				i(!0), de(await (e && t.refresh_network_status ? t.refresh_network_status() : t.network_status()));
+				i(!0), ve(await (e && t.refresh_network_status ? t.refresh_network_status() : t.network_status()));
 			} catch (e) {
 				d(e.message || "تعذر قراءة حالة الشبكة.");
 			} finally {
@@ -10768,51 +11049,51 @@ function xe() {
 			}
 		}
 	};
-	return (0, _.useEffect)(() => {
+	return (0, x.useEffect)(() => {
 		let e = () => {
 			i(!0), f();
 		};
 		return window.addEventListener("pywebviewready", e), f(), () => window.removeEventListener("pywebviewready", e);
-	}, []), /* @__PURE__ */ (0, M.jsxs)("section", {
+	}, []), /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel network-setup",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "section-top",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: "شبكة الامتحان بلا راوتر"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h2", { children: "تهيئة الاتصال المباشر بالـOmada" }),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("h2", { children: "تهيئة الاتصال المباشر بالـOmada" }),
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
-					children: "نسخة الإعداد 0.4.24 — الماك يوزّع عناوين الطلاب، والـOmada يوفّر الواي فاي. لا يحتاج الامتحان إنترنت."
+					children: "نسخة الإعداد 0.4.34 — الماك يوزّع عناوين الطلاب، والـOmada يوفّر الواي فاي. لا يحتاج الامتحان إنترنت."
 				})
-			] }), /* @__PURE__ */ (0, M.jsx)("span", {
+			] }), /* @__PURE__ */ (0, S.jsx)("span", {
 				className: `badge ${e?.ready ? "complete" : "quiet"}`,
 				children: e?.ready ? "الماك جاهز" : !e || e.inspectionError ? "لم يتم التأكد" : "لم تكتمل التهيئة"
 			})]
-		}), r ? e && !e.supported ? /* @__PURE__ */ (0, M.jsx)("p", {
+		}), r ? e && !e.supported ? /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "help",
 			children: e.message
-		}) : /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-			/* @__PURE__ */ (0, M.jsxs)("ol", {
+		}) : /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+			/* @__PURE__ */ (0, S.jsxs)("ol", {
 				className: "network-setup-steps",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "وصّل الهاب والكابل أولًا" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "وصّل الهاب بالماك وكابل الـOmada بمدخل Ethernet في الهاب، واترك كهرباء الـOmada موصولة. افصل كابلات Ethernet الأخرى أثناء التهيئة لتحديد منفذ الامتحان بوضوح. يمكنك إبقاء الماك على واي فاي آخر للإنترنت." })] }),
-					/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "جهّز الماك" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "راجع منفذ الكابل الظاهر أدناه، ثم اضغط زر التهيئة. سيطلب macOS كلمة سر الجهاز لتغيير إعداد منفذ Ethernet وتشغيل خدمتين محليتين. لا تُحفظ كلمة السر في البرنامج." })] }),
-					/* @__PURE__ */ (0, M.jsxs)("li", { children: [
-						/* @__PURE__ */ (0, M.jsx)("strong", { children: "اختبر صفحة الطلاب" }),
-						/* @__PURE__ */ (0, M.jsxs)("p", { children: [
+					/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "وصّل الهاب والكابل أولًا" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "وصّل الهاب بالماك وكابل الـOmada بمدخل Ethernet في الهاب، واترك كهرباء الـOmada موصولة. افصل كابلات Ethernet الأخرى أثناء التهيئة لتحديد منفذ الامتحان بوضوح. يمكنك إبقاء الماك على واي فاي آخر للإنترنت." })] }),
+					/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "جهّز الماك" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "راجع منفذ الكابل الظاهر أدناه، ثم اضغط زر التهيئة. سيطلب macOS كلمة سر الجهاز لتغيير إعداد منفذ Ethernet وتشغيل خدمتين محليتين. لا تُحفظ كلمة السر في البرنامج." })] }),
+					/* @__PURE__ */ (0, S.jsxs)("li", { children: [
+						/* @__PURE__ */ (0, S.jsx)("strong", { children: "اختبر صفحة الطلاب" }),
+						/* @__PURE__ */ (0, S.jsxs)("p", { children: [
 							"اتصل بواي فاي الامتحان، ثم افتح الرابط في Chrome أو Samsung Internet: ",
-							/* @__PURE__ */ (0, M.jsx)("b", {
+							/* @__PURE__ */ (0, S.jsx)("b", {
 								dir: "ltr",
 								children: n
 							}),
 							" أو امسح QR الموجود في شاشة الامتحان قبل تسجيل الدخول. استمر في نفس الرابط والمتصفح حتى التسليم."
 						] }),
-						t && /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+						t && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 							"لو صفحة الدخول التلقائي لم تظهر، افتح نفس الرابط أعلاه. الرابط المحلي ",
-							/* @__PURE__ */ (0, M.jsx)("b", {
+							/* @__PURE__ */ (0, S.jsx)("b", {
 								dir: "ltr",
 								children: "http://10.77.0.1/"
 							}),
@@ -10821,39 +11102,39 @@ function xe() {
 					] })
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("details", {
+			/* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "notice",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("summary", { children: "سامسونج متصل لكن نافذة الدخول لم تظهر؟" }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: "لو الرابط يفتح يدويًا، اتصال الموبايل بالامتحان يعمل؛ النافذة التلقائية تعتمد على نظامه. افتح الامتحان من المتصفح العادي قبل تسجيل الدخول، واستمر في نفس المتصفح حتى التسليم." }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: "إذا كان الاتصال يتبدل: إعدادات الموبايل ← الاتصالات ← Wi-Fi ← ⋮ ← Intelligent Wi-Fi، وأوقف «Switch to mobile data» أثناء الامتحان، واختر البقاء متصلًا عند ظهور «بلا إنترنت». أسماء الخيارات تختلف حسب الموديل." }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: "لو الرابط نفسه لا يفتح، راجع وصول شبكة الطلاب إلى الماك، وإعداد Guest Network أو قواعد الحظر في Omada. نجاح الفحص على الماك وحده لا يثبت وصول الموبايلات." })
+					/* @__PURE__ */ (0, S.jsx)("summary", { children: "الموبايل يترك الواي فاي أو لا يفتح الامتحان؟" }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: "لو الرابط يفتح يدويًا، اتصال الموبايل بالامتحان يعمل؛ النافذة التلقائية تعتمد على نظامه. افتح الامتحان من المتصفح العادي قبل تسجيل الدخول، واستمر في نفس المتصفح حتى التسليم." }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: "إذا كان الاتصال يتبدل: إعدادات الموبايل ← الاتصالات ← Wi-Fi ← ⋮ ← Intelligent Wi-Fi، وأوقف «Switch to mobile data» أثناء الامتحان، واختر البقاء متصلًا عند ظهور «بلا إنترنت». أسماء الخيارات تختلف حسب الموديل." }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: "لو الرابط نفسه لا يفتح، راجع وصول شبكة الطلاب إلى الماك، وإعداد Guest Network أو قواعد الحظر في Omada. نجاح الفحص على الماك وحده لا يثبت وصول الموبايلات." })
 				]
 			}),
-			e?.inspectionError && /* @__PURE__ */ (0, M.jsx)("p", {
+			e?.inspectionError && /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "notice",
 				role: "status",
 				children: e.message
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "network-setup-status",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("span", { children: ["منفذ الكابل: ", /* @__PURE__ */ (0, M.jsx)("b", { children: !e || e.inspectionError ? "لم يتم التأكد" : e.ethernetAmbiguous ? "أكثر من منفذ متصل" : e.ethernetActive ? "متصل" : "غير متصل" })] }),
-					/* @__PURE__ */ (0, M.jsxs)("span", { children: ["توزيع العناوين: ", /* @__PURE__ */ (0, M.jsx)("b", { children: !e || e.inspectionError ? "لم يتم التأكد" : e.dhcpRunning ? e.dhcpConfigurationReady === !1 ? "الإعداد يحتاج مراجعة" : e.dhcpSocketReady === !0 ? "المنفذ يستقبل" : e.dhcpSocketReady === !1 ? "المنفذ لا يستقبل" : "لم يتم التأكد" : "الخدمة متوقفة" })] }),
-					/* @__PURE__ */ (0, M.jsxs)("span", { children: ["صفحة الطلاب: ", /* @__PURE__ */ (0, M.jsx)("b", { children: e?.androidProbe?.studentServiceReady ? "تستجيب" : "لم يتم التأكد" })] })
+					/* @__PURE__ */ (0, S.jsxs)("span", { children: ["منفذ الكابل: ", /* @__PURE__ */ (0, S.jsx)("b", { children: !e || e.inspectionError ? "لم يتم التأكد" : e.ethernetAmbiguous ? "أكثر من منفذ متصل" : e.ethernetActive ? "متصل" : "غير متصل" })] }),
+					/* @__PURE__ */ (0, S.jsxs)("span", { children: ["توزيع العناوين: ", /* @__PURE__ */ (0, S.jsx)("b", { children: !e || e.inspectionError ? "لم يتم التأكد" : e.dhcpRunning ? e.dhcpConfigurationReady === !1 ? "الإعداد يحتاج مراجعة" : e.dhcpSocketReady === !0 ? "المنفذ يستقبل" : e.dhcpSocketReady === !1 ? "المنفذ لا يستقبل" : "لم يتم التأكد" : "الخدمة متوقفة" })] }),
+					/* @__PURE__ */ (0, S.jsxs)("span", { children: ["صفحة الطلاب: ", /* @__PURE__ */ (0, S.jsx)("b", { children: e?.androidProbe?.studentServiceReady ? "تستجيب" : "لم يتم التأكد" })] })
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "notice",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("strong", { children: "فحص خدمة الدخول والامتحان" }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: e?.androidProbe?.detail || "وصّل Omada وجهّز خدمات الماك لتشغيل الفحص." }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: "شبكة ٢.٤: لم يتم التحقق من إعداداتها · شبكة ٥: لم يتم التحقق من إعداداتها" }),
-					/* @__PURE__ */ (0, M.jsx)("p", {
+					/* @__PURE__ */ (0, S.jsx)("strong", { children: "فحص خدمة الدخول والامتحان" }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: e?.androidProbe?.detail || "وصّل Omada وجهّز خدمات الماك لتشغيل الفحص." }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: "شبكة ٢.٤: لم يتم التحقق من إعداداتها · شبكة ٥: لم يتم التحقق من إعداداتها" }),
+					/* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "فحص خدمة الماك لا يثبت إعداد كل تردد. يلزم قراءة إعدادات Omada وتجربة هاتف متصل بكل شبكة."
 					}),
-					/* @__PURE__ */ (0, M.jsx)("a", {
+					/* @__PURE__ */ (0, S.jsx)("a", {
 						className: "text-button",
 						href: "https://10.77.0.2/",
 						target: "_blank",
@@ -10862,7 +11143,7 @@ function xe() {
 					})
 				]
 			}),
-			e?.ethernetService && /* @__PURE__ */ (0, M.jsxs)("p", {
+			e?.ethernetService && /* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "help",
 				children: [
 					"منفذ الكابل: ",
@@ -10873,70 +11154,81 @@ function xe() {
 					e.ethernetIp || "غير محدد"
 				]
 			}),
-			e?.ethernetDetail && /* @__PURE__ */ (0, M.jsx)("p", {
+			e?.ethernetDetail && /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "notice",
 				role: "status",
 				children: e.ethernetDetail
 			}),
-			e?.configValid === !1 && /* @__PURE__ */ (0, M.jsxs)("p", {
+			e?.configValid === !1 && /* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "help",
 				role: "status",
 				children: ["فحص إعداد الشبكة: ", e.configDetail]
 			}),
-			e?.dhcpDetail && /* @__PURE__ */ (0, M.jsxs)("p", {
+			e?.dhcpDetail && /* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "help",
 				role: "status",
 				children: ["فحص توزيع العناوين: ", e.dhcpDetail]
 			}),
-			e?.dhcpLeases && /* @__PURE__ */ (0, M.jsxs)("div", {
+			e?.dhcpLeases && /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "notice",
 				role: "status",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("strong", { children: "عناوين أجهزة الطلاب" }),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: e.dhcpLeases.detail }),
-					e.dhcpLeases.dhcpLeaseCount != null && /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+					/* @__PURE__ */ (0, S.jsx)("strong", { children: "عناوين أجهزة الطلاب" }),
+					/* @__PURE__ */ (0, S.jsx)("p", { children: e.dhcpLeases.detail }),
+					e.dhcpLeases.dhcpLeaseCount != null && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 						"المحجوز: ",
 						e.dhcpLeases.dhcpLeaseCount,
 						" من ",
 						e.dhcpLeases.capacity
 					] }),
-					e.dhcpLeases.findings?.map((e) => /* @__PURE__ */ (0, M.jsx)("p", { children: e.detail }, e.code)),
-					/* @__PURE__ */ (0, M.jsx)("p", {
+					e.dhcpLeases.configVerified && e.dhcpLeases.leaseDataComplete && e.dhcpLeases.leasesAvailable && e.dhcpLeases.capacity != null && e.dhcpLeases.dhcpLeaseCount != null && /* @__PURE__ */ (0, S.jsxs)("p", { children: ["المتاح لعناوين جديدة: ", Math.max(0, e.dhcpLeases.capacity - e.dhcpLeases.dhcpLeaseCount)] }),
+					Number.isFinite(e.dhcpLeases.leaseSeconds) && /* @__PURE__ */ (0, S.jsxs)("p", { children: [
+						"مدة حجز العنوان: ",
+						Math.ceil(e.dhcpLeases.leaseSeconds / 60),
+						" دقيقة. عنوان الجهاز المغادر قد يظل محجوزًا حتى انتهاء مدته؛ العدد المحجوز ليس عدد الطلاب المتصلين الآن."
+					] }),
+					e.dhcpLeases.findings?.map((e) => /* @__PURE__ */ (0, S.jsx)("p", { children: e.detail }, e.code)),
+					/* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "الأجهزة المتصلة تجدّد عنوانها تلقائيًا. فحص السجل لا يثبت غياب راوتر آخر يوزّع عناوين على الشبكة."
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsx)(N, {
+			/* @__PURE__ */ (0, S.jsx)(we, {
 				status: e,
 				disabled: a,
 				refresh: f
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("details", {
+			/* @__PURE__ */ (0, S.jsx)(Pe, {
+				status: e,
+				disabled: a,
+				refresh: f
+			}),
+			/* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "notice",
-				children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "اختبار القاعة قبل دخول الطلاب" }), /* @__PURE__ */ (0, M.jsxs)("ol", { children: [
-					/* @__PURE__ */ (0, M.jsx)("li", { children: "تأكد أن الماك هو موزع العناوين الوحيد وأن شبكة الطلاب تسمح بالوصول إليه." }),
-					/* @__PURE__ */ (0, M.jsx)("li", { children: "اختبر سامسونج وآيفون وموبايلًا قديمًا على ترددي الواي فاي، من أماكن مختلفة في القاعة." }),
-					/* @__PURE__ */ (0, M.jsx)("li", { children: "اختبر إشعار الدخول، ثم دخول الامتحان وحفظ إجابة والتسليم في نفس المتصفح." }),
-					/* @__PURE__ */ (0, M.jsx)("li", { children: "اقطع اتصال هاتف التجربة وأعده، وتأكد من وصول إجابته. اختبر عددًا قريبًا من عدد الطلاب الفعلي." }),
-					/* @__PURE__ */ (0, M.jsx)("li", { children: "راجع الكهرباء والكابل، وصلاحية الشهادة إذا اخترت الدخول الآمن. احتفظ برابط الطلاب وQR كطريق إضافي للدخول." })
+				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "اختبار القاعة قبل دخول الطلاب" }), /* @__PURE__ */ (0, S.jsxs)("ol", { children: [
+					/* @__PURE__ */ (0, S.jsx)("li", { children: "تأكد أن الماك هو موزع العناوين الوحيد وأن شبكة الطلاب تسمح بالوصول إليه." }),
+					/* @__PURE__ */ (0, S.jsx)("li", { children: "اختبر سامسونج وآيفون وموبايلًا قديمًا على ترددي الواي فاي، من أماكن مختلفة في القاعة." }),
+					/* @__PURE__ */ (0, S.jsx)("li", { children: "اختبر إشعار الدخول، ثم دخول الامتحان وحفظ إجابة والتسليم في نفس المتصفح." }),
+					/* @__PURE__ */ (0, S.jsx)("li", { children: "اقطع اتصال هاتف التجربة وأعده، وتأكد من وصول إجابته. اختبر عددًا قريبًا من عدد الطلاب الفعلي." }),
+					/* @__PURE__ */ (0, S.jsx)("li", { children: "راجع الكهرباء والكابل، وصلاحية الشهادة إذا اخترت الدخول الآمن. احتفظ برابط الطلاب وQR كطريق إضافي للدخول." })
 				] })]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "لو عنوان الماك أو توزيع عناوين الطلاب محتاج إصلاح، أغلق القاعات واضغط زر التهيئة. يعيد ضبط منفذ الهاب المتصل ويختبر عنوانه وخدمة التوزيع. لو الهاب مفصول، وصّله واضغط «فحص الاتصال» أولًا."
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "actions",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						disabled: a || s || !e?.ethernetActive || e?.ethernetAmbiguous,
 						onClick: async () => {
 							o(!0), d("انتظر نافذة macOS واكتب كلمة سر الجهاز فيها فقط…");
 							try {
 								let e = await window.pywebview.api.prepare_network();
-								d(e.message), e.status ? de(e.status) : await f();
+								d(e.message), e.status ? ve(e.status) : await f();
 							} catch (e) {
 								d(e.message || "تعذرت التهيئة.");
 							} finally {
@@ -10945,30 +11237,30 @@ function xe() {
 						},
 						children: a ? "جارٍ التهيئة…" : e?.ready ? "تحديث تجهيز الماك" : "تهيئة الماك الآن"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
 						disabled: a || s,
 						onClick: () => f(!0),
 						children: s ? "جارٍ فحص الاتصال…" : "فحص الاتصال"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button ghost",
-						onClick: () => O(n).catch((e) => d(e.message)),
+						onClick: () => oe(n).catch((e) => d(e.message)),
 						children: "نسخ رابط الطلاب"
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsx)(be, {}),
-			u && /* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)(Ae, {}),
+			u && /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				role: "status",
 				children: u
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
-				children: "لا تفعّل Portal الداخلي في الـOmada لهذا الاختبار؛ سيضيف صفحة موافقة قبل الامتحان. ظهور نافذة الدخول تلقائيًا يعتمد على نظام الموبايل، لذلك احتفظ برابط الطلاب كبديل."
+				children: "أوقف Portal الداخلي في Omada عند اختيار الدخول بدون نافذة. افتح رابط الطلاب أو QR في المتصفح العادي؛ ردود الفحص المحلية لا تضمن علامة الإنترنت على كل هاتف."
 			})
-		] }) : /* @__PURE__ */ (0, M.jsx)("p", {
+		] }) : /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "help",
 			children: "افتح هذه الشاشة داخل برنامج مسار على الماك لتفعيل التهيئة."
 		})]
@@ -10976,20 +11268,20 @@ function xe() {
 }
 //#endregion
 //#region src/Storage.jsx
-var Se = (e) => e >= 1024 ** 3 ? `${b(e / 1024 ** 3)} GB` : e >= 1024 ** 2 ? `${b(e / 1024 ** 2)} MB` : `${b(e / 1024)} KB`, F = (e) => (/* @__PURE__ */ new Date(e * 1e3)).toLocaleString("ar-EG", {
+var Ie = (e) => e >= 1024 ** 3 ? `${A(e / 1024 ** 3)} GB` : e >= 1024 ** 2 ? `${A(e / 1024 ** 2)} MB` : `${A(e / 1024)} KB`, Le = (e) => (/* @__PURE__ */ new Date(e * 1e3)).toLocaleString("ar-EG", {
 	dateStyle: "medium",
 	timeStyle: "short"
 });
-function Ce({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
-	let [r, i] = (0, _.useState)(null), [a, o] = (0, _.useState)(null), [s, c] = (0, _.useState)(""), [l, u] = (0, _.useState)("يمكنك تشغيل فحص بنية الملف بدون تغيير البيانات."), [d, f] = (0, _.useState)(!1), [p, m] = (0, _.useState)(""), h = async () => {
+function Re({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
+	let [r, i] = (0, x.useState)(null), [a, o] = (0, x.useState)(null), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)("يمكنك تشغيل فحص بنية الملف بدون تغيير البيانات."), [d, f] = (0, x.useState)(!1), [p, m] = (0, x.useState)(""), h = async () => {
 		try {
-			let [e, t] = await Promise.all([E("/api/storage"), E("/api/settings/gemini")]);
+			let [e, t] = await Promise.all([N("/api/storage"), N("/api/settings/gemini")]);
 			i(e), o(t), m("");
 		} catch (e) {
 			m(e.message);
 		}
 	};
-	(0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
 		h();
 	}, []);
 	let g = async (e) => {
@@ -10997,106 +11289,106 @@ function Ce({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
 		try {
 			await e();
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			f(!1);
 		}
 	};
-	return p ? /* @__PURE__ */ (0, M.jsxs)("div", {
+	return p ? /* @__PURE__ */ (0, S.jsxs)("div", {
 		className: "empty",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("h2", { children: "تعذر قراءة بيانات التخزين" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: p }),
-			/* @__PURE__ */ (0, M.jsx)("button", {
+			/* @__PURE__ */ (0, S.jsx)("h2", { children: "تعذر قراءة بيانات التخزين" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: p }),
+			/* @__PURE__ */ (0, S.jsx)("button", {
 				className: "button",
 				onClick: h,
 				children: "إعادة المحاولة"
 			})
 		]
-	}) : !r || !a ? /* @__PURE__ */ (0, M.jsx)("div", {
+	}) : !r || !a ? /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "loading",
 		role: "status",
 		children: "جارٍ قراءة بيانات التخزين…"
-	}) : /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+	}) : /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "page-heading",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: "كل شيء على جهازك"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h1", { children: "الإعدادات والبيانات" }),
-				/* @__PURE__ */ (0, M.jsx)("p", { children: "مفتاح التصحيح وبيانات الامتحانات وإعدادات الواتساب محفوظة على هذا الكمبيوتر." })
-			] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("h1", { children: "الإعدادات والبيانات" }),
+				/* @__PURE__ */ (0, S.jsx)("p", { children: "مفتاح التصحيح وبيانات الامتحانات وإعدادات الواتساب محفوظة على هذا الكمبيوتر." })
+			] }), /* @__PURE__ */ (0, S.jsx)("button", {
 				className: "button",
 				disabled: d,
 				onClick: () => g(async () => {
-					await E("/api/storage/backup", {}, e), await h(), T("تم إنشاء نسخة احتياطية جديدة");
+					await N("/api/storage/backup", {}, e), await h(), M("تم إنشاء نسخة احتياطية جديدة");
 				}),
 				children: "إنشاء نسخة احتياطية"
 			})]
 		}),
-		n ? /* @__PURE__ */ (0, M.jsx)("p", {
+		n ? /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "notice",
 			children: "تهيئة شبكة ويندوز ومتابعة الاتصال من شاشة الامتحانات في برنامج السنتر."
-		}) : /* @__PURE__ */ (0, M.jsx)(xe, {}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		}) : /* @__PURE__ */ (0, S.jsx)(Fe, {}),
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel gemini-settings",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "section-top",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-						/* @__PURE__ */ (0, M.jsx)("span", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, S.jsx)("span", {
 							className: "context-label",
 							children: "إعدادات التصحيح"
 						}),
-						/* @__PURE__ */ (0, M.jsx)("h2", { children: "مفتاح خدمة التصحيح" }),
-						/* @__PURE__ */ (0, M.jsx)("p", {
+						/* @__PURE__ */ (0, S.jsx)("h2", { children: "مفتاح خدمة التصحيح" }),
+						/* @__PURE__ */ (0, S.jsx)("p", {
 							className: "help",
 							children: "أدخل المفتاح مرة واحدة لتشغيل تصحيح المقالي للجميع بعد انتهاء الامتحان."
 						})
-					] }), /* @__PURE__ */ (0, M.jsx)("span", {
+					] }), /* @__PURE__ */ (0, S.jsx)("span", {
 						className: `badge ${a.configured ? "complete" : "quiet"}`,
 						children: a.configured ? "المفتاح محفوظ" : "لم يُضف مفتاح"
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("form", {
+				/* @__PURE__ */ (0, S.jsxs)("form", {
 					onSubmit: (t) => {
 						t.preventDefault(), g(async () => {
-							await E("/api/settings/gemini", { apiKey: s.trim() }, e), c(""), o({
+							await N("/api/settings/gemini", { apiKey: s.trim() }, e), c(""), o({
 								...a,
 								configured: !0
-							}), T("تم حفظ مفتاح التصحيح");
+							}), M("تم حفظ مفتاح التصحيح");
 						});
 					},
-					children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["مفتاح API", /* @__PURE__ */ (0, M.jsx)("input", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["مفتاح API", /* @__PURE__ */ (0, S.jsx)("input", {
 						type: "password",
 						autoComplete: "new-password",
 						required: !0,
 						value: s,
 						onChange: (e) => c(e.target.value),
 						placeholder: "الصق المفتاح الجديد هنا"
-					})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+					})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						type: "submit",
 						disabled: d,
 						children: "حفظ المفتاح"
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("p", {
+				/* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "help",
 					children: [
 						"المفتاح يُحفظ في ملف ",
-						/* @__PURE__ */ (0, M.jsx)("code", {
+						/* @__PURE__ */ (0, S.jsx)("code", {
 							dir: "ltr",
 							children: ".env"
 						}),
 						" داخل مجلد البيانات، خارج SQLite والنسخ الاحتياطية. لا يظهر بعد حفظه."
 					]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("label", {
+				/* @__PURE__ */ (0, S.jsxs)("label", {
 					className: "path-label",
-					children: ["مكان ملف الإعدادات", /* @__PURE__ */ (0, M.jsx)("input", {
+					children: ["مكان ملف الإعدادات", /* @__PURE__ */ (0, S.jsx)("input", {
 						className: "file-path",
 						readOnly: !0,
 						dir: "ltr",
@@ -11105,173 +11397,173 @@ function Ce({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
 				})
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsx)("section", {
+		/* @__PURE__ */ (0, S.jsx)("section", {
 			className: "panel",
-			children: /* @__PURE__ */ (0, M.jsxs)("div", {
+			children: /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "واتساب السنتر الرسمي" }), /* @__PURE__ */ (0, M.jsx)("p", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "واتساب السنتر الرسمي" }), /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "ربط الحساب، ومزامنة القوالب، ومتابعة إرسال تقارير الطلاب من قائمة واتساب السنتر."
-				})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					onClick: t,
 					children: "فتح إعدادات واتساب"
 				})]
 			})
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "storage-layout",
-			children: [/* @__PURE__ */ (0, M.jsxs)("section", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("section", {
 				className: "panel storage-main",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "section-top",
-						children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "مكان حفظ البيانات" }), /* @__PURE__ */ (0, M.jsx)("p", {
+						children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "مكان حفظ البيانات" }), /* @__PURE__ */ (0, S.jsx)("p", {
 							className: "help",
 							children: "قاعدة محلية مستقلة عن منصة مسار."
-						})] }), /* @__PURE__ */ (0, M.jsx)("span", {
+						})] }), /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "badge complete",
 							children: "SQLite · محلي"
 						})]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "path-label",
-						children: ["ملف قاعدة البيانات", /* @__PURE__ */ (0, M.jsx)("input", {
+						children: ["ملف قاعدة البيانات", /* @__PURE__ */ (0, S.jsx)("input", {
 							className: "file-path",
 							readOnly: !0,
 							dir: "ltr",
 							value: r.databasePath
 						})]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "actions",
-						children: [/* @__PURE__ */ (0, M.jsx)("button", {
+						children: [/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							disabled: d,
 							onClick: () => g(async () => {
-								await E("/api/storage/open-folder", {}, e), T("تم فتح مجلد البيانات");
+								await N("/api/storage/open-folder", {}, e), M("تم فتح مجلد البيانات");
 							}),
 							children: "فتح مجلد البيانات ↗"
-						}), /* @__PURE__ */ (0, M.jsx)("button", {
+						}), /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button ghost small",
-							onClick: () => O(r.databasePath).catch((e) => T(e.message, !0)),
+							onClick: () => oe(r.databasePath).catch((e) => M(e.message, !0)),
 							children: "نسخ المسار"
 						})]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("dl", {
+					/* @__PURE__ */ (0, S.jsxs)("dl", {
 						className: "storage-facts",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("dt", { children: "حجم البيانات مع سجل الحفظ" }), /* @__PURE__ */ (0, M.jsx)("dd", {
+							/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("dt", { children: "حجم البيانات مع سجل الحفظ" }), /* @__PURE__ */ (0, S.jsx)("dd", {
 								dir: "ltr",
-								children: Se(r.databaseBytes + r.pendingBytes)
+								children: Ie(r.databaseBytes + r.pendingBytes)
 							})] }),
-							/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("dt", { children: "المساحة المتاحة على القرص" }), /* @__PURE__ */ (0, M.jsx)("dd", {
+							/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("dt", { children: "المساحة المتاحة على القرص" }), /* @__PURE__ */ (0, S.jsx)("dd", {
 								dir: "ltr",
-								children: Se(r.freeBytes)
+								children: Ie(r.freeBytes)
 							})] }),
-							/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("dt", { children: "الامتحانات المحفوظة" }), /* @__PURE__ */ (0, M.jsx)("dd", { children: b(r.counts.exams) })] }),
-							/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("dt", { children: "محاولات الطلاب / المسلّمة" }), /* @__PURE__ */ (0, M.jsxs)("dd", { children: [
-								b(r.counts.students),
+							/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("dt", { children: "الامتحانات المحفوظة" }), /* @__PURE__ */ (0, S.jsx)("dd", { children: A(r.counts.exams) })] }),
+							/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("dt", { children: "محاولات الطلاب / المسلّمة" }), /* @__PURE__ */ (0, S.jsxs)("dd", { children: [
+								A(r.counts.students),
 								" / ",
-								b(r.counts.submissions)
+								A(r.counts.submissions)
 							] })] })
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "integrity-row",
-						children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "فحص سلامة قاعدة البيانات" }), /* @__PURE__ */ (0, M.jsx)("p", {
+						children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "فحص سلامة قاعدة البيانات" }), /* @__PURE__ */ (0, S.jsx)("p", {
 							className: "help",
 							role: "status",
 							children: l
-						})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+						})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							disabled: d,
 							onClick: () => g(async () => {
 								u("جارٍ الفحص…");
-								let t = await E("/api/storage/check", {}, e);
+								let t = await N("/api/storage/check", {}, e);
 								u(t.healthy ? "بنية قاعدة البيانات سليمة." : "الفحص اكتشف مشكلة؛ احتفظ بنسخة وراجع الدعم.");
 							}),
 							children: "تشغيل الفحص"
 						})]
 					})
 				]
-			}), /* @__PURE__ */ (0, M.jsxs)("aside", {
+			}), /* @__PURE__ */ (0, S.jsxs)("aside", {
 				className: "storage-explainer",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("h2", { children: "ما الذي يتم حفظه؟" }),
-					/* @__PURE__ */ (0, M.jsxs)("ul", { children: [
-						/* @__PURE__ */ (0, M.jsx)("li", { children: "الأسئلة والإجابات النموذجية وإعدادات الوقت." }),
-						/* @__PURE__ */ (0, M.jsx)("li", { children: "بيانات الطلاب وإجاباتهم التي وصلت للكمبيوتر." }),
-						/* @__PURE__ */ (0, M.jsx)("li", { children: "التسليم والدرجات وملاحظات التصحيح." })
+					/* @__PURE__ */ (0, S.jsx)("h2", { children: "ما الذي يتم حفظه؟" }),
+					/* @__PURE__ */ (0, S.jsxs)("ul", { children: [
+						/* @__PURE__ */ (0, S.jsx)("li", { children: "الأسئلة والإجابات النموذجية وإعدادات الوقت." }),
+						/* @__PURE__ */ (0, S.jsx)("li", { children: "بيانات الطلاب وإجاباتهم التي وصلت للكمبيوتر." }),
+						/* @__PURE__ */ (0, S.jsx)("li", { children: "التسليم والدرجات وملاحظات التصحيح." })
 					] }),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "storage-tip",
-						children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "احتفظ بنسخة خارج الكمبيوتر" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "النسخ الموجودة هنا على نفس القرص. نزّل نسخة إلى فلاشة أو قرص آخر بعد كل جلسة." })]
+						children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "احتفظ بنسخة خارج الكمبيوتر" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "النسخ الموجودة هنا على نفس القرص. نزّل نسخة إلى فلاشة أو قرص آخر بعد كل جلسة." })]
 					})
 				]
 			})]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel backups-panel",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "section-top padded",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "النسخ المحفوظة" }), /* @__PURE__ */ (0, M.jsx)("p", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "النسخ المحفوظة" }), /* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "كل خمس دقائق أثناء التشغيل، وعند التشغيل والإغلاق وتغيير حالة الجلسة."
-					})] }), /* @__PURE__ */ (0, M.jsxs)("span", {
+					})] }), /* @__PURE__ */ (0, S.jsxs)("span", {
 						className: "badge quiet",
 						children: [
-							b(r.backupCount),
+							A(r.backupCount),
 							" نسخة · ",
-							Se(r.backupBytes)
+							Ie(r.backupBytes)
 						]
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsx)("div", {
+				/* @__PURE__ */ (0, S.jsx)("div", {
 					className: "table-scroll",
-					children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "تاريخ النسخة" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الحجم" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الملف" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "تنزيل" })
-					] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: r.backups.length ? r.backups.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, M.jsxs)("td", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: F(e.createdAt) }), t === 0 && /* @__PURE__ */ (0, M.jsx)("small", { children: "أحدث نسخة" })] }),
-						/* @__PURE__ */ (0, M.jsx)("td", {
+					children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "تاريخ النسخة" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الحجم" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الملف" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "تنزيل" })
+					] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: r.backups.length ? r.backups.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: Le(e.createdAt) }), t === 0 && /* @__PURE__ */ (0, S.jsx)("small", { children: "أحدث نسخة" })] }),
+						/* @__PURE__ */ (0, S.jsx)("td", {
 							dir: "ltr",
-							children: Se(e.bytes)
+							children: Ie(e.bytes)
 						}),
-						/* @__PURE__ */ (0, M.jsx)("td", { children: /* @__PURE__ */ (0, M.jsx)("span", {
+						/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "backup-filename",
 							dir: "ltr",
 							children: e.name
 						}) }),
-						/* @__PURE__ */ (0, M.jsx)("td", { children: /* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							disabled: d,
-							onClick: () => g(() => A(`/api/backups/${encodeURIComponent(e.name)}`, e.name, "application/octet-stream")),
+							onClick: () => g(() => le(`/api/backups/${encodeURIComponent(e.name)}`, e.name, "application/octet-stream")),
 							children: "تنزيل النسخة ↓"
 						}) })
-					] }, e.name)) : /* @__PURE__ */ (0, M.jsx)("tr", { children: /* @__PURE__ */ (0, M.jsx)("td", {
+					] }, e.name)) : /* @__PURE__ */ (0, S.jsx)("tr", { children: /* @__PURE__ */ (0, S.jsx)("td", {
 						className: "empty",
 						colSpan: "4",
 						children: "لا توجد نسخ بعد. أنشئ أول نسخة الآن."
 					}) }) })] })
 				}),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help padded",
 					children: "نعرض أحدث ٣٠ نسخة. النسخ الأقدم تظل في مجلد backups."
 				})
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("details", {
+		/* @__PURE__ */ (0, S.jsxs)("details", {
 			className: "restore-guide",
-			children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "إزاي أسترجع نسخة احتياطية؟" }), /* @__PURE__ */ (0, M.jsxs)("ol", { children: [
-				n ? /* @__PURE__ */ (0, M.jsx)("li", { children: "أنه كل قاعات الامتحان، ونزّل النسخة المطلوبة واحتفظ بمسار مجلد البيانات. أعد تشغيل ويندوز، ولا تفتح برنامج السنتر قبل إنهاء الخطوات التالية؛ إغلاق نافذة السنتر وحده يترك خدمة الامتحان شغالة." }) : /* @__PURE__ */ (0, M.jsx)("li", { children: "نزّل النسخة المطلوبة وافتح مجلد البيانات، ثم أغلق البرنامج." }),
-				/* @__PURE__ */ (0, M.jsx)("li", { children: "احتفظ بالمجلد الحالي باسم مختلف، وأنشئ مجلدًا فارغًا بنفس الاسم." }),
-				/* @__PURE__ */ (0, M.jsxs)("li", { children: [
+			children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "إزاي أسترجع نسخة احتياطية؟" }), /* @__PURE__ */ (0, S.jsxs)("ol", { children: [
+				n ? /* @__PURE__ */ (0, S.jsx)("li", { children: "أنه كل قاعات الامتحان، ونزّل النسخة المطلوبة واحتفظ بمسار مجلد البيانات. أعد تشغيل ويندوز، ولا تفتح برنامج السنتر قبل إنهاء الخطوات التالية؛ إغلاق نافذة السنتر وحده يترك خدمة الامتحان شغالة." }) : /* @__PURE__ */ (0, S.jsx)("li", { children: "نزّل النسخة المطلوبة وافتح مجلد البيانات، ثم أغلق البرنامج." }),
+				/* @__PURE__ */ (0, S.jsx)("li", { children: "احتفظ بالمجلد الحالي باسم مختلف، وأنشئ مجلدًا فارغًا بنفس الاسم." }),
+				/* @__PURE__ */ (0, S.jsxs)("li", { children: [
 					"ضع النسخة في المجلد الجديد باسم ",
-					/* @__PURE__ */ (0, M.jsx)("b", {
+					/* @__PURE__ */ (0, S.jsx)("b", {
 						dir: "ltr",
 						children: "exams.sqlite3"
 					}),
@@ -11283,7 +11575,7 @@ function Ce({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
 }
 //#endregion
 //#region src/whatsappTemplateFields.js
-var we = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Te = {
+var ze = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Be = {
 	1: "name",
 	2: "lesson",
 	3: "month",
@@ -11292,7 +11584,7 @@ var we = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Te = {
 	6: "score",
 	7: "maximum",
 	8: "homework"
-}, Ee = {
+}, Ve = {
 	student_name: "name",
 	name: "name",
 	student_code: "code",
@@ -11312,7 +11604,7 @@ var we = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Te = {
 	homework_status: "homework",
 	attendance: "attendance",
 	attendance_status: "attendance"
-}, De = {
+}, He = {
 	name: "اسم الطالب",
 	code: "كود الطالب",
 	result: "جاب كام من كام",
@@ -11328,17 +11620,17 @@ var we = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Te = {
 	attendance: "حالة الحضور",
 	literal: "نص ثابت"
 };
-function Oe(e) {
+function Ue(e) {
 	if (Array.isArray(e?.reportFields)) return e.reportFields;
 	let t = [], n = (n, r, i) => {
-		let a = [...new Set([...String(r || "").matchAll(we)].map((e) => e[1]))];
+		let a = [...new Set([...String(r || "").matchAll(ze)].map((e) => e[1]))];
 		a.every((e) => /^\d+$/.test(e)) && a.sort((e, t) => Number(e) - Number(t));
 		for (let r of a) t.push({
 			scope: n,
 			position: r,
 			buttonIndex: i,
 			key: n === "button" ? `button:${i}:${r}` : `${n}:${r}`,
-			suggestedSource: Ee[r] || (["parent_follow_center", "parent__follow_center"].includes(e?.name) ? n === "header" ? "name" : n === "body" ? Te[r] : "" : "")
+			suggestedSource: Ve[r] || (["parent_follow_center", "parent__follow_center"].includes(e?.name) ? n === "header" ? "name" : n === "body" ? Be[r] : "" : "")
 		});
 	};
 	for (let t of e?.components || []) t.type === "HEADER" && t.format === "TEXT" && n("header", t.text), t.type === "BODY" && n("body", t.text), t.type === "BUTTONS" && t.buttons?.forEach((e, t) => {
@@ -11346,22 +11638,22 @@ function Oe(e) {
 	});
 	return t;
 }
-function ke(e, t, n) {
-	return e?.savedBindings?.find((r) => r.bindingSchema === e.bindingSchema && r.recipientKind === t && r.reportKind === n && Ae(e, r.mappings));
+function We(e, t, n) {
+	return e?.savedBindings?.find((r) => r.bindingSchema === e.bindingSchema && r.recipientKind === t && r.reportKind === n && Ge(e, r.mappings));
 }
-function Ae(e, t) {
-	return Array.isArray(t) && t.length === Oe(e).length && t.every((e) => Object.hasOwn(De, e?.source) && (e.source !== "literal" || String(e.text || "").trim().length > 0));
+function Ge(e, t) {
+	return Array.isArray(t) && t.length === Ue(e).length && t.every((e) => Object.hasOwn(He, e?.source) && (e.source !== "literal" || String(e.text || "").trim().length > 0));
 }
-function je(e, t, n) {
-	let r = ke(e, t, n);
-	return r ? r.mappings.map((e) => ({ ...e })) : Oe(e).map((e) => ({ source: e.suggestedSource || "" }));
+function Ke(e, t, n) {
+	let r = We(e, t, n);
+	return r ? r.mappings.map((e) => ({ ...e })) : Ue(e).map((e) => ({ source: e.suggestedSource || "" }));
 }
-function Me(e, t, n = window.location.search) {
+function qe(e, t, n = window.location.search) {
 	let r = new URLSearchParams(n);
 	return r.set("view", e), r.set("batch", t), `?${r.toString()}`;
 }
-function Ne(e, t) {
-	let n = Oe(e), r = (e, r, i) => String(r || "").replace(we, (r, a) => {
+function Je(e, t) {
+	let n = Ue(e), r = (e, r, i) => String(r || "").replace(ze, (r, a) => {
 		let o = n.findIndex((t) => t.scope === e && String(t.position) === a && (e !== "button" || t.buttonIndex === i));
 		return o < 0 ? "" : t.parameters?.[o] || "";
 	});
@@ -11369,31 +11661,31 @@ function Ne(e, t) {
 }
 //#endregion
 //#region src/WhatsApp.jsx
-var Pe = {
+var Ye = {
 	accepted: "قبل واتساب الرسالة",
 	failed: "لم تُرسل",
 	rejected: "رفض واتساب الطلب",
 	unknown: "غير مؤكدة — راجع واتساب",
 	preparing: "تجهيز التقرير",
 	sending: "جارٍ الإرسال"
-}, Fe = (e) => (e?.components || []).find((e) => e.type === "BODY")?.text || "";
-function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
-	let c = e.find((e) => e.id === t && e.reportSupported), l = Oe(c), u = ke(c, o, s), d = e.filter((e) => e.reportSupported), f = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), p = (t) => {
-		n(t), i(je(e.find((e) => e.id === t), o, s));
+}, Xe = (e) => (e?.components || []).find((e) => e.type === "BODY")?.text || "";
+function Ze({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
+	let c = e.find((e) => e.id === t && e.reportSupported), l = Ue(c), u = We(c, o, s), d = e.filter((e) => e.reportSupported), f = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), p = (t) => {
+		n(t), i(Ke(e.find((e) => e.id === t), o, s));
 	}, m = (e, t) => i(l.map((n, i) => i === e ? {
 		...r[i],
 		...t
 	} : r[i] || { source: "" }));
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["قالب رسالة التقرير", /* @__PURE__ */ (0, M.jsxs)("select", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["قالب رسالة التقرير", /* @__PURE__ */ (0, S.jsxs)("select", {
 		className: "whatsapp-template-list",
 		size: Math.max(2, Math.min(6, d.length + 1)),
 		disabled: a,
 		value: t,
 		onChange: (e) => p(e.target.value),
-		children: [/* @__PURE__ */ (0, M.jsx)("option", {
+		children: [/* @__PURE__ */ (0, S.jsx)("option", {
 			value: "",
 			children: "اختر قالبًا معتمدًا من الحساب"
-		}), d.map((e) => /* @__PURE__ */ (0, M.jsxs)("option", {
+		}), d.map((e) => /* @__PURE__ */ (0, S.jsxs)("option", {
 			value: e.id,
 			children: [
 				e.name,
@@ -11401,31 +11693,31 @@ function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 				e.language
 			]
 		}, e.id))]
-	})] }), c && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("div", {
+	})] }), c && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "whatsapp-message",
 		dir: "auto",
-		children: Fe(c)
-	}), /* @__PURE__ */ (0, M.jsxs)("details", {
+		children: Xe(c)
+	}), /* @__PURE__ */ (0, S.jsxs)("details", {
 		open: !u || void 0,
-		children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: f ? "ربط المتغيرات مثبت · تعديل الربط" : "حدد بيانات متغيرات القالب" }), /* @__PURE__ */ (0, M.jsx)("div", {
+		children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: f ? "ربط المتغيرات مثبت · تعديل الربط" : "حدد بيانات متغيرات القالب" }), /* @__PURE__ */ (0, S.jsx)("div", {
 			className: "whatsapp-fields",
-			children: l.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+			children: l.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 				e.scope === "header" ? "العنوان" : e.scope === "button" ? "زر الرابط" : "نص الرسالة",
 				" · المتغير ",
 				e.position,
-				/* @__PURE__ */ (0, M.jsxs)("select", {
+				/* @__PURE__ */ (0, S.jsxs)("select", {
 					disabled: a,
 					value: r[t]?.source || "",
 					onChange: (e) => m(t, { source: e.target.value }),
-					children: [/* @__PURE__ */ (0, M.jsx)("option", {
+					children: [/* @__PURE__ */ (0, S.jsx)("option", {
 						value: "",
 						children: "اختر بيانات الطالب"
-					}), Object.entries(De).map(([e, t]) => /* @__PURE__ */ (0, M.jsx)("option", {
+					}), Object.entries(He).map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("option", {
 						value: e,
 						children: t
 					}, e))]
 				})
-			] }), r[t]?.source === "literal" && /* @__PURE__ */ (0, M.jsxs)("label", { children: ["النص الثابت", /* @__PURE__ */ (0, M.jsx)("input", {
+			] }), r[t]?.source === "literal" && /* @__PURE__ */ (0, S.jsxs)("label", { children: ["النص الثابت", /* @__PURE__ */ (0, S.jsx)("input", {
 				disabled: a,
 				maxLength: 1e3,
 				value: r[t]?.text || "",
@@ -11434,35 +11726,35 @@ function Ie({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 		})]
 	}, `${c.id}:${c.bindingSchema}:${!!u}`)] })] });
 }
-function Le({ token: e, returnBatchId: t = "" }) {
-	let [n, r] = (0, _.useState)(null), [i, a] = (0, _.useState)([]), [o, s] = (0, _.useState)([]), [c, l] = (0, _.useState)(""), [u, d] = (0, _.useState)(""), [f, p] = (0, _.useState)({
+function Qe({ token: e, returnBatchId: t = "" }) {
+	let [n, r] = (0, x.useState)(null), [i, a] = (0, x.useState)([]), [o, s] = (0, x.useState)([]), [c, l] = (0, x.useState)(""), [u, d] = (0, x.useState)(""), [f, p] = (0, x.useState)({
 		phoneNumberId: "",
 		businessAccountId: "",
 		apiVersion: "v23.0",
 		accessToken: "",
 		appSecret: ""
-	}), [m, h] = (0, _.useState)(!1), [g, v] = (0, _.useState)(""), [y, x] = (0, _.useState)(""), S = async () => {
+	}), [m, h] = (0, x.useState)(!1), [g, _] = (0, x.useState)(""), [v, y] = (0, x.useState)(""), b = async () => {
 		let [e, t, n] = await Promise.all([
-			E("/api/whatsapp/configuration"),
-			E("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }),
-			E("/api/whatsapp/history")
+			N("/api/whatsapp/configuration"),
+			N("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }),
+			N("/api/whatsapp/history")
 		]);
-		r(e), a(t.templates), x(t.syncError || ""), s(n.items), p((t) => ({
+		r(e), a(t.templates), y(t.syncError || ""), s(n.items), p((t) => ({
 			...t,
 			phoneNumberId: e.phoneNumberId || "",
 			businessAccountId: e.businessAccountId || "",
 			apiVersion: e.apiVersion || "v23.0",
 			accessToken: "",
 			appSecret: ""
-		})), v("");
+		})), _("");
 	};
-	(0, _.useEffect)(() => {
-		S().catch((e) => v(e.message));
-	}, []), (0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
+		b().catch((e) => _(e.message));
+	}, []), (0, x.useEffect)(() => {
 		if (m) return;
 		let e = !0, t = setInterval(() => {
-			E("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }).then((t) => {
-				e && (a(t.templates), x(t.syncError || ""));
+			N("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }).then((t) => {
+				e && (a(t.templates), y(t.syncError || ""));
 			}).catch(() => {});
 		}, 6e4);
 		return () => {
@@ -11490,83 +11782,83 @@ function Le({ token: e, returnBatchId: t = "" }) {
 			p((e) => ({
 				...e,
 				...r
-			})), l(""), T("تمت قراءة الحساب؛ اضغط حفظ الحساب. لا يُرسل أي واتساب بمجرد الحفظ.");
+			})), l(""), M("تمت قراءة الحساب؛ اضغط حفظ الحساب. لا يُرسل أي واتساب بمجرد الحفظ.");
 		} catch {
 			l("اختر ملف JSON صحيحًا يحتوي بيانات حساب واتساب.");
 		}
-	}, w = /^v(?:[0-9]|1[0-9]|20)\.0$/.test(f.apiVersion), D = async (e) => {
+	}, w = /^v(?:[0-9]|1[0-9]|20)\.0$/.test(f.apiVersion), T = async (e) => {
 		h(!0);
 		try {
 			await e();
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			h(!1);
 		}
 	};
-	return g ? /* @__PURE__ */ (0, M.jsxs)("section", {
+	return g ? /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel whatsapp-settings",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: "تعذر قراءة إعدادات واتساب" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: g }),
-			/* @__PURE__ */ (0, M.jsx)("button", {
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: "تعذر قراءة إعدادات واتساب" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: g }),
+			/* @__PURE__ */ (0, S.jsx)("button", {
 				className: "button",
-				onClick: () => S().catch((e) => v(e.message)),
+				onClick: () => b().catch((e) => _(e.message)),
 				children: "إعادة المحاولة"
 			})
 		]
-	}) : n ? /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+	}) : n ? /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "page-heading",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: "تقارير الطلاب"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h1", { children: "واتساب السنتر" }),
-				t && /* @__PURE__ */ (0, M.jsx)("a", {
+				/* @__PURE__ */ (0, S.jsx)("h1", { children: "واتساب السنتر" }),
+				t && /* @__PURE__ */ (0, S.jsx)("a", {
 					className: "button secondary",
-					href: Me("whatsapp-center", t),
+					href: qe("whatsapp-center", t),
 					children: "العودة لإرسال تقرير السنتر"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("p", { children: "اربط الحساب، واختر القالب المعتمد. إرسال التقارير متاح من نتائج القاعة أو الشيتات." })
-			] }), /* @__PURE__ */ (0, M.jsx)("span", {
+				/* @__PURE__ */ (0, S.jsx)("p", { children: "اربط الحساب، واختر القالب المعتمد. إرسال التقارير متاح من نتائج القاعة أو الشيتات." })
+			] }), /* @__PURE__ */ (0, S.jsx)("span", {
 				className: `badge ${n.configured ? "complete" : "quiet"}`,
 				children: n.configured ? "بيانات الحساب محفوظة" : "أكمل ربط الحساب"
 			})]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel whatsapp-settings",
 			children: [
-				/* @__PURE__ */ (0, M.jsx)("h2", { children: "الحساب الرسمي" }),
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("h2", { children: "الحساب الرسمي" }),
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "text-button",
-					onClick: () => O("https://developers.facebook.com/docs/graph-api/changelog/versions/"),
+					onClick: () => oe("https://developers.facebook.com/docs/graph-api/changelog/versions/"),
 					children: "نسخ رابط إصدارات Meta الرسمي"
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["قراءة ملف إعدادات الحساب JSON", /* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["قراءة ملف إعدادات الحساب JSON", /* @__PURE__ */ (0, S.jsx)("input", {
 					type: "file",
 					accept: ".json,application/json",
 					disabled: m,
 					onChange: C
 				})] }),
-				c && /* @__PURE__ */ (0, M.jsx)("p", {
+				c && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "notice",
 					children: c
 				}),
-				u && /* @__PURE__ */ (0, M.jsx)("p", {
+				u && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "notice",
 					role: "status",
 					children: u
 				}),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "انسخ الرقمين المختلفين من WhatsApp ← API Setup. يلزم إنترنت على جهاز الإدارة للمزامنة والإرسال."
 				}),
-				w && /* @__PURE__ */ (0, M.jsxs)("p", {
+				w && /* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "notice",
 					role: "alert",
-					children: ["ملف الحساب يستخدم نسخة Meta API قديمة؛ انتهى دعم v20.0 في ٢٤ سبتمبر ٢٠٢٦. v23.0 مدعوم حتى ٨ أكتوبر ٢٠٢٧.", /* @__PURE__ */ (0, M.jsx)("button", {
+					children: ["ملف الحساب يستخدم نسخة Meta API قديمة؛ انتهى دعم v20.0 في ٢٤ سبتمبر ٢٠٢٦. v23.0 مدعوم حتى ٨ أكتوبر ٢٠٢٧.", /* @__PURE__ */ (0, S.jsx)("button", {
 						type: "button",
 						className: "text-button",
 						disabled: m,
@@ -11577,20 +11869,20 @@ function Le({ token: e, returnBatchId: t = "" }) {
 						children: "اختيار v23.0 لهذا الحساب"
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("form", {
+				/* @__PURE__ */ (0, S.jsxs)("form", {
 					onSubmit: (t) => {
-						t.preventDefault(), D(async () => {
-							await E("/api/whatsapp/configuration", f, e), await S(), T("تم حفظ إعدادات واتساب");
+						t.preventDefault(), T(async () => {
+							await N("/api/whatsapp/configuration", f, e), await b(), M("تم حفظ إعدادات واتساب");
 						});
 					},
 					children: [
-						/* @__PURE__ */ (0, M.jsx)("div", {
+						/* @__PURE__ */ (0, S.jsx)("div", {
 							className: "whatsapp-fields",
 							children: [
 								["phoneNumberId", "Phone Number ID"],
 								["businessAccountId", "WhatsApp Business Account ID"],
 								["apiVersion", "نسخة Meta API"]
-							].map(([e, t]) => /* @__PURE__ */ (0, M.jsxs)("label", { children: [t, /* @__PURE__ */ (0, M.jsx)("input", {
+							].map(([e, t]) => /* @__PURE__ */ (0, S.jsxs)("label", { children: [t, /* @__PURE__ */ (0, S.jsx)("input", {
 								required: !0,
 								dir: "ltr",
 								value: f[e],
@@ -11600,10 +11892,10 @@ function Le({ token: e, returnBatchId: t = "" }) {
 								})
 							})] }, e))
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 							"توكن واتساب",
 							n.tokenConfigured ? " · محفوظ" : "",
-							/* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsx)("input", {
 								type: "password",
 								autoComplete: "off",
 								required: !n.tokenConfigured,
@@ -11615,10 +11907,10 @@ function Le({ token: e, returnBatchId: t = "" }) {
 								placeholder: n.tokenConfigured ? "اتركه فارغًا لاستخدام المحفوظ" : "الصق التوكن هنا"
 							})
 						] }),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 							"App Secret",
 							n.appSecretConfigured ? " · محفوظ" : "",
-							/* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsx)("input", {
 								type: "password",
 								autoComplete: "off",
 								value: f.appSecret,
@@ -11629,11 +11921,11 @@ function Le({ token: e, returnBatchId: t = "" }) {
 								placeholder: "سر تطبيق Meta الخاص بالويب هوك"
 							})
 						] }),
-						/* @__PURE__ */ (0, M.jsx)("p", {
+						/* @__PURE__ */ (0, S.jsx)("p", {
 							className: "help",
 							children: "المفاتيح محمية بحساب مستخدم ويندوز الحالي، خارج قاعدة البيانات والنسخ الاحتياطية. عند نقل البرنامج إلى جهاز آخر، اربط الحساب عليه مرة أخرى."
 						}),
-						/* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button",
 							disabled: m || w,
 							children: "حفظ الحساب"
@@ -11642,52 +11934,52 @@ function Le({ token: e, returnBatchId: t = "" }) {
 				})
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel whatsapp-settings",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "section-top",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "القوالب الرسمية" }), /* @__PURE__ */ (0, M.jsxs)("p", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "القوالب الرسمية" }), /* @__PURE__ */ (0, S.jsxs)("p", {
 						className: "help",
 						children: [
-							b(i.length),
+							A(i.length),
 							" قالب · ",
-							b(i.filter((e) => e.reportSupported).length),
+							A(i.filter((e) => e.reportSupported).length),
 							" متاح للتقارير النصية أو PDF. يقرأ البرنامج متغيرات كل قالب تلقائيًا، ويمكنك تغيير ربطها قبل الإرسال."
 						]
-					})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+					})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
 						disabled: m || !n.configured,
-						onClick: () => D(async () => {
-							await E("/api/whatsapp/templates/sync", {}, e, { timeoutMs: 12e4 }), await S(), T("تم تحديث القوالب والتحقق من رقم الإرسال");
+						onClick: () => T(async () => {
+							await N("/api/whatsapp/templates/sync", {}, e, { timeoutMs: 12e4 }), await b(), M("تم تحديث القوالب والتحقق من رقم الإرسال");
 						}),
 						children: "مزامنة القوالب من Meta"
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "تُحدّث القوالب تلقائيًا كل ٥ دقائق ما دامت الشاشة مفتوحة، وقبل المعاينة والإرسال عند الحاجة."
 				}),
-				y && /* @__PURE__ */ (0, M.jsx)("p", {
+				v && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "notice",
-					children: y
+					children: v
 				}),
-				/* @__PURE__ */ (0, M.jsx)("div", {
+				/* @__PURE__ */ (0, S.jsx)("div", {
 					className: "whatsapp-templates",
-					children: i.length ? i.map((e) => /* @__PURE__ */ (0, M.jsxs)("article", {
+					children: i.length ? i.map((e) => /* @__PURE__ */ (0, S.jsxs)("article", {
 						className: "whatsapp-template",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("div", {
+							/* @__PURE__ */ (0, S.jsxs)("div", {
 								className: "section-top",
-								children: [/* @__PURE__ */ (0, M.jsx)("strong", {
+								children: [/* @__PURE__ */ (0, S.jsx)("strong", {
 									dir: "ltr",
 									children: e.name
-								}), /* @__PURE__ */ (0, M.jsx)("span", {
+								}), /* @__PURE__ */ (0, S.jsx)("span", {
 									className: `badge ${e.reportSupported ? "complete" : "quiet"}`,
 									children: e.status === "APPROVED" ? "معتمد" : e.status
 								})]
 							}),
-							/* @__PURE__ */ (0, M.jsxs)("p", {
+							/* @__PURE__ */ (0, S.jsxs)("p", {
 								className: "help",
 								children: [
 									e.language,
@@ -11695,64 +11987,64 @@ function Le({ token: e, returnBatchId: t = "" }) {
 									e.category
 								]
 							}),
-							/* @__PURE__ */ (0, M.jsx)("p", {
+							/* @__PURE__ */ (0, S.jsx)("p", {
 								className: "whatsapp-message",
 								dir: "auto",
-								children: Fe(e)
+								children: Xe(e)
 							}),
-							/* @__PURE__ */ (0, M.jsx)("p", {
+							/* @__PURE__ */ (0, S.jsx)("p", {
 								className: "help",
 								children: e.reportSupported ? "جاهز لرسالة تقرير الطالب" : e.reportReason
 							})
 						]
-					}, e.id)) : /* @__PURE__ */ (0, M.jsx)("p", {
+					}, e.id)) : /* @__PURE__ */ (0, S.jsx)("p", {
 						className: "empty",
 						children: "احفظ الحساب ثم زامن القوالب لتظهر هنا."
 					})
 				})
 			]
 		}),
-		n.verifyToken && /* @__PURE__ */ (0, M.jsxs)("section", {
+		n.verifyToken && /* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel whatsapp-settings",
 			children: [
-				/* @__PURE__ */ (0, M.jsx)("h2", { children: "ربط الويب هوك" }),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("h2", { children: "ربط الويب هوك" }),
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "الويب هوك يحتاج رابط HTTPS عامًا على المنصة. هذا الرمز لتأكيد الرابط في Meta؛ إعدادات الإرسال تعمل من البرنامج."
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["Verify Token", /* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["Verify Token", /* @__PURE__ */ (0, S.jsx)("input", {
 					readOnly: !0,
 					dir: "ltr",
 					value: n.verifyToken
 				})] }),
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
-					onClick: () => O(n.verifyToken),
+					onClick: () => oe(n.verifyToken),
 					children: "نسخ رمز التحقق"
 				})
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel whatsapp-settings",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "سجل إرسال التقارير" }), /* @__PURE__ */ (0, M.jsx)("p", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "سجل إرسال التقارير" }), /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "«قبل واتساب الرسالة» تأكيد قبول الطلب، ويختلف عن وصولها أو قراءتها. الحالة غير المؤكدة لا يعاد إرسالها تلقائيًا."
-				})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "text-button",
 					disabled: m,
-					onClick: () => D(S),
+					onClick: () => T(b),
 					children: "تحديث السجل"
 				})]
-			}), /* @__PURE__ */ (0, M.jsx)("div", {
+			}), /* @__PURE__ */ (0, S.jsx)("div", {
 				className: "table-scroll",
-				children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الطالب" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "التقرير" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الحالة" })
-				] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: o.length ? o.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: e.name }), /* @__PURE__ */ (0, M.jsxs)("small", {
+				children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الطالب" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "التقرير" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الحالة" })
+				] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: o.length ? o.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: e.name }), /* @__PURE__ */ (0, S.jsxs)("small", {
 						dir: "ltr",
 						children: [
 							e.code,
@@ -11760,92 +12052,92 @@ function Le({ token: e, returnBatchId: t = "" }) {
 							e.phone
 						]
 					})] }),
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [e.filename, /* @__PURE__ */ (0, M.jsx)("small", {
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.filename, /* @__PURE__ */ (0, S.jsx)("small", {
 						dir: "ltr",
 						children: e.template
 					})] }),
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [Pe[e.state] || e.state, /* @__PURE__ */ (0, M.jsx)("small", { children: e.error })] })
-				] }, t)) : /* @__PURE__ */ (0, M.jsx)("tr", { children: /* @__PURE__ */ (0, M.jsx)("td", {
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [Ye[e.state] || e.state, /* @__PURE__ */ (0, S.jsx)("small", { children: e.error })] })
+				] }, t)) : /* @__PURE__ */ (0, S.jsx)("tr", { children: /* @__PURE__ */ (0, S.jsx)("td", {
 					colSpan: 3,
 					className: "empty",
 					children: "لم تُرسل تقارير بعد."
 				}) }) })] })
 			})]
 		})
-	] }) : /* @__PURE__ */ (0, M.jsx)("div", {
+	] }) : /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "loading",
 		children: "جارٍ قراءة إعدادات واتساب…"
 	});
 }
 //#endregion
 //#region src/SendReports.jsx
-function Re({ attempts: e, label: t = "إرسال عبر واتساب", centerBatchId: n = "", recipientKind: r = "student", reportKind: i = "exam" }) {
-	let a = !!n, [o, s] = (0, _.useState)(null), [c, l] = (0, _.useState)(""), [u, d] = (0, _.useState)([]), [f, p] = (0, _.useState)(null), [m, h] = (0, _.useState)(!1), [g, v] = (0, _.useState)(""), [y, x] = (0, _.useState)(""), S = a ? e : e.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0), C = JSON.stringify([
+function $e({ attempts: e, label: t = "إرسال عبر واتساب", centerBatchId: n = "", recipientKind: r = "student", reportKind: i = "exam" }) {
+	let a = !!n, [o, s] = (0, x.useState)(null), [c, l] = (0, x.useState)(""), [u, d] = (0, x.useState)([]), [f, p] = (0, x.useState)(null), [m, h] = (0, x.useState)(!1), [g, _] = (0, x.useState)(""), [v, y] = (0, x.useState)(""), b = a ? e : e.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0), C = JSON.stringify([
 		n,
 		r,
 		i,
-		S.map((e) => e.id)
-	]), w = o?.templates.find((e) => e.id === c && e.reportSupported), D = JSON.stringify([
+		b.map((e) => e.id)
+	]), w = o?.templates.find((e) => e.id === c && e.reportSupported), T = JSON.stringify([
 		c,
 		w?.bindingSchema,
 		r,
 		i
-	]), O = ke(w, r, i), k = !!(O && JSON.stringify(O.mappings) === JSON.stringify(u)), ee = !!(w && Ae(w, u)), A = JSON.stringify([
+	]), E = We(w, r, i), D = !!(E && JSON.stringify(E.mappings) === JSON.stringify(u)), O = !!(w && Ge(w, u)), ee = JSON.stringify([
 		C,
 		c,
 		w?.bindingSchema,
 		u
-	]), ne = (0, _.useRef)(A);
-	ne.current = A;
-	let [re, j] = (0, _.useState)(""), ie = f && re === A, ae = async () => {
-		x("");
+	]), te = (0, x.useRef)(ee);
+	te.current = ee;
+	let [k, ne] = (0, x.useState)(""), re = f && k === ee, j = async () => {
+		y("");
 		try {
 			let [e, t, n] = await Promise.all([
-				E("/api/bootstrap"),
-				E("/api/whatsapp/configuration"),
-				E("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 })
+				N("/api/bootstrap"),
+				N("/api/whatsapp/configuration"),
+				N("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 })
 			]);
 			s({
 				token: e.token,
 				config: t,
 				templates: n.templates,
 				syncError: n.syncError
-			}), p(null), v("");
+			}), p(null), _("");
 		} catch (e) {
-			x(e.message), T(e.message, !0);
+			y(e.message), M(e.message, !0);
 		}
 	};
-	(0, _.useEffect)(() => {
-		a && ae();
-	}, [n]), (0, _.useEffect)(() => {
-		d(je(w, r, i)), p(null);
-	}, [D]), (0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
+		a && j();
+	}, [n]), (0, x.useEffect)(() => {
+		d(Ke(w, r, i)), p(null);
+	}, [T]), (0, x.useEffect)(() => {
 		p(null);
-	}, [C]), (0, _.useEffect)(() => {
+	}, [C]), (0, x.useEffect)(() => {
 		if (!o || m) return;
 		let e = !0, t = setInterval(() => {
-			E("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }).then((t) => {
+			N("/api/whatsapp/templates", void 0, void 0, { timeoutMs: 12e4 }).then((t) => {
 				e && s((e) => e && {
 					...e,
 					templates: t.templates,
 					syncError: t.syncError
 				});
 			}).catch((t) => {
-				e && v(t.message);
+				e && _(t.message);
 			});
 		}, 6e4);
 		return () => {
 			e = !1, clearInterval(t);
 		};
 	}, [!!o, m]);
-	let oe = (e) => {
-		l(e), p(null), v("");
-	}, se = (e) => {
+	let ie = (e) => {
+		l(e), p(null), _("");
+	}, ae = (e) => {
 		d(e), p(null);
-	}, ce = async () => {
+	}, oe = async () => {
 		h(!0);
 		try {
-			let e = await E("/api/whatsapp/template-bindings", {
+			let e = await N("/api/whatsapp/template-bindings", {
 				templateId: c,
 				bindingSchema: w.bindingSchema,
 				recipientKind: r,
@@ -11858,37 +12150,37 @@ function Re({ attempts: e, label: t = "إرسال عبر واتساب", centerBa
 					...t,
 					savedBindings: [...(t.savedBindings || []).filter((e) => e.recipientKind !== r || e.reportKind !== i), e]
 				} : t)
-			})), v("تم تثبيت الربط لهذا القالب ونوع الرسالة والمستلم. تُملأ بيانات كل طالب تلقائيًا في المرات القادمة.");
+			})), _("تم تثبيت الربط لهذا القالب ونوع الرسالة والمستلم. تُملأ بيانات كل طالب تلقائيًا في المرات القادمة.");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			h(!1);
 		}
-	}, le = async () => {
-		let e = A;
+	}, se = async () => {
+		let e = ee;
 		h(!0);
 		try {
-			let t = await E("/api/whatsapp/reports/preview", {
-				attemptIds: S.map((e) => e.id),
+			let t = await N("/api/whatsapp/reports/preview", {
+				attemptIds: b.map((e) => e.id),
 				templateId: c,
 				bindingSchema: w.bindingSchema,
 				mappings: u,
 				centerBatchId: n,
 				recipientKind: r
 			}, o.token, { timeoutMs: 12e4 });
-			ne.current === e && (p(t.items), j(e));
+			te.current === e && (p(t.items), ne(e));
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			h(!1);
 		}
-	}, ue = async (e = !1) => {
-		if (!ie) return;
+	}, ce = async (e = !1) => {
+		if (!re) return;
 		let t = f.filter((t) => !t.error && (e ? ["failed", "rejected"].includes(t.prior?.state) : !t.prior));
-		if (t.length && await te(`إرسال ${b(t.length)} رسالة على واتساب؟`, "راجع المعاينة والأرقام. كل مستلم تصله بيانات الطالب الظاهرة فقط.") && ne.current === A) {
+		if (t.length && await ue(`إرسال ${A(t.length)} رسالة على واتساب؟`, "راجع المعاينة والأرقام. كل مستلم تصله بيانات الطالب الظاهرة فقط.") && te.current === ee) {
 			h(!0);
 			try {
-				await E("/api/whatsapp/jobs", {
+				await N("/api/whatsapp/jobs", {
 					items: t.map((e) => ({
 						attemptId: e.attemptId,
 						fingerprint: e.fingerprint
@@ -11899,30 +12191,30 @@ function Re({ attempts: e, label: t = "إرسال عبر واتساب", centerBa
 					retry: e,
 					centerBatchId: n,
 					recipientKind: r
-				}, o.token, { timeoutMs: 12e4 }), a || s(null), p(null), window.dispatchEvent(new Event("whatsapp-jobs-changed")), v("أُضيفت الرسائل لدور الإرسال. تابع حالتها في سجل الإرسال."), T("أُضيفت الرسائل لدور الإرسال.");
+				}, o.token, { timeoutMs: 12e4 }), a || s(null), p(null), window.dispatchEvent(new Event("whatsapp-jobs-changed")), _("أُضيفت الرسائل لدور الإرسال. تابع حالتها في سجل الإرسال."), M("أُضيفت الرسائل لدور الإرسال.");
 			} catch (e) {
-				p(null), v("أعد المعاينة لقراءة السجل قبل الاستكمال."), T(e.message, !0);
+				p(null), _("أعد المعاينة لقراءة السجل قبل الاستكمال."), M(e.message, !0);
 			} finally {
 				h(!1);
 			}
 		}
 	};
-	if (a && !o) return /* @__PURE__ */ (0, M.jsxs)("section", {
+	if (a && !o) return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel padded",
-		children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "قالب الرسالة ومعاينتها" }), y ? /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("p", {
+		children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "قالب الرسالة ومعاينتها" }), v ? /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("p", {
 			className: "notice",
 			role: "alert",
-			children: y
-		}), /* @__PURE__ */ (0, M.jsx)("button", {
+			children: v
+		}), /* @__PURE__ */ (0, S.jsx)("button", {
 			className: "button secondary",
-			onClick: ae,
+			onClick: j,
 			children: "إعادة تحميل القوالب"
-		})] }) : /* @__PURE__ */ (0, M.jsx)("p", {
+		})] }) : /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "loading",
 			children: "جارٍ تحميل قوالب الحساب…"
 		})]
 	});
-	let de = o && /* @__PURE__ */ (0, M.jsxs)("section", {
+	let le = o && /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: `panel ${a ? "padded" : "send-dialog"}`,
 		...a ? {} : {
 			role: "dialog",
@@ -11930,136 +12222,136 @@ function Re({ attempts: e, label: t = "إرسال عبر واتساب", centerBa
 			"aria-label": "إرسال تقارير واتساب"
 		},
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "قالب الرسالة ومعاينتها" }), !a && /* @__PURE__ */ (0, M.jsx)("button", {
+				children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "قالب الرسالة ومعاينتها" }), !a && /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "text-button",
 					disabled: m,
 					onClick: () => s(null),
 					children: "إغلاق"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: a ? `${b(S.length)} طالب محدد برقم صالح` : `${b(S.length)} تقرير مكتمل التصحيح · ${b(e.length - S.length)} طالب لم يسلّم أو ينتظر التصحيح أو محاولته ملغاة.` }),
-			o.config.configured ? /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-				o.syncError && /* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", { children: a ? `${A(b.length)} طالب محدد برقم صالح` : `${A(b.length)} تقرير مكتمل التصحيح · ${A(e.length - b.length)} طالب لم يسلّم أو ينتظر التصحيح أو محاولته ملغاة.` }),
+			o.config.configured ? /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				o.syncError && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "notice",
 					children: o.syncError
 				}),
-				/* @__PURE__ */ (0, M.jsx)(Ie, {
+				/* @__PURE__ */ (0, S.jsx)(Ze, {
 					templates: o.templates,
 					templateId: c,
-					setTemplateId: oe,
+					setTemplateId: ie,
 					mappings: u,
-					setMappings: se,
+					setMappings: ae,
 					disabled: m,
 					recipientKind: r,
 					reportKind: i
 				}),
-				w && /* @__PURE__ */ (0, M.jsxs)("div", {
+				w && /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "actions",
-					children: [/* @__PURE__ */ (0, M.jsx)("button", {
+					children: [/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
-						disabled: m || !ee || k,
-						onClick: ce,
-						children: k ? "ربط المتغيرات مثبت" : "تثبيت ربط المتغيرات"
-					}), /* @__PURE__ */ (0, M.jsx)("p", {
+						disabled: m || !O || D,
+						onClick: oe,
+						children: D ? "ربط المتغيرات مثبت" : "تثبيت ربط المتغيرات"
+					}), /* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "اختار مصدر كل متغير مرة واحدة. تُقرأ الدرجة والنهاية العظمى من سجل الطالب، ومنها الورقي من ١٠ والإلكتروني من ١٢. نص القالب الثابت يظل كما اعتمدته Meta؛ اختار قالب الحضور أو الغياب المناسب."
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "actions",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("button", {
+						/* @__PURE__ */ (0, S.jsxs)("button", {
 							className: "button secondary",
-							disabled: m || !S.length || !ee,
-							onClick: le,
+							disabled: m || !b.length || !O,
+							onClick: se,
 							children: [
 								"معاينة الرسائل (",
-								b(S.length),
+								A(b.length),
 								")"
 							]
 						}),
-						ie && /* @__PURE__ */ (0, M.jsxs)("button", {
+						re && /* @__PURE__ */ (0, S.jsxs)("button", {
 							className: "button",
 							disabled: m || !f.some((e) => !e.error && !e.prior),
-							onClick: () => ue(),
+							onClick: () => ce(),
 							children: [
 								"إرسال الرسائل الجديدة (",
-								b(f.filter((e) => !e.error && !e.prior).length),
+								A(f.filter((e) => !e.error && !e.prior).length),
 								")"
 							]
 						}),
-						ie && f.some((e) => ["failed", "rejected"].includes(e.prior?.state)) && /* @__PURE__ */ (0, M.jsx)("button", {
+						re && f.some((e) => ["failed", "rejected"].includes(e.prior?.state)) && /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary",
 							disabled: m,
-							onClick: () => ue(!0),
+							onClick: () => ce(!0),
 							children: "إعادة محاولة الرسائل التي لم تُرسل"
 						})
 					]
 				})
-			] }) : /* @__PURE__ */ (0, M.jsx)("div", {
+			] }) : /* @__PURE__ */ (0, S.jsx)("div", {
 				className: "notice",
 				children: "افتح «إعداد حساب واتساب والقوالب» لربط الحساب أول مرة."
 			}),
-			g && /* @__PURE__ */ (0, M.jsx)("p", {
+			g && /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "notice",
 				role: "status",
 				children: g
 			}),
-			ie && f.some((e) => e.error) && /* @__PURE__ */ (0, M.jsxs)("p", {
+			re && f.some((e) => e.error) && /* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "notice",
 				role: "alert",
-				children: [b(f.filter((e) => e.error).length), " طالب لن يدخل الإرسال لأن القالب لا يطابق حالته. غيّر القالب أو تحديد الطلاب ثم أعد المعاينة."]
+				children: [A(f.filter((e) => e.error).length), " طالب لن يدخل الإرسال لأن القالب لا يطابق حالته. غيّر القالب أو تحديد الطلاب ثم أعد المعاينة."]
 			}),
-			ie && /* @__PURE__ */ (0, M.jsx)("div", {
+			re && /* @__PURE__ */ (0, S.jsx)("div", {
 				className: "table-scroll",
-				children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الطالب والرقم" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "معاينة الرسالة" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "حالة الإرسال" })
-				] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: f.map((e) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [
-						/* @__PURE__ */ (0, M.jsx)("strong", { children: e.name }),
-						/* @__PURE__ */ (0, M.jsx)("small", {
+				children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الطالب والرقم" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "معاينة الرسالة" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "حالة الإرسال" })
+				] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: f.map((e) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+						/* @__PURE__ */ (0, S.jsx)("strong", { children: e.name }),
+						/* @__PURE__ */ (0, S.jsx)("small", {
 							dir: "ltr",
 							children: e.phone
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("small", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("small", { children: [
 							"الكود: ",
 							e.code,
 							" · ",
-							e.score == null ? "لم تُرصد" : b(e.score),
+							e.score == null ? "لم تُرصد" : A(e.score),
 							" من ",
-							e.maximum == null ? "غير معروفة" : b(e.maximum)
+							e.maximum == null ? "غير معروفة" : A(e.maximum)
 						] })
 					] }),
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [/* @__PURE__ */ (0, M.jsx)("small", {
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [/* @__PURE__ */ (0, S.jsx)("small", {
 						className: "whatsapp-message",
 						dir: "auto",
-						children: e.error ? "لن تُرسل لهذا الطالب" : Ne(w, e)
-					}), !a && /* @__PURE__ */ (0, M.jsx)("small", { children: e.filename })] }),
-					/* @__PURE__ */ (0, M.jsxs)("td", { children: [e.error ? "مستبعد من الإرسال" : e.prior ? Pe[e.prior.state] : "جاهز للإرسال", /* @__PURE__ */ (0, M.jsx)("small", { children: e.error || e.prior?.error })] })
+						children: e.error ? "لن تُرسل لهذا الطالب" : Je(w, e)
+					}), !a && /* @__PURE__ */ (0, S.jsx)("small", { children: e.filename })] }),
+					/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.error ? "مستبعد من الإرسال" : e.prior ? Ye[e.prior.state] : "جاهز للإرسال", /* @__PURE__ */ (0, S.jsx)("small", { children: e.error || e.prior?.error })] })
 				] }, e.attemptId)) })] })
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "الإرسال حتى ٥ رسائل معًا، والمحاولة تتكرر للأخطاء المؤقتة المؤكدة. الرسائل المقبولة أو غير المؤكدة محفوظة لمنع تكرارها. أبقِ البرنامج مفتوحًا ومتصلًا بالإنترنت."
 			})
 		]
 	});
-	return a ? de : /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("button", {
+	return a ? le : /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("button", {
 		className: "button secondary small",
-		onClick: ae,
+		onClick: j,
 		children: t
-	}), o && /* @__PURE__ */ (0, M.jsx)("div", {
+	}), o && /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "send-overlay",
-		children: de
+		children: le
 	})] });
 }
 //#endregion
 //#region src/WhatsAppJobs.jsx
-var ze = {
+var et = {
 	queued: "في دور الإرسال",
 	running: "جارٍ الإرسال",
 	completed: "اكتمل الإرسال",
@@ -12067,24 +12359,24 @@ var ze = {
 	stopped: "تم الإيقاف",
 	interrupted: "توقف عند إغلاق البرنامج"
 };
-function Be() {
-	let [e, t] = (0, _.useState)([]), [n, r] = (0, _.useState)(""), [i, a] = (0, _.useState)(""), o = async () => {
-		let e = await E("/api/whatsapp/jobs");
+function tt() {
+	let [e, t] = (0, x.useState)([]), [n, r] = (0, x.useState)(""), [i, a] = (0, x.useState)(""), o = async () => {
+		let e = await N("/api/whatsapp/jobs");
 		t(e.items);
 	};
-	(0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
 		let e = !0, n = !1, i = async () => {
 			if (!n) {
 				n = !0;
 				try {
-					let n = await E("/api/whatsapp/jobs");
+					let n = await N("/api/whatsapp/jobs");
 					e && t(n.items);
 				} catch {} finally {
 					n = !1;
 				}
 			}
 		};
-		E("/api/bootstrap").then((t) => {
+		N("/api/bootstrap").then((t) => {
 			e && r(t.token);
 		}).catch(() => {}), i();
 		let a = setInterval(i, 3e3);
@@ -12095,51 +12387,51 @@ function Be() {
 	let s = async (e) => {
 		a(e);
 		try {
-			await E("/api/whatsapp/jobs/resume", { jobId: e }, n), await o();
+			await N("/api/whatsapp/jobs/resume", { jobId: e }, n), await o();
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			a("");
 		}
 	}, c = async (e) => {
 		a(e);
 		try {
-			await E("/api/whatsapp/jobs/stop", { jobId: e }, n), await o();
+			await N("/api/whatsapp/jobs/stop", { jobId: e }, n), await o();
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			a("");
 		}
 	};
 	if (!e.length) return null;
 	let l = e.filter((e) => ["queued", "running"].includes(e.state)), u = [...l, ...e.filter((e) => !l.includes(e)).slice(0, 2)];
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel",
 		"aria-label": "إرسال واتساب في الخلفية",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("strong", { children: [
+				children: [/* @__PURE__ */ (0, S.jsxs)("strong", { children: [
 					"إرسال واتساب في الخلفية · ",
-					b(l.length),
+					A(l.length),
 					" عملية نشطة"
-				] }), /* @__PURE__ */ (0, M.jsx)("span", {
+				] }), /* @__PURE__ */ (0, S.jsx)("span", {
 					className: "help",
 					children: "يمكنك متابعة العمل في أي امتحان"
 				})]
 			}),
-			u.map((e) => /* @__PURE__ */ (0, M.jsxs)("div", {
+			u.map((e) => /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "notice",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "section-top",
 						children: [
-							/* @__PURE__ */ (0, M.jsxs)("strong", { children: [
+							/* @__PURE__ */ (0, S.jsxs)("strong", { children: [
 								e.title,
 								" · ",
-								e.stopping && e.state === "running" ? "يتوقف بعد الدفعة الحالية" : ze[e.state]
+								e.stopping && e.state === "running" ? "يتوقف بعد الدفعة الحالية" : et[e.state]
 							] }),
-							["queued", "running"].includes(e.state) && /* @__PURE__ */ (0, M.jsx)("button", {
+							["queued", "running"].includes(e.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "text-button",
 								disabled: !n || i === e.id || e.stopping,
 								onClick: () => c(e.id),
@@ -12149,7 +12441,7 @@ function Be() {
 								"partial",
 								"stopped",
 								"interrupted"
-							].includes(e.state) && /* @__PURE__ */ (0, M.jsx)("button", {
+							].includes(e.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "text-button",
 								disabled: !n || i === e.id,
 								onClick: () => s(e.id),
@@ -12157,23 +12449,23 @@ function Be() {
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("p", { children: [
+					/* @__PURE__ */ (0, S.jsxs)("p", { children: [
 						"تمت معالجة ",
-						b(e.processed),
+						A(e.processed),
 						" من ",
-						b(e.total),
+						A(e.total),
 						" · قبل واتساب ",
-						b(e.accepted),
+						A(e.accepted),
 						" · لم يتأكد إرسال ",
-						b(e.failed)
+						A(e.failed)
 					] }),
-					e.message && /* @__PURE__ */ (0, M.jsx)("p", {
+					e.message && /* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: e.message
 					})
 				]
 			}, e.id)),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "٥ تقارير معًا، ثم ٥ ثوانٍ بين الدفعات. لو انقطع الإنترنت ينتظر ويستكمل تلقائيًا. الرسائل المقبولة لا تُرسل مرة أخرى، والرسالة غير المؤكدة تحتاج متابعة. أبقِ البرنامج مفتوحًا. قبول الطلب يختلف عن وصول الرسالة."
 			})
@@ -12182,98 +12474,98 @@ function Be() {
 }
 //#endregion
 //#region src/CenterWhatsAppReports.jsx
-var Ve = {
+var nt = {
 	followup: "متابعة الحضور والواجب والدرجة",
 	attendance: "الحضور والغياب",
 	homework: "عمل الواجب أو لم يعمل",
 	grade: "درجة الطالب"
 };
-function He(e) {
+function rt(e) {
 	let t = String(e || "").replace(/[٠-٩۰-۹]/g, (e) => String(e.charCodeAt(0) - (e <= "٩" ? 1632 : 1776))).replace(/[\s()-]/g, "");
 	return t.startsWith("0020") ? t = "0" + t.slice(4) : t.startsWith("+20") ? t = "0" + t.slice(3) : t.startsWith("20") && t.length === 12 && (t = "0" + t.slice(2)), /^01[0125]\d{8}$/.test(t);
 }
-function Ue({ batchId: e }) {
-	let [t, n] = (0, _.useState)(null), [r, i] = (0, _.useState)(""), [a, o] = (0, _.useState)(/* @__PURE__ */ new Set()), [s, c] = (0, _.useState)("guardian");
-	if ((0, _.useEffect)(() => {
+function it({ batchId: e }) {
+	let [t, n] = (0, x.useState)(null), [r, i] = (0, x.useState)(""), [a, o] = (0, x.useState)(/* @__PURE__ */ new Set()), [s, c] = (0, x.useState)("guardian");
+	if ((0, x.useEffect)(() => {
 		let t = !0;
-		return n(null), i(""), E(`/api/whatsapp/center/batches/${encodeURIComponent(e)}`).then((e) => {
+		return n(null), i(""), N(`/api/whatsapp/center/batches/${encodeURIComponent(e)}`).then((e) => {
 			t && (n(e), o(new Set(e.records.map((e) => e.id))));
 		}).catch((e) => {
 			t && i(e.message);
 		}), () => {
 			t = !1;
 		};
-	}, [e]), r) return /* @__PURE__ */ (0, M.jsxs)("section", {
+	}, [e]), r) return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel padded",
-		children: [/* @__PURE__ */ (0, M.jsx)("h1", { children: "تعذر فتح رسائل السنتر" }), /* @__PURE__ */ (0, M.jsx)("p", {
+		children: [/* @__PURE__ */ (0, S.jsx)("h1", { children: "تعذر فتح رسائل السنتر" }), /* @__PURE__ */ (0, S.jsx)("p", {
 			role: "alert",
 			children: r
 		})]
 	});
-	if (!t) return /* @__PURE__ */ (0, M.jsx)("p", {
+	if (!t) return /* @__PURE__ */ (0, S.jsx)("p", {
 		className: "loading",
 		children: "جارٍ تحميل الطلاب وبيانات الرسائل…"
 	});
-	let l = (e) => s === "guardian" ? e.guardianPhone : e.phone, u = t.records.filter((e) => a.has(e.id)), d = u.filter((e) => He(l(e))), f = t.records.length > 0 && t.records.every((e) => a.has(e.id)), p = t.messageKind || "followup";
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsxs)("header", {
+	let l = (e) => s === "guardian" ? e.guardianPhone : e.phone, u = t.records.filter((e) => a.has(e.id)), d = u.filter((e) => rt(l(e))), f = t.records.length > 0 && t.records.every((e) => a.has(e.id)), p = t.messageKind || "followup";
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsxs)("header", {
 			className: "page-heading",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h1", { children: "رسائل واتساب" }), /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h1", { children: "رسائل واتساب" }), /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 				t.title,
 				" · ",
-				Ve[p] || Ve.followup
-			] })] }), /* @__PURE__ */ (0, M.jsx)("a", {
+				nt[p] || nt.followup
+			] })] }), /* @__PURE__ */ (0, S.jsx)("a", {
 				className: "button secondary",
-				href: Me("whatsapp", e),
+				href: qe("whatsapp", e),
 				children: "إعداد حساب واتساب والقوالب"
 			})]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel padded",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["المستلم", /* @__PURE__ */ (0, M.jsxs)("select", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المستلم", /* @__PURE__ */ (0, S.jsxs)("select", {
 					value: s,
 					onChange: (e) => c(e.target.value),
-					children: [/* @__PURE__ */ (0, M.jsx)("option", {
+					children: [/* @__PURE__ */ (0, S.jsx)("option", {
 						value: "guardian",
 						children: "ولي الأمر"
-					}), /* @__PURE__ */ (0, M.jsx)("option", {
+					}), /* @__PURE__ */ (0, S.jsx)("option", {
 						value: "student",
 						children: "الطالب"
 					})]
-				})] }), /* @__PURE__ */ (0, M.jsxs)("p", {
+				})] }), /* @__PURE__ */ (0, S.jsxs)("p", {
 					role: "status",
 					children: [
-						b(d.length),
+						A(d.length),
 						" رسالة برقم صالح · ",
-						b(u.length - d.length),
+						A(u.length - d.length),
 						" رقم مفقود أو غير صالح"
 					]
 				})]
-			}), /* @__PURE__ */ (0, M.jsxs)("details", { children: [
-				/* @__PURE__ */ (0, M.jsxs)("summary", { children: [
+			}), /* @__PURE__ */ (0, S.jsxs)("details", { children: [
+				/* @__PURE__ */ (0, S.jsxs)("summary", { children: [
 					"مراجعة الطلاب المحددين (",
-					b(u.length),
+					A(u.length),
 					")"
 				] }),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: [/* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: [/* @__PURE__ */ (0, S.jsx)("input", {
 					type: "checkbox",
 					checked: f,
 					onChange: (e) => o(e.target.checked ? new Set(t.records.map((e) => e.id)) : /* @__PURE__ */ new Set())
 				}), " تحديد الكل"] }),
-				/* @__PURE__ */ (0, M.jsx)("div", {
+				/* @__PURE__ */ (0, S.jsx)("div", {
 					className: "table-scroll",
-					children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "اختيار" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الطالب والكود" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الرقم" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "المجموعة والحصة" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الحضور" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الواجب" }),
-						/* @__PURE__ */ (0, M.jsx)("th", { children: "الدرجة" })
-					] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: t.records.map((e) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, M.jsx)("td", { children: /* @__PURE__ */ (0, M.jsx)("input", {
+					children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "اختيار" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الطالب والكود" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الرقم" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "المجموعة والحصة" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الحضور" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الواجب" }),
+						/* @__PURE__ */ (0, S.jsx)("th", { children: "الدرجة" })
+					] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: t.records.map((e) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("input", {
 							"aria-label": `اختيار ${e.name}`,
 							type: "checkbox",
 							checked: a.has(e.id),
@@ -12282,35 +12574,35 @@ function Ue({ batchId: e }) {
 								return t.target.checked ? r.add(e.id) : r.delete(e.id), r;
 							})
 						}) }),
-						/* @__PURE__ */ (0, M.jsxs)("td", { children: [e.name, /* @__PURE__ */ (0, M.jsx)("small", { children: e.code })] }),
-						/* @__PURE__ */ (0, M.jsxs)("td", {
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.name, /* @__PURE__ */ (0, S.jsx)("small", { children: e.code })] }),
+						/* @__PURE__ */ (0, S.jsxs)("td", {
 							dir: "ltr",
-							children: [l(e) || "غير مسجل", /* @__PURE__ */ (0, M.jsx)("small", { children: He(l(e)) ? "" : "لن يدخل الإرسال" })]
+							children: [l(e) || "غير مسجل", /* @__PURE__ */ (0, S.jsx)("small", { children: rt(l(e)) ? "" : "لن يدخل الإرسال" })]
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("td", { children: [e.group, /* @__PURE__ */ (0, M.jsxs)("small", { children: [
+						/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.group, /* @__PURE__ */ (0, S.jsxs)("small", { children: [
 							e.lesson,
 							" · ",
 							e.exam
 						] })] }),
-						/* @__PURE__ */ (0, M.jsx)("td", { children: e.attendance || "غير مسجل" }),
-						/* @__PURE__ */ (0, M.jsx)("td", { children: e.homework || "غير مسجل" }),
-						/* @__PURE__ */ (0, M.jsx)("td", { children: e.score == null ? "لم تُرصد" : `${e.score} من ${e.maximum ?? "غير معروفة"}` })
+						/* @__PURE__ */ (0, S.jsx)("td", { children: e.attendance || "غير مسجل" }),
+						/* @__PURE__ */ (0, S.jsx)("td", { children: e.homework || "غير مسجل" }),
+						/* @__PURE__ */ (0, S.jsx)("td", { children: e.score == null ? "لم تُرصد" : `${e.score} من ${e.maximum ?? "غير معروفة"}` })
 					] }, e.id)) })] })
 				})
 			] })]
 		}),
-		/* @__PURE__ */ (0, M.jsx)(Re, {
+		/* @__PURE__ */ (0, S.jsx)($e, {
 			attempts: d,
 			centerBatchId: e,
 			recipientKind: s,
 			reportKind: p
 		}),
-		/* @__PURE__ */ (0, M.jsx)(Be, {})
+		/* @__PURE__ */ (0, S.jsx)(tt, {})
 	] });
 }
 //#endregion
 //#region src/CenterSetup.jsx
-var We = [
+var at = [
 	{
 		kind: "grades",
 		title: "الصفوف الدراسية",
@@ -12339,13 +12631,13 @@ var We = [
 		key: "groupId"
 	}
 ];
-function Ge({ catalog: e, request: t, refresh: n }) {
-	let [r, i] = (0, _.useState)({}), [a, o] = (0, _.useState)({}), [s, c] = (0, _.useState)(!1), l = (e, t) => i((n) => {
+function ot({ catalog: e, request: t, refresh: n }) {
+	let [r, i] = (0, x.useState)({}), [a, o] = (0, x.useState)({}), [s, c] = (0, x.useState)(!1), l = (e, t) => i((n) => {
 		let r = {
 			...n,
 			[e]: t
-		}, i = We.findIndex((t) => t.kind === e);
-		return We.slice(i + 1).forEach((e) => delete r[e.kind]), r;
+		}, i = at.findIndex((t) => t.kind === e);
+		return at.slice(i + 1).forEach((e) => delete r[e.kind]), r;
 	}), u = async (e, i) => {
 		i.preventDefault();
 		let s = (a[e.kind] || "").trim();
@@ -12358,9 +12650,9 @@ function Ge({ catalog: e, request: t, refresh: n }) {
 				await n(), o((t) => ({
 					...t,
 					[e.kind]: ""
-				})), l(e.kind, a.id), T(`تمت إضافة ${e.singular}`);
+				})), l(e.kind, a.id), M(`تمت إضافة ${e.singular}`);
 			} catch (e) {
-				T(e.message, !0);
+				M(e.message, !0);
 			} finally {
 				c(!1);
 			}
@@ -12370,52 +12662,52 @@ function Ge({ catalog: e, request: t, refresh: n }) {
 		if (i && i !== r.name) {
 			c(!0);
 			try {
-				await t(`/api/catalog/${e.kind}/${r.id}/rename`, { name: i }), await n(), T("تم تعديل الاسم");
+				await t(`/api/catalog/${e.kind}/${r.id}/rename`, { name: i }), await n(), M("تم تعديل الاسم");
 			} catch (e) {
-				T(e.message, !0);
+				M(e.message, !0);
 			} finally {
 				c(!1);
 			}
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "page-heading",
-		children: /* @__PURE__ */ (0, M.jsxs)("div", { children: [
-			/* @__PURE__ */ (0, M.jsx)("span", {
+		children: /* @__PURE__ */ (0, S.jsxs)("div", { children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
 				className: "context-label",
 				children: "تنظيم السنتر"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: "الصفوف والسناتر والمجموعات والحصص" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: "رتّب أماكن التدريس مرة واحدة. في قاعة السنتر تختار الحصة ثم اسم الامتحان المناسب لها." })
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: "الصفوف والسناتر والمجموعات والحصص" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: "رتّب أماكن التدريس مرة واحدة. في قاعة السنتر تختار الحصة ثم اسم الامتحان المناسب لها." })
 		] })
-	}), /* @__PURE__ */ (0, M.jsx)("div", {
+	}), /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "catalog-grid",
-		children: We.map((t) => {
+		children: at.map((t) => {
 			let n = t.parent && r[t.parent], i = (e?.[t.kind] || []).filter((e) => !t.parent || e[t.key] === n), c = !t.parent || !!n;
-			return /* @__PURE__ */ (0, M.jsxs)("section", {
+			return /* @__PURE__ */ (0, S.jsxs)("section", {
 				className: "panel catalog-column",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "catalog-heading",
-					children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: t.title }), /* @__PURE__ */ (0, M.jsx)("span", {
+					children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: t.title }), /* @__PURE__ */ (0, S.jsx)("span", {
 						className: "badge quiet",
-						children: b(i.length)
+						children: A(i.length)
 					})]
-				}), c ? /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("div", {
+				}), c ? /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 					className: "catalog-items",
-					children: i.length ? i.map((e) => /* @__PURE__ */ (0, M.jsxs)("div", {
+					children: i.length ? i.map((e) => /* @__PURE__ */ (0, S.jsxs)("div", {
 						className: `catalog-item ${r[t.kind] === e.id ? "selected" : ""}`,
-						children: [/* @__PURE__ */ (0, M.jsx)("button", {
+						children: [/* @__PURE__ */ (0, S.jsx)("button", {
 							type: "button",
 							onClick: () => l(t.kind, e.id),
 							children: e.name
-						}), /* @__PURE__ */ (0, M.jsx)("button", {
+						}), /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "catalog-rename",
 							type: "button",
 							"aria-label": `تعديل ${e.name}`,
 							onClick: () => d(t, e),
 							children: "تعديل"
 						})]
-					}, e.id)) : /* @__PURE__ */ (0, M.jsxs)("p", {
+					}, e.id)) : /* @__PURE__ */ (0, S.jsxs)("p", {
 						className: "help catalog-empty",
 						children: [
 							"أضف أول ",
@@ -12423,13 +12715,13 @@ function Ge({ catalog: e, request: t, refresh: n }) {
 							" هنا."
 						]
 					})
-				}), /* @__PURE__ */ (0, M.jsxs)("form", {
+				}), /* @__PURE__ */ (0, S.jsxs)("form", {
 					className: "catalog-add",
 					onSubmit: (e) => u(t, e),
-					children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+					children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 						"إضافة ",
 						t.singular,
-						/* @__PURE__ */ (0, M.jsx)("input", {
+						/* @__PURE__ */ (0, S.jsx)("input", {
 							required: !0,
 							maxLength: "150",
 							value: a[t.kind] || "",
@@ -12439,16 +12731,16 @@ function Ge({ catalog: e, request: t, refresh: n }) {
 							})),
 							placeholder: `اسم ${t.singular}`
 						})
-					] }), /* @__PURE__ */ (0, M.jsx)("button", {
+					] }), /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary small",
 						disabled: s,
 						children: "＋ إضافة"
 					})]
-				})] }) : /* @__PURE__ */ (0, M.jsxs)("p", {
+				})] }) : /* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "help catalog-empty",
 					children: [
 						"اختر ",
-						We.find((e) => e.kind === t.parent)?.singular,
+						at.find((e) => e.kind === t.parent)?.singular,
 						" أولًا."
 					]
 				})]
@@ -12458,42 +12750,42 @@ function Ge({ catalog: e, request: t, refresh: n }) {
 }
 //#endregion
 //#region src/DownloadReports.jsx
-function Ke({ examId: e, attempts: t }) {
-	let [n, r] = (0, _.useState)(!1), i = t.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0).length;
-	return /* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("button", {
+function st({ examId: e, attempts: t }) {
+	let [n, r] = (0, x.useState)(!1), i = t.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0).length;
+	return /* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("button", {
 		className: "button secondary small",
 		disabled: n || !i,
 		onClick: async () => {
 			if (!n) {
 				r(!0);
 				try {
-					await A(`/api/exams/${e}/reports.zip`, "تقارير-الطلاب.zip", "application/zip") && T("تم تجهيز ملف تقارير الطلاب");
+					await le(`/api/exams/${e}/reports.zip`, "تقارير-الطلاب.zip", "application/zip") && M("تم تجهيز ملف تقارير الطلاب");
 				} catch (e) {
-					T(e.message, !0);
+					M(e.message, !0);
 				} finally {
 					r(!1);
 				}
 			}
 		},
-		children: n ? "جارٍ تجهيز ملفات PDF…" : `تنزيل تقارير PDF في ZIP (${b(i)})`
-	}), /* @__PURE__ */ (0, M.jsx)("p", {
+		children: n ? "جارٍ تجهيز ملفات PDF…" : `تنزيل تقارير PDF في ZIP (${A(i)})`
+	}), /* @__PURE__ */ (0, S.jsx)("p", {
 		className: "help",
 		children: "يشمل التقارير مكتملة التصحيح فقط. اسم الملف: اسم الطالب — درجته من المجموع."
 	})] });
 }
 //#endregion
 //#region src/Sheets.jsx
-function qe({ catalog: e, exams: t }) {
-	let [n, r] = (0, _.useState)(!1), i = async () => {
+function ct({ catalog: e, exams: t }) {
+	let [n, r] = (0, x.useState)(!1), i = async () => {
 		r(!0);
 		try {
-			await A(`/api/exams/${s}/results.xlsx?groupId=${encodeURIComponent(a)}`, `نتائج-${e.groups.find((e) => e.id === a)?.name || "المجموعة"}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") && T("تم تنزيل شيت Excel");
+			await le(`/api/exams/${s}/results.xlsx?groupId=${encodeURIComponent(a)}`, `نتائج-${e.groups.find((e) => e.id === a)?.name || "المجموعة"}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") && M("تم تنزيل شيت Excel");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			r(!1);
 		}
-	}, [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(""), [l, u] = (0, _.useState)(null), [d, f] = (0, _.useState)(""), p = (t) => {
+	}, [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)(null), [d, f] = (0, x.useState)(""), p = (t) => {
 		let n = e.centers.find((e) => e.id === t.centerId);
 		return [
 			e.grades.find((e) => e.id === n?.gradeId)?.name,
@@ -12501,9 +12793,9 @@ function qe({ catalog: e, exams: t }) {
 			t.name
 		].filter(Boolean).join(" · ");
 	}, m = t.filter((t) => e.lessons.some((e) => e.id === t.lessonId && e.groupId === a));
-	(0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
 		let e = !0;
-		return u(null), f(""), s && E(`/api/exams/${s}`).then((t) => {
+		return u(null), f(""), s && N(`/api/exams/${s}`).then((t) => {
 			e && u(t);
 		}).catch((t) => {
 			e && f(t.message);
@@ -12512,43 +12804,43 @@ function qe({ catalog: e, exams: t }) {
 		};
 	}, [s]);
 	let h = l?.attempts.filter((e) => e.joined_at) || [];
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsx)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsx)("div", {
 			className: "page-heading",
-			children: /* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: /* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: "نتائج المجموعات"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h1", { children: "شيتات" }),
-				/* @__PURE__ */ (0, M.jsx)("p", { children: "اختر المجموعة وجلسة الامتحان لتنزيل النتائج في ملف Excel." })
+				/* @__PURE__ */ (0, S.jsx)("h1", { children: "شيتات" }),
+				/* @__PURE__ */ (0, S.jsx)("p", { children: "اختر المجموعة وجلسة الامتحان لتنزيل النتائج في ملف Excel." })
 			] })
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel padded",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "launcher-grid",
-					children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, M.jsxs)("select", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, S.jsxs)("select", {
 						value: a,
 						onChange: (e) => {
 							o(e.target.value), c("");
 						},
-						children: [/* @__PURE__ */ (0, M.jsx)("option", {
+						children: [/* @__PURE__ */ (0, S.jsx)("option", {
 							value: "",
 							children: "اختر المجموعة"
-						}), e.groups.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+						}), e.groups.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 							value: e.id,
 							children: p(e)
 						}, e.id))]
-					})] }), /* @__PURE__ */ (0, M.jsxs)("label", { children: ["الامتحان", /* @__PURE__ */ (0, M.jsxs)("select", {
+					})] }), /* @__PURE__ */ (0, S.jsxs)("label", { children: ["الامتحان", /* @__PURE__ */ (0, S.jsxs)("select", {
 						disabled: !a,
 						value: s,
 						onChange: (e) => c(e.target.value),
-						children: [/* @__PURE__ */ (0, M.jsx)("option", {
+						children: [/* @__PURE__ */ (0, S.jsx)("option", {
 							value: "",
 							children: "اختر جلسة الامتحان"
-						}), m.map((t) => /* @__PURE__ */ (0, M.jsxs)("option", {
+						}), m.map((t) => /* @__PURE__ */ (0, S.jsxs)("option", {
 							value: t.id,
 							children: [
 								t.title,
@@ -12560,69 +12852,69 @@ function qe({ catalog: e, exams: t }) {
 						}, t.id))]
 					})] })]
 				}),
-				a && !m.length && /* @__PURE__ */ (0, M.jsx)("p", {
+				a && !m.length && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "لا توجد جلسات امتحان مرتبطة بهذه المجموعة."
 				}),
-				d && /* @__PURE__ */ (0, M.jsx)("p", {
+				d && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "inline-error",
 					children: d
 				}),
-				s && !l && !d && /* @__PURE__ */ (0, M.jsx)("p", {
+				s && !l && !d && /* @__PURE__ */ (0, S.jsx)("p", {
 					role: "status",
 					children: "جارٍ قراءة النتائج…"
 				}),
-				l && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+				l && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "actions",
 					children: [
-						/* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button",
 							disabled: n,
 							onClick: i,
 							children: n ? "جارٍ تجهيز الشيت…" : "تنزيل شيت Excel ↓"
 						}),
-						/* @__PURE__ */ (0, M.jsx)(Ke, {
+						/* @__PURE__ */ (0, S.jsx)(st, {
 							examId: s,
 							attempts: h
 						}),
-						/* @__PURE__ */ (0, M.jsx)(Re, {
+						/* @__PURE__ */ (0, S.jsx)($e, {
 							attempts: h,
 							label: "إرسال تقارير المجموعة عبر واتساب"
 						})
 					]
-				}), /* @__PURE__ */ (0, M.jsxs)("p", {
+				}), /* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "help",
-					children: [b(h.length), " طالب حضر. العناوين في أول صف، وبيانات الطلاب من الصف الثاني. النتيجة النهائية تظهر بعد اكتمال التصحيح فقط؛ الموبايل والكود محفوظان كنص للحفاظ على الصفر الأول."]
+					children: [A(h.length), " طالب حضر. العناوين في أول صف، وبيانات الطلاب من الصف الثاني. النتيجة النهائية تظهر بعد اكتمال التصحيح فقط؛ الموبايل والكود محفوظان كنص للحفاظ على الصفر الأول."]
 				})] })
 			]
 		}),
-		l && /* @__PURE__ */ (0, M.jsx)("section", {
+		l && /* @__PURE__ */ (0, S.jsx)("section", {
 			className: "panel table-scroll",
-			children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "الطالب" }),
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "الموبايل" }),
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "الدرجة" }),
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "الحالة" }),
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "سبب الإلغاء" }),
-				/* @__PURE__ */ (0, M.jsx)("th", { children: "التقرير" })
-			] }) }), /* @__PURE__ */ (0, M.jsxs)("tbody", { children: [h.map((e) => /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-				/* @__PURE__ */ (0, M.jsx)("td", { children: e.name }),
-				/* @__PURE__ */ (0, M.jsx)("td", {
+			children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "الطالب" }),
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "الموبايل" }),
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "الدرجة" }),
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "الحالة" }),
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "سبب الإلغاء" }),
+				/* @__PURE__ */ (0, S.jsx)("th", { children: "التقرير" })
+			] }) }), /* @__PURE__ */ (0, S.jsxs)("tbody", { children: [h.map((e) => /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+				/* @__PURE__ */ (0, S.jsx)("td", { children: e.name }),
+				/* @__PURE__ */ (0, S.jsx)("td", {
 					dir: "ltr",
 					children: e.phone
 				}),
-				/* @__PURE__ */ (0, M.jsx)("td", { children: !e.cancelled_at && e.submitted_at && e.pending === 0 ? `${b(e.score)} من ${b(e.maximum)} (${b(e.maximum ? 100 * e.score / e.maximum : 0)}٪)` : "—" }),
-				/* @__PURE__ */ (0, M.jsx)("td", { children: e.cancelled_at ? "ملغي" : e.submitted_at ? e.pending ? `متبقي ${b(e.pending)} للتصحيح` : "تم التصحيح" : "لم يسلّم" }),
-				/* @__PURE__ */ (0, M.jsx)("td", {
+				/* @__PURE__ */ (0, S.jsx)("td", { children: !e.cancelled_at && e.submitted_at && e.pending === 0 ? `${A(e.score)} من ${A(e.maximum)} (${A(e.maximum ? 100 * e.score / e.maximum : 0)}٪)` : "—" }),
+				/* @__PURE__ */ (0, S.jsx)("td", { children: e.cancelled_at ? "ملغي" : e.submitted_at ? e.pending ? `متبقي ${A(e.pending)} للتصحيح` : "تم التصحيح" : "لم يسلّم" }),
+				/* @__PURE__ */ (0, S.jsx)("td", {
 					className: "cancellation-reason",
 					children: e.cancelReason || "—"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("td", { children: !e.cancelled_at && e.submitted_at && e.pending === 0 ? /* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("td", { children: !e.cancelled_at && e.submitted_at && e.pending === 0 ? /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "text-button",
-					onClick: () => A(`/api/attempts/${e.id}/report.pdf`, `تقرير-${e.name}.pdf`, "application/pdf").catch((e) => T(e.message, !0)),
+					onClick: () => le(`/api/attempts/${e.id}/report.pdf`, `تقرير-${e.name}.pdf`, "application/pdf").catch((e) => M(e.message, !0)),
 					children: "تنزيل PDF"
 				}) : "التقرير غير جاهز" })
-			] }, e.id)), !h.length && /* @__PURE__ */ (0, M.jsx)("tr", { children: /* @__PURE__ */ (0, M.jsx)("td", {
+			] }, e.id)), !h.length && /* @__PURE__ */ (0, S.jsx)("tr", { children: /* @__PURE__ */ (0, S.jsx)("td", {
 				colSpan: "6",
 				children: "لم يدخل طلاب هذه الجلسة."
 			}) })] })] })
@@ -12631,17 +12923,17 @@ function qe({ catalog: e, exams: t }) {
 }
 //#endregion
 //#region src/LiveTimer.jsx
-function Je({ dashboard: e, request: t, refresh: n }) {
-	let [r, i] = (0, _.useState)(Date.now()), [a, o] = (0, _.useState)(5), [s, c] = (0, _.useState)(!1);
-	(0, _.useEffect)(() => {
+function lt({ dashboard: e, request: t, refresh: n }) {
+	let [r, i] = (0, x.useState)(Date.now()), [a, o] = (0, x.useState)(5), [s, c] = (0, x.useState)(!1);
+	(0, x.useEffect)(() => {
 		let e = setInterval(() => i(Date.now()), 1e3);
 		return () => clearInterval(e);
 	}, []);
-	let l = e.exam, [u, d] = (0, _.useState)({
+	let l = e.exam, [u, d] = (0, x.useState)({
 		time: e.serverTime,
 		local: Date.now()
 	});
-	(0, _.useEffect)(() => d({
+	(0, x.useEffect)(() => d({
 		time: e.serverTime,
 		local: Date.now()
 	}), [e.serverTime]);
@@ -12649,18 +12941,18 @@ function Je({ dashboard: e, request: t, refresh: n }) {
 		if (!s) {
 			c(!0);
 			try {
-				await t(`/api/exams/${l.id}/extend-time`, { minutes: e }), await n(), T(`تمت إضافة ${b(e)} دقيقة للوقت`);
+				await t(`/api/exams/${l.id}/extend-time`, { minutes: e }), await n(), M(`تمت إضافة ${A(e)} دقيقة للوقت`);
 			} catch (e) {
-				T(e.message, !0);
+				M(e.message, !0);
 			} finally {
 				c(!1);
 			}
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel live-timer",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("span", { children: l.config.timerMode === "shared" ? "أطول وقت متبقٍ (يشمل تمديد الطلاب)" : "أطول وقت متبقٍ لطالب" }), /* @__PURE__ */ (0, M.jsxs)("strong", {
+			/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("span", { children: l.config.timerMode === "shared" ? "أطول وقت متبقٍ (يشمل تمديد الطلاب)" : "أطول وقت متبقٍ لطالب" }), /* @__PURE__ */ (0, S.jsxs)("strong", {
 				dir: "ltr",
 				children: [
 					String(Math.floor(h / 60)).padStart(2, "0"),
@@ -12668,22 +12960,22 @@ function Je({ dashboard: e, request: t, refresh: n }) {
 					String(h % 60).padStart(2, "0")
 				]
 			})] }),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "actions",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
 						disabled: s,
 						onClick: () => g(2),
 						children: "＋ دقيقتين للجميع"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary",
 						disabled: s,
 						onClick: () => g(5),
 						children: "＋ ٥ دقائق للجميع"
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: ["دقائق إضافية", /* @__PURE__ */ (0, M.jsx)("input", {
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: ["دقائق إضافية", /* @__PURE__ */ (0, S.jsx)("input", {
 						type: "number",
 						min: "1",
 						max: "120",
@@ -12691,7 +12983,7 @@ function Je({ dashboard: e, request: t, refresh: n }) {
 						value: a,
 						onChange: (e) => o(Number(e.target.value))
 					})] }),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						disabled: s || !Number.isInteger(a) || a < 1 || a > 120,
 						onClick: () => g(a),
@@ -12699,7 +12991,7 @@ function Je({ dashboard: e, request: t, refresh: n }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "الزيادة تشمل الطلاب الذين ما زالوا يحلون والدخول المتأخر. لا تفتح محاولة سبق تسليمها."
 			})
@@ -12708,7 +13000,7 @@ function Je({ dashboard: e, request: t, refresh: n }) {
 }
 //#endregion
 //#region src/rosterStatus.js
-var Ye = [
+var ut = [
 	["all", "الكل"],
 	["solving", "يحل الآن"],
 	["waiting", "في الانتظار"],
@@ -12721,7 +13013,7 @@ var Ye = [
 	["pending", "بانتظار التصحيح"],
 	["graded", "تم التصحيح"],
 	["cancelled", "ملغي"]
-], Xe = [
+], dt = [
 	["fullscreen", "ملء الشاشة"],
 	["fullscreen_exit", "خارج ملء الشاشة"],
 	["screen_reduced", "مساحة عرض أقل"],
@@ -12729,7 +13021,7 @@ var Ye = [
 	["fullscreen_unsupported", "ملء الشاشة غير مدعوم"],
 	["screen_missing", "بدون بيانات شاشة"]
 ];
-function Ze(e, t, n) {
+function ft(e, t, n) {
 	return e.cancelled_at ? {
 		key: "cancelled",
 		tone: "disconnected",
@@ -12772,9 +13064,9 @@ function Ze(e, t, n) {
 		label: "لم يسلّم"
 	};
 }
-function Qe(e, t, n) {
+function pt(e, t, n) {
 	if (n === "all") return !0;
-	if (Xe.some(([e]) => e === n)) {
+	if (dt.some(([e]) => e === n)) {
 		if (e.cancelled_at || e.submitted_at) return !1;
 		let t = e.screen?.current;
 		if (n === "screen_missing") return !t;
@@ -12787,9 +13079,9 @@ function Qe(e, t, n) {
 	}
 	return n === "active" ? !e.cancelled_at && !e.submitted_at : n === "submitted" ? !e.cancelled_at && !!e.submitted_at : n === "pending" ? !e.cancelled_at && !!e.submitted_at && e.pending > 0 : n === "graded" ? !e.cancelled_at && !!e.submitted_at && e.pending === 0 : t.key === n;
 }
-function $e(e, t, n) {
+function mt(e, t, n) {
 	if (!e.joined_at || e.cancelled_at || e.submitted_at || !["waiting", "running"].includes(t.state)) return "";
-	let r = Ze(e, t, n);
+	let r = ft(e, t, n);
 	return [
 		"paused",
 		"away",
@@ -12799,47 +13091,47 @@ function $e(e, t, n) {
 }
 //#endregion
 //#region src/SelectedTime.jsx
-function et({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
-	let [a, o] = (0, _.useState)(5), [s, c] = (0, _.useState)(!1), l = async (a) => {
+function ht({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
+	let [a, o] = (0, x.useState)(5), [s, c] = (0, x.useState)(!1), l = async (a) => {
 		if (!s && t.length) {
 			c(!0);
 			try {
 				await n(`/api/exams/${e}/extend-time`, {
 					minutes: a,
 					attemptIds: t.map((e) => e.id)
-				}), i(), await r(), T(`تمت إضافة ${b(a)} دقيقة لـ${b(t.length)} طالب فقط`);
+				}), i(), await r(), M(`تمت إضافة ${A(a)} دقيقة لـ${A(t.length)} طالب فقط`);
 			} catch (e) {
-				T(e.message, !0);
+				M(e.message, !0);
 			} finally {
 				c(!1);
 			}
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "selected-time",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "تمديد الوقت لطلاب معينين" }), /* @__PURE__ */ (0, M.jsxs)("p", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "تمديد الوقت لطلاب معينين" }), /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "help",
 			children: [
 				"حدد الطلاب من المربعات في الجدول. المحدد الآن: ",
-				b(t.length),
+				A(t.length),
 				". وقت باقي الطلاب لا يتغير."
 			]
-		})] }), /* @__PURE__ */ (0, M.jsxs)("div", {
+		})] }), /* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "actions",
 			children: [
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary small",
 					disabled: s || !t.length,
 					onClick: () => l(2),
 					children: "＋ دقيقتين للمحددين"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary small",
 					disabled: s || !t.length,
 					onClick: () => l(5),
 					children: "＋ ٥ دقائق للمحددين"
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["دقائق للمحددين", /* @__PURE__ */ (0, M.jsx)("input", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["دقائق للمحددين", /* @__PURE__ */ (0, S.jsx)("input", {
 					type: "number",
 					min: "1",
 					max: "120",
@@ -12847,13 +13139,67 @@ function et({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 					value: a,
 					onChange: (e) => o(Number(e.target.value))
 				})] }),
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button small",
 					disabled: s || !t.length || !Number.isInteger(a) || a < 1 || a > 120,
 					onClick: () => l(a),
 					children: "تمديد للمحددين"
 				}),
-				t.length > 0 && /* @__PURE__ */ (0, M.jsx)("button", {
+				t.length > 0 && /* @__PURE__ */ (0, S.jsx)("button", {
+					className: "text-button",
+					disabled: s,
+					onClick: i,
+					children: "إلغاء التحديد"
+				})
+			]
+		})]
+	});
+}
+//#endregion
+//#region src/ReopenAttempts.jsx
+function gt({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
+	let [a, o] = (0, x.useState)(10), [s, c] = (0, x.useState)(!1);
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
+		className: "selected-time",
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "إعادة فتح المحاولات المسلّمة" }), /* @__PURE__ */ (0, S.jsxs)("p", {
+			className: "help",
+			children: [
+				"حدد من عمود «إعادة فتح». المحدد الآن: ",
+				A(t.length),
+				". الوقت يبدأ عند التأكيد والإجابات الواصلة محفوظة."
+			]
+		})] }), /* @__PURE__ */ (0, S.jsxs)("div", {
+			className: "actions",
+			children: [
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["الوقت الجديد بالدقائق ", /* @__PURE__ */ (0, S.jsx)("input", {
+					type: "number",
+					min: "1",
+					max: "120",
+					step: "1",
+					value: a,
+					onChange: (e) => o(Number(e.target.value))
+				})] }),
+				/* @__PURE__ */ (0, S.jsx)("button", {
+					className: "button small",
+					disabled: s || !t.length || !Number.isInteger(a) || a < 1 || a > 120,
+					onClick: async () => {
+						if (!(s || !t.length || !Number.isInteger(a) || a < 1 || a > 120) && await ue(`إعادة فتح ${A(t.length)} محاولة؟`, `سيبدأ وقت جديد مدته ${A(a)} دقيقة الآن للطلاب المحددين. تبقى الإجابات الواصلة، وتُعاد مراجعة التصحيح عند التسليم الجديد.`)) {
+							c(!0);
+							try {
+								await n(`/api/exams/${e}/reopen-attempts`, {
+									minutes: a,
+									attemptIds: t.map((e) => e.id)
+								}), i(), await r(), M("أُعيد فتح المحاولات المحددة. على الطلاب استخدام نفس الموبايل والمتصفح.");
+							} catch (e) {
+								M(e.message, !0);
+							} finally {
+								c(!1);
+							}
+						}
+					},
+					children: "إعادة فتح المحددين"
+				}),
+				t.length > 0 && /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "text-button",
 					disabled: s,
 					onClick: i,
@@ -12865,34 +13211,34 @@ function et({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 }
 //#endregion
 //#region src/CancelAttempt.jsx
-function tt({ attempt: e, request: t, refresh: n, onClose: r }) {
-	let [i, a] = (0, _.useState)(""), [o, s] = (0, _.useState)(!1), [c, l] = (0, _.useState)("");
-	return /* @__PURE__ */ (0, M.jsx)("div", {
+function _t({ attempt: e, request: t, refresh: n, onClose: r }) {
+	let [i, a] = (0, x.useState)(""), [o, s] = (0, x.useState)(!1), [c, l] = (0, x.useState)("");
+	return /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "send-overlay",
-		children: /* @__PURE__ */ (0, M.jsxs)("section", {
+		children: /* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel send-dialog",
 			role: "dialog",
 			"aria-modal": "true",
 			"aria-labelledby": "cancel-attempt-title",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("h2", {
+				/* @__PURE__ */ (0, S.jsxs)("h2", {
 					id: "cancel-attempt-title",
 					children: ["إلغاء محاولة ", e.name]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("p", { children: ["كود الطالب: ", /* @__PURE__ */ (0, M.jsx)("b", {
+				/* @__PURE__ */ (0, S.jsxs)("p", { children: ["كود الطالب: ", /* @__PURE__ */ (0, S.jsx)("b", {
 					dir: "ltr",
 					children: e.code
 				})] }),
-				/* @__PURE__ */ (0, M.jsx)("p", {
+				/* @__PURE__ */ (0, S.jsx)("p", {
 					className: "notice",
 					children: "يتوقف الطالب عن الحل ولا يمكنه العودة لهذه المحاولة. تظل إجاباته محفوظة للمراجعة، وتظهر حالته «ملغي» وسبب الإلغاء في الشيت."
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("form", {
+				/* @__PURE__ */ (0, S.jsxs)("form", {
 					onSubmit: async (a) => {
 						if (a.preventDefault(), !o) {
 							s(!0), l("");
 							try {
-								await t(`/api/attempts/${e.id}/cancel`, { reason: i.trim() }), await n(), r(), T("تم إلغاء المحاولة وحفظ السبب في الشيت");
+								await t(`/api/attempts/${e.id}/cancel`, { reason: i.trim() }), await n(), r(), M("تم إلغاء المحاولة وحفظ السبب في الشيت");
 							} catch (e) {
 								l(e.message);
 							} finally {
@@ -12901,7 +13247,7 @@ function tt({ attempt: e, request: t, refresh: n, onClose: r }) {
 						}
 					},
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["سبب الإلغاء", /* @__PURE__ */ (0, M.jsx)("textarea", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["سبب الإلغاء", /* @__PURE__ */ (0, S.jsx)("textarea", {
 							autoFocus: !0,
 							required: !0,
 							maxLength: 1e3,
@@ -12910,18 +13256,18 @@ function tt({ attempt: e, request: t, refresh: n, onClose: r }) {
 							onChange: (e) => a(e.target.value),
 							placeholder: "اكتب سبب الإلغاء…"
 						})] }),
-						c && /* @__PURE__ */ (0, M.jsx)("p", {
+						c && /* @__PURE__ */ (0, S.jsx)("p", {
 							role: "alert",
 							className: "inline-error",
 							children: c
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("div", {
+						/* @__PURE__ */ (0, S.jsxs)("div", {
 							className: "actions",
-							children: [/* @__PURE__ */ (0, M.jsx)("button", {
+							children: [/* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button danger",
 								disabled: o || !i.trim(),
 								children: o ? "جارٍ الإلغاء…" : "تأكيد إلغاء المحاولة"
-							}), /* @__PURE__ */ (0, M.jsx)("button", {
+							}), /* @__PURE__ */ (0, S.jsx)("button", {
 								type: "button",
 								className: "button secondary",
 								disabled: o,
@@ -12937,7 +13283,7 @@ function tt({ attempt: e, request: t, refresh: n, onClose: r }) {
 }
 //#endregion
 //#region src/rosterOrder.js
-var nt = [
+var vt = [
 	["newest", "أحدث دخول أولًا"],
 	["oldest", "أقدم دخول أولًا"],
 	["seen", "أحدث ظهور أولًا"],
@@ -12947,10 +13293,10 @@ var nt = [
 	["highest", "أعلى درجة بعد التصحيح"],
 	["lowest", "أقل درجة بعد التصحيح"],
 	["deadline", "الأقرب لانتهاء الوقت"]
-], rt = new Intl.Collator("ar", {
+], yt = new Intl.Collator("ar", {
 	numeric: !0,
 	sensitivity: "base"
-}), it = new Intl.DateTimeFormat("ar-EG", {
+}), bt = new Intl.DateTimeFormat("ar-EG", {
 	day: "numeric",
 	month: "short",
 	hour: "2-digit",
@@ -12958,15 +13304,15 @@ var nt = [
 	second: "2-digit",
 	timeZone: "Africa/Cairo"
 });
-function at(e, t) {
+function xt(e, t) {
 	return t === "newest" || t === "oldest" ? e.joined_at || null : t === "seen" ? e.last_seen || null : t === "submitted" ? e.submitted_at || null : t === "highest" || t === "lowest" ? !e.cancelled_at && e.submitted_at && e.pending === 0 ? e.score : null : t === "deadline" && !e.cancelled_at && !e.submitted_at && e.deadline || null;
 }
-function ot(e, t) {
+function St(e, t) {
 	return [...e].sort((e, n) => {
 		let r = 0;
-		if (t === "name" || t === "code") r = rt.compare(String(e[t] || ""), String(n[t] || ""));
+		if (t === "name" || t === "code") r = yt.compare(String(e[t] || ""), String(n[t] || ""));
 		else {
-			let i = at(e, t), a = at(n, t);
+			let i = xt(e, t), a = xt(n, t);
 			if (i === null && a !== null) return 1;
 			if (a === null && i !== null) return -1;
 			i !== null && a !== null && (r = [
@@ -12975,70 +13321,70 @@ function ot(e, t) {
 				"deadline"
 			].includes(t) ? i - a : a - i);
 		}
-		return r || rt.compare(String(e.code), String(n.code)) || String(e.id).localeCompare(String(n.id));
+		return r || yt.compare(String(e.code), String(n.code)) || String(e.id).localeCompare(String(n.id));
 	});
 }
-function st(e) {
-	return e ? it.format(/* @__PURE__ */ new Date(e * 1e3)) : "لم يدخل بعد";
+function Ct(e) {
+	return e ? bt.format(/* @__PURE__ */ new Date(e * 1e3)) : "لم يدخل بعد";
 }
-function ct(e, t) {
+function wt(e, t) {
 	let n = [], r = [];
 	for (let i of e) (t(i) ? n : r).push(i);
 	return [...n, ...r];
 }
 //#endregion
 //#region src/RosterCards.jsx
-function lt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: i }) {
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+function Tt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: i }) {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "roster-card-area",
 		"aria-label": "حالات الطلاب",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "roster-card-heading",
-				children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "حالات الطلاب" }), /* @__PURE__ */ (0, M.jsxs)("p", {
+				children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "حالات الطلاب" }), /* @__PURE__ */ (0, S.jsxs)("p", {
 					className: "help",
 					children: [r ? "الأعداد حسب البحث الحالي. " : "", "اختر الحالة لعرض طلابها."]
 				})]
 			}),
 			[{
 				label: "حالات الطلاب",
-				filters: Ye
+				filters: ut
 			}, ...i ? [{
 				label: "مراقبة الشاشة",
-				filters: Xe
-			}] : []].map((r) => /* @__PURE__ */ (0, M.jsxs)(_.Fragment, { children: [r.label === "مراقبة الشاشة" && /* @__PURE__ */ (0, M.jsx)("h3", {
+				filters: dt
+			}] : []].map((r) => /* @__PURE__ */ (0, S.jsxs)(x.Fragment, { children: [r.label === "مراقبة الشاشة" && /* @__PURE__ */ (0, S.jsx)("h3", {
 				className: "screen-card-heading",
 				children: "آخر حالة للشاشة · المحاولات غير المسلّمة"
-			}), /* @__PURE__ */ (0, M.jsx)("div", {
+			}), /* @__PURE__ */ (0, S.jsx)("div", {
 				className: "roster-status-cards",
 				role: "group",
 				"aria-label": r.label === "حالات الطلاب" ? "تصفية الطلاب" : "تصفية مراقبة الشاشة",
-				children: r.filters.map(([r, i]) => /* @__PURE__ */ (0, M.jsxs)("button", {
+				children: r.filters.map(([r, i]) => /* @__PURE__ */ (0, S.jsxs)("button", {
 					type: "button",
-					"aria-label": `${i}: ${b(e[r])} طالب`,
+					"aria-label": `${i}: ${A(e[r])} طالب`,
 					"aria-pressed": t === r,
 					className: `roster-status-card ${t === r ? "selected" : ""}`,
 					onClick: () => n(r),
-					children: [/* @__PURE__ */ (0, M.jsx)("span", {
+					children: [/* @__PURE__ */ (0, S.jsx)("span", {
 						className: "roster-card-label",
 						children: i
-					}), /* @__PURE__ */ (0, M.jsxs)("span", {
+					}), /* @__PURE__ */ (0, S.jsxs)("span", {
 						className: "roster-card-bottom",
-						children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: b(e[r]) }), /* @__PURE__ */ (0, M.jsx)("span", {
+						children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: A(e[r]) }), /* @__PURE__ */ (0, S.jsx)("span", {
 							"aria-hidden": "true",
 							children: t === r ? "✓" : "←"
 						})]
 					})]
 				}, r))
 			})] }, r.label)),
-			/* @__PURE__ */ (0, M.jsxs)("p", {
+			/* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "roster-card-selection",
 				role: "status",
 				children: [
 					"المعروض: ",
-					[...Ye, ...Xe].find(([e]) => e === t)?.[1],
+					[...ut, ...dt].find(([e]) => e === t)?.[1],
 					" · ",
-					b(e[t]),
+					A(e[t]),
 					" طالب"
 				]
 			})
@@ -13047,35 +13393,35 @@ function lt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: 
 }
 //#endregion
 //#region src/ScreenControls.jsx
-function ut({ exam: e, request: t, refresh: n }) {
-	let [r, i] = (0, _.useState)(!1), a = async (r) => {
+function Et({ exam: e, request: t, refresh: n }) {
+	let [r, i] = (0, x.useState)(!1), a = async (r) => {
 		i(!0);
 		try {
-			await t(`/api/exams/${e.id}/screen-rule`, { enabled: r }), await n(), T("تم حفظ مراقبة الشاشة");
+			await t(`/api/exams/${e.id}/screen-rule`, { enabled: r }), await n(), M("تم حفظ مراقبة الشاشة");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			i(!1);
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel padded",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("h2", { children: "مراقبة شاشة الطالب" }),
-			/* @__PURE__ */ (0, M.jsxs)("label", {
+			/* @__PURE__ */ (0, S.jsx)("h2", { children: "مراقبة شاشة الطالب" }),
+			/* @__PURE__ */ (0, S.jsxs)("label", {
 				className: "checkbox-row",
-				children: [/* @__PURE__ */ (0, M.jsx)("input", {
+				children: [/* @__PURE__ */ (0, S.jsx)("input", {
 					type: "checkbox",
 					checked: e.config.screenGuard === !0,
 					disabled: r,
 					onChange: (e) => a(e.target.checked)
 				}), " إيقاف الحل عند الخروج من ملء الشاشة أو انخفاض مساحة العرض"]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "الطالب يوافق بزر عند بدء الحل. انخفاض أكثر من ٢٥٪ أو الخروج من ملء الشاشة لمدة ٥ ثوانٍ يوقفه حتى تضغط «استكمال الطالب». الوقت يستمر والإجابات محفوظة."
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "علامة المتصفح ليست بصمة جهاز مضمونة. قياس الشاشة والخروج إشارات يرسلها المتصفح، وقد تتأثر بتقسيم الشاشة أو إعدادات الجهاز. الكيبورد والتدوير يُراعَيان قدر الإمكان؛ الأجهزة غير الداعمة لملء الشاشة تراقَب بالمساحة فقط."
 			})
@@ -13084,39 +13430,39 @@ function ut({ exam: e, request: t, refresh: n }) {
 }
 //#endregion
 //#region src/AbsenceControls.jsx
-function dt({ exam: e, request: t, refresh: n }) {
-	let [r, i] = (0, _.useState)(e.config.absenceSeconds || 0), [a, o] = (0, _.useState)(!1);
-	return (0, _.useEffect)(() => i(e.config.absenceSeconds || 0), [e.config.absenceSeconds]), /* @__PURE__ */ (0, M.jsxs)("section", {
+function Dt({ exam: e, request: t, refresh: n }) {
+	let [r, i] = (0, x.useState)(e.config.absenceSeconds || 0), [a, o] = (0, x.useState)(!1);
+	return (0, x.useEffect)(() => i(e.config.absenceSeconds || 0), [e.config.absenceSeconds]), /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel padded",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "الخروج من صفحة الامتحان" }), /* @__PURE__ */ (0, M.jsx)("p", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "الخروج من صفحة الامتحان" }), /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "حدد مدة الغياب بنفسك. صفر يعني أن الإيقاف يدوي فقط."
-				})] }), /* @__PURE__ */ (0, M.jsx)("span", {
+				})] }), /* @__PURE__ */ (0, S.jsx)("span", {
 					className: "badge quiet",
-					children: e.config.absenceSeconds ? `إيقاف بعد ${b(e.config.absenceSeconds)} ثانية` : "إيقاف يدوي"
+					children: e.config.absenceSeconds ? `إيقاف بعد ${A(e.config.absenceSeconds)} ثانية` : "إيقاف يدوي"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "actions",
-				children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["مدة الغياب بالثواني", /* @__PURE__ */ (0, M.jsx)("input", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["مدة الغياب بالثواني", /* @__PURE__ */ (0, S.jsx)("input", {
 					type: "number",
 					min: "0",
 					max: "3600",
 					step: "1",
 					value: r,
 					onChange: (e) => i(Number(e.target.value))
-				})] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				})] }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					disabled: a || !Number.isInteger(r) || r < 0 || r > 3600 || r > 0 && r < 5,
 					onClick: async () => {
 						o(!0);
 						try {
-							await t(`/api/exams/${e.id}/absence-rule`, { seconds: r }), await n(), T("تم حفظ إعداد الغياب");
+							await t(`/api/exams/${e.id}/absence-rule`, { seconds: r }), await n(), M("تم حفظ إعداد الغياب");
 						} catch (e) {
-							T(e.message, !0);
+							M(e.message, !0);
 						} finally {
 							o(!1);
 						}
@@ -13124,7 +13470,7 @@ function dt({ exam: e, request: t, refresh: n }) {
 					children: "حفظ مدة الغياب"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "الإيقاف يمنع الحل والتسليم، والتايمر يظل شغالًا. تغيير التطبيق أو انقطاع الاتصال قد يُحسب غيابًا. الاستكمال بقرارك من صف الطالب."
 			})
@@ -13133,14 +13479,14 @@ function dt({ exam: e, request: t, refresh: n }) {
 }
 //#endregion
 //#region src/centerRoomSelection.js
-function ft(e, t, n = !1) {
+function Ot(e, t, n = !1) {
 	if (n) return null;
 	let r = e.find((e) => e.id === t), i = e.find((e) => ["waiting", "running"].includes(e.state));
 	return r ? r.state === "closed" && i && i.createdAt > r.createdAt ? i.id : null : i?.id || e[0]?.id || null;
 }
 //#endregion
 //#region src/centerEmbeddedTheme.js
-var pt = {
+var kt = {
 	light: {
 		canvas: "#F6F7F8",
 		surface: "#FFFFFF",
@@ -13177,7 +13523,7 @@ var pt = {
 		textOnNav: "#E6EDF5",
 		onPrimary: "#092625"
 	}
-}, mt = {
+}, At = {
 	canvas: "canvas",
 	surface: "paper",
 	ink: "ink",
@@ -13195,8 +13541,8 @@ var pt = {
 	textOnNav: "center-text-on-nav",
 	onPrimary: "on-primary"
 };
-function ht(e) {
-	let t = e?.mode === "dark" ? "dark" : "light", n = { ...pt[t] };
+function jt(e) {
+	let t = e?.mode === "dark" ? "dark" : "light", n = { ...kt[t] };
 	for (let t of Object.keys(n)) {
 		let r = e?.colors?.[t] ?? (t === "onPrimary" ? e?.onPrimary : void 0);
 		typeof r == "string" && /^#[\da-f]{6}$/i.test(r) && (n[t] = r);
@@ -13206,20 +13552,20 @@ function ht(e) {
 		colors: n
 	};
 }
-function gt(e, t) {
+function Mt(e, t) {
 	if (new URLSearchParams(e.location.search).get("embedded") !== "center") return !1;
 	t.documentElement.classList.add("center-embedded-root"), t.body.classList.add("center-embedded");
 	let n = (e) => {
-		let n = ht(e), r = t.documentElement;
+		let n = jt(e), r = t.documentElement;
 		r.dataset.centerTheme = n.mode, r.style.colorScheme = n.mode;
-		for (let [e, t] of Object.entries(mt)) r.style.setProperty(`--${t}`, n.colors[e]);
+		for (let [e, t] of Object.entries(At)) r.style.setProperty(`--${t}`, n.colors[e]);
 		return r.style.setProperty("--navy", n.colors.ink), !0;
 	};
 	return e.applyMassarCenterTheme = n, n(e.__massarCenterTheme || { mode: new URLSearchParams(e.location.search).get("theme") }), !0;
 }
 //#endregion
 //#region src/centerNativeNavigation.js
-var _t = /* @__PURE__ */ new Set([
+var Nt = /* @__PURE__ */ new Set([
 	"room",
 	"exams",
 	"sheets",
@@ -13227,11 +13573,11 @@ var _t = /* @__PURE__ */ new Set([
 	"whatsapp",
 	"storage",
 	"guide"
-]), vt = /* @__PURE__ */ new WeakMap();
-function yt(e) {
-	return e === "editor" ? "exams" : _t.has(e) ? e : null;
+]), Pt = /* @__PURE__ */ new WeakMap();
+function Ft(e) {
+	return e === "editor" ? "exams" : Nt.has(e) ? e : null;
 }
-function bt(e, t, n) {
+function It(e, t, n) {
 	e.chrome.webview.postMessage({
 		kind: "massar-center-navigation",
 		nonce: t.nonce,
@@ -13239,18 +13585,18 @@ function bt(e, t, n) {
 		...n
 	});
 }
-function xt(e, t, n) {
-	let r = vt.get(e), i = yt(t);
-	r && i && (r.view = i, bt(e, r, {
+function Lt(e, t, n) {
+	let r = Pt.get(e), i = Ft(t);
+	r && i && (r.view = i, It(e, r, {
 		action: "state",
 		destination: i,
 		...n ? { requestId: n } : {}
 	}));
 }
-function St(e, t, { navigate: n, canLeave: r, onError: i }) {
+function Rt(e, t, { navigate: n, canLeave: r, onError: i }) {
 	let a = new URLSearchParams(e.location.search), o = e.__massarCenterNavigationNonce;
 	if (a.get("embedded") !== "center" || a.get("native-shell") !== "1" || e.location.protocol !== "http:" || e.location.hostname !== "127.0.0.1" || e.top !== e || typeof o != "string" || !/^[a-f0-9]{48}$/.test(o) || !e.chrome?.webview?.postMessage || !e.chrome?.webview?.addEventListener) return () => {};
-	let s = vt.get(e);
+	let s = Pt.get(e);
 	if (!s) {
 		let t = e.crypto.getRandomValues(/* @__PURE__ */ new Uint8Array(16));
 		s = {
@@ -13258,38 +13604,38 @@ function St(e, t, { navigate: n, canLeave: r, onError: i }) {
 			documentId: Array.from(t, (e) => e.toString(16).padStart(2, "0")).join(""),
 			view: "room",
 			tail: Promise.resolve()
-		}, vt.set(e, s);
+		}, Pt.set(e, s);
 	}
 	s.navigate = n, s.canLeave = r, s.onError = i, t.body.classList.add("center-native-shell");
 	let c = (t) => {
 		let n = t.data;
-		n?.kind !== "massar-center-navigation" || n.nonce !== s.nonce || n.documentId !== s.documentId || !Number.isSafeInteger(n.requestId) || n.requestId < 1 || !["navigate", "leave"].includes(n.action) || n.action === "navigate" && !_t.has(n.destination) || (s.tail = s.tail.then(async () => {
+		n?.kind !== "massar-center-navigation" || n.nonce !== s.nonce || n.documentId !== s.documentId || !Number.isSafeInteger(n.requestId) || n.requestId < 1 || !["navigate", "leave"].includes(n.action) || n.action === "navigate" && !Nt.has(n.destination) || (s.tail = s.tail.then(async () => {
 			try {
 				if (n.action === "leave") {
 					let t = await s.canLeave();
-					bt(e, s, {
+					It(e, s, {
 						action: "leave-result",
 						requestId: n.requestId,
 						allowed: t === !0
 					});
-				} else xt(e, await s.navigate(n.destination) === !0 ? n.destination : s.view, n.requestId);
+				} else Lt(e, await s.navigate(n.destination) === !0 ? n.destination : s.view, n.requestId);
 			} catch (t) {
-				n.action === "leave" ? bt(e, s, {
+				n.action === "leave" ? It(e, s, {
 					action: "leave-result",
 					requestId: n.requestId,
 					allowed: !1
-				}) : xt(e, s.view, n.requestId), s.onError?.(t);
+				}) : Lt(e, s.view, n.requestId), s.onError?.(t);
 			}
 		}));
 	};
-	return e.chrome.webview.addEventListener("message", c), bt(e, s, {
+	return e.chrome.webview.addEventListener("message", c), It(e, s, {
 		action: "ready",
 		destination: s.view
 	}), () => e.chrome.webview.removeEventListener("message", c);
 }
 //#endregion
 //#region src/admin.jsx
-var Ct = gt(window, document), wt = {
+var zt = Mt(window, document), Bt = {
 	whatsapp: "واتساب السنتر",
 	"whatsapp-center": "إرسال تقرير السنتر",
 	sheets: "شيتات",
@@ -13299,167 +13645,167 @@ var Ct = gt(window, document), wt = {
 	storage: "الإعدادات والبيانات",
 	guide: "دليل التشغيل",
 	editor: "تجهيز امتحان"
-}, I = ["waiting", "running"], Tt = "احفظ الدرجة وأغلق مراجعة الطالب أولًا", Et = () => !!document.getElementById("review-panel");
-function Dt() {
-	if (Et()) throw Error(Tt);
+}, Vt = ["waiting", "running"], Ht = "احفظ الدرجة وأغلق مراجعة الطالب أولًا", Ut = () => !!document.getElementById("review-panel");
+function Wt() {
+	if (Ut()) throw Error(Ht);
 	if (Array.from(document.querySelectorAll("dialog[open],[role=dialog]")).some((e) => e.getClientRects().length > 0)) throw Error("أكمل العملية المفتوحة أو أغلق النافذة أولًا");
 }
-var Ot = (e) => /* @__PURE__ */ (0, M.jsx)("span", {
+var Gt = (e) => /* @__PURE__ */ (0, S.jsx)("span", {
 	className: `badge ${e}`,
-	children: C[e]
+	children: j[e]
 });
-function kt({ url: e }) {
-	let t = re.encodeText(e, re.Ecc.MEDIUM), n = [];
+function Kt({ url: e }) {
+	let t = fe.encodeText(e, fe.Ecc.MEDIUM), n = [];
 	for (let e = 0; e < t.size; e++) for (let r = 0; r < t.size; r++) t.getModule(r, e) && n.push(`M${r + 4},${e + 4}h1v1h-1z`);
-	return /* @__PURE__ */ (0, M.jsxs)("figure", {
+	return /* @__PURE__ */ (0, S.jsxs)("figure", {
 		className: "student-qr",
-		children: [/* @__PURE__ */ (0, M.jsxs)("svg", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("svg", {
 			className: "qr",
 			viewBox: `0 0 ${t.size + 8} ${t.size + 8}`,
 			role: "img",
 			"aria-label": "رمز دخول الطلاب",
-			children: [/* @__PURE__ */ (0, M.jsx)("rect", {
+			children: [/* @__PURE__ */ (0, S.jsx)("rect", {
 				width: "100%",
 				height: "100%",
 				fill: "white"
-			}), /* @__PURE__ */ (0, M.jsx)("path", {
+			}), /* @__PURE__ */ (0, S.jsx)("path", {
 				d: n.join(""),
 				fill: "#0A1D3D"
 			})]
-		}), /* @__PURE__ */ (0, M.jsx)("figcaption", {
+		}), /* @__PURE__ */ (0, S.jsx)("figcaption", {
 			dir: "ltr",
 			children: e
 		})]
 	});
 }
-function At() {
-	let [e, t] = (0, _.useState)(null), [n, r] = (0, _.useState)(!1), [i, a] = (0, _.useState)([]), [o, s] = (0, _.useState)([]), [c, l] = (0, _.useState)({
+function qt() {
+	let [e, t] = (0, x.useState)(null), [n, r] = (0, x.useState)(!1), [i, a] = (0, x.useState)([]), [o, s] = (0, x.useState)([]), [c, l] = (0, x.useState)({
 		grades: [],
 		centers: [],
 		groups: [],
 		lessons: []
-	}), [u, d] = (0, _.useState)(null), [f, p] = (0, _.useState)(null), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)([
+	}), [u, d] = (0, x.useState)(null), [f, p] = (0, x.useState)(null), [m, h] = (0, x.useState)(null), [g, _] = (0, x.useState)([
 		"storage",
 		"whatsapp",
 		"whatsapp-center"
-	].includes(new URLSearchParams(location.search).get("view")) ? new URLSearchParams(location.search).get("view") : "room"), y = (0, _.useRef)(g), b = (0, _.useCallback)((e) => {
-		y.current = e, v(e);
-	}, []), [x, S] = (0, _.useState)(null), [C, w] = (0, _.useState)(!1), D = (0, _.useRef)(!1), O = (0, _.useCallback)((e) => {
-		D.current = e, w(e);
-	}, []), [k, ee] = (0, _.useState)(!1), ne = (0, _.useRef)(!1), re = (0, _.useCallback)((e) => {
-		ne.current = e, ee(e);
-	}, []), [j, ie] = (0, _.useState)(!0), [ae, oe] = (0, _.useState)(""), se = (0, _.useRef)(null), le = (e, t) => E(e, t, se.current), ue = async () => {
-		let e = await E("/api/exams");
+	].includes(new URLSearchParams(location.search).get("view")) ? new URLSearchParams(location.search).get("view") : "room"), v = (0, x.useRef)(g), y = (0, x.useCallback)((e) => {
+		v.current = e, _(e);
+	}, []), [b, C] = (0, x.useState)(null), [w, T] = (0, x.useState)(!1), E = (0, x.useRef)(!1), D = (0, x.useCallback)((e) => {
+		E.current = e, T(e);
+	}, []), [O, ee] = (0, x.useState)(!1), te = (0, x.useRef)(!1), k = (0, x.useCallback)((e) => {
+		te.current = e, ee(e);
+	}, []), [A, ne] = (0, x.useState)(!0), [re, j] = (0, x.useState)(""), ie = (0, x.useRef)(null), ae = (e, t) => N(e, t, ie.current), oe = async () => {
+		let e = await N("/api/exams");
 		return a(e.exams), e.exams;
-	}, de = async () => {
-		let e = await E("/api/templates");
+	}, se = async () => {
+		let e = await N("/api/templates");
 		return s(e.templates), e.templates;
-	}, fe = async () => {
-		let e = await E("/api/catalog");
+	}, ce = async () => {
+		let e = await N("/api/catalog");
 		return l(e), e;
-	}, pe = async (e) => {
-		let t = await E(`/api/exams/${e}`);
-		p(t), h(e), b("room"), O(!1);
-	}, me = async (e) => {
-		if (!ne.current) {
-			re(!0);
+	}, de = async (e) => {
+		let t = await N(`/api/exams/${e}`);
+		p(t), h(e), y("room"), D(!1);
+	}, fe = async (e) => {
+		if (!te.current) {
+			k(!0);
 			try {
 				await e();
 			} catch (e) {
-				T(e.message || "تعذر الاتصال بالجهاز", !0);
+				M(e.message || "تعذر الاتصال بالجهاز", !0);
 			} finally {
-				re(!1);
+				k(!1);
 			}
 		}
-	}, he = async (e) => {
-		if (Ct && Dt(), ne.current) throw Error("انتظر انتهاء العملية الحالية");
-		re(!0);
+	}, pe = async (e) => {
+		if (zt && Wt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
+		k(!0);
 		try {
-			return y.current === "editor" && D.current && !await te("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.") ? !1 : (e === "sheets" && await Promise.all([ue(), fe()]), e === "exams" && await de(), e === "catalog" && await fe(), b(e), O(!1), !0);
+			return v.current === "editor" && E.current && !await ue("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.") ? !1 : (e === "sheets" && await Promise.all([oe(), ce()]), e === "exams" && await se(), e === "catalog" && await ce(), y(e), D(!1), !0);
 		} finally {
-			re(!1);
+			k(!1);
 		}
 	};
-	(0, _.useEffect)(() => {
+	(0, x.useEffect)(() => {
 		let e = !0;
 		return (async () => {
 			try {
 				let n = new URLSearchParams(location.hash.slice(1)).get("center-access");
-				n && (history.replaceState(null, "", location.pathname + location.search), await E("/api/center/browser-login", { capability: n }));
-				let i = await E("/api/bootstrap");
+				n && (history.replaceState(null, "", location.pathname + location.search), await N("/api/center/browser-login", { capability: n }));
+				let i = await N("/api/bootstrap");
 				if (!e) return;
-				if (se.current = i.token, t(i), i.centerIntegrated && !Ct) {
+				if (ie.current = i.token, t(i), i.centerIntegrated && !zt) {
 					let e = document.createElement("p");
 					e.className = "notice", e.textContent = "اختر الامتحان والمجموعة والحصة على الساكند من الدليل المحفوظ، وافتح القاعة دون اتصال بالهوست. بعد التصحيح أعد الاتصال وحمّل الدرجات.", document.querySelector(".sidebar")?.appendChild(e);
 				}
 				let [o, c, u] = await Promise.all([
-					E("/api/exams"),
-					E("/api/templates"),
-					E("/api/catalog")
+					N("/api/exams"),
+					N("/api/templates"),
+					N("/api/catalog")
 				]);
 				if (!e) return;
 				a(o.exams), s(c.templates), l(u);
 				let d = o.exams;
 				if (d.length) {
-					let t = d.find((e) => I.includes(e.state)) || d[0], n = await E(`/api/exams/${t.id}`);
+					let t = d.find((e) => Vt.includes(e.state)) || d[0], n = await N(`/api/exams/${t.id}`);
 					e && (p(n), h(t.id));
 				}
 				e && r(!0);
 			} catch (t) {
-				e && oe(t.message);
+				e && j(t.message);
 			}
 		})(), () => {
 			e = !1;
 		};
-	}, []), (0, _.useEffect)(() => {
-		document.body.classList.toggle("center-whatsapp-view", Ct && g === "whatsapp-center"), document.querySelectorAll(".nav-item").forEach((e) => {
+	}, []), (0, x.useEffect)(() => {
+		document.body.classList.toggle("center-whatsapp-view", zt && g === "whatsapp-center"), document.querySelectorAll(".nav-item").forEach((e) => {
 			e.classList.toggle("active", e.dataset.view === g), e.dataset.view === g ? e.setAttribute("aria-current", "page") : e.removeAttribute("aria-current");
 		});
 		let e = document.getElementById("page-location");
-		e && (e.textContent = wt[g]);
-	}, [g]), (0, _.useEffect)(() => {
+		e && (e.textContent = Bt[g]);
+	}, [g]), (0, x.useEffect)(() => {
 		let e = (e) => {
 			let t = e.target.closest(".nav-item");
-			t && he(t.dataset.view).catch((e) => T(e.message, !0));
+			t && pe(t.dataset.view).catch((e) => M(e.message, !0));
 		}, t = document.querySelector(".sidebar nav");
 		return t?.addEventListener("click", e), () => t?.removeEventListener("click", e);
 	}, [
 		g,
-		C,
-		k
-	]), (0, _.useEffect)(() => {
+		w,
+		O
+	]), (0, x.useEffect)(() => {
 		let e = document.getElementById("backup");
 		if (!e) return;
-		let t = () => me(async () => {
-			await A("/api/backup", `massar-backup-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.sqlite3`, "application/octet-stream") && T("تم تجهيز النسخة الاحتياطية");
+		let t = () => fe(async () => {
+			await le("/api/backup", `massar-backup-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.sqlite3`, "application/octet-stream") && M("تم تجهيز النسخة الاحتياطية");
 		});
 		return e.addEventListener("click", t), () => e.removeEventListener("click", t);
-	}, [k]), (0, _.useEffect)(() => {
+	}, [O]), (0, x.useEffect)(() => {
 		if (!e) return;
 		let n = !0, r = setInterval(async () => {
 			try {
-				let r = await E("/api/status");
+				let r = await N("/api/status");
 				if (n && Array.isArray(r.studentUrls) && t((e) => !e || JSON.stringify(e.studentUrls) === JSON.stringify(r.studentUrls) ? e : {
 					...e,
 					studentUrls: r.studentUrls
-				}), e.centerIntegrated && g === "room" && !k) {
-					let e = await E("/api/exams");
+				}), e.centerIntegrated && g === "room" && !O) {
+					let e = await N("/api/exams");
 					if (!n) return;
 					a(e.exams);
-					let t = !!(document.querySelector("#review-panel,dialog[open]") || document.activeElement?.matches("input,textarea,select")), r = ft(e.exams, m, t);
+					let t = !!(document.querySelector("#review-panel,dialog[open]") || document.activeElement?.matches("input,textarea,select")), r = Ot(e.exams, m, t);
 					if (r) {
-						let e = await E(`/api/exams/${r}`);
-						n && (p(e), h(r), ie(!0));
+						let e = await N(`/api/exams/${r}`);
+						n && (p(e), h(r), ne(!0));
 						return;
 					}
 				}
-				if (g === "room" && m && !k) {
-					let e = await E(`/api/exams/${m}`);
-					n && (f && e.exam.state !== f.exam.state && await ue(), p(e));
+				if (g === "room" && m && !O) {
+					let e = await N(`/api/exams/${m}`);
+					n && (f && e.exam.state !== f.exam.state && await oe(), p(e));
 				}
-				n && ie(!0);
+				n && ne(!0);
 			} catch {
-				n && ie(!1);
+				n && ne(!1);
 			}
 		}, 3e3);
 		return () => {
@@ -13469,47 +13815,47 @@ function At() {
 		e,
 		g,
 		m,
-		k,
+		O,
 		f?.exam.state
-	]), (0, _.useEffect)(() => {
+	]), (0, x.useEffect)(() => {
 		let e = document.getElementById("admin-connection");
-		e && (e.classList.toggle("offline", !j), e.textContent = j ? "● متصل بجهاز الإدارة" : "انقطع الاتصال بجهاز الإدارة");
-	}, [j]), (0, _.useEffect)(() => {
-		if (n) return St(window, document, {
+		e && (e.classList.toggle("offline", !A), e.textContent = A ? "● متصل بجهاز الإدارة" : "انقطع الاتصال بجهاز الإدارة");
+	}, [A]), (0, x.useEffect)(() => {
+		if (n) return Rt(window, document, {
 			navigate: async (e) => {
-				if (ne.current) throw Error("انتظر انتهاء العملية الحالية");
-				return he(e);
+				if (te.current) throw Error("انتظر انتهاء العملية الحالية");
+				return pe(e);
 			},
 			canLeave: () => {
-				if (Dt(), ne.current) throw Error("انتظر انتهاء العملية الحالية");
-				return y.current !== "editor" || !D.current || te("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.");
+				if (Wt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
+				return v.current !== "editor" || !E.current || ue("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.");
 			},
-			onError: (e) => T(e.message, !0)
+			onError: (e) => M(e.message, !0)
 		});
 	}, [
 		n,
 		g,
-		C,
-		k
-	]), (0, _.useEffect)(() => {
-		n && xt(window, g);
-	}, [n, g]), (0, _.useEffect)(() => {
+		w,
+		O
+	]), (0, x.useEffect)(() => {
+		n && Lt(window, g);
+	}, [n, g]), (0, x.useEffect)(() => {
 		let e = (e) => {
-			y.current === "editor" && D.current && (e.preventDefault(), e.returnValue = "");
+			v.current === "editor" && E.current && (e.preventDefault(), e.returnValue = "");
 		};
 		return window.addEventListener("beforeunload", e), () => window.removeEventListener("beforeunload", e);
-	}, [g, C]);
-	let ge = async (e) => {
-		re(!0);
+	}, [g, w]);
+	let me = async (e) => {
+		k(!0);
 		try {
-			await le(u ? `/api/templates/${u}/save` : "/api/templates", e), await de(), b("exams"), O(!1), T("تم حفظ الامتحان في المكتبة");
+			await ae(u ? `/api/templates/${u}/save` : "/api/templates", e), await se(), y("exams"), D(!1), M("تم حفظ الامتحان في المكتبة");
 		} finally {
-			re(!1);
+			k(!1);
 		}
-	}, _e = async (t, n, r, i) => {
-		re(!0);
+	}, he = async (t, n, r, i) => {
+		k(!0);
 		try {
-			let a = await le("/api/room/open", e.centerIntegrated ? r ? {
+			let a = await ae("/api/room/open", e.centerIntegrated ? r ? {
 				standalone: !0,
 				requestId: r,
 				templateId: n,
@@ -13521,178 +13867,178 @@ function At() {
 				lessonId: t,
 				templateId: n
 			});
-			await ue(), await pe(a.id), T("تم فتح قاعة السنتر للحصة المختارة");
+			await oe(), await de(a.id), M("تم فتح قاعة السنتر للحصة المختارة");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
-			re(!1);
+			k(!1);
 		}
-	}, N = (e) => me(async () => {
-		(e !== "start" || await te("بدء الامتحان الآن؟", "سيبدأ الوقت لكل الطلاب الموجودين. تأكد أن الطلاب مستعدون.")) && (e !== "close" || await te("إنهاء هذه القاعة؟", "ستُقفل محاولات طلاب هذه القاعة فقط، وتُعتمد آخر إجابات وصلت للجهاز.")) && (await le(`/api/exams/${m}/${e}`, {}), await ue(), await pe(m), T(e === "start" ? "بدأ الامتحان" : e === "publish" ? "قاعة الانتظار مفتوحة" : "انتهى الامتحان وحُفظت الإجابات"));
-	}), P = (e) => {
-		d(e?.id || null), S(e?.config || null), b("editor"), O(!1);
+	}, ge = (e) => fe(async () => {
+		(e !== "start" || await ue("بدء الامتحان الآن؟", "سيبدأ الوقت لكل الطلاب الموجودين. تأكد أن الطلاب مستعدون.")) && (e !== "close" || await ue("إنهاء هذه القاعة؟", "ستُقفل محاولات طلاب هذه القاعة فقط، وتُعتمد آخر إجابات وصلت للجهاز.")) && (await ae(`/api/exams/${m}/${e}`, {}), await oe(), await de(m), M(e === "start" ? "بدأ الامتحان" : e === "publish" ? "قاعة الانتظار مفتوحة" : "انتهى الامتحان وحُفظت الإجابات"));
+	}), F = (e) => {
+		d(e?.id || null), C(e?.config || null), y("editor"), D(!1);
 	};
-	return ae ? /* @__PURE__ */ (0, M.jsxs)("div", {
+	return re ? /* @__PURE__ */ (0, S.jsxs)("div", {
 		className: "empty",
 		children: [
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: "تعذر فتح الإدارة" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: ae }),
-			/* @__PURE__ */ (0, M.jsx)("a", {
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: "تعذر فتح الإدارة" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: re }),
+			/* @__PURE__ */ (0, S.jsx)("a", {
 				className: "button",
 				href: "/",
 				children: "إعادة المحاولة"
 			})
 		]
-	}) : e ? g === "sheets" ? /* @__PURE__ */ (0, M.jsx)(qe, {
+	}) : e ? g === "sheets" ? /* @__PURE__ */ (0, S.jsx)(ct, {
 		catalog: c,
 		exams: i
-	}) : g === "storage" ? /* @__PURE__ */ (0, M.jsx)(Ce, {
+	}) : g === "storage" ? /* @__PURE__ */ (0, S.jsx)(Re, {
 		centerIntegrated: e.centerIntegrated,
 		token: e.token,
-		onWhatsApp: () => b("whatsapp")
-	}) : g === "whatsapp-center" ? /* @__PURE__ */ (0, M.jsx)(Ue, { batchId: new URLSearchParams(location.search).get("batch") || "" }) : g === "whatsapp" ? /* @__PURE__ */ (0, M.jsx)(Le, {
+		onWhatsApp: () => y("whatsapp")
+	}) : g === "whatsapp-center" ? /* @__PURE__ */ (0, S.jsx)(it, { batchId: new URLSearchParams(location.search).get("batch") || "" }) : g === "whatsapp" ? /* @__PURE__ */ (0, S.jsx)(Qe, {
 		token: e.token,
 		returnBatchId: new URLSearchParams(location.search).get("batch") || ""
-	}) : g === "guide" ? /* @__PURE__ */ (0, M.jsx)(Ut, { centerIntegrated: e.centerIntegrated }) : g === "catalog" ? /* @__PURE__ */ (0, M.jsx)(Ge, {
+	}) : g === "guide" ? /* @__PURE__ */ (0, S.jsx)(on, { centerIntegrated: e.centerIntegrated }) : g === "catalog" ? /* @__PURE__ */ (0, S.jsx)(ot, {
 		catalog: c,
-		request: le,
-		refresh: fe
-	}) : g === "editor" ? /* @__PURE__ */ (0, M.jsx)(ce, {
-		config: x,
-		onDirty: O,
-		onSave: ge,
-		onCancel: () => he("exams").catch((e) => T(e.message, !0))
-	}, u || "new") : g === "exams" ? /* @__PURE__ */ (0, M.jsx)(jt, {
+		request: ae,
+		refresh: ce
+	}) : g === "editor" ? /* @__PURE__ */ (0, S.jsx)(P, {
+		config: b,
+		onDirty: D,
+		onSave: me,
+		onCancel: () => pe("exams").catch((e) => M(e.message, !0))
+	}, u || "new") : g === "exams" ? /* @__PURE__ */ (0, S.jsx)(L, {
 		templates: o,
-		onEdit: P,
-		onNew: () => P(null)
-	}) : Ct ? /* @__PURE__ */ (0, M.jsx)(Ft, {
+		onEdit: F,
+		onNew: () => F(null)
+	}) : zt ? /* @__PURE__ */ (0, S.jsx)(Zt, {
 		dashboard: f,
 		bootstrap: e,
-		busy: k,
-		onState: N,
-		request: le,
-		refresh: () => pe(m),
-		onLibrary: () => he("exams").catch((e) => T(e.message, !0)),
-		launcher: /* @__PURE__ */ (0, M.jsx)(Mt, {
+		busy: O,
+		onState: ge,
+		request: ae,
+		refresh: () => de(m),
+		onLibrary: () => pe("exams").catch((e) => M(e.message, !0)),
+		launcher: /* @__PURE__ */ (0, S.jsx)(Jt, {
 			centerIntegrated: e.centerIntegrated,
 			catalog: c,
 			templates: o,
 			exams: i,
-			onOpen: _e,
-			onHistory: pe,
-			busy: k,
-			request: le,
+			onOpen: he,
+			onHistory: de,
+			busy: O,
+			request: ae,
 			currentId: m
 		})
-	}) : f ? /* @__PURE__ */ (0, M.jsx)(Rt, {
+	}) : f ? /* @__PURE__ */ (0, S.jsx)(en, {
 		dashboard: f,
 		bootstrap: e,
-		busy: k,
-		onState: N,
-		request: le,
-		refresh: () => pe(m),
-		launcher: /* @__PURE__ */ (0, M.jsx)(Mt, {
+		busy: O,
+		onState: ge,
+		request: ae,
+		refresh: () => de(m),
+		launcher: /* @__PURE__ */ (0, S.jsx)(Jt, {
 			centerIntegrated: e.centerIntegrated,
 			catalog: c,
 			templates: o,
 			exams: i,
-			onOpen: _e,
-			onHistory: pe,
-			busy: k,
-			request: le,
+			onOpen: he,
+			onHistory: de,
+			busy: O,
+			request: ae,
 			currentId: m
 		})
-	}, m) : /* @__PURE__ */ (0, M.jsx)(Mt, {
+	}, m) : /* @__PURE__ */ (0, S.jsx)(Jt, {
 		centerIntegrated: e.centerIntegrated,
 		catalog: c,
 		templates: o,
 		exams: i,
-		onOpen: _e,
-		onHistory: pe,
-		busy: k,
-		request: le
-	}) : /* @__PURE__ */ (0, M.jsx)("div", {
+		onOpen: he,
+		onHistory: de,
+		busy: O,
+		request: ae
+	}) : /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "loading",
 		children: "جارٍ فتح قاعة السنتر…"
 	});
 }
-function jt({ templates: e, onEdit: t, onNew: n }) {
-	let [r, i] = (0, _.useState)(""), a = e.filter((e) => String(e.config.title || "").toLowerCase().includes(r.toLowerCase()));
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+function L({ templates: e, onEdit: t, onNew: n }) {
+	let [r, i] = (0, x.useState)(""), a = e.filter((e) => String(e.config.title || "").toLowerCase().includes(r.toLowerCase()));
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 		className: "page-heading",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-			/* @__PURE__ */ (0, M.jsx)("span", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
 				className: "context-label",
 				children: "جهّز الامتحان مرة واستخدمه في أي حصة"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: "مكتبة الامتحانات" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: "كل امتحان محفوظ باسمه وأسئلته؛ تختاره عند فتح قاعة السنتر." })
-		] }), /* @__PURE__ */ (0, M.jsx)("button", {
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: "مكتبة الامتحانات" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: "كل امتحان محفوظ باسمه وأسئلته؛ تختاره عند فتح قاعة السنتر." })
+		] }), /* @__PURE__ */ (0, S.jsx)("button", {
 			className: "button",
 			onClick: n,
 			children: "＋ إنشاء امتحان"
 		})]
-	}), /* @__PURE__ */ (0, M.jsxs)("section", {
+	}), /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel library-panel",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "library-toolbar",
-			children: [/* @__PURE__ */ (0, M.jsxs)("label", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("label", {
 				className: "search-field",
-				children: [/* @__PURE__ */ (0, M.jsx)("span", {
+				children: [/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "sr-only",
 					children: "بحث في الامتحانات"
-				}), /* @__PURE__ */ (0, M.jsx)("input", {
+				}), /* @__PURE__ */ (0, S.jsx)("input", {
 					placeholder: "ابحث باسم الامتحان…",
 					value: r,
 					onChange: (e) => i(e.target.value)
 				})]
-			}), /* @__PURE__ */ (0, M.jsxs)("span", {
+			}), /* @__PURE__ */ (0, S.jsxs)("span", {
 				className: "muted",
-				children: [b(e.length), " امتحان محفوظ"]
+				children: [A(e.length), " امتحان محفوظ"]
 			})]
-		}), /* @__PURE__ */ (0, M.jsx)("div", {
+		}), /* @__PURE__ */ (0, S.jsx)("div", {
 			className: "exam-list",
-			children: a.length ? a.map((e) => /* @__PURE__ */ (0, M.jsxs)("button", {
+			children: a.length ? a.map((e) => /* @__PURE__ */ (0, S.jsxs)("button", {
 				className: "exam-list-row",
 				onClick: () => t(e),
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: e.config.title }), /* @__PURE__ */ (0, M.jsxs)("small", { children: [
-					b(e.config.questions?.length || 0),
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: e.config.title }), /* @__PURE__ */ (0, S.jsxs)("small", { children: [
+					A(e.config.questions?.length || 0),
 					" سؤال · ",
-					b(e.config.minutes),
+					A(e.config.minutes),
 					" دقيقة"
-				] })] }), /* @__PURE__ */ (0, M.jsx)("span", {
+				] })] }), /* @__PURE__ */ (0, S.jsx)("span", {
 					className: "exam-open-label",
 					children: "فتح وتعديل ←"
 				})]
-			}, e.id)) : /* @__PURE__ */ (0, M.jsxs)("div", {
+			}, e.id)) : /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "empty",
-				children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "لا يوجد امتحان بهذا الاسم" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "أنشئ امتحانًا جديدًا أو غيّر البحث." })]
+				children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "لا يوجد امتحان بهذا الاسم" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "أنشئ امتحانًا جديدًا أو غيّر البحث." })]
 			})
 		})]
 	})] });
 }
-function Mt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy: a, currentId: o, request: s, centerIntegrated: c = !1 }) {
-	let [l, u] = (0, _.useState)(""), [d, f] = (0, _.useState)(""), [p, m] = (0, _.useState)(""), [h, g] = (0, _.useState)(""), [v, y] = (0, _.useState)(""), x = (t, n, r) => (e[t] || []).filter((e) => e[n] === r), S = n.filter((e) => I.includes(e.state)), [C, w] = (0, _.useState)(null), [D, O] = (0, _.useState)(!1);
-	(0, _.useEffect)(() => {
+function Jt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy: a, currentId: o, request: s, centerIntegrated: c = !1 }) {
+	let [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)(""), [p, m] = (0, x.useState)(""), [h, g] = (0, x.useState)(""), [_, v] = (0, x.useState)(""), y = (t, n, r) => (e[t] || []).filter((e) => e[n] === r), b = n.filter((e) => Vt.includes(e.state)), [C, w] = (0, x.useState)(null), [T, E] = (0, x.useState)(!1);
+	(0, x.useEffect)(() => {
 		let e = !0;
-		return E("/api/settings/rooms").then((t) => {
+		return N("/api/settings/rooms").then((t) => {
 			e && w(t.multipleRooms);
-		}).catch((e) => T(e.message, !0)), () => {
+		}).catch((e) => M(e.message, !0)), () => {
 			e = !1;
 		};
 	}, []);
-	let k = async (e) => {
-		O(!0);
+	let D = async (e) => {
+		E(!0);
 		try {
 			let t = await s("/api/settings/rooms", { multipleRooms: e });
-			w(t.multipleRooms), T(e ? "تم تفعيل تشغيل أكثر من قاعة" : "تم الرجوع لقاعة واحدة");
+			w(t.multipleRooms), M(e ? "تم تفعيل تشغيل أكثر من قاعة" : "تم الرجوع لقاعة واحدة");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
-			O(!1);
+			E(!1);
 		}
-	}, ee = (t) => {
+	}, O = (t) => {
 		let n = e.lessons?.find((e) => e.id === t);
 		if (!n) return c ? "الرصد بعد النقل للهوست" : "جلسة قديمة";
 		let r = e.groups?.find((e) => e.id === n.groupId);
@@ -13701,178 +14047,178 @@ function Mt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy:
 			r?.name,
 			n.name
 		].filter(Boolean).join(" · ");
-	}, A = /* @__PURE__ */ (0, M.jsxs)("label", {
+	}, ee = /* @__PURE__ */ (0, S.jsxs)("label", {
 		className: "multiple-rooms-option",
-		children: [/* @__PURE__ */ (0, M.jsx)("input", {
+		children: [/* @__PURE__ */ (0, S.jsx)("input", {
 			type: "checkbox",
 			checked: C === !0,
-			disabled: a || D || C === null,
-			onChange: (e) => k(e.target.checked)
-		}), /* @__PURE__ */ (0, M.jsxs)("span", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "تشغيل أكثر من قاعة في نفس الوقت" }), /* @__PURE__ */ (0, M.jsx)("small", { children: "قاعة واحدة: دخول مباشر. أكثر من قاعة: اختيار إجباري للطلاب الجدد. الطلاب الموجودون يظلون في قاعتهم." })] })]
-	}), te = n.length > 0 && /* @__PURE__ */ (0, M.jsxs)("section", {
+			disabled: a || T || C === null,
+			onChange: (e) => D(e.target.checked)
+		}), /* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "تشغيل أكثر من قاعة في نفس الوقت" }), /* @__PURE__ */ (0, S.jsx)("small", { children: "قاعة واحدة: دخول مباشر. أكثر من قاعة: اختيار إجباري للطلاب الجدد. الطلاب الموجودون يظلون في قاعتهم." })] })]
+	}), te = n.length > 0 && /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel history-panel",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "padded section-top",
-			children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "سجل الجلسات والنتائج" }), /* @__PURE__ */ (0, M.jsxs)("span", {
+			children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "سجل الجلسات والنتائج" }), /* @__PURE__ */ (0, S.jsxs)("span", {
 				className: "muted",
-				children: [b(n.length), " جلسة"]
+				children: [A(n.length), " جلسة"]
 			})]
-		}), n.map((e) => /* @__PURE__ */ (0, M.jsxs)("button", {
+		}), n.map((e) => /* @__PURE__ */ (0, S.jsxs)("button", {
 			className: `exam-list-row ${e.id === o ? "selected" : ""}`,
 			onClick: () => i(e.id),
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: e.title }), /* @__PURE__ */ (0, M.jsxs)("small", { children: [
-					ee(e.lessonId),
+				/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: e.title }), /* @__PURE__ */ (0, S.jsxs)("small", { children: [
+					O(e.lessonId),
 					" · ",
 					(/* @__PURE__ */ new Date(e.createdAt * 1e3)).toLocaleDateString("ar-EG"),
 					" · ",
-					b(e.submitted),
+					A(e.submitted),
 					" تسليم"
 				] })] }),
-				Ot(e.state),
-				/* @__PURE__ */ (0, M.jsx)("span", {
+				Gt(e.state),
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "exam-open-label",
 					children: "عرض ←"
 				})
 			]
 		}, e.id))]
 	});
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsx)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsx)("div", {
 			className: "page-heading",
-			children: /* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: /* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: "قاعة السنتر"
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h1", { children: c ? "اختر الامتحان والمجموعة والحصة" : "اختر الحصة والامتحان" }),
-				/* @__PURE__ */ (0, M.jsx)("p", { children: c ? "اختَر الامتحان والمجموعة والحصة من دليل السنتر المحفوظ تلقائيًا. لا تحتاج اتصالًا بالهوست أو كشف طلاب لفتح القاعة." : "الامتحانات تُجهّز في المكتبة. هنا تربط نسخة من الامتحان بالحصة وتفتحها للطلاب." })
+				/* @__PURE__ */ (0, S.jsx)("h1", { children: c ? "اختر الامتحان والمجموعة والحصة" : "اختر الحصة والامتحان" }),
+				/* @__PURE__ */ (0, S.jsx)("p", { children: c ? "اختَر الامتحان والمجموعة والحصة من دليل السنتر المحفوظ تلقائيًا. لا تحتاج اتصالًا بالهوست أو كشف طلاب لفتح القاعة." : "الامتحانات تُجهّز في المكتبة. هنا تربط نسخة من الامتحان بالحصة وتفتحها للطلاب." })
 			] })
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel launcher-panel",
 			children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "section-top",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "فتح جلسة جديدة" }), /* @__PURE__ */ (0, M.jsx)("p", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "فتح جلسة جديدة" }), /* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: C ? "يمكن فتح أكثر من قاعة؛ الطلاب الجدد يختارون القاعة عند وجود قاعتين أو أكثر." : "يمكن فتح جلسة واحدة في الوقت نفسه."
-					})] }), S.length > 0 && /* @__PURE__ */ (0, M.jsxs)("span", {
+					})] }), b.length > 0 && /* @__PURE__ */ (0, S.jsxs)("span", {
 						className: "badge waiting",
-						children: [b(S.length), " قاعة مفتوحة"]
+						children: [A(b.length), " قاعة مفتوحة"]
 					})]
 				}),
-				Ct ? /* @__PURE__ */ (0, M.jsxs)("details", {
+				zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 					className: "center-room-options",
-					children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "إعدادات القاعات" }), A]
-				}) : A,
-				!c && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+					children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "إعدادات القاعات" }), ee]
+				}) : ee,
+				!c && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "launcher-grid",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["الصف الدراسي", /* @__PURE__ */ (0, M.jsxs)("select", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["الصف الدراسي", /* @__PURE__ */ (0, S.jsxs)("select", {
 							value: l,
 							onChange: (e) => {
 								u(e.target.value), f(""), m(""), g("");
 							},
-							children: [/* @__PURE__ */ (0, M.jsx)("option", {
+							children: [/* @__PURE__ */ (0, S.jsx)("option", {
 								value: "",
 								children: "اختر الصف"
-							}), e.grades?.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+							}), e.grades?.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e.id,
 								children: e.name
 							}, e.id))]
 						})] }),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["السنتر", /* @__PURE__ */ (0, M.jsxs)("select", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["السنتر", /* @__PURE__ */ (0, S.jsxs)("select", {
 							value: d,
 							disabled: !l,
 							onChange: (e) => {
 								f(e.target.value), m(""), g("");
 							},
-							children: [/* @__PURE__ */ (0, M.jsx)("option", {
+							children: [/* @__PURE__ */ (0, S.jsx)("option", {
 								value: "",
 								children: "اختر السنتر"
-							}), x("centers", "gradeId", l).map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+							}), y("centers", "gradeId", l).map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e.id,
 								children: e.name
 							}, e.id))]
 						})] }),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, M.jsxs)("select", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, S.jsxs)("select", {
 							value: p,
 							disabled: !d,
 							onChange: (e) => {
 								m(e.target.value), g("");
 							},
-							children: [/* @__PURE__ */ (0, M.jsx)("option", {
+							children: [/* @__PURE__ */ (0, S.jsx)("option", {
 								value: "",
 								children: "اختر المجموعة"
-							}), x("groups", "centerId", d).map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+							}), y("groups", "centerId", d).map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e.id,
 								children: e.name
 							}, e.id))]
 						})] }),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["الحصة", /* @__PURE__ */ (0, M.jsxs)("select", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["الحصة", /* @__PURE__ */ (0, S.jsxs)("select", {
 							value: h,
 							disabled: !p,
 							onChange: (e) => g(e.target.value),
-							children: [/* @__PURE__ */ (0, M.jsx)("option", {
+							children: [/* @__PURE__ */ (0, S.jsx)("option", {
 								value: "",
 								children: "اختر الحصة"
-							}), x("lessons", "groupId", p).map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+							}), y("lessons", "groupId", p).map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e.id,
 								children: e.name
 							}, e.id))]
 						})] }),
-						/* @__PURE__ */ (0, M.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, M.jsxs)("select", {
-							value: v,
-							onChange: (e) => y(e.target.value),
-							children: [/* @__PURE__ */ (0, M.jsx)("option", {
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, S.jsxs)("select", {
+							value: _,
+							onChange: (e) => v(e.target.value),
+							children: [/* @__PURE__ */ (0, S.jsx)("option", {
 								value: "",
 								children: "اختر الامتحان"
-							}), t.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+							}), t.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e.id,
 								children: e.config.title
 							}, e.id))]
 						})] })
 					]
-				}), /* @__PURE__ */ (0, M.jsxs)("div", {
+				}), /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "actions launcher-actions",
 					children: [
-						/* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button",
-							disabled: a || D || C === null || !h || !v || !C && S.length > 0,
-							onClick: () => r(h, v),
+							disabled: a || T || C === null || !h || !_ || !C && b.length > 0,
+							onClick: () => r(h, _),
 							children: "فتح قاعة السنتر ←"
 						}),
-						(!e.grades?.length || !e.lessons?.length) && /* @__PURE__ */ (0, M.jsx)("span", {
+						(!e.grades?.length || !e.lessons?.length) && /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "help",
 							children: "أضف الصف والسنتر والمجموعة والحصة من «تنظيم السنتر» أولًا."
 						}),
-						!t.length && /* @__PURE__ */ (0, M.jsx)("span", {
+						!t.length && /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "help",
 							children: "أنشئ امتحانًا من «مكتبة الامتحانات» أولًا."
 						})
 					]
 				})] }),
-				c && /* @__PURE__ */ (0, M.jsx)(Nt, {
+				c && /* @__PURE__ */ (0, S.jsx)(Yt, {
 					templates: t,
 					onOpen: r,
-					disabled: a || D || C === null || !C && S.length > 0
+					disabled: a || T || C === null || !C && b.length > 0
 				})
 			]
 		}),
-		n.length > 0 && (Ct ? /* @__PURE__ */ (0, M.jsxs)("details", {
+		n.length > 0 && (zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 			className: "center-room-history",
-			children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "سجل الجلسات والنتائج" }), te]
+			children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "سجل الجلسات والنتائج" }), te]
 		}) : te)
 	] });
 }
-function Nt({ templates: e, onOpen: t, disabled: n }) {
-	let [r, i] = (0, _.useState)(""), [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(""), [l, u] = (0, _.useState)(""), [d, f] = (0, _.useState)({
+function Yt({ templates: e, onOpen: t, disabled: n }) {
+	let [r, i] = (0, x.useState)(""), [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)({
 		contexts: [],
 		updatedAt: null
-	}), [p, m] = (0, _.useState)(!0), [h, g] = (0, _.useState)(""), v = (0, _.useRef)(null);
-	(0, _.useEffect)(() => {
-		let e = !0, t = () => E("/api/room/cached-catalog").then((t) => {
+	}), [p, m] = (0, x.useState)(!0), [h, g] = (0, x.useState)(""), _ = (0, x.useRef)(null);
+	(0, x.useEffect)(() => {
+		let e = !0, t = () => N("/api/room/cached-catalog").then((t) => {
 			e && (f(t), g(""));
 		}).catch((t) => {
 			e && g(t.message);
@@ -13885,21 +14231,21 @@ function Nt({ templates: e, onOpen: t, disabled: n }) {
 			e = !1, clearInterval(n);
 		};
 	}, []);
-	let y = d.contexts || [], x = (e, t) => [...new Map(e.map((e) => [e[t], e])).values()], S = x(y, "groupId"), C = x(y.filter((e) => e.groupId === a), "sessionId"), w = y.filter((e) => e.groupId === a && e.sessionId === s), T = w.find((e) => e.activityId === l), D = (e) => {
-		v.current = null, e();
-	}, O = (e) => {
+	let v = d.contexts || [], y = (e, t) => [...new Map(e.map((e) => [e[t], e])).values()], b = y(v, "groupId"), C = y(v.filter((e) => e.groupId === a), "sessionId"), w = v.filter((e) => e.groupId === a && e.sessionId === s), T = w.find((e) => e.activityId === l), E = (e) => {
+		_.current = null, e();
+	}, D = (e) => {
 		let n = e?.id || "";
-		(!v.current || v.current.contextId !== n) && (v.current = {
+		(!_.current || _.current.contextId !== n) && (_.current = {
 			id: crypto.randomUUID(),
 			contextId: n
-		}), t(null, r, v.current.id, n);
+		}), t(null, r, _.current.id, n);
 	};
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		p && /* @__PURE__ */ (0, M.jsx)("p", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		p && /* @__PURE__ */ (0, S.jsx)("p", {
 			role: "status",
 			children: "جارٍ قراءة دليل المجموعات والحصص المحفوظ…"
 		}),
-		!p && d.updatedAt && /* @__PURE__ */ (0, M.jsxs)("p", {
+		!p && d.updatedAt && /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "help",
 			children: [
 				"دليل السنتر محفوظ على هذا الجهاز · آخر تحديث ",
@@ -13907,94 +14253,94 @@ function Nt({ templates: e, onOpen: t, disabled: n }) {
 				". يعمل دون اتصال بالهوست."
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "launcher-grid",
-			children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, M.jsxs)("select", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, S.jsxs)("select", {
 				value: r,
-				onChange: (e) => D(() => i(e.target.value)),
-				children: [/* @__PURE__ */ (0, M.jsx)("option", {
+				onChange: (e) => E(() => i(e.target.value)),
+				children: [/* @__PURE__ */ (0, S.jsx)("option", {
 					value: "",
 					children: "اختر الامتحان من المكتبة"
-				}), e.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+				}), e.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 					value: e.id,
 					children: e.config.title
 				}, e.id))]
-			})] }), y.length > 0 && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, M.jsxs)("select", {
+			})] }), v.length > 0 && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المجموعة", /* @__PURE__ */ (0, S.jsxs)("select", {
 					value: a,
 					disabled: p,
-					onChange: (e) => D(() => {
+					onChange: (e) => E(() => {
 						o(e.target.value), c(""), u("");
 					}),
-					children: [/* @__PURE__ */ (0, M.jsx)("option", {
+					children: [/* @__PURE__ */ (0, S.jsx)("option", {
 						value: "",
 						children: "اختر المجموعة"
-					}), S.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+					}), b.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 						value: e.groupId,
 						children: e.groupLabel
 					}, e.groupId))]
 				})] }),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["الحصة الفعلية", /* @__PURE__ */ (0, M.jsxs)("select", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["الحصة الفعلية", /* @__PURE__ */ (0, S.jsxs)("select", {
 					value: s,
 					disabled: !a || p,
-					onChange: (e) => D(() => {
+					onChange: (e) => E(() => {
 						c(e.target.value), u("");
 					}),
-					children: [/* @__PURE__ */ (0, M.jsx)("option", {
+					children: [/* @__PURE__ */ (0, S.jsx)("option", {
 						value: "",
 						children: "اختر الحصة"
-					}), C.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+					}), C.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 						value: e.sessionId,
 						children: e.sessionLabel
 					}, e.sessionId))]
 				})] }),
-				/* @__PURE__ */ (0, M.jsxs)("label", { children: ["امتحان الرصد", /* @__PURE__ */ (0, M.jsxs)("select", {
+				/* @__PURE__ */ (0, S.jsxs)("label", { children: ["امتحان الرصد", /* @__PURE__ */ (0, S.jsxs)("select", {
 					value: l,
 					disabled: !s || p,
-					onChange: (e) => D(() => u(e.target.value)),
-					children: [/* @__PURE__ */ (0, M.jsx)("option", {
+					onChange: (e) => E(() => u(e.target.value)),
+					children: [/* @__PURE__ */ (0, S.jsx)("option", {
 						value: "",
 						children: "اختر امتحان الرصد"
-					}), w.map((e) => /* @__PURE__ */ (0, M.jsxs)("option", {
+					}), w.map((e) => /* @__PURE__ */ (0, S.jsxs)("option", {
 						value: e.activityId,
 						children: [
 							e.activityName,
 							" · من ",
-							b(e.maxScore)
+							A(e.maxScore)
 						]
 					}, e.activityId))]
 				})] })
 			] })]
 		}),
-		T && /* @__PURE__ */ (0, M.jsxs)("p", {
+		T && /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "help",
 			children: [
 				"مجموع امتحان الرصد: ",
-				b(T.maxScore),
+				A(T.maxScore),
 				". اختر نموذجًا يطابق المجموع المسموح: ",
-				(T.allowedMaxScores || [T.maxScore]).map(b).join(" / "),
+				(T.allowedMaxScores || [T.maxScore]).map(A).join(" / "),
 				"."
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "actions launcher-actions",
-			children: [/* @__PURE__ */ (0, M.jsx)("button", {
+			children: [/* @__PURE__ */ (0, S.jsx)("button", {
 				className: "button",
-				disabled: n || p || !r || y.length > 0 && !T,
-				onClick: () => O(T),
+				disabled: n || p || !r || v.length > 0 && !T,
+				onClick: () => D(T),
 				children: "فتح قاعة السنتر ←"
-			}), y.length > 0 && /* @__PURE__ */ (0, M.jsx)("button", {
+			}), v.length > 0 && /* @__PURE__ */ (0, S.jsx)("button", {
 				className: "button secondary",
 				disabled: n || p || !r,
-				onClick: () => O(null),
+				onClick: () => D(null),
 				children: "فتح دون ربط حصة"
 			})]
 		}),
-		!p && !y.length && /* @__PURE__ */ (0, M.jsx)("p", {
+		!p && !v.length && /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "notice",
 			children: "دليل الحصص غير موجود بعد. يمكنك فتح الامتحان الآن، ثم اختيار وجهة الرصد على الهوست بعد الاتصال. يُحفظ الدليل تلقائيًا عند ربط الساكند بالهوست وتسجيل دخول الموظف."
 		}),
-		h && /* @__PURE__ */ (0, M.jsxs)("p", {
+		h && /* @__PURE__ */ (0, S.jsxs)("p", {
 			role: "alert",
 			className: "notice",
 			children: [
@@ -14003,26 +14349,26 @@ function Nt({ templates: e, onOpen: t, disabled: n }) {
 				". الامتحانات المحفوظة ما زالت متاحة."
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsx)("p", {
+		/* @__PURE__ */ (0, S.jsx)("p", {
 			className: "help",
 			children: "الطالب يكتب اسمه ورقم الموبايل والكود. لا يحتاج حضورًا سابقًا؛ الإجابات والدرجات محفوظة على الساكند، وتنتقل للهوست بعد التصحيح."
 		}),
-		!e.length && /* @__PURE__ */ (0, M.jsx)("p", {
+		!e.length && /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "help",
 			children: "أضف نموذجًا من مكتبة الامتحانات أولًا."
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("details", { children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "قاعة مرتبطة بكشف مجهّز سابقًا — اختياري" }), /* @__PURE__ */ (0, M.jsx)(Pt, {
+		/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "قاعة مرتبطة بكشف مجهّز سابقًا — اختياري" }), /* @__PURE__ */ (0, S.jsx)(Xt, {
 			templates: e,
 			onOpen: t,
 			disabled: n
 		})] })
 	] });
 }
-function Pt({ templates: e, onOpen: t, disabled: n }) {
-	let [r, i] = (0, _.useState)([]), [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(""), [l, u] = (0, _.useState)("");
-	(0, _.useEffect)(() => {
+function Xt({ templates: e, onOpen: t, disabled: n }) {
+	let [r, i] = (0, x.useState)([]), [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)("");
+	(0, x.useEffect)(() => {
 		let e = !0;
-		return E("/api/room/center-choices").then((t) => {
+		return N("/api/room/center-choices").then((t) => {
 			e && i(t.contexts);
 		}).catch((t) => {
 			e && u(t.message);
@@ -14031,16 +14377,16 @@ function Pt({ templates: e, onOpen: t, disabled: n }) {
 		};
 	}, []);
 	let d = r.find((e) => e.id === a);
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "launcher-grid",
-			children: [/* @__PURE__ */ (0, M.jsxs)("label", { children: ["الحصة المجهّزة من السنتر", /* @__PURE__ */ (0, M.jsxs)("select", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["الحصة المجهّزة من السنتر", /* @__PURE__ */ (0, S.jsxs)("select", {
 				value: a,
 				onChange: (e) => o(e.target.value),
-				children: [/* @__PURE__ */ (0, M.jsx)("option", {
+				children: [/* @__PURE__ */ (0, S.jsx)("option", {
 					value: "",
 					children: "اختر المجموعة والحصة والامتحان في الرصد"
-				}), r.map((e) => /* @__PURE__ */ (0, M.jsxs)("option", {
+				}), r.map((e) => /* @__PURE__ */ (0, S.jsxs)("option", {
 					value: e.id,
 					children: [
 						e.groupLabel,
@@ -14050,90 +14396,90 @@ function Pt({ templates: e, onOpen: t, disabled: n }) {
 						e.activityName
 					]
 				}, e.id))]
-			})] }), /* @__PURE__ */ (0, M.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, M.jsxs)("select", {
+			})] }), /* @__PURE__ */ (0, S.jsxs)("label", { children: ["اسم الامتحان", /* @__PURE__ */ (0, S.jsxs)("select", {
 				value: s,
 				onChange: (e) => c(e.target.value),
-				children: [/* @__PURE__ */ (0, M.jsx)("option", {
+				children: [/* @__PURE__ */ (0, S.jsx)("option", {
 					value: "",
 					children: "اختر الامتحان من المكتبة"
-				}), e.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+				}), e.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 					value: e.id,
 					children: e.config.title
 				}, e.id))]
 			})] })]
 		}),
-		d && /* @__PURE__ */ (0, M.jsxs)("p", {
+		d && /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "help",
 			children: [
 				"الدرجة النهائية في الرصد: ",
-				b(d.maxScore),
+				A(d.maxScore),
 				". اختر امتحانًا بنفس المجموع."
 			]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "actions launcher-actions",
 			children: [
-				/* @__PURE__ */ (0, M.jsx)("button", {
+				/* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button",
 					disabled: n || !a || !s,
 					onClick: () => t(a, s),
 					children: "فتح قاعة السنتر ←"
 				}),
-				!r.length && /* @__PURE__ */ (0, M.jsx)("p", {
+				!r.length && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "وصّل الكابل، ثم جهّز كشف الحصة من شاشة «تجهيز الحصة وكشف الطلاب» في البرنامج قبل الدخول للقاعة."
 				}),
-				!e.length && /* @__PURE__ */ (0, M.jsx)("p", {
+				!e.length && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "help",
 					children: "أضف نموذجًا من مكتبة الامتحانات أولًا."
 				})
 			]
 		}),
-		l && /* @__PURE__ */ (0, M.jsx)("p", {
+		l && /* @__PURE__ */ (0, S.jsx)("p", {
 			role: "alert",
 			className: "notice",
 			children: l
 		})
 	] });
 }
-function Ft({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, onLibrary: o, launcher: s }) {
-	let c = e?.exam, l = () => c ? c.state === "closed" ? "grades" : "monitor" : "setup", [u, d] = (0, _.useState)(l), f = (e) => {
+function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, onLibrary: o, launcher: s }) {
+	let c = e?.exam, l = () => c ? c.state === "closed" ? "grades" : "monitor" : "setup", [u, d] = (0, x.useState)(l), f = (e) => {
 		if (e !== u) try {
-			Dt(), d(e);
+			Wt(), d(e);
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		}
-	}, p = (0, _.useRef)(c?.id);
-	(0, _.useEffect)(() => {
+	}, p = (0, x.useRef)(c?.id);
+	(0, x.useEffect)(() => {
 		p.current !== c?.id && (p.current = c?.id, d(l()));
-	}, [c?.id]), (0, _.useEffect)(() => {
+	}, [c?.id]), (0, x.useEffect)(() => {
 		c?.state === "closed" && d("grades");
 	}, [c?.state]);
-	let m = e?.attempts.filter((e) => e.joined_at && !e.cancelled_at) || [], h = m.filter((e) => e.submitted_at), g = h.filter((e) => e.pending > 0), v = e?.centerTarget, y = [
-		v?.groupLabel,
-		v?.sessionLabel,
-		v?.activityName
-	].filter(Boolean).join(" · ") || (v ? "الحصة مرتبطة بالسنتر؛ تفاصيل وجهة الرصد تظهر على الهوست." : "قاعة دون ربط حصة. تُحدد وجهة الرصد على الهوست عند نقل النتائج.");
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	let m = e?.attempts.filter((e) => e.joined_at && !e.cancelled_at) || [], h = m.filter((e) => e.submitted_at), g = h.filter((e) => e.pending > 0), _ = e?.centerTarget, v = [
+		_?.groupLabel,
+		_?.sessionLabel,
+		_?.activityName
+	].filter(Boolean).join(" · ") || (_ ? "الحصة مرتبطة بالسنتر؛ تفاصيل وجهة الرصد تظهر على الهوست." : "قاعة دون ربط حصة. تُحدد وجهة الرصد على الهوست عند نقل النتائج.");
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "center-exam-flow",
 		"aria-label": "إدارة الامتحانات",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("header", {
+			/* @__PURE__ */ (0, S.jsxs)("header", {
 				className: "page-heading",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("h1", { children: "إدارة الامتحانات" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "افتح القاعة، تابع الطلاب، ثم صحّح وانقل النتائج للهوست." })] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h1", { children: "إدارة الامتحانات" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "افتح القاعة، تابع الطلاب، ثم صحّح وانقل النتائج للهوست." })] }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary",
 					onClick: o,
 					children: "مكتبة الامتحانات"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("nav", {
+			/* @__PURE__ */ (0, S.jsx)("nav", {
 				className: "center-exam-stages",
 				"aria-label": "مراحل إدارة الامتحان",
 				children: [
 					["setup", "فتح القاعة"],
 					["monitor", "متابعة الطلاب"],
 					["grades", "التصحيح والرصد"]
-				].map(([e, t]) => /* @__PURE__ */ (0, M.jsx)("button", {
+				].map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("button", {
 					type: "button",
 					"aria-pressed": u === e,
 					disabled: e !== "setup" && !c,
@@ -14141,60 +14487,60 @@ function Ft({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 					children: t
 				}, e))
 			}),
-			u === "setup" ? /* @__PURE__ */ (0, M.jsxs)("div", {
+			u === "setup" ? /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "center-exam-setup",
-				children: [c && /* @__PURE__ */ (0, M.jsxs)("div", {
+				children: [c && /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "center-room-context",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: c.config.title }), /* @__PURE__ */ (0, M.jsx)("p", { children: y })] }),
-						Ot(c.state),
-						/* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: c.config.title }), /* @__PURE__ */ (0, S.jsx)("p", { children: v })] }),
+						Gt(c.state),
+						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							onClick: () => f(c.state === "closed" ? "grades" : "monitor"),
 							children: "العودة للجلسة الحالية"
 						})
 					]
 				}), s]
-			}) : /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+			}) : /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "center-room-context",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: c.config.title }), /* @__PURE__ */ (0, M.jsx)("p", { children: y })] }), /* @__PURE__ */ (0, M.jsx)("button", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: c.config.title }), /* @__PURE__ */ (0, S.jsx)("p", { children: v })] }), /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary small",
 						onClick: () => f("setup"),
 						children: "الجلسات وبيانات القاعة"
 					})]
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "center-room-toolbar",
-					children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "center-room-summary",
 						"aria-label": "ملخص القاعة",
 						children: [
-							Ot(c.state),
-							/* @__PURE__ */ (0, M.jsxs)("span", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: b(m.length) }), " دخلوا القاعة"] }),
-							/* @__PURE__ */ (0, M.jsxs)("span", { children: [
-								/* @__PURE__ */ (0, M.jsx)("strong", { children: b(u === "grades" ? h.length - g.length : h.length) }),
+							Gt(c.state),
+							/* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: A(m.length) }), " دخلوا القاعة"] }),
+							/* @__PURE__ */ (0, S.jsxs)("span", { children: [
+								/* @__PURE__ */ (0, S.jsx)("strong", { children: A(u === "grades" ? h.length - g.length : h.length) }),
 								" ",
 								u === "grades" ? "جاهزة للرصد" : "سلّموا"
 							] }),
-							/* @__PURE__ */ (0, M.jsxs)("span", { children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: b(g.length) }), " ينتظرون التصحيح"] })
+							/* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: A(g.length) }), " ينتظرون التصحيح"] })
 						]
-					}), /* @__PURE__ */ (0, M.jsxs)("div", {
+					}), /* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "actions",
 						children: [
-							c.state === "draft" && /* @__PURE__ */ (0, M.jsx)("button", {
+							c.state === "draft" && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button",
 								disabled: n,
 								onClick: () => r("publish"),
 								children: "فتح قاعة الانتظار ←"
 							}),
-							c.state === "waiting" && /* @__PURE__ */ (0, M.jsx)("button", {
+							c.state === "waiting" && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button",
 								disabled: n,
 								onClick: () => r("start"),
 								children: "ابدأ الامتحان للجميع ←"
 							}),
-							I.includes(c.state) && /* @__PURE__ */ (0, M.jsx)("button", {
+							Vt.includes(c.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button secondary danger-text",
 								disabled: n,
 								onClick: () => r("close"),
@@ -14203,29 +14549,29 @@ function Ft({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						]
 					})]
 				}),
-				c.state === "running" && /* @__PURE__ */ (0, M.jsx)(Je, {
+				c.state === "running" && /* @__PURE__ */ (0, S.jsx)(lt, {
 					dashboard: e,
 					request: i,
 					refresh: a
 				}),
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "center-room-disclosures",
-					children: [/* @__PURE__ */ (0, M.jsxs)("details", {
+					children: [/* @__PURE__ */ (0, S.jsxs)("details", {
 						className: "center-room-link",
-						children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "رابط دخول الطلاب ورمز QR" }), /* @__PURE__ */ (0, M.jsx)(Lt, {
+						children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "رابط دخول الطلاب ورمز QR" }), /* @__PURE__ */ (0, S.jsx)($t, {
 							exam: c,
 							bootstrap: t
 						})]
-					}), /* @__PURE__ */ (0, M.jsxs)("details", {
+					}), /* @__PURE__ */ (0, S.jsxs)("details", {
 						className: "center-room-settings",
 						children: [
-							/* @__PURE__ */ (0, M.jsx)("summary", { children: "الأسئلة وإعدادات المراقبة" }),
-							/* @__PURE__ */ (0, M.jsxs)("details", { children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "عرض أسئلة الجلسة" }), /* @__PURE__ */ (0, M.jsx)(zt, { exam: c })] }),
-							I.includes(c.state) && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)(dt, {
+							/* @__PURE__ */ (0, S.jsx)("summary", { children: "الأسئلة وإعدادات المراقبة" }),
+							/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "عرض أسئلة الجلسة" }), /* @__PURE__ */ (0, S.jsx)(tn, { exam: c })] }),
+							Vt.includes(c.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Dt, {
 								exam: c,
 								request: i,
 								refresh: a
-							}), /* @__PURE__ */ (0, M.jsx)(ut, {
+							}), /* @__PURE__ */ (0, S.jsx)(Et, {
 								exam: c,
 								request: i,
 								refresh: a
@@ -14233,14 +14579,14 @@ function Ft({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						]
 					})]
 				}),
-				u === "grades" && /* @__PURE__ */ (0, M.jsx)("p", {
+				u === "grades" && /* @__PURE__ */ (0, S.jsx)("p", {
 					className: "center-recording-note",
 					children: "تُحفظ النتائج على الساكند. بعد اكتمال التصحيح، أعد توصيل الجهازين واختر «تحميل الدرجات» على الهوست لتأكيد الرصد دفعة واحدة. تحتفظ كل نتيجة بمجموعها الفعلي."
 				}),
-				/* @__PURE__ */ (0, M.jsx)("section", {
+				/* @__PURE__ */ (0, S.jsx)("section", {
 					className: "center-room-roster",
 					"aria-label": u === "grades" ? "التصحيح والرصد" : "متابعة الطلاب",
-					children: /* @__PURE__ */ (0, M.jsx)(Bt, {
+					children: /* @__PURE__ */ (0, S.jsx)(nn, {
 						dashboard: e,
 						tab: u === "grades" ? "results" : "students",
 						request: i,
@@ -14252,7 +14598,7 @@ function Ft({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 		]
 	});
 }
-function It({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
+function Qt({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
 	let a = i === "results" ? [
 		"all",
 		"pending",
@@ -14263,129 +14609,129 @@ function It({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
 		"solving",
 		"submitted",
 		"problem"
-	], o = ([r, i]) => /* @__PURE__ */ (0, M.jsxs)("button", {
+	], o = ([r, i]) => /* @__PURE__ */ (0, S.jsxs)("button", {
 		type: "button",
 		className: `filter-chip ${t === r ? "active" : ""}`,
-		"aria-label": `${i}: ${b(e[r])} طالب`,
+		"aria-label": `${i}: ${A(e[r])} طالب`,
 		"aria-pressed": t === r,
 		onClick: () => n(r),
-		children: [i, /* @__PURE__ */ (0, M.jsx)("strong", { children: b(e[r]) })]
+		children: [i, /* @__PURE__ */ (0, S.jsx)("strong", { children: A(e[r]) })]
 	}, r);
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "center-roster-filters",
 		"aria-label": "حالات الطلاب",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 			role: "group",
 			"aria-label": "تصفية الطلاب",
-			children: [r.filter(([e]) => a.includes(e)).map(o), /* @__PURE__ */ (0, M.jsxs)("details", {
+			children: [r.filter(([e]) => a.includes(e)).map(o), /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "center-extra-filters",
-				children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "فلاتر أخرى" }), /* @__PURE__ */ (0, M.jsx)("div", {
+				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "فلاتر أخرى" }), /* @__PURE__ */ (0, S.jsx)("div", {
 					role: "group",
 					"aria-label": "حالات ومراقبة إضافية",
 					children: r.filter(([e]) => !a.includes(e)).map(o)
 				})]
 			})]
-		}), /* @__PURE__ */ (0, M.jsxs)("p", {
+		}), /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "help",
 			role: "status",
 			children: [
 				"المعروض: ",
 				r.find(([e]) => e === t)?.[1],
 				" · ",
-				b(e[t]),
+				A(e[t]),
 				" طالب"
 			]
 		})]
 	});
 }
-function Lt({ exam: e, bootstrap: t }) {
-	let n = me(pe()), [r, i] = (0, _.useState)(""), a = n || (t.studentUrls.includes(r) ? r : t.studentUrls[0]);
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+function $t({ exam: e, bootstrap: t }) {
+	let n = xe(be()), [r, i] = (0, x.useState)(""), a = n || (t.studentUrls.includes(r) ? r : t.studentUrls[0]);
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "join-panel",
-		children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-			/* @__PURE__ */ (0, M.jsx)("span", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
 				className: "context-label",
 				children: "دخول الطلاب"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("h2", { children: "رابط دخول الطلاب" }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: t.centerIntegrated ? "الطالب يتصل بالواي فاي، يفتح الرابط، ثم يكتب اسمه ورقم تلفونه وكوده ويدخل مباشرةً." : "الطالب يتصل بالواي فاي، يمسح الرمز، ثم يدخل اسمه ورقمه وكوده." }),
-			t.centerIntegrated && /* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("h2", { children: "رابط دخول الطلاب" }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: t.centerIntegrated ? "الطالب يتصل بالواي فاي، يفتح الرابط، ثم يكتب اسمه ورقم تلفونه وكوده ويدخل مباشرةً." : "الطالب يتصل بالواي فاي، يمسح الرمز، ثم يدخل اسمه ورقمه وكوده." }),
+			t.centerIntegrated && /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "الإجابات والدرجات محفوظة على الساكند. بعد التصحيح أعد ربط الجهازين، واختر وجهة الرصد وحمّل الدرجات من الهوست."
 			}),
-			!n && t.studentUrls.length > 1 && /* @__PURE__ */ (0, M.jsxs)("label", { children: ["اختر عنوان الشبكة المتصل بها الطلاب", /* @__PURE__ */ (0, M.jsx)("select", {
+			!n && t.studentUrls.length > 1 && /* @__PURE__ */ (0, S.jsxs)("label", { children: ["اختر عنوان الشبكة المتصل بها الطلاب", /* @__PURE__ */ (0, S.jsx)("select", {
 				value: a,
 				onChange: (e) => i(e.target.value),
-				children: t.studentUrls.map((e) => /* @__PURE__ */ (0, M.jsx)("option", {
+				children: t.studentUrls.map((e) => /* @__PURE__ */ (0, S.jsx)("option", {
 					value: e,
 					children: e
 				}, e))
 			})] }),
-			a ? /* @__PURE__ */ (0, M.jsxs)("div", {
+			a ? /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "link-field",
-				children: [/* @__PURE__ */ (0, M.jsx)("input", {
+				children: [/* @__PURE__ */ (0, S.jsx)("input", {
 					readOnly: !0,
 					dir: "ltr",
 					value: a
-				}), /* @__PURE__ */ (0, M.jsx)("button", {
+				}), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button secondary small",
-					onClick: () => O(a).catch((e) => T(e.message, !0)),
+					onClick: () => oe(a).catch((e) => M(e.message, !0)),
 					children: "نسخ الرابط"
 				})]
-			}) : /* @__PURE__ */ (0, M.jsx)("p", {
+			}) : /* @__PURE__ */ (0, S.jsx)("p", {
 				className: "inline-error",
 				children: "لا يوجد عنوان شبكة محلية للكمبيوتر. اتصل بشبكة الهوت سبوت أو الراوتر أولًا."
 			}),
-			n && /* @__PURE__ */ (0, M.jsxs)("details", {
+			n && /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "notice",
 				children: [
-					/* @__PURE__ */ (0, M.jsx)("summary", { children: "رابط محلي بديل قبل تسجيل الدخول فقط" }),
-					/* @__PURE__ */ (0, M.jsxs)("p", { children: [
+					/* @__PURE__ */ (0, S.jsx)("summary", { children: "رابط محلي بديل قبل تسجيل الدخول فقط" }),
+					/* @__PURE__ */ (0, S.jsxs)("p", { children: [
 						"الرابط الأساسي والرمز يفتحان نفس عنوان صفحة الدخول التلقائي. إذا تعذّر فتحه قبل دخول الامتحان، استخدم ",
-						/* @__PURE__ */ (0, M.jsx)("b", {
+						/* @__PURE__ */ (0, S.jsx)("b", {
 							dir: "ltr",
 							children: "http://10.77.0.1/"
 						}),
 						"."
 					] }),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary small",
-						onClick: () => O("http://10.77.0.1/").catch((e) => T(e.message, !0)),
+						onClick: () => oe("http://10.77.0.1/").catch((e) => M(e.message, !0)),
 						children: "نسخ الرابط المحلي البديل"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("p", { children: "من بدأ الامتحان يستمر في نفس الرابط والمتصفح؛ الانتقال إلى عنوان آخر لا ينقل الجلسة والإجابات المحفوظة على الموبايل." })
+					/* @__PURE__ */ (0, S.jsx)("p", { children: "من بدأ الامتحان يستمر في نفس الرابط والمتصفح؛ الانتقال إلى عنوان آخر لا ينقل الجلسة والإجابات المحفوظة على الموبايل." })
 				]
 			}),
-			t.centerIntegrated ? /* @__PURE__ */ (0, M.jsx)("button", {
+			t.centerIntegrated ? /* @__PURE__ */ (0, S.jsx)("button", {
 				className: "text-button",
-				onClick: () => O(t.localStudentUrl).catch((e) => T(e.message, !0)),
+				onClick: () => oe(t.localStudentUrl).catch((e) => M(e.message, !0)),
 				children: "نسخ رابط تجربة الطالب على هذا الجهاز"
-			}) : /* @__PURE__ */ (0, M.jsx)("a", {
+			}) : /* @__PURE__ */ (0, S.jsx)("a", {
 				className: "text-link",
 				href: t.localStudentUrl,
 				target: "_blank",
 				rel: "noopener",
 				children: "فتح صفحة طالب على هذا الجهاز ↗"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "شارك الرابط بعد اتصال الطلاب بنفس الشبكة. يختار الطالب «البقاء متصلًا بالشبكة» ويوقف التحويل التلقائي لبيانات الهاتف. الرابط والرمز للطلاب الجدد؛ من بدأ الامتحان يستمر في نفس العنوان والمتصفح حتى التسليم."
 			})
-		] }), a && /* @__PURE__ */ (0, M.jsx)(kt, { url: a })]
+		] }), a && /* @__PURE__ */ (0, S.jsx)(Kt, { url: a })]
 	});
 }
-function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, launcher: o }) {
-	let s = e.exam, [c, l] = (0, _.useState)(s.state === "closed" ? "results" : "students");
-	(0, _.useEffect)(() => {
+function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, launcher: o }) {
+	let s = e.exam, [c, l] = (0, x.useState)(s.state === "closed" ? "results" : "students");
+	(0, x.useEffect)(() => {
 		s.state === "closed" && l("results");
 	}, [s.state]);
 	let u = e.attempts.filter((e) => e.joined_at), d = u.filter((t) => e.serverTime - t.last_seen < 15).length, f = u.filter((e) => !e.cancelled_at && e.submitted_at).length, p = u.filter((e) => !e.cancelled_at && e.submitted_at && e.pending > 0).length;
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
 		o,
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "page-heading room-current-heading",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, M.jsx)("span", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "context-label",
 					children: {
 						draft: "جهّز امتحانك، ثم افتح القاعة.",
@@ -14394,32 +14740,32 @@ function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						closed: "انتهى الامتحان. راجع النتائج."
 					}[s.state]
 				}),
-				/* @__PURE__ */ (0, M.jsx)("h1", { children: s.config.title }),
-				/* @__PURE__ */ (0, M.jsxs)("div", {
+				/* @__PURE__ */ (0, S.jsx)("h1", { children: s.config.title }),
+				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "exam-meta",
 					children: [
-						Ot(s.state),
-						/* @__PURE__ */ (0, M.jsxs)("span", { children: [b(s.config.questionCount), " أسئلة"] }),
-						/* @__PURE__ */ (0, M.jsxs)("span", { children: [b(s.config.minutes), " دقيقة"] }),
-						/* @__PURE__ */ (0, M.jsx)("span", { children: s.config.timerMode === "shared" ? "نهاية موحدة" : "وقت مستقل لكل طالب" })
+						Gt(s.state),
+						/* @__PURE__ */ (0, S.jsxs)("span", { children: [A(s.config.questionCount), " أسئلة"] }),
+						/* @__PURE__ */ (0, S.jsxs)("span", { children: [A(s.config.minutes), " دقيقة"] }),
+						/* @__PURE__ */ (0, S.jsx)("span", { children: s.config.timerMode === "shared" ? "نهاية موحدة" : "وقت مستقل لكل طالب" })
 					]
 				})
-			] }), /* @__PURE__ */ (0, M.jsxs)("div", {
+			] }), /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "actions",
 				children: [
-					s.state === "draft" && /* @__PURE__ */ (0, M.jsx)("button", {
+					s.state === "draft" && /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						disabled: n,
 						onClick: () => r("publish"),
 						children: "فتح قاعة الانتظار ←"
 					}),
-					s.state === "waiting" && /* @__PURE__ */ (0, M.jsx)("button", {
+					s.state === "waiting" && /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button",
 						disabled: n,
 						onClick: () => r("start"),
 						children: "ابدأ الامتحان للجميع ←"
 					}),
-					I.includes(s.state) && /* @__PURE__ */ (0, M.jsx)("button", {
+					Vt.includes(s.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary danger-text",
 						disabled: n,
 						onClick: () => r("close"),
@@ -14428,21 +14774,21 @@ function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 				]
 			})]
 		}),
-		s.state === "running" && /* @__PURE__ */ (0, M.jsx)(Je, {
+		s.state === "running" && /* @__PURE__ */ (0, S.jsx)(lt, {
 			dashboard: e,
 			request: i,
 			refresh: a
 		}),
-		I.includes(s.state) && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)(dt, {
+		Vt.includes(s.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Dt, {
 			exam: s,
 			request: i,
 			refresh: a
-		}), /* @__PURE__ */ (0, M.jsx)(ut, {
+		}), /* @__PURE__ */ (0, S.jsx)(Et, {
 			exam: s,
 			request: i,
 			refresh: a
 		})] }),
-		/* @__PURE__ */ (0, M.jsx)("ol", {
+		/* @__PURE__ */ (0, S.jsx)("ol", {
 			className: "exam-steps",
 			"aria-label": "مراحل الامتحان",
 			children: [
@@ -14450,32 +14796,32 @@ function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 				["waiting", "استقبال الطلاب"],
 				["running", "حل الامتحان"],
 				["closed", "مراجعة النتائج"]
-			].map(([e, t], n) => /* @__PURE__ */ (0, M.jsxs)("li", {
+			].map(([e, t], n) => /* @__PURE__ */ (0, S.jsxs)("li", {
 				className: s.state === e ? "current" : "",
-				children: [/* @__PURE__ */ (0, M.jsx)("span", { children: b(n + 1) }), t]
+				children: [/* @__PURE__ */ (0, S.jsx)("span", { children: A(n + 1) }), t]
 			}, e))
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("div", {
+		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: `room-overview room-state-${s.state}`,
-			children: [/* @__PURE__ */ (0, M.jsx)(Lt, {
+			children: [/* @__PURE__ */ (0, S.jsx)($t, {
 				exam: s,
 				bootstrap: t
-			}), /* @__PURE__ */ (0, M.jsxs)("section", {
+			}), /* @__PURE__ */ (0, S.jsxs)("section", {
 				className: "attendance-summary",
 				"aria-label": "ملخص الحضور",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("span", { children: "دخل القاعة" }), /* @__PURE__ */ (0, M.jsx)("strong", { children: b(u.length) })] }),
-					/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("span", { children: "متصل الآن" }), /* @__PURE__ */ (0, M.jsx)("strong", { children: b(d) })] }),
-					/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("span", { children: "سلّم الامتحان" }), /* @__PURE__ */ (0, M.jsx)("strong", { children: b(f) })] }),
-					/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsx)("span", { children: "ينتظر تصحيح المقالي" }), /* @__PURE__ */ (0, M.jsx)("strong", { children: b(p) })] })
+					/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("span", { children: "دخل القاعة" }), /* @__PURE__ */ (0, S.jsx)("strong", { children: A(u.length) })] }),
+					/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("span", { children: "متصل الآن" }), /* @__PURE__ */ (0, S.jsx)("strong", { children: A(d) })] }),
+					/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("span", { children: "سلّم الامتحان" }), /* @__PURE__ */ (0, S.jsx)("strong", { children: A(f) })] }),
+					/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("span", { children: "ينتظر تصحيح المقالي" }), /* @__PURE__ */ (0, S.jsx)("strong", { children: A(p) })] })
 				]
 			})]
 		}),
-		/* @__PURE__ */ (0, M.jsxs)("section", {
+		/* @__PURE__ */ (0, S.jsxs)("section", {
 			className: "panel roster-panel",
-			children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+			children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "panel-toolbar",
-				children: [/* @__PURE__ */ (0, M.jsx)("div", {
+				children: [/* @__PURE__ */ (0, S.jsx)("div", {
 					className: "tabs",
 					role: "group",
 					"aria-label": "عرض القاعة",
@@ -14483,16 +14829,16 @@ function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						["students", "الطلاب والحضور"],
 						["questions", "الأسئلة"],
 						["results", "التصحيح والنتائج"]
-					].map(([e, t]) => /* @__PURE__ */ (0, M.jsx)("button", {
+					].map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("button", {
 						className: c === e ? "active" : "",
 						onClick: () => l(e),
 						children: t
 					}, e))
-				}), /* @__PURE__ */ (0, M.jsxs)("span", {
+				}), /* @__PURE__ */ (0, S.jsxs)("span", {
 					className: "muted",
-					children: [b(e.attempts.length), " طالب في الجلسة"]
+					children: [A(e.attempts.length), " طالب في الجلسة"]
 				})]
-			}), c === "questions" ? /* @__PURE__ */ (0, M.jsx)(zt, { exam: s }) : /* @__PURE__ */ (0, M.jsx)(Bt, {
+			}), c === "questions" ? /* @__PURE__ */ (0, S.jsx)(tn, { exam: s }) : /* @__PURE__ */ (0, S.jsx)(nn, {
 				dashboard: e,
 				tab: c,
 				request: i,
@@ -14502,250 +14848,269 @@ function Rt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 		})
 	] });
 }
-function zt({ exam: e }) {
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("div", {
+function tn({ exam: e }) {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "section-top padded",
-		children: /* @__PURE__ */ (0, M.jsx)("p", {
+		children: /* @__PURE__ */ (0, S.jsx)("p", {
 			className: "muted",
 			children: "الأسئلة نسخة محفوظة لهذه الجلسة. أي تعديل في المكتبة يؤثر في الجلسات الجديدة فقط."
 		})
-	}), /* @__PURE__ */ (0, M.jsx)("div", {
+	}), /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "question-previews",
-		children: e.config.questions.map((e, t) => /* @__PURE__ */ (0, M.jsxs)("article", { children: [/* @__PURE__ */ (0, M.jsxs)("div", {
+		children: e.config.questions.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("article", { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "section-top",
-			children: [/* @__PURE__ */ (0, M.jsxs)("h3", { children: [
-				b(t + 1),
+			children: [/* @__PURE__ */ (0, S.jsxs)("h3", { children: [
+				A(t + 1),
 				". ",
 				e.text
-			] }), /* @__PURE__ */ (0, M.jsxs)("span", {
+			] }), /* @__PURE__ */ (0, S.jsxs)("span", {
 				className: "badge quiet",
-				children: [b(e.points), " درجات"]
+				children: [A(e.points), " درجات"]
 			})]
-		}), /* @__PURE__ */ (0, M.jsxs)("p", {
+		}), /* @__PURE__ */ (0, S.jsxs)("p", {
 			className: "model-answer-preview",
 			children: ["الإجابة النموذجية: ", e.kind === "mcq" ? e.options[e.correct] : e.modelAnswer]
 		})] }, e.id))
 	})] });
 }
-function Bt({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
-	let [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)("newest"), [l, u] = (0, _.useState)(!0), [d, f] = (0, _.useState)("all"), [p, m] = (0, _.useState)(null), [h, g] = (0, _.useState)(null), [v, y] = (0, _.useState)([]), x = e.exam, C = a.toLowerCase().trim(), w = e.attempts.filter((e) => `${e.name || ""} ${e.code} ${e.phone || ""}`.toLowerCase().includes(C)), E = (t) => Ze(t, x, e.serverTime), D = x.config.screenGuard === !0 || e.attempts.some((e) => e.screen), k = D ? [...Ye, ...Xe] : Ye, ee = Ct ? [...k, ["problem", "يحتاج متابعة"]] : k, ne = (t, n) => n === "problem" ? !!$e(t, x, e.serverTime) : Qe(t, E(t), n), re = Object.fromEntries(ee.map(([e]) => [e, w.filter((t) => ne(t, e)).length])), j = ee.some(([e]) => e === d) ? d : "all", ie = ot(w.filter((e) => ne(e, j)), s), ae = (t) => $e(t, x, e.serverTime), oe = ie.filter(ae).length, se = l ? ct(ie, ae) : ie, ce = (t) => x.state === "running" && t.joined_at && !t.cancelled_at && !t.submitted_at && t.deadline > e.serverTime, le = e.attempts.filter((e) => v.includes(e.id) && ce(e)), ue = se.filter(ce), de = (e, t) => y((n) => t ? [.../* @__PURE__ */ new Set([...n, e])] : n.filter((t) => t !== e)), fe = async (e) => {
-		if (await te("استعادة دخول الطالب؟", "سيتم تسجيل خروج الجلسة القديمة. يدخل الطالب بنفس الكود والرقم، وتبقى الإجابات والوقت كما هما.")) try {
-			await n(`/api/attempts/${e.id}/reset-login`, {}), T("يمكن للطالب الدخول مجددًا بنفس الكود والرقم"), await r();
+function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
+	let [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)("newest"), [l, u] = (0, x.useState)(!0), [d, f] = (0, x.useState)("all"), [p, m] = (0, x.useState)(null), [h, g] = (0, x.useState)(null), [_, v] = (0, x.useState)([]), [y, b] = (0, x.useState)([]), C = e.exam, w = a.toLowerCase().trim(), T = e.attempts.filter((e) => `${e.name || ""} ${e.code} ${e.phone || ""}`.toLowerCase().includes(w)), E = (t) => ft(t, C, e.serverTime), D = C.config.screenGuard === !0 || e.attempts.some((e) => e.screen), O = D ? [...ut, ...dt] : ut, ee = zt ? [...O, ["problem", "يحتاج متابعة"]] : O, te = (t, n) => n === "problem" ? !!mt(t, C, e.serverTime) : pt(t, E(t), n), k = Object.fromEntries(ee.map(([e]) => [e, T.filter((t) => te(t, e)).length])), ne = ee.some(([e]) => e === d) ? d : "all", j = St(T.filter((e) => te(e, ne)), s), ie = (t) => mt(t, C, e.serverTime), N = j.filter(ie).length, ae = l ? wt(j, ie) : j, se = (t) => C.state === "running" && t.joined_at && !t.cancelled_at && !t.submitted_at && t.deadline > e.serverTime, ce = e.attempts.filter((e) => _.includes(e.id) && se(e)), de = ae.filter(se), fe = (e) => C.state === "running" && e.joined_at && !e.cancelled_at && e.submitted_at, pe = e.attempts.filter((e) => y.includes(e.id) && fe(e)), me = ae.filter(fe), he = (e, t) => v((n) => t ? [.../* @__PURE__ */ new Set([...n, e])] : n.filter((t) => t !== e)), ge = async (e) => {
+		if (await ue("استعادة دخول الطالب؟", "سيتم تسجيل خروج الجلسة القديمة. يدخل الطالب بنفس الكود والرقم، وتبقى الإجابات والوقت كما هما.")) try {
+			await n(`/api/attempts/${e.id}/reset-login`, {}), M("يمكن للطالب الدخول مجددًا بنفس الكود والرقم"), await r();
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)("div", {
 		id: "room-content",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "roster-tools",
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "search-field",
-						children: [/* @__PURE__ */ (0, M.jsx)("span", {
+						children: [/* @__PURE__ */ (0, S.jsx)("span", {
 							className: "sr-only",
 							children: "بحث بالاسم أو الكود"
-						}), /* @__PURE__ */ (0, M.jsx)("input", {
+						}), /* @__PURE__ */ (0, S.jsx)("input", {
 							placeholder: "ابحث باسم الطالب أو كوده…",
 							value: a,
 							onChange: (e) => o(e.target.value)
 						})]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "roster-order",
-						children: ["ترتيب الطلاب", /* @__PURE__ */ (0, M.jsx)("select", {
+						children: ["ترتيب الطلاب", /* @__PURE__ */ (0, S.jsx)("select", {
 							value: s,
 							onChange: (e) => c(e.target.value),
-							children: nt.map(([e, t]) => /* @__PURE__ */ (0, M.jsx)("option", {
+							children: vt.map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e,
 								children: t
 							}, e))
 						})]
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("label", {
+					/* @__PURE__ */ (0, S.jsxs)("label", {
 						className: "roster-priority",
 						title: "الموقوف، خارج الصفحة، غير المتصل، أو عنده تنبيه شاشة حالي",
 						children: [
-							/* @__PURE__ */ (0, M.jsx)("input", {
+							/* @__PURE__ */ (0, S.jsx)("input", {
 								type: "checkbox",
 								checked: l,
 								onChange: (e) => u(e.target.checked)
 							}),
 							"المشاكل أولًا ",
-							/* @__PURE__ */ (0, M.jsx)("span", {
+							/* @__PURE__ */ (0, S.jsx)("span", {
 								className: "badge quiet",
-								children: b(oe)
+								children: A(N)
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, M.jsx)("button", {
+					/* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary small",
-						onClick: () => A(`/api/exams/${x.id}/${t === "students" ? "students.csv" : "results.csv"}`, t === "students" ? "students.csv" : "results.csv", "text/csv").catch((e) => T(e.message, !0)),
+						onClick: () => le(`/api/exams/${C.id}/${t === "students" ? "students.csv" : "results.csv"}`, t === "students" ? "students.csv" : "results.csv", "text/csv").catch((e) => M(e.message, !0)),
 						children: t === "students" ? "تنزيل كشف الطلاب ↓" : "تنزيل النتائج CSV ↓"
 					})
 				]
 			}),
-			t === "results" && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("p", {
+			t === "results" && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "results-note",
 				children: "الاختيارات تُصحح تلقائيًا. راجع المقالي قبل طباعة التقارير. الدرجات لا تظهر للطلاب."
-			}), Ct ? /* @__PURE__ */ (0, M.jsxs)("details", {
+			}), zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "center-batch-grading",
-				children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "التصحيح الجماعي للمقالي وإعداداته" }), /* @__PURE__ */ (0, M.jsx)(Vt, {
-					exam: x,
+				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "التصحيح الجماعي للمقالي وإعداداته" }), /* @__PURE__ */ (0, S.jsx)(rn, {
+					exam: C,
 					dashboard: e,
 					request: n,
 					refresh: r
 				})]
-			}) : /* @__PURE__ */ (0, M.jsx)(Vt, {
-				exam: x,
+			}) : /* @__PURE__ */ (0, S.jsx)(rn, {
+				exam: C,
 				dashboard: e,
 				request: n,
 				refresh: r
 			})] }),
-			t === "results" && (Ct ? /* @__PURE__ */ (0, M.jsxs)("details", {
+			t === "results" && (zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "center-result-exports",
-				children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "تنزيل التقارير وإرسال واتساب" }), /* @__PURE__ */ (0, M.jsxs)("div", {
+				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "تنزيل التقارير وإرسال واتساب" }), /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "whatsapp-send-row",
-					children: [/* @__PURE__ */ (0, M.jsx)(Ke, {
-						examId: x.id,
+					children: [/* @__PURE__ */ (0, S.jsx)(st, {
+						examId: C.id,
 						attempts: e.attempts
-					}), /* @__PURE__ */ (0, M.jsx)(Re, {
+					}), /* @__PURE__ */ (0, S.jsx)($e, {
 						attempts: e.attempts.filter((e) => e.joined_at),
 						label: "إرسال تقارير كل الطلاب عبر واتساب"
 					})]
 				})]
-			}) : /* @__PURE__ */ (0, M.jsxs)("div", {
+			}) : /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "whatsapp-send-row",
-				children: [/* @__PURE__ */ (0, M.jsx)(Ke, {
-					examId: x.id,
+				children: [/* @__PURE__ */ (0, S.jsx)(st, {
+					examId: C.id,
 					attempts: e.attempts
-				}), /* @__PURE__ */ (0, M.jsx)(Re, {
+				}), /* @__PURE__ */ (0, S.jsx)($e, {
 					attempts: e.attempts.filter((e) => e.joined_at),
 					label: "إرسال تقارير كل الطلاب عبر واتساب"
 				})]
 			})),
-			Ct ? /* @__PURE__ */ (0, M.jsx)(It, {
-				counts: re,
-				filter: j,
+			zt ? /* @__PURE__ */ (0, S.jsx)(Qt, {
+				counts: k,
+				filter: ne,
 				onChange: f,
 				filters: ee,
 				tab: t
-			}) : /* @__PURE__ */ (0, M.jsx)(lt, {
-				counts: re,
-				filter: j,
+			}) : /* @__PURE__ */ (0, S.jsx)(Tt, {
+				counts: k,
+				filter: ne,
 				onChange: f,
-				searching: !!C,
+				searching: !!w,
 				showScreenCards: D
 			}),
-			x.state === "running" && /* @__PURE__ */ (0, M.jsx)(et, {
-				examId: x.id,
-				attempts: le,
+			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(ht, {
+				examId: C.id,
+				attempts: ce,
 				request: n,
 				refresh: r,
-				clear: () => y([])
+				clear: () => v([])
 			}),
-			/* @__PURE__ */ (0, M.jsx)("div", {
+			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(gt, {
+				examId: C.id,
+				attempts: pe,
+				request: n,
+				refresh: r,
+				clear: () => b([])
+			}),
+			/* @__PURE__ */ (0, S.jsx)("div", {
 				className: "table-scroll",
-				children: /* @__PURE__ */ (0, M.jsxs)("table", { children: [/* @__PURE__ */ (0, M.jsx)("thead", { children: /* @__PURE__ */ (0, M.jsxs)("tr", { children: [
-					x.state === "running" && /* @__PURE__ */ (0, M.jsx)("th", { children: /* @__PURE__ */ (0, M.jsx)("input", {
+				children: /* @__PURE__ */ (0, S.jsxs)("table", { children: [/* @__PURE__ */ (0, S.jsx)("thead", { children: /* @__PURE__ */ (0, S.jsxs)("tr", { children: [
+					C.state === "running" && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("th", { children: ["تمديد ", /* @__PURE__ */ (0, S.jsx)("input", {
 						type: "checkbox",
 						"aria-label": "تحديد الطلاب الظاهرين المتاح تمديدهم",
-						disabled: !ue.length,
-						checked: ue.length > 0 && ue.every((e) => v.includes(e.id)),
-						onChange: (e) => y((t) => e.target.checked ? [.../* @__PURE__ */ new Set([...t, ...ue.map((e) => e.id)])] : t.filter((e) => !ue.some((t) => t.id === e)))
-					}) }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الطالب" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "كود الطالب" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الحالة" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: t === "results" ? "الدرجة" : "آخر ظهور" }),
-					/* @__PURE__ */ (0, M.jsx)("th", { children: "الإجراء" })
-				] }) }), /* @__PURE__ */ (0, M.jsx)("tbody", { children: se.length ? se.map((a) => {
-					let o = E(a), s = ae(a), c = a.last_seen ? e.serverTime - a.last_seen < 15 ? "الآن" : `منذ ${b(Math.floor((e.serverTime - a.last_seen) / 60))} دقيقة` : "—", l = /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-						!a.cancelled_at && t === "results" && a.submitted_at ? /* @__PURE__ */ (0, M.jsx)("button", {
+						disabled: !de.length,
+						checked: de.length > 0 && de.every((e) => _.includes(e.id)),
+						onChange: (e) => v((t) => e.target.checked ? [.../* @__PURE__ */ new Set([...t, ...de.map((e) => e.id)])] : t.filter((e) => !de.some((t) => t.id === e)))
+					})] }), /* @__PURE__ */ (0, S.jsxs)("th", { children: ["إعادة فتح ", /* @__PURE__ */ (0, S.jsx)("input", {
+						type: "checkbox",
+						"aria-label": "تحديد المحاولات المسلّمة الظاهرة لإعادة فتحها",
+						disabled: !me.length,
+						checked: me.length > 0 && me.every((e) => y.includes(e.id)),
+						onChange: (e) => b((t) => e.target.checked ? [.../* @__PURE__ */ new Set([...t, ...me.map((e) => e.id)])] : t.filter((e) => !me.some((t) => t.id === e)))
+					})] })] }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الطالب" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "كود الطالب" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الحالة" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: t === "results" ? "الدرجة" : "آخر ظهور" }),
+					/* @__PURE__ */ (0, S.jsx)("th", { children: "الإجراء" })
+				] }) }), /* @__PURE__ */ (0, S.jsx)("tbody", { children: ae.length ? ae.map((a) => {
+					let o = E(a), s = ie(a), c = a.last_seen ? e.serverTime - a.last_seen < 15 ? "الآن" : `منذ ${A(Math.floor((e.serverTime - a.last_seen) / 60))} دقيقة` : "—", l = /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+						!a.cancelled_at && t === "results" && a.submitted_at ? /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button",
 							onClick: () => m(a.id),
 							children: "مراجعة وتصحيح ←"
-						}) : !a.cancelled_at && a.joined_at && !a.submitted_at ? /* @__PURE__ */ (0, M.jsx)("button", {
+						}) : !a.cancelled_at && a.joined_at && !a.submitted_at ? /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button",
 							disabled: i,
-							onClick: () => fe(a),
+							onClick: () => ge(a),
 							children: "استعادة الدخول"
-						}) : /* @__PURE__ */ (0, M.jsx)("span", {
+						}) : /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "muted",
 							children: "—"
 						}),
-						!a.cancelled_at && x.state === "running" && a.joined_at && !a.submitted_at && /* @__PURE__ */ (0, M.jsx)("button", {
+						!a.cancelled_at && C.state === "running" && a.joined_at && !a.submitted_at && /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button",
 							disabled: i,
 							onClick: async () => {
 								try {
-									await n(`/api/attempts/${a.id}/${a.paused ? "resume" : "pause"}`, {}), await r(), T(a.paused ? "تم استكمال الطالب" : "تم إيقاف الطالب");
+									await n(`/api/attempts/${a.id}/${a.paused ? "resume" : "pause"}`, {}), await r(), M(a.paused ? "تم استكمال الطالب" : "تم إيقاف الطالب");
 								} catch (e) {
-									T(e.message, !0);
+									M(e.message, !0);
 								}
 							},
 							children: a.paused ? "استكمال الطالب" : "إيقاف الطالب"
 						}),
-						!a.cancelled_at && a.joined_at && /* @__PURE__ */ (0, M.jsx)("button", {
+						!a.cancelled_at && a.joined_at && /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button cancellation-action",
 							disabled: i,
 							onClick: () => g(a),
 							children: "إلغاء المحاولة"
 						})
 					] });
-					return /* @__PURE__ */ (0, M.jsxs)("tr", {
+					return /* @__PURE__ */ (0, S.jsxs)("tr", {
 						className: s ? "roster-problem-row" : "",
 						children: [
-							x.state === "running" && /* @__PURE__ */ (0, M.jsx)("td", { children: /* @__PURE__ */ (0, M.jsx)("input", {
+							C.state === "running" && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("input", {
 								type: "checkbox",
 								"aria-label": `تحديد ${a.name} لتمديد الوقت`,
-								disabled: !ce(a),
-								checked: ce(a) && v.includes(a.id),
-								onChange: (e) => de(a.id, e.target.checked)
-							}) }),
-							/* @__PURE__ */ (0, M.jsxs)("td", { children: [
-								/* @__PURE__ */ (0, M.jsx)("strong", { children: a.name || "طالب" }),
-								/* @__PURE__ */ (0, M.jsx)("small", {
+								disabled: !se(a),
+								checked: se(a) && _.includes(a.id),
+								onChange: (e) => he(a.id, e.target.checked)
+							}) }), /* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("input", {
+								type: "checkbox",
+								"aria-label": `تحديد ${a.name} لإعادة فتح المحاولة`,
+								disabled: !fe(a),
+								checked: !!(fe(a) && y.includes(a.id)),
+								onChange: (e) => b((t) => e.target.checked ? [.../* @__PURE__ */ new Set([...t, a.id])] : t.filter((e) => e !== a.id))
+							}) })] }),
+							/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+								/* @__PURE__ */ (0, S.jsx)("strong", { children: a.name || "طالب" }),
+								/* @__PURE__ */ (0, S.jsx)("small", {
 									dir: "ltr",
 									children: a.phone || "لم تُسجل بياناته"
 								}),
-								/* @__PURE__ */ (0, M.jsxs)("small", { children: ["الدخول: ", st(a.joined_at)] })
+								/* @__PURE__ */ (0, S.jsxs)("small", { children: ["الدخول: ", Ct(a.joined_at)] })
 							] }),
-							/* @__PURE__ */ (0, M.jsx)("td", { children: /* @__PURE__ */ (0, M.jsx)("button", {
+							/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "code-button",
 								title: "نسخ الكود",
-								onClick: () => O(a.code).catch((e) => T(e.message, !0)),
+								onClick: () => oe(a.code).catch((e) => M(e.message, !0)),
 								children: a.code
 							}) }),
-							/* @__PURE__ */ (0, M.jsxs)("td", { children: [
-								/* @__PURE__ */ (0, M.jsx)("span", {
+							/* @__PURE__ */ (0, S.jsxs)("td", { children: [
+								/* @__PURE__ */ (0, S.jsx)("span", {
 									className: `badge ${o.tone}`,
 									children: o.label
 								}),
-								s && /* @__PURE__ */ (0, M.jsxs)("small", {
+								s && /* @__PURE__ */ (0, S.jsxs)("small", {
 									className: "roster-problem-note",
 									children: ["يحتاج متابعة: ", s]
 								}),
-								ce(a) && /* @__PURE__ */ (0, M.jsxs)("small", { children: ["الوقت المتبقي: ", /* @__PURE__ */ (0, M.jsx)("b", {
+								se(a) && /* @__PURE__ */ (0, S.jsxs)("small", { children: ["الوقت المتبقي: ", /* @__PURE__ */ (0, S.jsx)("b", {
 									dir: "ltr",
-									children: S(Math.ceil(Math.max(0, a.deadline - e.serverTime)))
+									children: re(Math.ceil(Math.max(0, a.deadline - e.serverTime)))
 								})] }),
-								a.cancelled_at && /* @__PURE__ */ (0, M.jsxs)("small", {
+								a.cancelled_at && /* @__PURE__ */ (0, S.jsxs)("small", {
 									className: "cancellation-reason",
 									children: ["سبب الإلغاء: ", a.cancelReason]
 								}),
-								a.screen && /* @__PURE__ */ (0, M.jsxs)("small", {
+								a.screen && /* @__PURE__ */ (0, S.jsxs)("small", {
 									className: "screen-details",
 									children: [
 										"علامة المتصفح: ",
-										/* @__PURE__ */ (0, M.jsx)("b", {
+										/* @__PURE__ */ (0, S.jsx)("b", {
 											dir: "ltr",
 											children: a.screen.current.deviceId.slice(0, 8)
 										}),
-										/* @__PURE__ */ (0, M.jsx)("br", {}),
+										/* @__PURE__ */ (0, S.jsx)("br", {}),
 										"الشاشة: ",
-										/* @__PURE__ */ (0, M.jsxs)("b", {
+										/* @__PURE__ */ (0, S.jsxs)("b", {
 											dir: "ltr",
 											children: [
 												a.screen.current.screenWidth,
@@ -14754,7 +15119,7 @@ function Bt({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 											]
 										}),
 										" · العرض: ",
-										/* @__PURE__ */ (0, M.jsxs)("b", {
+										/* @__PURE__ */ (0, S.jsxs)("b", {
 											dir: "ltr",
 											children: [
 												a.screen.current.width,
@@ -14762,56 +15127,56 @@ function Bt({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 												a.screen.current.height
 											]
 										}),
-										/* @__PURE__ */ (0, M.jsx)("br", {}),
+										/* @__PURE__ */ (0, S.jsx)("br", {}),
 										a.screen.current.fullscreenSupported ? a.screen.current.fullscreen ? "ملء الشاشة نشط" : "خارج ملء الشاشة" : "ملء الشاشة غير مدعوم",
-										a.screen.lastEvent && /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-											/* @__PURE__ */ (0, M.jsx)("br", {}),
+										a.screen.lastEvent && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+											/* @__PURE__ */ (0, S.jsx)("br", {}),
 											"آخر تنبيه: ",
 											a.screen.lastEvent,
 											" · ",
-											b(a.screen.events),
+											A(a.screen.events),
 											" مرة"
 										] })
 									]
 								}),
-								x.config.screenGuard && !a.screen && !a.submitted_at && !a.cancelled_at && /* @__PURE__ */ (0, M.jsx)("small", { children: "في انتظار موافقة مراقبة الشاشة" }),
-								a.departures > 0 && /* @__PURE__ */ (0, M.jsxs)("small", { children: [
+								C.config.screenGuard && !a.screen && !a.submitted_at && !a.cancelled_at && /* @__PURE__ */ (0, S.jsx)("small", { children: "في انتظار موافقة مراقبة الشاشة" }),
+								a.departures > 0 && /* @__PURE__ */ (0, S.jsxs)("small", { children: [
 									"غادر الصفحة ",
-									b(a.departures),
+									A(a.departures),
 									" مرة"
 								] })
 							] }),
-							/* @__PURE__ */ (0, M.jsx)("td", { children: t === "results" ? a.cancelled_at ? "ملغي" : a.submitted_at ? /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-								b(a.score),
+							/* @__PURE__ */ (0, S.jsx)("td", { children: t === "results" ? a.cancelled_at ? "ملغي" : a.submitted_at ? /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+								A(a.score),
 								" / ",
-								b(a.maximum),
-								a.pending > 0 && /* @__PURE__ */ (0, M.jsxs)("small", { children: [
+								A(a.maximum),
+								a.pending > 0 && /* @__PURE__ */ (0, S.jsxs)("small", { children: [
 									"متبقي ",
-									b(a.pending),
+									A(a.pending),
 									" مقالي"
 								] })
 							] }) : "لم يسلّم" : c }),
-							/* @__PURE__ */ (0, M.jsx)("td", { children: Ct && t === "students" ? /* @__PURE__ */ (0, M.jsxs)("details", {
+							/* @__PURE__ */ (0, S.jsx)("td", { children: zt && t === "students" ? /* @__PURE__ */ (0, S.jsxs)("details", {
 								className: "center-student-actions",
-								children: [/* @__PURE__ */ (0, M.jsx)("summary", { children: "إجراءات الطالب" }), /* @__PURE__ */ (0, M.jsx)("div", { children: l })]
+								children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "إجراءات الطالب" }), /* @__PURE__ */ (0, S.jsx)("div", { children: l })]
 							}) : l })
 						]
 					}, a.id);
-				}) : /* @__PURE__ */ (0, M.jsx)("tr", { children: /* @__PURE__ */ (0, M.jsx)("td", {
-					colSpan: x.state === "running" ? 6 : 5,
+				}) : /* @__PURE__ */ (0, S.jsx)("tr", { children: /* @__PURE__ */ (0, S.jsx)("td", {
+					colSpan: C.state === "running" ? 7 : 5,
 					className: "empty",
 					children: a || d !== "all" ? "لا يوجد طلاب مطابقون للبحث أو التصفية." : "الطالب يظهر هنا بعد دخوله باسمه ورقمه وكوده."
 				}) }) })] })
 			}),
-			h && /* @__PURE__ */ (0, M.jsx)(tt, {
+			h && /* @__PURE__ */ (0, S.jsx)(_t, {
 				attempt: h,
 				request: n,
 				refresh: r,
 				onClose: () => g(null)
 			}),
-			p && /* @__PURE__ */ (0, M.jsx)(Ht, {
+			p && /* @__PURE__ */ (0, S.jsx)(an, {
 				attempt: e.attempts.find((e) => e.id === p),
-				exam: x,
+				exam: C,
 				request: n,
 				onClose: () => m(null),
 				refresh: r
@@ -14819,14 +15184,14 @@ function Bt({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 		]
 	});
 }
-function Vt({ exam: e, dashboard: t, request: n, refresh: r }) {
-	let [i, a] = (0, _.useState)(!1), [o, s] = (0, _.useState)(null), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(""), [f, p] = (0, _.useState)(!1), m = t.attempts.reduce((e, t) => e + (t.cancelled_at ? 0 : t.pending || 0), 0);
-	(0, _.useEffect)(() => {
+function rn({ exam: e, dashboard: t, request: n, refresh: r }) {
+	let [i, a] = (0, x.useState)(!1), [o, s] = (0, x.useState)(null), [c, l] = (0, x.useState)(!1), [u, d] = (0, x.useState)(""), [f, p] = (0, x.useState)(!1), m = t.attempts.reduce((e, t) => e + (t.cancelled_at ? 0 : t.pending || 0), 0);
+	(0, x.useEffect)(() => {
 		let t = !0;
 		return n(`/api/exams/${e.id}/essay-batch`).then((e) => {
 			t && s(e);
 		}).catch((e) => {
-			t && T(e.message, !0);
+			t && M(e.message, !0);
 		}), () => {
 			t = !1;
 		};
@@ -14837,111 +15202,111 @@ function Vt({ exam: e, dashboard: t, request: n, refresh: r }) {
 			await n(`/api/exams/${e.id}/essay-batch`, {
 				...t,
 				partialCredit: i
-			}), l(!1), d(""), T("بدأ تصحيح المقالي. يمكن متابعة التقدم هنا."), s(await n(`/api/exams/${e.id}/essay-batch`));
+			}), l(!1), d(""), M("بدأ تصحيح المقالي. يمكن متابعة التقدم هنا."), s(await n(`/api/exams/${e.id}/essay-batch`));
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			p(!1);
 		}
-	}, g = o?.job, v = g?.state === "running", y = g ? `${{
+	}, g = o?.job, _ = g?.state === "running", v = g ? `${{
 		running: "التصحيح جارٍ",
 		completed: "اكتمل التصحيح",
 		partial: "اكتمل مع إجابات بدون درجة",
 		interrupted: "توقف التصحيح"
-	}[g.state] || "حالة التصحيح"} · ${b(g.processed)} من ${b(g.total)} سؤال · ${b(g.graded)} صُحح · ${b(g.skipped)} كان مصححًا · ${b(g.failed)} بدون نتيجة مؤكدة.${g.needs_review ? ` ${b(g.needs_review)} إجابة معلقة من التصحيح السابق.` : ""} ${g.message || ""}` : `${b(m)} إجابة مقالية تنتظر التصحيح.`;
-	return /* @__PURE__ */ (0, M.jsxs)("section", {
+	}[g.state] || "حالة التصحيح"} · ${A(g.processed)} من ${A(g.total)} سؤال · ${A(g.graded)} صُحح · ${A(g.skipped)} كان مصححًا · ${A(g.failed)} بدون نتيجة مؤكدة.${g.needs_review ? ` ${A(g.needs_review)} إجابة معلقة من التصحيح السابق.` : ""} ${g.message || ""}` : `${A(m)} إجابة مقالية تنتظر التصحيح.`;
+	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "essay-batch-panel",
 		"aria-label": "التصحيح الجماعي للمقالي",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, M.jsx)("span", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, S.jsx)("span", {
 						className: "context-label",
 						children: "تصحيح جماعي"
 					}),
-					/* @__PURE__ */ (0, M.jsx)("h2", { children: "المقالي لكل الطلاب" }),
-					/* @__PURE__ */ (0, M.jsx)("p", {
+					/* @__PURE__ */ (0, S.jsx)("h2", { children: "المقالي لكل الطلاب" }),
+					/* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "يصحح الإجابات المسلّمة غير المصححة فقط. يمكنك اختيار درجات جزئية وتعديل كل درجة يدويًا."
 					})
-				] }), /* @__PURE__ */ (0, M.jsx)("button", {
+				] }), /* @__PURE__ */ (0, S.jsx)("button", {
 					className: "button",
-					disabled: e.state !== "closed" || v || m === 0 || f || !o,
+					disabled: e.state !== "closed" || _ || m === 0 || f || !o,
 					onClick: () => o?.keyConfigured ? h({}) : l(!0),
 					children: "تصحيح المقالي للجميع ✦"
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("label", {
+			/* @__PURE__ */ (0, S.jsxs)("label", {
 				className: "check-label",
-				children: [/* @__PURE__ */ (0, M.jsx)("input", {
+				children: [/* @__PURE__ */ (0, S.jsx)("input", {
 					type: "checkbox",
 					checked: i,
-					disabled: v || f,
+					disabled: _ || f,
 					onChange: (e) => a(e.target.checked)
 				}), "منح درجات جزئية للأجزاء الصحيحة في المقالي"]
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("p", {
+			/* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "help",
 				children: [i ? "توزيع درجة السؤال على الأجزاء المطلوبة، مع قبول الإجابات بنفس المعنى." : "التقدير الحالي: صح أو غلط فقط.", " ينطبق على الإجابات التي لم تُصحح بعد."]
 			}),
-			/* @__PURE__ */ (0, M.jsx)("p", {
+			/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "help",
 				children: "٥ طلبات معًا، ثم انتظار ٥ ثوانٍ بين الدفعات. أي طلب مؤقت لا يوقف بقية الدفعة ويعاد تلقائيًا. كل إجابة تحصل على درجة نهائية حسب المعنى والأجزاء الصحيحة المفهومة. يمكنك تعديل الدرجة يدويًا بعد التصحيح."
 			}),
-			/* @__PURE__ */ (0, M.jsxs)("p", {
+			/* @__PURE__ */ (0, S.jsxs)("p", {
 				className: "help",
 				role: "status",
 				children: [
-					o ? y : "جارٍ قراءة حالة التصحيح…",
+					o ? v : "جارٍ قراءة حالة التصحيح…",
 					" ",
-					b(m),
+					A(m),
 					" إجابة ما زالت بدون درجة.",
-					v && /* @__PURE__ */ (0, M.jsx)("button", {
+					_ && /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "text-button",
 						onClick: async () => {
 							try {
-								await n(`/api/exams/${e.id}/essay-batch/stop`, {}), T("سيقف التصحيح بعد السؤال الحالي");
+								await n(`/api/exams/${e.id}/essay-batch/stop`, {}), M("سيقف التصحيح بعد السؤال الحالي");
 							} catch (e) {
-								T(e.message, !0);
+								M(e.message, !0);
 							}
 						},
 						children: "إيقاف بعد السؤال الحالي"
 					})
 				]
 			}),
-			c && /* @__PURE__ */ (0, M.jsxs)("form", {
+			c && /* @__PURE__ */ (0, S.jsxs)("form", {
 				onSubmit: (e) => {
 					e.preventDefault(), h({ apiKey: u.trim() });
 				},
 				children: [
-					/* @__PURE__ */ (0, M.jsxs)("label", { children: ["مفتاح خدمة التصحيح", /* @__PURE__ */ (0, M.jsx)("input", {
+					/* @__PURE__ */ (0, S.jsxs)("label", { children: ["مفتاح خدمة التصحيح", /* @__PURE__ */ (0, S.jsx)("input", {
 						type: "password",
 						autoComplete: "off",
 						value: u,
 						onChange: (e) => d(e.target.value),
 						placeholder: "الصق المفتاح هنا"
 					})] }),
-					/* @__PURE__ */ (0, M.jsx)("p", {
+					/* @__PURE__ */ (0, S.jsx)("p", {
 						className: "help",
 						children: "يحتاج إنترنت على جهاز الإدارة. يُرسل نص السؤال والإجابة النموذجية وإجابة الطالب فقط. المفتاح يُحفظ في .env خارج SQLite."
 					}),
-					/* @__PURE__ */ (0, M.jsxs)("div", {
+					/* @__PURE__ */ (0, S.jsxs)("div", {
 						className: "actions",
 						children: [
-							/* @__PURE__ */ (0, M.jsx)("button", {
+							/* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button",
 								disabled: f,
 								type: "submit",
 								children: "ابدأ التصحيح"
 							}),
-							/* @__PURE__ */ (0, M.jsx)("button", {
+							/* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button secondary",
 								type: "button",
 								onClick: () => h({}),
 								children: "استخدم المفتاح المحفوظ"
 							}),
-							/* @__PURE__ */ (0, M.jsx)("button", {
+							/* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button secondary",
 								type: "button",
 								onClick: () => l(!1),
@@ -14954,8 +15319,8 @@ function Vt({ exam: e, dashboard: t, request: n, refresh: r }) {
 		]
 	});
 }
-function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
-	let [a, o] = (0, _.useState)(!1);
+function an({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
+	let [a, o] = (0, x.useState)(!1);
 	if (!e) return null;
 	let s = e.questionIds.map((e) => t.config.questions.find((t) => t.id === e)).filter(Boolean), c = async (t, r) => {
 		t.preventDefault();
@@ -14966,50 +15331,50 @@ function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 				questionId: r.id,
 				score: Number(a.elements.score.value),
 				feedback: a.elements.feedback.value
-			}), await i(), T("تم حفظ التصحيح");
+			}), await i(), M("تم حفظ التصحيح");
 		} catch (e) {
-			T(e.message, !0);
+			M(e.message, !0);
 		} finally {
 			o(!1);
 		}
 	};
-	return /* @__PURE__ */ (0, M.jsxs)("div", {
+	return /* @__PURE__ */ (0, S.jsxs)("div", {
 		id: "review-panel",
 		children: [
-			/* @__PURE__ */ (0, M.jsxs)("div", {
+			/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "review-heading",
-				children: [/* @__PURE__ */ (0, M.jsxs)("div", { children: [/* @__PURE__ */ (0, M.jsxs)("h2", { children: ["ورقة ", e.name] }), /* @__PURE__ */ (0, M.jsxs)("p", { children: [
+				children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsxs)("h2", { children: ["ورقة ", e.name] }), /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 					"الدرجة المصححة: ",
-					b(e.score),
+					A(e.score),
 					" من ",
-					b(e.maximum)
-				] })] }), /* @__PURE__ */ (0, M.jsxs)("div", {
+					A(e.maximum)
+				] })] }), /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "actions",
 					children: [
-						e.pending ? /* @__PURE__ */ (0, M.jsx)("span", {
+						e.pending ? /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "badge waiting",
 							children: "أكمل المقالي لفتح التقرير"
-						}) : Ct ? /* @__PURE__ */ (0, M.jsx)("button", {
+						}) : zt ? /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							disabled: a,
 							onClick: async () => {
 								o(!0);
 								try {
-									await A(`/api/attempts/${e.id}/report.pdf`, "تقرير-الطالب.pdf", "application/pdf");
+									await le(`/api/attempts/${e.id}/report.pdf`, "تقرير-الطالب.pdf", "application/pdf");
 								} catch (e) {
-									T(e.message, !0);
+									M(e.message, !0);
 								} finally {
 									o(!1);
 								}
 							},
 							children: "تنزيل تقرير الطالب PDF"
-						}) : /* @__PURE__ */ (0, M.jsx)("a", {
+						}) : /* @__PURE__ */ (0, S.jsx)("a", {
 							className: "button secondary small",
 							href: `/report/${e.id}`,
 							children: "فتح تقرير الطالب / تنزيل PDF ↗"
 						}),
-						/* @__PURE__ */ (0, M.jsx)(Re, { attempts: [e] }),
-						/* @__PURE__ */ (0, M.jsx)("button", {
+						/* @__PURE__ */ (0, S.jsx)($e, { attempts: [e] }),
+						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button",
 							disabled: a,
 							onClick: r,
@@ -15018,7 +15383,7 @@ function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 					]
 				})]
 			}),
-			/* @__PURE__ */ (0, M.jsx)(ge, {
+			/* @__PURE__ */ (0, S.jsx)(Se, {
 				attempt: e,
 				exam: t,
 				request: n,
@@ -15026,38 +15391,38 @@ function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 			}),
 			s.map((t, n) => {
 				let r = e.answers[t.id], i = e.grades[t.id];
-				return /* @__PURE__ */ (0, M.jsxs)("article", {
+				return /* @__PURE__ */ (0, S.jsxs)("article", {
 					className: "review-question",
 					children: [
-						/* @__PURE__ */ (0, M.jsxs)("h3", { children: [
-							b(n + 1),
+						/* @__PURE__ */ (0, S.jsxs)("h3", { children: [
+							A(n + 1),
 							". ",
 							t.text
 						] }),
-						/* @__PURE__ */ (0, M.jsxs)("p", {
+						/* @__PURE__ */ (0, S.jsxs)("p", {
 							className: "answer-text",
 							children: [
-								/* @__PURE__ */ (0, M.jsx)("strong", { children: "إجابة الطالب:" }),
+								/* @__PURE__ */ (0, S.jsx)("strong", { children: "إجابة الطالب:" }),
 								" ",
 								t.kind === "mcq" ? r == null ? "لم يجب" : t.options[r] : r || "لم يجب"
 							]
 						}),
-						/* @__PURE__ */ (0, M.jsxs)("p", {
+						/* @__PURE__ */ (0, S.jsxs)("p", {
 							className: "model-answer-preview",
 							children: [
-								/* @__PURE__ */ (0, M.jsx)("strong", { children: "الإجابة النموذجية:" }),
+								/* @__PURE__ */ (0, S.jsx)("strong", { children: "الإجابة النموذجية:" }),
 								" ",
 								t.kind === "mcq" ? t.options[t.correct] : t.modelAnswer
 							]
 						}),
-						t.kind === "essay" ? /* @__PURE__ */ (0, M.jsxs)("form", {
+						t.kind === "essay" ? /* @__PURE__ */ (0, S.jsxs)("form", {
 							className: "grade-form",
 							onSubmit: (e) => c(e, t),
 							children: [
-								/* @__PURE__ */ (0, M.jsxs)("label", { children: [
+								/* @__PURE__ */ (0, S.jsxs)("label", { children: [
 									"الدرجة من ",
-									b(t.points),
-									/* @__PURE__ */ (0, M.jsx)("input", {
+									A(t.points),
+									/* @__PURE__ */ (0, S.jsx)("input", {
 										name: "score",
 										type: "number",
 										required: !0,
@@ -15067,24 +15432,24 @@ function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 										defaultValue: i?.score ?? ""
 									})
 								] }),
-								/* @__PURE__ */ (0, M.jsxs)("label", { children: ["ملاحظة التصحيح", /* @__PURE__ */ (0, M.jsx)("input", {
+								/* @__PURE__ */ (0, S.jsxs)("label", { children: ["ملاحظة التصحيح", /* @__PURE__ */ (0, S.jsx)("input", {
 									name: "feedback",
 									maxLength: "2000",
 									defaultValue: (i?.feedback || "").replace(/^Gemini:\s*/i, "")
 								})] }),
-								/* @__PURE__ */ (0, M.jsx)("button", {
+								/* @__PURE__ */ (0, S.jsx)("button", {
 									className: "button small",
 									type: "submit",
 									disabled: a,
 									children: "حفظ الدرجة"
 								})
 							]
-						}, `${t.id}:${i?.score}:${i?.feedback}`) : /* @__PURE__ */ (0, M.jsxs)("span", {
+						}, `${t.id}:${i?.score}:${i?.feedback}`) : /* @__PURE__ */ (0, S.jsxs)("span", {
 							className: "badge complete",
 							children: [
-								b(i?.score || 0),
+								A(i?.score || 0),
 								" / ",
-								b(t.points)
+								A(t.points)
 							]
 						})
 					]
@@ -15093,33 +15458,34 @@ function Ht({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 		]
 	});
 }
-function Ut({ centerIntegrated: e = !1 }) {
-	return /* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [/* @__PURE__ */ (0, M.jsx)("div", {
+function on({ centerIntegrated: e = !1 }) {
+	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "page-heading",
-		children: /* @__PURE__ */ (0, M.jsxs)("div", { children: [
-			/* @__PURE__ */ (0, M.jsx)("span", {
+		children: /* @__PURE__ */ (0, S.jsxs)("div", { children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
 				className: "context-label",
 				children: "قبل أول تجربة"
 			}),
-			/* @__PURE__ */ (0, M.jsx)("h1", { children: "جهّز القاعة بخطوات بسيطة." }),
-			/* @__PURE__ */ (0, M.jsx)("p", { children: "ابدأ بعدد قليل من الموبايلات، ثم زوّد العدد تدريجيًا." })
+			/* @__PURE__ */ (0, S.jsx)("h1", { children: "جهّز القاعة بخطوات بسيطة." }),
+			/* @__PURE__ */ (0, S.jsx)("p", { children: "ابدأ بعدد قليل من الموبايلات، ثم زوّد العدد تدريجيًا." })
 		] })
-	}), /* @__PURE__ */ (0, M.jsxs)("section", {
+	}), /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel guide",
-		children: [/* @__PURE__ */ (0, M.jsxs)("ol", { children: [
-			/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "وصّل الكمبيوتر والطلاب بنفس الشبكة" }), /* @__PURE__ */ (0, M.jsx)("p", { children: e ? "من برنامج السنتر افتح «التهيئة والبورتال» على جهاز الساكند، وافحص الاتصال قبل فتح القاعة. الطلاب يتصلون بواي فاي الامتحان ويفتحون الرابط الظاهر في القاعة. إن ظهر تنبيه «بلا إنترنت»، يختارون البقاء متصلين بالشبكة. يظل تسجيل الطلاب والحضور والتحصيل متاحًا على الهوست والساكند أثناء الاتصال." : "مع الـOmada المباشر، افتح «الإعدادات والبيانات» ثم «تهيئة الماك الآن». بعد اكتمالها، وصّل كابل الـOmada بالماك واترك محوّل كهربائه موصولًا. الطلاب يتصلون بواي فاي الامتحان؛ قد تظهر لهم صفحة الدخول تلقائيًا. لو لم تظهر، يفتحون رابط الطلاب المحلي. يمكن إبقاء الماك متصلًا بواي فاي آخر للإنترنت؛ شبكة الامتحان نفسها لا تحتاج إنترنت. لو ظهر للموبايل تنبيه «بلا إنترنت»، اختر البقاء متصلًا بهذه الشبكة." })] }),
-			/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "جهّز الامتحان وافتح القاعة" }), /* @__PURE__ */ (0, M.jsx)("p", { children: e ? "على الساكند اختر الامتحان والمجموعة والحصة وامتحان الرصد من دليل السنتر المحفوظ تلقائيًا، وافتح القاعة دون اتصال بالهوست أو كشف طلاب. لو الدليل غير موجود، يمكنك فتح قاعة دون ربط واختيار الوجهة لاحقًا على الهوست. الطالب يكتب اسمه وتلفونه وكوده؛ ثم اضغط ابدأ الامتحان للجميع." : "الطالب يكتب اسمه ورقمه وكوده الحالي، ثم ينتظر بدء الامتحان." })] }),
-			/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "ابدأ وتابع الحفظ" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "راقب المتصلين وحالة حفظ الإجابات. عند تغيير الموبايل استخدم «استعادة الدخول»." })] }),
-			/* @__PURE__ */ (0, M.jsxs)("li", { children: [/* @__PURE__ */ (0, M.jsx)("h2", { children: "راجع واحتفظ بنسخة" }), /* @__PURE__ */ (0, M.jsx)("p", { children: e ? "أغلق القاعة وأكمل تصحيح المقالي، ثم أعد ربط الجهازين. على الهوست راجع وجهة الرصد المختارة، أو حددها لو فُتحت القاعة دون ربط، واضغط تأكيد استيراد الدرجات مرة واحدة. تُرصد الدرجات النهائية فقط، ومنها الصفر، ويظهر عدد المرصودين والباقين وأسباب الانتظار." : "بعد انتهاء الامتحان راجع المقالي واطبع تقرير كل طالب أو احفظه PDF، ثم نزّل نسخة احتياطية." })] })
-		] }), /* @__PURE__ */ (0, M.jsxs)("div", {
+		children: [/* @__PURE__ */ (0, S.jsxs)("ol", { children: [
+			/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "وصّل الكمبيوتر والطلاب بنفس الشبكة" }), /* @__PURE__ */ (0, S.jsx)("p", { children: e ? "من برنامج السنتر افتح «التهيئة والبورتال» على جهاز الساكند، وافحص الاتصال قبل فتح القاعة. الطلاب يتصلون بواي فاي الامتحان ويفتحون الرابط الظاهر في القاعة. إن ظهر تنبيه «بلا إنترنت»، يختارون البقاء متصلين بالشبكة. يظل تسجيل الطلاب والحضور والتحصيل متاحًا على الهوست والساكند أثناء الاتصال." : "مع الـOmada المباشر، افتح «الإعدادات والبيانات» ثم «تهيئة الماك الآن». بعد اكتمالها، وصّل كابل الـOmada بالماك واترك محوّل كهربائه موصولًا. الطلاب يتصلون بواي فاي الامتحان؛ قد تظهر لهم صفحة الدخول تلقائيًا. لو لم تظهر، يفتحون رابط الطلاب المحلي. يمكن إبقاء الماك متصلًا بواي فاي آخر للإنترنت؛ شبكة الامتحان نفسها لا تحتاج إنترنت. لو ظهر للموبايل تنبيه «بلا إنترنت»، اختر البقاء متصلًا بهذه الشبكة." })] }),
+			/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "جهّز الامتحان وافتح القاعة" }), /* @__PURE__ */ (0, S.jsx)("p", { children: e ? "على الساكند اختر الامتحان والمجموعة والحصة وامتحان الرصد من دليل السنتر المحفوظ تلقائيًا، وافتح القاعة دون اتصال بالهوست أو كشف طلاب. لو الدليل غير موجود، يمكنك فتح قاعة دون ربط واختيار الوجهة لاحقًا على الهوست. الطالب يكتب اسمه وتلفونه وكوده؛ ثم اضغط ابدأ الامتحان للجميع." : "الطالب يكتب اسمه ورقمه وكوده الحالي، ثم ينتظر بدء الامتحان." })] }),
+			/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "ابدأ وتابع الحفظ" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "راقب المتصلين وحالة حفظ الإجابات. عند تغيير الموبايل استخدم «استعادة الدخول»." })] }),
+			/* @__PURE__ */ (0, S.jsxs)("li", { children: [/* @__PURE__ */ (0, S.jsx)("h2", { children: "راجع واحتفظ بنسخة" }), /* @__PURE__ */ (0, S.jsx)("p", { children: e ? "أغلق القاعة وأكمل تصحيح المقالي، ثم أعد ربط الجهازين. على الهوست راجع وجهة الرصد المختارة، أو حددها لو فُتحت القاعة دون ربط، واضغط تأكيد استيراد الدرجات مرة واحدة. تُرصد الدرجات النهائية فقط، ومنها الصفر، ويظهر عدد المرصودين والباقين وأسباب الانتظار." : "بعد انتهاء الامتحان راجع المقالي واطبع تقرير كل طالب أو احفظه PDF، ثم نزّل نسخة احتياطية." })] })
+		] }), /* @__PURE__ */ (0, S.jsxs)("div", {
 			className: "notice",
-			children: [/* @__PURE__ */ (0, M.jsx)("strong", { children: "حدود نسخة التجربة" }), /* @__PURE__ */ (0, M.jsx)("p", { children: "تصحيح المقالي الذكي يحتاج إنترنت على جهاز الإدارة. إرسال تقارير واتساب يحتاج حسابًا رسميًا وقالبًا معتمدًا وإنترنت على جهاز الإدارة. أبقِ الكمبيوتر مفتوحًا طوال الامتحان." })]
+			children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: "حدود نسخة التجربة" }), /* @__PURE__ */ (0, S.jsx)("p", { children: "تصحيح المقالي الذكي يحتاج إنترنت على جهاز الإدارة. إرسال تقارير واتساب يحتاج حسابًا رسميًا وقالبًا معتمدًا وإنترنت على جهاز الإدارة. أبقِ الكمبيوتر مفتوحًا طوال الامتحان." })]
 		})]
 	})] });
 }
-(0, v.createRoot)(document.getElementById("main")).render(/* @__PURE__ */ (0, M.jsxs)(M.Fragment, { children: [
-	/* @__PURE__ */ (0, M.jsx)(he, {}),
-	/* @__PURE__ */ (0, M.jsx)(Be, {}),
-	/* @__PURE__ */ (0, M.jsx)(At, {})
+(0, b.createRoot)(document.getElementById("main")).render(/* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
+	(0, y.createPortal)(/* @__PURE__ */ (0, S.jsx)(te, {}), document.getElementById("network-incident-shortcut")),
+	/* @__PURE__ */ (0, S.jsx)(I, {}),
+	/* @__PURE__ */ (0, S.jsx)(tt, {}),
+	/* @__PURE__ */ (0, S.jsx)(qt, {})
 ] }));
 //#endregion

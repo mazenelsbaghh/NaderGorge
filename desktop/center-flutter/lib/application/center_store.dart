@@ -2922,7 +2922,6 @@ class CenterStore extends ChangeNotifier {
       );
       if (session.status == SessionStatus.canceled ||
           !sessionHasStarted(sessionId) ||
-          isCairoGroup(session.groupId) ||
           activity.kind != AcademicActivityKind.homework ||
           !activity.appliesToSession(session)) {
         throw const CenterException('اختر واجبًا وحصة بدأت لرصد الحاضرين.');
@@ -3053,18 +3052,6 @@ class CenterStore extends ChangeNotifier {
         'الطالب غير مسجل في مجموعة القاهرة المختارة.',
       );
     }
-    if (!cairo &&
-        !_activeAttendances.any(
-          (entry) =>
-              entry.studentId == student.id &&
-              entry.sessionId == session.id &&
-              (entry.status == AttendanceStatus.present ||
-                  entry.status == AttendanceStatus.makeup),
-        )) {
-      throw const CenterException(
-        'الرصد متاح للطلاب الحاضرين والمعوّضين فعليًا في هذه الحصة فقط.',
-      );
-    }
     AcademicActivity? activity;
     if (record.activityId != null) {
       activity = _find<AcademicActivity>(
@@ -3096,6 +3083,18 @@ class CenterStore extends ChangeNotifier {
           'هذا النشاط واجب؛ لا تسجل فيه درجة امتحان أو غياب امتحان.',
         );
       }
+    }
+    if ((!cairo || activity?.kind == AcademicActivityKind.homework) &&
+        !_activeAttendances.any(
+          (entry) =>
+              entry.studentId == student.id &&
+              entry.sessionId == session.id &&
+              (entry.status == AttendanceStatus.present ||
+                  entry.status == AttendanceStatus.makeup),
+        )) {
+      throw const CenterException(
+        'الرصد متاح للطلاب الحاضرين والمعوّضين فعليًا في هذه الحصة فقط.',
+      );
     }
     final existing = _state.academics.where(
       (e) =>
@@ -3130,10 +3129,12 @@ class CenterStore extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     if (cairo) {
-      if (activity?.kind != AcademicActivityKind.exam) {
-        throw const CenterException('تحضير القاهرة مخصص لرصد الامتحانات.');
+      if (activity == null) {
+        throw const CenterException('اختر امتحانًا أو واجبًا لرصد القاهرة.');
       }
-      if (record.score != null && !record.examAbsent) {
+      if (activity.kind == AcademicActivityKind.exam &&
+          record.score != null &&
+          !record.examAbsent) {
         final previous = _activeAttendances
             .where(
               (a) => a.studentId == student.id && a.sessionId == session.id,

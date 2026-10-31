@@ -63,7 +63,7 @@ func TestAbandonedStudentConnectionsCloseAndLeaveJoiningAvailable(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if interrupted == "request body" && response.StatusCode != http.StatusBadRequest {
+			if interrupted == "request body" && response.StatusCode != http.StatusRequestTimeout {
 				t.Fatalf("partial join unexpectedly returned %d", response.StatusCode)
 			}
 			if interrupted == "idle keep-alive" && response.StatusCode != http.StatusOK {

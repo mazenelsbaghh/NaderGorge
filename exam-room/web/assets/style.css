@@ -83,3 +83,19 @@ dialog:not([open]){display:none}
 .student-shortcut summary{cursor:pointer;font-weight:700;min-height:32px}
 .student-shortcut ol{padding-inline-start:24px;margin:8px 0}
 .student-shortcut [data-shortcut-status]:empty{display:none}
+
+/* Content shrinks and wraps inside the phone viewport; only question navigation scrolls sideways. */
+.student-body{min-width:0;overflow-wrap:anywhere}
+.student-body #student-main{width:100%;min-width:0}
+.student-body .student-header{width:100%;flex-wrap:wrap}
+.student-header .brand,.student-header .brand>span{min-width:0;max-width:100%}
+.student-header .brand img{flex-shrink:0}
+.student-header>.badge{max-width:100%;white-space:normal}
+.student-body .join-layout{grid-template-columns:repeat(2,minmax(0,1fr))}
+.student-body .join-layout>*,.student-body .join-form,.student-body input,.student-body textarea{min-width:0}
+.student-body .question-nav{max-width:100%;min-width:0}
+.student-body .question-nav button{flex-shrink:0}
+.student-body .student-identity strong,.student-body .exam-header-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.student-body .step-summary{flex-wrap:wrap}
+.student-body .toast>span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){.student-body .join-layout{grid-template-columns:minmax(0,1fr)}}

@@ -106,6 +106,23 @@ class PortalModeSelectionTest(unittest.TestCase):
         return {'hostname': 'exam.massar-academy.net',
                 'expiresAt': (datetime.now(timezone.utc)+timedelta(days=days)).isoformat()}
 
+    def test_direct_selection_survives_restart_and_only_changes_live_status_when_applied(self):
+        for mode in ('direct', 'welcome'):
+            with self.subTest(mode=mode):
+                self.installed.write_text('{broken unused certificate')
+                self.applied.write_text('{"mode":"legacy"}')
+                self.settings.select_mode(mode)
+                restored = PortalSettings(self.root, self.root/'checker', lambda _: None)
+                self.assertEqual(restored.installation(), {'mode': mode})
+                self.assertEqual(restored.status()['appliedMode'], 'legacy')
+                self.assertTrue(restored.status()['pendingModeChange'])
+                self.applied.write_text(json.dumps({'mode': mode}))
+                status = restored.status()
+                self.assertEqual(status['state'], mode)
+                self.assertFalse(status['pendingModeChange'])
+                self.assertFalse(status['phoneVerified'])
+                self.assertIsNone(status['installed'])
+
     def healthy_status(self):
         checked = subprocess.CompletedProcess([], 0, json.dumps({'ready': True, 'hostname': 'exam.massar-academy.net'}), '')
         with patch.object(portal_settings.subprocess, 'run', return_value=checked):
@@ -203,7 +220,7 @@ class PortalModeSelectionTest(unittest.TestCase):
         self.assertEqual(self.settings.installation(), {'mode': 'https', 'hostname': '', 'directory': ''})
 
     def test_backward_compatible_defaults_and_certificate_renewal_keep_live_state(self):
-        self.assertEqual(self.settings.installation(), {'mode': 'legacy'})
+        self.assertEqual(self.settings.installation(), {'mode': 'direct'})
         self.settings.directory.mkdir()
         candidate = self.settings.directory/'candidate.json'
         candidate.write_text(json.dumps(self.certificate_metadata(days=60)))

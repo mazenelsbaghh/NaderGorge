@@ -95,6 +95,12 @@ type portalEvent struct {
 }
 
 func diagnosticKind(request *http.Request, status int) string {
+	if request.URL.Path == "/welcome" || request.URL.Path == "/welcome/ready" {
+		return "welcome_page"
+	}
+	if request.URL.Path == "/welcome/accept" {
+		return "welcome_accept"
+	}
 	if request.URL.Path == "/capport" {
 		return "capport"
 	}

@@ -8,7 +8,9 @@
 .nav-item.active { background:#203c53; border-color:#36556a; }
 .nav-item.active::after { content:""; width:5px; height:5px; border-radius:50%; margin-inline-start:auto; background:#7bdcc9; }
 .workspace { margin-right:240px; }
-.topbar { min-height:70px; background:#ffffffc9; }
+.topbar { min-height:70px; background:#ffffffc9; flex-wrap:wrap; gap:12px; }
+.network-incident-report { max-width:460px; min-width:0; }
+.network-incident-report .help { margin-top:6px; overflow-wrap:anywhere; }
 .workspace main { padding:36px 40px 70px; max-width:1500px; }
 .page-heading { align-items:center; margin-bottom:28px; }
 .page-heading h1 { font-size:29px; line-height:1.6; }

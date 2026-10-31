@@ -225,4 +225,87 @@ void main() {
       },
     );
   }
+
+  for (final scenario in [
+    'appendGroup',
+    'removeOldGroup',
+    'alreadyAddedWithoutMarker',
+  ]) {
+    test(
+      'existing student enrollment $scenario preserves prior membership',
+      () async {
+        final initial = CenterState.fromJson(
+          Map<String, dynamic>.from(jsonDecode(jsonEncode(baseline))),
+        );
+        final originalStudent = initial.students.single;
+        final oldGroups = originalStudent.groupIds;
+        final additionalGroup = initial.groups.single.copyWith(
+          id: 'additional-imported-group',
+          name: 'additional imported group',
+        );
+        initial.groups.add(additionalGroup);
+        final newGroups = [...oldGroups, additionalGroup.id];
+        final enrollmentKey = '${originalStudent.id}:${additionalGroup.id}';
+        if (scenario == 'alreadyAddedWithoutMarker') {
+          initial.students[0] = originalStudent.copyWith(groupIds: newGroups);
+          initial.enrollments[enrollmentKey] = _enrolledAt;
+        }
+        validateState(initial);
+        final before = initial.toJson();
+        final patch = {
+          'id': _repairId,
+          'installationSeedId': initial.installationSeedId,
+          'requiredSessionId': initial.sessions.single.id,
+          'updates': [
+            {
+              'collection': 'students',
+              'id': originalStudent.id,
+              'before': {'groupIds': oldGroups},
+              'after': {
+                'groupIds': scenario == 'removeOldGroup'
+                    ? [additionalGroup.id]
+                    : newGroups,
+              },
+            },
+          ],
+          'inserts': [],
+          'enrollmentInserts': [
+            {
+              'studentId': originalStudent.id,
+              'groupId': additionalGroup.id,
+              'enrolledAt': _enrolledAt,
+            },
+          ],
+          'audit': [],
+        };
+        // A newer membership that already equals the reviewed after-state is safe.
+        final applies = scenario != 'removeOldGroup';
+        final expected = CenterState.fromJson(
+          Map<String, dynamic>.from(jsonDecode(jsonEncode(before))),
+        );
+        if (applies) {
+          expected.students[0] = originalStudent.copyWith(groupIds: newGroups);
+          expected.enrollments[enrollmentKey] = _enrolledAt;
+          expected.appliedDataRepairs.add(_repairId);
+        }
+        final originalAsset = syntheticRepairAssets[_asset];
+        syntheticRepairAssets[_asset] = patch;
+        installSyntheticRepairAssets();
+        addTearDown(() => syntheticRepairAssets[_asset] = originalAsset!);
+        final directory = await Directory.systemTemp.createTemp(
+          'existing-enrollment-',
+        );
+        addTearDown(() => directory.delete(recursive: true));
+        final store = await CenterStore.open(
+          directory: directory.path,
+          initialState: () async => initial,
+        );
+        await store.close();
+        expect((await _persistedState(directory)).toJson(), expected.toJson());
+        final reopened = await CenterStore.open(directory: directory.path);
+        await reopened.close();
+        expect((await _persistedState(directory)).toJson(), expected.toJson());
+      },
+    );
+  }
 }

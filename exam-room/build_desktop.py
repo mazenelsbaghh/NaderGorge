@@ -1,16 +1,21 @@
 """Run using the build environment on each target OS. Never package data/."""
 from pathlib import Path
 import argparse
+import json
 import os
 import plistlib
 import subprocess
 import sys
+import tarfile
+from macos_compatibility import MINIMUM_MACOS, native_requirements, verify_macos_bundle, version_parts
 
 
 root = Path(__file__).resolve().parent
 parser = argparse.ArgumentParser()
 parser.add_argument('--output-dir', type=Path, default=root / 'dist')
 args = parser.parse_args()
+if sys.platform == 'darwin' and version_parts(native_requirements(Path(sys.base_prefix) / 'Python')) > version_parts(MINIMUM_MACOS):
+    raise RuntimeError('Build with the compatible python.org runtime; this Python requires a newer macOS.')
 frontend = root / 'frontend'
 if not (frontend / 'node_modules').is_dir():
     subprocess.run(['npm', 'ci', '--prefix', str(frontend)], cwd=root, check=True)
@@ -35,9 +40,15 @@ command = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--win
            '--specpath', str(root / 'build'), '--paths', str(root)]
 if sys.platform == 'darwin':
     portal_binary = binary_dir / 'massar-exam-portal-proxy'
-    dnsmasq_binary = Path('/opt/homebrew/opt/dnsmasq/sbin/dnsmasq')
-    if not dnsmasq_binary.is_file():
-        raise RuntimeError('Install dnsmasq on the build Mac before packaging.')
+    dnsmasq_source = root / 'build' / 'dnsmasq-2.93'
+    with tarfile.open(root / 'packaging' / 'vendor' / 'dnsmasq-2.93.tar.gz') as archive:
+        archive.extractall(root / 'build', filter='data')
+    subprocess.run(['make', '-j4', '-f', '../Makefile', 'top=..', 'CC=clang',
+                    'build_cflags=-DVERSION=\\"2.93\\"',
+                    f'CFLAGS=-Wall -W -O2 -mmacosx-version-min={MINIMUM_MACOS}',
+                    f'LDFLAGS=-mmacosx-version-min={MINIMUM_MACOS}', 'dnsmasq'],
+                   cwd=dnsmasq_source / 'src', check=True)
+    dnsmasq_binary = dnsmasq_source / 'src' / 'dnsmasq'
     subprocess.run(['go', 'build', '-trimpath', '-o', str(portal_binary), './cmd/portal-proxy'], cwd=root, check=True)
     command += ['--osx-bundle-identifier', 'com.massar.examroom',
                 '--icon', str(root / 'packaging' / 'Massar.icns'),
@@ -57,14 +68,17 @@ if sys.platform == 'darwin':
     info = app / 'Contents' / 'Info.plist'
     with info.open('rb') as source:
         metadata = plistlib.load(source)
-    metadata['CFBundleShortVersionString'] = '0.4.24'
-    metadata['CFBundleVersion'] = '43'
+    metadata['CFBundleShortVersionString'] = '0.4.34'
+    metadata['CFBundleVersion'] = '53'
+    metadata['LSMinimumSystemVersion'] = MINIMUM_MACOS
     with info.open('wb') as target:
         plistlib.dump(metadata, target)
     subprocess.run(['codesign', '--force', '--deep', '--sign', '-', '--timestamp=none', str(app)], check=True)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
+    compatibility = verify_macos_bundle(app)
+    (args.output_dir.resolve() / 'macOS-compatibility.json').write_text(json.dumps(compatibility, indent=2) + '\n')
     installer = args.output_dir.resolve() / 'Massar-Exam-Room-macOS-arm64-Installer.pkg'
     subprocess.run(['pkgbuild', '--component', str(app), '--install-location', '/Applications',
-                    '--identifier', 'com.massar.examroom.installer', '--version', '0.4.24',
+                    '--identifier', 'com.massar.examroom.installer', '--version', '0.4.34',
                     str(installer)], check=True)
     print(f'Installable package: {installer}')

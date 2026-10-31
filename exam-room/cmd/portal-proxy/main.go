@@ -69,13 +69,17 @@ func studentProxy(target *url.URL) *httputil.ReverseProxy {
 			MaxIdleConns:          512,
 			MaxIdleConnsPerHost:   512,
 			IdleConnTimeout:       90 * time.Second,
-			ResponseHeaderTimeout: 15 * time.Second,
+			ResponseHeaderTimeout: 35 * time.Second,
 		},
 		ErrorHandler: studentProxyError,
 	}
 }
 
 func handler() http.Handler {
+	return networkHandler(false)
+}
+
+func networkHandler(direct bool) http.Handler {
 	proxy := studentProxy(studentUpstream())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/capport" {
@@ -87,6 +91,12 @@ func handler() http.Handler {
 			host = strings.TrimSuffix(host, ":80")
 		}
 		if !localHost(host) {
+			if direct {
+				if !connectivityResponse(w, r, strings.ToLower(host)) {
+					http.Error(w, "Offline exam network: open http://10.77.0.1/", http.StatusNotFound)
+				}
+				return
+			}
 			// Phones probe an ordinary HTTP address after joining Wi-Fi. The
 			// local DNS server points that probe here, so send its browser to
 			// the actual student page without exposing any student API under
@@ -111,11 +121,13 @@ func portalServer(address string, handler http.Handler) *http.Server {
 	// Interrupted phone connections must not retain sockets or upstream work for
 	// the entire exam. These deadlines apply per request, not to the exam session.
 	return &http.Server{Addr: address, Handler: handler, ReadHeaderTimeout: 12 * time.Second,
-		ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 30 * time.Second}
+		ReadTimeout: 15 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 30 * time.Second}
 }
 
 func main() {
 	listen := flag.String("listen", ":80", "local HTTP listener")
+	direct := flag.Bool("no-captive-portal", false, "disable automatic login redirects and answer supported HTTP connectivity probes locally; does not provide Internet")
+	welcome := flag.Bool("welcome-portal", false, "show Start before answering supported HTTP checks for that client's IP; does not provide Internet")
 	diagnosticPath := flag.String("diagnostic-log", "/var/db/massar-exam-room/portal-events.jsonl", "bounded portal diagnostics")
 	var capport capportConfig
 	flag.StringVar(&capport.listen, "https-listen", ":443", "local HTTPS listener")
@@ -125,6 +137,12 @@ func main() {
 	checkCapport := flag.Bool("check-capport", false, "validate CAPPORT certificate configuration and exit without opening listeners")
 	checkPortal := flag.Bool("check-portal", false, "verify trusted HTTPS discovery and exam service at 10.77.0.1, then exit")
 	flag.Parse()
+	if *welcome && (*direct || capport.configured()) {
+		log.Fatal("Welcome portal cannot be combined with direct or HTTPS portal mode")
+	}
+	if *direct && capport.configured() {
+		log.Fatal("Direct access cannot advertise a captive HTTPS portal")
+	}
 	if *checkCapport && *checkPortal {
 		log.Fatal("Choose either --check-capport or --check-portal")
 	}
@@ -145,7 +163,14 @@ func main() {
 		log.Fatal(err)
 	}
 	sink := queueDiagnostics(diagnosticFile)
-	server := portalServer(*listen, diagnosticHandler(handler(), sink))
+	var entry http.Handler = networkHandler(*direct)
+	if *welcome {
+		entry, err = newWelcomePortal()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	server := portalServer(*listen, diagnosticHandler(entry, sink))
 	if capport.configured() {
 		httpsServer, err := capportServer(capport, sink)
 		if err != nil {

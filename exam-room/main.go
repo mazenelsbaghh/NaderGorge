@@ -188,14 +188,27 @@ func payload(r *http.Request) (M, error) {
 	}
 	var p M
 	dec := json.NewDecoder(io.LimitReader(r.Body, 1500001))
-	if e := dec.Decode(&p); e != nil || p == nil {
+	if e := dec.Decode(&p); e != nil {
+		return payloadReadError(e)
+	}
+	if p == nil {
 		return nil, fail("تعذر قراءة الطلب", 400)
 	}
 	var extra any
-	if dec.Decode(&extra) != io.EOF {
+	if err := dec.Decode(&extra); err != io.EOF {
+		if err != nil {
+			return payloadReadError(err)
+		}
 		return nil, fail("صيغة الطلب غير صالحة", 400)
 	}
 	return p, nil
+}
+func payloadReadError(err error) (M, error) {
+	var timeout net.Error
+	if errors.As(err, &timeout) && timeout.Timeout() || errors.Is(err, io.ErrUnexpectedEOF) {
+		return nil, fail("لم يكتمل وصول الطلب. احتفظ بإجاباتك وأعد الإرسال تلقائيًا.", http.StatusRequestTimeout)
+	}
+	return nil, fail("تعذر قراءة الطلب", http.StatusBadRequest)
 }
 func cookie(r *http.Request, name string) string {
 	c, e := r.Cookie(name)
@@ -242,7 +255,7 @@ func (a *app) studentAPI(w http.ResponseWriter, r *http.Request) error {
 		v, e := a.db.studentPresence(tok, r.URL.Query().Get("visible") != "0")
 		// A delayed expired response must not clear a newer login cookie.
 		if e == nil {
-			jsonOut(w, v)
+			studentSessionJSON(w, r, v)
 		}
 		return e
 	case r.Method == "POST" && p == "/api/presence":
@@ -257,7 +270,7 @@ func (a *app) studentAPI(w http.ResponseWriter, r *http.Request) error {
 		screen, _ := body["screen"].(map[string]any)
 		v, err := a.db.studentPresence(tok, visible, M(screen))
 		if err == nil {
-			jsonOut(w, v)
+			studentSessionJSON(w, r, v)
 		}
 		return err
 	case r.Method == "POST" && p == "/api/center/lookup":
@@ -665,6 +678,8 @@ func (a *app) adminAPI(w http.ResponseWriter, r *http.Request) error {
 			v, e = a.db.absenceRule(parts[3], body)
 		case "extend-time":
 			v, e = a.db.extendTime(parts[3], body)
+		case "reopen-attempts":
+			v, e = a.db.reopenAttempts(parts[3], body)
 		case "save":
 			v, e = a.db.updateExam(parts[3], body)
 		case "duplicate":

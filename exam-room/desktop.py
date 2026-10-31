@@ -13,6 +13,7 @@ from exam_downloads import ExamDownloads
 from network_setup import NetworkSetupApi, bundle_path
 from network_timeline import NetworkTimeline
 from portal_settings import PortalSettings
+from omada_monitor import OmadaMonitor
 from sleep_protection import SleepProtection
 
 
@@ -78,6 +79,8 @@ def main():
         return 1
     sleep_protection = SleepProtection()
     sleep_protection.start(process.pid)
+    omada_monitor = OmadaMonitor(args.data_dir)
+    omada_monitor.start()
     try:
         webview.settings['ALLOW_DOWNLOADS'] = True
         downloads = ExamDownloads(args.admin_port, lambda filename: window.create_file_dialog(
@@ -90,7 +93,7 @@ def main():
             finally:
                 window.set_title('مسار · امتحانات السنتر')
         portal_settings = PortalSettings(args.data_dir, bundle_path() / 'massar-exam-portal-proxy', choose_certificate_file)
-        api = NetworkSetupApi(sleep_protection, downloads, portal_settings, args.admin_port, timeline)
+        api = NetworkSetupApi(sleep_protection, downloads, portal_settings, args.admin_port, timeline, omada_monitor)
         timeline.start(api._collect_network_status)
         window = webview.create_window('مسار · امتحانات السنتر', f'http://127.0.0.1:{args.admin_port}',
                               width=1360, height=900, min_size=(800, 600), confirm_close=True,
@@ -101,6 +104,7 @@ def main():
                                             'global.quitConfirmation': 'إغلاق البرنامج سيوقف اتصال الطلاب. الإجابات المحفوظة ستبقى، والوقت سيستمر في الانقضاء. هل تريد الإغلاق؟'})
         webview.start(private_mode=True, gui='edgechromium' if sys.platform == 'win32' else None)
     finally:
+        omada_monitor.stop()
         timeline.stop()
         process.terminate()
         try:

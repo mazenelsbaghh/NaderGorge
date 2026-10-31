@@ -49,6 +49,15 @@ def private_fixture(directory, *, overlay=False, baseline_sha=None):
     if overlay:
         review = {"status": "verified", "ownerAuthorized": True, "sourceBackupSha256": "a" * 64,
                   "installationSeedSha256": files["installation_seed.json"], "repairSha256": files[trial.GRADE_REPAIR_ASSET]}
+        review["attendanceRepair"] = {"status": "verified", "ownerAuthorized": True,
+                                      "repairSha256": files[trial.ATTENDANCE_REPAIR_ASSET],
+                                      "sourceSha256": "b" * 64, "sourceBackupSha256": "c" * 64}
+        review["jaberAttendanceRepair"] = {**review["attendanceRepair"],
+                                           "repairSha256": files[trial.JABER_ATTENDANCE_REPAIR_ASSET]}
+        review["shobraAttendanceRepair"] = {**review["attendanceRepair"],
+                                            "repairSha256": files[trial.SHOBRA_ATTENDANCE_REPAIR_ASSET]}
+        review["haramAttendanceRepair"] = {**review["attendanceRepair"],
+                                           "repairSha256": files[trial.HARAM_ATTENDANCE_REPAIR_ASSET]}
         review_bytes = json.dumps(review).encode()
         (directory / "grade-repair-review.json").write_bytes(review_bytes)
         manifest.update({"baselineSha256": baseline_sha, "reviewManifest": "grade-repair-review.json", "reviewManifestSha256": trial.digest(review_bytes)})
@@ -90,7 +99,7 @@ class WindowsTrialTests(unittest.TestCase):
             before = {path.name: path.read_bytes() for path in baseline.iterdir()}
             with patch.object(trial, "ROOT", root):
                 result = trial.private_inputs(baseline, overlay)
-                self.assertEqual(13, len(result["files"]))
+                self.assertEqual(17, len(result["files"]))
                 self.assertEqual(manifest["files"], result["files"])
                 self.assertEqual(historical["sha256"], result["baselineSha256"])
                 self.assertEqual("a" * 64, result["sourceBackupSha256"])
@@ -99,7 +108,7 @@ class WindowsTrialTests(unittest.TestCase):
             self.assertEqual(before, {path.name: path.read_bytes() for path in baseline.iterdir()})
 
     def test_private_overlay_rejects_tampering_unreviewed_seed_and_unsafe_paths(self):
-        for mutation in ("zip_tamper", "missing_repair", "seed", "other_history", "unreviewed", "source_hash", "review_digest", "repair_review", "baseline", "outside", "symlink", "zip_path"):
+        for mutation in ("zip_tamper", "missing_repair", "seed", "other_history", "unreviewed", "source_hash", "review_digest", "repair_review", "attendance_missing", "attendance_unreviewed", "attendance_digest", "attendance_source", "jaber_missing", "jaber_digest", "shobra_missing", "shobra_digest", "haram_missing", "haram_digest", "baseline", "outside", "symlink", "zip_path"):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary).resolve()
                 baseline = root / "artifacts/private/baseline"
@@ -122,6 +131,38 @@ class WindowsTrialTests(unittest.TestCase):
                     rebind_overlay(overlay, review_changes=changes)
                 elif mutation == "review_digest":
                     (overlay / "grade-repair-review.json").write_text('{}')
+                elif mutation.startswith("attendance_"):
+                    attendance = json.loads((overlay / "grade-repair-review.json").read_text())["attendanceRepair"]
+                    if mutation == "attendance_missing":
+                        attendance = None
+                    elif mutation == "attendance_unreviewed":
+                        attendance["status"] = "pending"
+                    elif mutation == "attendance_digest":
+                        attendance["repairSha256"] = "d" * 64
+                    else:
+                        attendance["sourceSha256"] = "unknown"
+                    rebind_overlay(overlay, review_changes={"attendanceRepair": attendance})
+                elif mutation.startswith("jaber_"):
+                    jaber = json.loads((overlay / "grade-repair-review.json").read_text())["jaberAttendanceRepair"]
+                    if mutation == "jaber_missing":
+                        jaber = None
+                    else:
+                        jaber["repairSha256"] = "d" * 64
+                    rebind_overlay(overlay, review_changes={"jaberAttendanceRepair": jaber})
+                elif mutation.startswith("shobra_"):
+                    shobra = json.loads((overlay / "grade-repair-review.json").read_text())["shobraAttendanceRepair"]
+                    if mutation == "shobra_missing":
+                        shobra = None
+                    else:
+                        shobra["repairSha256"] = "d" * 64
+                    rebind_overlay(overlay, review_changes={"shobraAttendanceRepair": shobra})
+                elif mutation.startswith("haram_"):
+                    haram = json.loads((overlay / "grade-repair-review.json").read_text())["haramAttendanceRepair"]
+                    if mutation == "haram_missing":
+                        haram = None
+                    else:
+                        haram["repairSha256"] = "d" * 64
+                    rebind_overlay(overlay, review_changes={"haramAttendanceRepair": haram})
                 elif mutation == "baseline":
                     (baseline / "host.zip").write_bytes(b"tampered historical host")
                 elif mutation == "outside":

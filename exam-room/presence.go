@@ -42,7 +42,8 @@ func pauseIfAbsent(q Q, a Attempt, x Exam, t float64) error {
 	if seconds <= 0 || x.State != "running" || a.Submitted.Valid {
 		return nil
 	}
-	_, err := q.Exec(`UPDATE attempt_presence SET paused=1 WHERE attempt_id=? AND paused=0 AND COALESCE(hidden_since,last_visible)<=?`, a.ID, t-seconds)
+	// Missing heartbeats can mean lost Wi-Fi, not leaving the exam page.
+	_, err := q.Exec(`UPDATE attempt_presence SET paused=1 WHERE attempt_id=? AND paused=0 AND hidden_since<=?`, a.ID, t-seconds)
 	return err
 }
 func pauseAbsent(q Q, x Exam, t float64) error {
@@ -53,7 +54,7 @@ func pauseAbsent(q Q, x Exam, t float64) error {
 	if seconds <= 0 || x.State != "running" {
 		return nil
 	}
-	_, err := q.Exec(`UPDATE attempt_presence SET paused=1 WHERE paused=0 AND COALESCE(hidden_since,last_visible)<=? AND attempt_id IN (SELECT id FROM attempts WHERE exam_id=? AND submitted_at IS NULL AND deadline>?)`, t-seconds, x.ID, t)
+	_, err := q.Exec(`UPDATE attempt_presence SET paused=1 WHERE paused=0 AND hidden_since<=? AND attempt_id IN (SELECT id FROM attempts WHERE exam_id=? AND submitted_at IS NULL AND deadline>?)`, t-seconds, x.ID, t)
 	return err
 }
 func (d *DB) studentPresence(tok string, visible bool, screen ...M) (M, error) {

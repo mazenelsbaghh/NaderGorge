@@ -15,14 +15,21 @@ import network_setup
 
 class AndroidPortalProbeTest(unittest.TestCase):
     def test_ready_requires_dns_redirect_and_actual_exam_service(self):
-        for dns_ip, http_status, service_status, service_body, expected in [
-            ('127.0.0.1', 302, 200, '{"rooms":[],"serverTime":123}', True),
-            ('127.0.0.2', 302, 200, '{"rooms":[],"serverTime":123}', False),
-            ('127.0.0.1', 200, 200, '{"rooms":[],"serverTime":123}', False),
-            ('127.0.0.1', 503, 200, '{"rooms":[],"serverTime":123}', False),
-            ('127.0.0.1', 302, 502, 'Bad Gateway', False),
-            ('127.0.0.1', 302, 200, '<html>Router login</html>', False),
-            ('127.0.0.1', 302, 200, '{}', False),
+        for dns_ip, http_status, service_status, service_body, expected, mode in [
+            ('127.0.0.1', 302, 200, '{"rooms":[],"serverTime":123}', True, 'legacy'),
+            ('127.0.0.2', 302, 200, '{"rooms":[],"serverTime":123}', False, 'legacy'),
+            ('127.0.0.1', 200, 200, '{"rooms":[],"serverTime":123}', False, 'legacy'),
+            ('127.0.0.1', 503, 200, '{"rooms":[],"serverTime":123}', False, 'legacy'),
+            ('127.0.0.1', 302, 502, 'Bad Gateway', False, 'legacy'),
+            ('127.0.0.1', 302, 200, '<html>Router login</html>', False, 'legacy'),
+            ('127.0.0.1', 302, 200, '{}', False, 'legacy'),
+            ('127.0.0.1', 204, 200, '{"rooms":[],"serverTime":123}', True, 'direct'),
+            ('127.0.0.1', 302, 200, '{"rooms":[],"serverTime":123}', False, 'direct'),
+            ('127.0.0.1', 204, 502, 'Bad Gateway', False, 'direct'),
+            ('127.0.0.2', 204, 200, '{"rooms":[],"serverTime":123}', False, 'direct'),
+            ('127.0.0.1', 302, 200, '{"rooms":[],"serverTime":123}', True, 'welcome'),
+            ('127.0.0.1', 204, 200, '{"rooms":[],"serverTime":123}', True, 'welcome'),
+            ('127.0.0.1', 302, 502, 'Bad Gateway', False, 'welcome'),
         ]:
             with self.subTest(dns_ip=dns_ip, http_status=http_status, service_status=service_status, service_body=service_body):
                 requests = []
@@ -36,7 +43,7 @@ class AndroidPortalProbeTest(unittest.TestCase):
                             return
                         self.send_response(http_status)
                         if http_status == 302:
-                            self.send_header('Location', student_url)
+                            self.send_header('Location', student_url+'welcome' if mode == 'welcome' else student_url)
                         self.end_headers()
                     def log_message(self, *_):
                         pass
@@ -47,7 +54,7 @@ class AndroidPortalProbeTest(unittest.TestCase):
                 try:
                     dns_result = subprocess.CompletedProcess([], 0, dns_ip+'\n', '')
                     with patch.object(network_setup, 'command', return_value=dns_result):
-                        result = network_setup.check_android_portal(student_url)
+                        result = network_setup.check_android_portal(student_url, mode=mode)
                     self.assertEqual(result['ready'], expected)
                     self.assertEqual(requests, [('/generate_204', 'connectivitycheck.gstatic.com'),
                                                 ('/api/lounge', f'127.0.0.1:{server.server_port}')])

@@ -247,11 +247,25 @@ class TransactionalNetworkInstallTest(unittest.TestCase):
         self.assertIn('dhcp-option-force=114,https://exam.example.com/capport', self.config.read_text())
         self.assertEqual((self.data / 'capport/privkey.pem').read_text(), 'PRIVATE_SECRET')
 
+    def test_welcome_mode_replaces_https_listener_without_removing_saved_keys(self):
+        self.assertEqual(self.run_install('exam.example.com', self.cert_source).returncode, 0)
+        completed = self.run_install(mode='welcome')
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads((self.data / 'portal-mode.json').read_text()), {'mode': 'welcome'})
+        arguments = plistlib.loads(self.proxy_plist.read_bytes())['ProgramArguments']
+        self.assertIn('--welcome-portal', arguments)
+        self.assertNotIn('--no-captive-portal', arguments)
+        self.assertNotIn('--capport-hostname', arguments)
+        self.assertNotIn('dhcp-option-force=114', self.config.read_text())
+        self.assertEqual((self.data / 'capport/privkey.pem').read_text(), 'PRIVATE_SECRET')
+
     def test_never_configured_legacy_network_needs_no_certificate(self):
         completed = self.run_install()
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertNotIn('dhcp-option-force=114', self.config.read_text())
         self.assertFalse((self.data / 'capport-public.json').exists())
+        self.assertEqual(json.loads((self.data / 'portal-mode.json').read_text()), {'mode': 'direct'})
+        self.assertIn('--no-captive-portal', plistlib.loads(self.proxy_plist.read_bytes())['ProgramArguments'])
         for directory in (self.data, self.config.parent, self.root / 'usr/local/libexec'):
             self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o755)
 
@@ -453,6 +467,20 @@ class TransactionalNetworkInstallTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE((self.data / 'portal-mode.json').stat().st_mode), 0o644)
         self.assertIn('dhcp-option-force=114,https://exam.example.com/capport', self.config.read_text())
         self.assertIn('--capport-hostname', plistlib.loads(self.proxy_plist.read_bytes())['ProgramArguments'])
+
+    def test_switching_https_to_direct_removes_discovery_and_preserves_certificates(self):
+        self.assertEqual(self.run_install('exam.example.com', self.cert_source, mode='https').returncode, 0)
+        key = self.data / 'capport/privkey.pem'
+        original = key.read_bytes()
+        for mode in ('direct', None):
+            completed = self.run_install(mode=mode)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads((self.data / 'portal-mode.json').read_text()), {'mode': 'direct'})
+            self.assertNotIn('dhcp-option-force=114', self.config.read_text())
+            arguments = plistlib.loads(self.proxy_plist.read_bytes())['ProgramArguments']
+            self.assertIn('--no-captive-portal', arguments)
+            self.assertNotIn('--capport-hostname', arguments)
+            self.assertEqual(key.read_bytes(), original)
 
     def test_explicit_legacy_works_with_expired_certificate_and_corrupt_metadata(self):
         self.assertEqual(self.run_install('exam.example.com', self.cert_source, mode='https').returncode, 0)

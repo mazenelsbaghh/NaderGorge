@@ -188,7 +188,7 @@ func (d *DB) expire() error {
 			}
 			if x.Config["timerMode"] == "shared" && x.Started.Valid && now() >= x.Started.Float64+examDuration(x) {
 				var extended int
-				if e = q.QueryRow(`SELECT COUNT(*) FROM attempts WHERE exam_id=? AND submitted_at IS NULL AND deadline>? AND NOT EXISTS(SELECT 1 FROM attempt_cancellations WHERE attempt_id=attempts.id)`, eid, now()).Scan(&extended); e != nil {
+				if e = q.QueryRow(`SELECT COUNT(*) FROM attempts WHERE exam_id=? AND submitted_at IS NULL AND deadline>? AND NOT EXISTS(SELECT 1 FROM attempt_cancellations WHERE attempt_id=attempts.id)`, eid, now()-answerSyncGraceSeconds).Scan(&extended); e != nil {
 					return e
 				}
 				if extended == 0 {
@@ -199,7 +199,7 @@ func (d *DB) expire() error {
 					continue
 				}
 			}
-			rs, e := q.Query(attemptSQL+` WHERE exam_id=? AND submitted_at IS NULL AND deadline<=?`, eid, now())
+			rs, e := q.Query(attemptSQL+` WHERE exam_id=? AND submitted_at IS NULL AND deadline<=?`, eid, now()-answerSyncGraceSeconds)
 			if e != nil {
 				return e
 			}
@@ -248,7 +248,7 @@ func (d *DB) auth(q Q, tok string) (Attempt, Exam, error) {
 	if e != nil {
 		return a, x, e
 	}
-	if !a.Cancelled.Valid && !a.Submitted.Valid && a.Deadline.Valid && now() >= a.Deadline.Float64 {
+	if !a.Cancelled.Valid && !a.Submitted.Valid && a.Deadline.Valid && now() >= a.Deadline.Float64+answerSyncGraceSeconds {
 		if e = finalize(q, a, x, "timeout"); e != nil {
 			return a, x, e
 		}
@@ -483,6 +483,13 @@ func (d *DB) saveAnswers(tok string, p M) (M, error) {
 	if e != nil {
 		return nil, e
 	}
+	autoSubmit := false
+	if _, present := p["autoSubmit"]; present {
+		autoSubmit, e = boolField(p, "autoSubmit")
+		if e != nil {
+			return nil, e
+		}
+	}
 	var out M
 	e = d.tx(func(q *sql.Tx) error {
 		a, x, e := d.auth(q, tok)
@@ -520,8 +527,12 @@ func (d *DB) saveAnswers(tok string, p M) (M, error) {
 				return e
 			}
 		}
-		if submit {
-			if e = finalize(q, a, x, "student"); e != nil {
+		if submit && (!autoSubmit || (a.Deadline.Valid && now() >= a.Deadline.Float64)) {
+			reason := "student"
+			if autoSubmit {
+				reason = "timeout"
+			}
+			if e = finalize(q, a, x, reason); e != nil {
 				return e
 			}
 			a, e = attempt(q, a.ID)

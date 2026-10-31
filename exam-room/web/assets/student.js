@@ -1,4 +1,4 @@
-import {$, $$, api as sendRequest, escapeHtml as e, number, timeLabel, toast, cloneData, formValues, askDialog, downloadBlob} from './common.js';
+import {$, $$, api as sendRequest, escapeHtml as e, number, timeLabel, toast, cloneData, formValues, askDialog} from './common.js';
 
 import {screenGuardActive,screenGuardBlocked,enterExamScreen,screenMeasurement} from './screen-guard.js';
 import {createStudentShortcut} from './student-shortcut.js';
@@ -10,7 +10,9 @@ const api=diagnostics.request;
 const main = $('#student-main');
 const joinMarkup = main.innerHTML;
 let session, answers = {}, serverRevision = 0, pendingWrite = null, saving = false;
-let finishing = false, dirty = false, conflict = false, clockOffset = 0, saveTimer, online = true, joining = false;
+let finishing = false, automaticFinish = false, dirty = false, clockOffset = 0, saveTimer, online = true, joining = false;
+let saveFailures = 0, nextSaveAt = 0, localDraftSaved = true;
+let checkedSubmission = '';
 let sessionExpired = false, examLayoutObserver, unreceivedDraft = false;
 let unreceivedDrafts = [];
 let pollTimer, polling = false;
@@ -22,53 +24,28 @@ function canOfferShortcut() {
   return session===null&&!joining&&!sessionExpired&&renderedState==='join';
 }
 function readShortcutRisk() {
-  if(unreceivedDraft||unreceivedDrafts.length)return 'توجد إجابات لم يتأكد وصولها. نزّل النسخة الاحتياطية للمشرف قبل إضافة الاختصار أو تغيير المتصفح.';
+  if(unreceivedDraft||unreceivedDrafts.length)return 'توجد إجابات لم يتأكد وصولها. راجع المشرف قبل إضافة الاختصار أو تغيير المتصفح، ولا تمسح بياناته.';
   try {
     for(let index=0;index<localStorage.length;index++) {
       const key=localStorage.key(index);
-      if(key&&key.indexOf('massar-exam-draft:')===0&&draftNotReceived(JSON.parse(localStorage.getItem(key))))return 'توجد مسودة إجابات لم يتأكد وصولها. نزّلها من أسفل الصفحة للمشرف قبل إضافة الاختصار أو تغيير المتصفح.';
+      if(key&&key.indexOf('massar-exam-draft:')===0&&draftNotReceived(JSON.parse(localStorage.getItem(key))))return 'توجد مسودة إجابات لم يتأكد وصولها. راجع المشرف قبل إضافة الاختصار أو تغيير المتصفح، ولا تمسح بياناته.';
     }
   } catch {return 'تعذر فحص الإجابات المحفوظة في هذا المتصفح. يمكنك تسجيل بياناتك والدخول هنا عاديًا؛ راجع المشرف قبل إضافة الاختصار أو تغيير المتصفح، ولا تمسح بياناته.';}
   return '';
 }
 
 function currentDraft() {
-  return {answers, serverRevision, pendingWrite, finishing, questionIndex, dirty, attemptId:session.id, examId:session.examId, name:session.name, code:session.code, title:session.title};
+  return {answers, serverRevision, pendingWrite, finishing, automaticFinish, questionIndex, dirty, attemptId:session.id, examId:session.examId, name:session.name, code:session.code, title:session.title};
 }
 function saveDraft() {
   if (!session || session.state !== 'running') return;
   try {
     localStorage.setItem(draftKey(session.id), JSON.stringify(currentDraft()));
+    localDraftSaved = true;
   } catch {
+    localDraftSaved = false;
     toast('التخزين المؤقت على هذا المتصفح غير متاح. تأكد من ظهور «تم الحفظ على الجهاز».', true);
   }
-}
-function exportAnswerBackup(draft) {
-  const backup = {format:'massar-answer-backup-v1', attemptId:draft.attemptId, examId:draft.examId,
-    name:draft.name, code:draft.code, title:draft.title, answers:draft.answers};
-  downloadBlob(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),`Massar-Answers-${draft.attemptId.slice(0,8)}.json`);
-  toast('تم تجهيز نسخة الإجابات. احتفظ بالملف وقدّمه للمشرف إذا لم تصل إجاباتك.');
-}
-function renderDraftDownloads() {
-  const drafts=[];
-  try {
-    for(let index=0;index<localStorage.length;index++) {
-      const key=localStorage.key(index);
-      if(key.indexOf('massar-exam-draft:')!==0)continue;
-      try {
-        const draft=JSON.parse(localStorage.getItem(key));
-        if(typeof draft?.attemptId==='string'&&draft.attemptId&&draft.examId&&draft.answers&&(draft.dirty||draft.pendingWrite))drafts.push(draft);
-      } catch { /* A damaged draft must not hide the other recoverable attempts. */ }
-    }
-  } catch { return; }
-  if(!drafts.length)return;
-  const panel=document.createElement('section');panel.className='notice';
-  const description=document.createElement('p');description.textContent='توجد مسودات إجابات على هذا المتصفح. نزّل نسخة للمشرف قبل حذف بياناته أو تغيير الجهاز.';panel.appendChild(description);
-  drafts.forEach(draft=>{const button=document.createElement('button');button.className='button secondary';button.textContent='تنزيل نسخة: '+draft.title+' — '+draft.code;button.onclick=()=>exportAnswerBackup(draft);panel.appendChild(button);});
-  main.appendChild(panel);
-}
-function downloadAnswerBackup() {
-  exportAnswerBackup(currentDraft());
 }
 function sameAnswers(left, right) {
   const keys = Object.keys(left || {});
@@ -87,7 +64,7 @@ function storedAttemptDrafts(attemptId) {
       try { const draft = JSON.parse(localStorage.getItem(key)); if (draftNotReceived(draft)) drafts.push(draft); }
       catch { /* A damaged draft must not hide the other recoverable attempts. */ }
     }
-  } catch { /* Keep the current page's answers available for export when storage is unavailable. */ }
+  } catch { /* Keep the in-memory answers when browser storage is unavailable. */ }
   return drafts;
 }
 function retainDraft(draft, nextSession) {
@@ -96,7 +73,7 @@ function retainDraft(draft, nextSession) {
   retained.backupKey = draft.backupKey || draftKey(nextSession.id) + ':unreceived:' + Date.now().toString(36) + Math.random().toString(36).slice(2);
   unreceivedDrafts.push(retained);
   try { localStorage.setItem(retained.backupKey, JSON.stringify(retained)); }
-  catch { toast('تعذر حفظ نسخة الإجابات في المتصفح. نزّلها الآن قبل إغلاق الصفحة.', true); }
+  catch { toast('تعذر حفظ نسخة الإجابات في المتصفح. اترك الصفحة مفتوحة وراجع المشرف فورًا.', true); }
 }
 function restoreRetainedDrafts(nextSession) {
   const retained = unreceivedDrafts.filter(draft => draft.attemptId === nextSession.id)
@@ -115,16 +92,13 @@ function renderRetainedDrafts() {
   const panel = $('#retained-drafts');
   if (!panel) return;
   panel.hidden = unreceivedDrafts.length === 0;
-  panel.innerHTML = '<strong>توجد نسخة سابقة من إجاباتك تحتاج مراجعة.</strong><p>لم يتأكد حفظ هذه النسخة على جهاز الإدارة. احتفظنا بها منفصلة للمراجعة؛ نزّلها للمشرف قبل حذف بيانات المتصفح. استخدم نافذة واحدة للامتحان.</p>';
-  unreceivedDrafts.forEach((draft, index) => {
-    const button = document.createElement('button'); button.className = 'button secondary'; button.type = 'button';
-    button.textContent = 'تنزيل الإجابات السابقة للمراجعة' + (unreceivedDrafts.length > 1 ? ' ' + number(index + 1) : '');
-    button.onclick = () => exportAnswerBackup(draft); panel.appendChild(button);
-  });
+  panel.innerHTML = '<strong>توجد نسخة سابقة من إجاباتك تحتاج مراجعة.</strong><p>لم يتأكد حفظ هذه النسخة على جهاز الإدارة. احتفظنا بها منفصلة للمراجعة؛ راجع المشرف من نفس الموبايل والمتصفح، ولا تمسح بياناته. استخدم نافذة واحدة للامتحان.</p>';
 }
 function recoverDraft(nextSession) {
   answers = cloneData(nextSession.answers); serverRevision = nextSession.revision;
-  pendingWrite = null; finishing = false; dirty = false; conflict = false; questionIndex = 0;
+  pendingWrite = null; finishing = false; automaticFinish = false; dirty = false; questionIndex = 0;
+  saveFailures = 0; nextSaveAt = 0;
+  checkedSubmission = '';
   restoreRetainedDrafts(nextSession);
   let saved;
   try { saved = JSON.parse(localStorage.getItem(draftKey(nextSession.id)) || 'null'); }
@@ -142,6 +116,7 @@ function recoverDraft(nextSession) {
   }
   answers = saved.answers; pendingWrite = acknowledged ? null : saved.pendingWrite;
   finishing = saved.finishing;
+  automaticFinish = saved.automaticFinish === true;
   dirty = !sameAnswers(answers, nextSession.answers);
 }
 function setNetwork(connected) {
@@ -150,7 +125,7 @@ function setNetwork(connected) {
   const banner = $('#network-alert');
   banner.hidden = connected;
   banner.textContent = session?.state === 'running'
-    ? 'الاتصال بجهاز الامتحان منقطع. ارجع لواي فاي السنتر واختر البقاء متصلًا بدون إنترنت. الإجابات تنتظر الإرسال؛ نزّل نسخة احتياطية قبل تغيير المتصفح.'
+    ? 'الاتصال بجهاز الامتحان منقطع. ارجع لواي فاي السنتر واختر البقاء متصلًا بدون إنترنت. الإجابات تنتظر الإرسال؛ احتفظ بنفس المتصفح ولا تمسح بياناته.'
     : 'لم يصل رد من جهاز الامتحان. ابقَ على واي فاي السنتر واختر البقاء متصلًا بدون إنترنت؛ بنحاول تلقائيًا. البيانات اللي كتبتها موجودة.';
   if (!connected) {
     const retry=document.createElement('button');retry.className='button secondary small';retry.textContent='تحقق من الاتصال الآن';retry.onclick=()=>poll();banner.appendChild(retry);
@@ -160,20 +135,26 @@ function setNetwork(connected) {
 function acceptSession(nextSession, fromWrite = false) {
   shortcut.hide();
   if (session?.id === nextSession.id &&
-      (nextSession.revision < session.revision || ['submitted', 'cancelled'].indexOf(session.state) >= 0 && ['running', 'waiting'].indexOf(nextSession.state) >= 0)) return;
+      (nextSession.revision < session.revision || session.state === 'cancelled' && ['running', 'waiting'].indexOf(nextSession.state) >= 0 || session.state === 'submitted' && ['running', 'waiting'].indexOf(nextSession.state) >= 0 && nextSession.revision <= session.revision)) return;
+  if (session?.id === nextSession.id && nextSession.state === 'running') {
+    nextSession = {...nextSession, questions:nextSession.questions || session.questions, answers:nextSession.answers || session.answers};
+  }
   const changedAttempt = session?.id !== nextSession.id;
   const becameRunning = session?.state !== 'running' && nextSession.state === 'running';
   if (nextSession.state === 'submitted' && (changedAttempt || session.state !== 'submitted')) retainUnreceivedDrafts(nextSession);
   clockOffset = nextSession.serverTime * 1000 - Date.now();
   session = nextSession; sessionExpired = false;
   if (changedAttempt || becameRunning) recoverDraft(nextSession);
+  if (nextSession.state === 'running' && automaticFinish && remainingSeconds() > 0) {
+    finishing = false; automaticFinish = false; saveDraft();
+  }
   if (!fromWrite && nextSession.state === 'running' && !pendingWrite && !dirty && !saving && nextSession.revision > serverRevision) {
     answers = cloneData(nextSession.answers); serverRevision = nextSession.revision;
     renderedState = '';
   }
   if (nextSession.state === 'submitted') {
     unreceivedDraft = unreceivedDrafts.length > 0;
-    finishing = false; dirty = false; pendingWrite = null;
+    finishing = false; automaticFinish = false; dirty = false; pendingWrite = null;
     if (!unreceivedDraft) {
       try { localStorage.removeItem(draftKey(nextSession.id)); } catch { /* Storage may be unavailable. */ }
     }
@@ -209,10 +190,6 @@ function renderSession() {
       $('.student-finish h1').textContent = 'تم إغلاق محاولتك، ' + session.name;
       $('.student-finish > p').textContent = 'تم اعتماد الإجابات التي وصلت إلى جهاز الإدارة.';
       $('.student-finish').insertBefore(warning, $('.submission-receipt'));
-      unreceivedDrafts.forEach((draft,index)=>{
-        const backupButton=document.createElement('button');backupButton.className='button';backupButton.textContent='تنزيل نسخة احتياطية للإجابات'+(unreceivedDrafts.length>1?' '+number(index+1):'');backupButton.onclick=()=>exportAnswerBackup(draft);
-        $('.student-finish').insertBefore(backupButton,nextButton);
-      });
     }
     return;
   }
@@ -223,18 +200,17 @@ function renderSession() {
   if (session.state !== 'running') return;
   main.innerHTML = `<div class="exam-sticky"><div class="exam-header-details"><div class="student-identity"><strong>${e(session.name)}</strong><span>كود الطالب: <b dir="ltr">${e(session.code)}</b></span></div><strong class="exam-header-title">${e(session.title)}</strong><span id="save-status" role="status">تم الحفظ على الجهاز</span></div><div class="timer-box"><small>الوقت المتبقي</small><strong id="exam-timer" dir="ltr">--:--</strong></div></div>
     <div class="exam-paper"><div class="student-exam-heading"><span class="context-label">بالتوفيق يا ${e(session.name)}</span><h1>سؤال بخطوة، لحد ما تكمّل.</h1>${session.instructions ? `<p class="instructions">${e(session.instructions)}</p>` : ''}<nav class="question-nav" aria-label="خطوات الامتحان">${session.questions.map((question, index) => `<button type="button" data-nav="${question.id}" data-index="${index}" aria-label="السؤال ${index + 1}">${number(index + 1)}</button>`).join('')}</nav><div class="step-summary"><strong id="step-position" aria-live="polite"></strong><span id="answer-progress"></span></div><progress id="step-progress" aria-label="تقدمك في أسئلة الامتحان" max="${session.questions.length}" value="1"></progress></div>
-    <div id="screen-guard-notice" class="notice" hidden><strong>مراقبة شاشة الامتحان</strong><p>سيُسجّل مقاس العرض وعلامة هذا المتصفح. الخروج من ملء الشاشة أو انخفاض المساحة قد يوقف الحل؛ الوقت يستمر.</p><button class="button secondary" id="enter-exam-screen">نعم، افتح شاشة الامتحان</button><p id="screen-support" class="help"></p></div><div id="exam-paused" class="notice" role="alert" hidden><strong>الامتحان موقوف مؤقتًا</strong><p>إجاباتك محفوظة والوقت ما زال شغالًا. اطلب من المشرف الضغط على «استكمال الطالب».</p></div><div id="answer-conflict" class="notice" hidden><strong>تغيرت الإجابات في نافذة أخرى.</strong><p>استخدم نافذة واحدة للامتحان. أعد تحميل الصفحة لتحميل آخر حفظ قبل المتابعة.</p><a class="button secondary" href="/">إعادة تحميل الصفحة</a></div>
+    <div id="screen-guard-notice" class="notice" hidden><strong>مراقبة شاشة الامتحان</strong><p>سيُسجّل مقاس العرض وعلامة هذا المتصفح. الخروج من ملء الشاشة أو انخفاض المساحة قد يوقف الحل؛ الوقت يستمر.</p><button class="button secondary" id="enter-exam-screen">نعم، افتح شاشة الامتحان</button><p id="screen-support" class="help"></p></div><div id="exam-paused" class="notice" role="alert" hidden><strong>الامتحان موقوف مؤقتًا</strong><p>إجاباتك محفوظة والوقت ما زال شغالًا. اطلب من المشرف الضغط على «استكمال الطالب».</p></div>
     <section id="retained-drafts" class="notice" role="status" hidden></section>
     ${session.questions.map((question, index) => questionMarkup(question, index)).join('')}
-    <button type="button" class="button secondary" id="answer-backup">تنزيل نسخة احتياطية للإجابات</button><p class="help">احتفظ بالملف قبل تغيير الموبايل أو المتصفح. النسخة لا تُسلّم الامتحان؛ اعتمادها يكون بواسطة المشرف.</p><p class="help paper-note">تأكد من ظهور «تم الحفظ على الجهاز» قبل التسليم. عند انتهاء الوقت تُعتمد آخر إجابات وصلت لجهاز الإدارة.</p></div>
+    <p class="help paper-note">تأكد من ظهور «تم الحفظ على الجهاز» قبل التسليم. عند انتهاء الوقت يقفل الحل، وتستمر محاولة إرسال الإجابات المحفوظة لمدة ٥ دقائق.</p></div>
     <footer class="exam-submit-bar step-controls"><button class="button secondary" id="previous-question">→ السابق</button><button class="button" id="next-question">التالي ←</button><button class="button" id="submit-exam" hidden>مراجعة وتسليم ←</button></footer>`;
   $$('[data-answer]').forEach(input => input.addEventListener(input.type === 'radio' ? 'change' : 'input', () => {
     answers[input.dataset.answer] = input.type === 'radio' ? Number(input.value) : input.value;
     dirty = true; saveDraft(); updateProgress(); updateSaveStatus();
-    clearTimeout(saveTimer); saveTimer = setTimeout(flushAnswers, input.type === 'radio' ? 0 : 350);
+    scheduleAnswerSave(input.type === 'radio' ? 200 : 1000);
   }));
   $('#enter-exam-screen').onclick = async()=>{try{const supported=await enterExamScreen();$('#screen-support').textContent=supported?'':'هذا المتصفح لا يدعم ملء الشاشة. سنراقب مساحة العرض فقط؛ أبلغ المشرف.';await announceVisibility();freezeInputs();updateScreenNotice();}catch{toast('تعذر فتح ملء الشاشة. افتح الرابط في متصفح يدعمه أو راجع المشرف.',true);}};
-  $('#answer-backup').onclick = downloadAnswerBackup;
   $('#submit-exam').onclick = requestSubmission;
   $('#previous-question').onclick = () => moveQuestion(questionIndex - 1);
   $('#next-question').onclick = () => moveQuestion(questionIndex + 1);
@@ -297,7 +273,7 @@ function updateProgress() {
 function updateSaveStatus() {
   const label = $('#save-status');
   if (!label) return;
-  label.textContent = conflict ? 'تحتاج إعادة تحميل الصفحة' : !online ? 'لم تصل آخر التغييرات؛ نحاول الاتصال…' : saving ? 'جارٍ حفظ الإجابات…' : dirty || pendingWrite ? 'تغييرات تنتظر الحفظ…' : '✓ تم الحفظ على الجهاز';
+  label.textContent = !localDraftSaved ? 'تعذر الحفظ على الموبايل؛ اترك الصفحة مفتوحة وراجع المشرف' : !online ? 'الإجابات محفوظة على الموبايل؛ نحاول الاتصال…' : saving ? 'جارٍ تأكيد حفظ الإجابات…' : dirty || pendingWrite ? 'محفوظة على الموبايل؛ تنتظر تأكيد الجهاز…' : '✓ تم الحفظ على الجهاز';
   label.className = online && !dirty && !pendingWrite && !saving ? 'saved' : 'unsaved';
 }
 function remainingSeconds() { return Math.max(0, (session.deadline * 1000 - Date.now() - clockOffset) / 1000); }
@@ -308,25 +284,27 @@ function updateTimer() {
   $('.timer-box').classList.toggle('urgent', remaining <= 60);
   if (remaining === 0) {
     $('#exam-timer').textContent = '00:00'; freezeInputs();
-    $('#submit-exam').textContent = 'انتهى الوقت؛ ننتظر تأكيد الاستلام';
+    $('#submit-exam').textContent = 'انتهى وقت الحل؛ نزامن الإجابات لمدة ٥ دقائق';
+    if (!finishing) {finishing = true; automaticFinish = true; saveDraft(); scheduleAnswerSave(0);}
   }
 }
 function freezeInputs() {
   const screenBlocked=screenGuardBlocked(session);
-  const frozen = screenBlocked || session?.paused || finishing || conflict || remainingSeconds() <= 0;
+  const frozen = screenBlocked || session?.paused || finishing || remainingSeconds() <= 0;
   $$('[data-answer]').forEach(input => { input.disabled = frozen; });
   $$('[data-nav], #next-question').forEach(button => { button.disabled = screenBlocked || session?.paused || finishing; });
   if ($('#previous-question')) $('#previous-question').disabled = screenBlocked || session?.paused || finishing || questionIndex === 0;
   if ($('#submit-exam')) {
-    $('#submit-exam').disabled = screenBlocked || session?.paused || conflict || remainingSeconds() <= 0 || (finishing && saving);
+    $('#submit-exam').disabled = screenBlocked || session?.paused || remainingSeconds() <= 0 || (finishing && saving);
     if (finishing && remainingSeconds() > 0) $('#submit-exam').textContent = online ? 'جارٍ تأكيد التسليم…' : 'إعادة محاولة التسليم';
   }
 }
 async function flushAnswers() {
-  if (!session || session.state !== 'running' || session.paused || screenGuardBlocked(session) || saving || conflict || (!dirty && !pendingWrite && !finishing)) return;
+  if (!session || session.state !== 'running' || session.paused || screenGuardBlocked(session) || saving || (!dirty && !pendingWrite && !finishing)) return;
+  if (performance.now() < nextSaveAt) {scheduleAnswerSave(nextSaveAt - performance.now()); return;}
   const attemptId = session.id;
   if (!pendingWrite) {
-    pendingWrite = {answers: cloneData(answers), revision: serverRevision + 1, submit: finishing};
+    pendingWrite = {answers: cloneData(answers), revision: serverRevision + 1, submit: finishing, autoSubmit: finishing && automaticFinish};
     saveDraft();
   }
   saving = true; updateSaveStatus(); freezeInputs();
@@ -334,10 +312,13 @@ async function flushAnswers() {
     const sent = pendingWrite;
     const response = await api('/api/answers', sent);
     if (session?.id !== attemptId || response.session.id !== attemptId) return;
+    if (response.session.revision < session.revision) return;
     serverRevision = response.session.revision;
     if (response.answersReceived === true) {
       pendingWrite = null;
       dirty = !sameAnswers(answers, sent.answers);
+      forgetAcknowledgedDrafts(attemptId, sent.answers);
+      saveFailures = 0; nextSaveAt = performance.now() + 1000;
       saveDraft();
     }
     setNetwork(true); acceptSession(response.session, true);
@@ -347,21 +328,80 @@ async function flushAnswers() {
     if (error.status === 423) {
       try {const response=await api(`/api/session?visible=${document.hidden?0:1}`);if(session?.id===attemptId&&response.session?.id===attemptId)acceptSession(response.session);}
       catch {if(session?.id===attemptId)setNetwork(false);}
-    } else if (error.status === 409 || error.status === 400) {
-      conflict = true;
-      retainUnreceivedDrafts(session); renderRetainedDrafts();
-      $('#answer-conflict').hidden = false;
-      toast(error.message, true);
+    } else if (error.status === 409) {
+      try {await reconcileAnswerConflict(attemptId);}
+      catch {setNetwork(false); deferAnswerRetry();}
     } else if (error.status === 401) {
       await expiredSession(error.message);
-    } else setNetwork(false);
+    } else {
+      if (error.status === 400) {pendingWrite = null; dirty = true; saveDraft();}
+      setNetwork(false); deferAnswerRetry();
+    }
   } finally {
     saving = false; updateSaveStatus();
     if (session?.state === 'running') {
       freezeInputs();
-      if (online && !session.paused && !conflict && (dirty || finishing)) setTimeout(flushAnswers, 150);
+      if (!session.paused && (dirty || pendingWrite || finishing)) scheduleAnswerSave(1000);
     }
   }
+}
+function forgetAcknowledgedDrafts(attemptId, receivedAnswers) {
+  unreceivedDrafts = unreceivedDrafts.filter(draft => {
+    if (draft.attemptId !== attemptId || !sameAnswers(draft.answers, receivedAnswers)) return true;
+    try {if (draft.backupKey) localStorage.removeItem(draft.backupKey);}
+    catch { /* Keep the in-memory receipt; an undeletable backup remains available. */ }
+    return false;
+  });
+  if (session?.state === 'submitted') renderedState = '';
+}
+async function verifyFinalDelivery(nextSession) {
+  if (nextSession.state !== 'submitted' || checkedSubmission === nextSession.id) return;
+  const candidates = unreceivedDrafts.filter(draft => draft.attemptId === nextSession.id)
+    .concat(storedAttemptDrafts(nextSession.id));
+  if (session?.id === nextSession.id && pendingWrite) candidates.push(currentDraft());
+  const checked = new Set();
+  for (const draft of candidates) {
+    const sent = draft.pendingWrite;
+    if (!sent || !sameAnswers(draft.answers, sent.answers)) continue;
+    const key = JSON.stringify(sent);
+    if (checked.has(key)) continue;
+    checked.add(key);
+    const receipt = await api('/api/answers', sent);
+    if (session && session.id !== nextSession.id) return;
+    if (receipt.session.id !== nextSession.id || receipt.answersReceived !== true) continue;
+    forgetAcknowledgedDrafts(nextSession.id, sent.answers);
+    if (sameAnswers(answers, sent.answers)) {pendingWrite = null; dirty = false;}
+    try {
+      const stored = JSON.parse(localStorage.getItem(draftKey(nextSession.id)) || 'null');
+      if (stored && sameAnswers(stored.answers, sent.answers)) localStorage.removeItem(draftKey(nextSession.id));
+    } catch { /* An unreadable draft stays available for manual recovery. */ }
+  }
+  checkedSubmission = nextSession.id;
+}
+function scheduleAnswerSave(delay) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushAnswers, Math.max(delay, nextSaveAt - performance.now()));
+}
+function deferAnswerRetry() {
+  saveFailures++;
+  nextSaveAt = performance.now() + Math.min(15000, 1000 * 2 ** Math.min(saveFailures, 4)) + Math.random() * 750;
+}
+async function reconcileAnswerConflict(attemptId) {
+  const response = await api('/api/session');
+  if (session?.id !== attemptId || response.session?.id !== attemptId) return;
+  const latest = response.session;
+  if (latest.state !== 'running') {acceptSession(latest); return;}
+  const acknowledged = pendingWrite?.revision === latest.revision && sameAnswers(pendingWrite.answers, latest.answers);
+  if (acknowledged) {
+    pendingWrite = null; dirty = !sameAnswers(answers, latest.answers);
+  } else {
+    retainUnreceivedDrafts(latest);
+    answers = cloneData(latest.answers); pendingWrite = null; dirty = false; finishing = false; automaticFinish = false;
+    renderedState = '';
+    toast('استعدنا آخر حفظ. تقدر تكمل الحل، ونسختك المختلفة محفوظة في المتصفح لمراجعة المشرف.');
+  }
+  serverRevision = latest.revision; saveFailures = 0; nextSaveAt = performance.now() + 1000;
+  acceptSession(latest, true); saveDraft(); renderRetainedDrafts();
 }
 async function requestSubmission() {
   if (finishing) { await flushAnswers(); return; }
@@ -370,7 +410,7 @@ async function requestSubmission() {
   $('#submit-copy').textContent = missing ? `لسه فيه ${number(missing)} أسئلة بدون إجابة. تقدر ترجع تكملها أو تسلم الآن.` : 'أجبت عن كل الأسئلة. سنرسل الإجابات ونؤكد حفظها قبل إنهاء المحاولة.';
   const approved=await askDialog(dialog,$('#submit-copy').textContent);
   if (!approved || session?.state !== 'running') return;
-  finishing = true; saveDraft(); freezeInputs(); await flushAnswers();
+  finishing = true; automaticFinish = false; saveDraft(); freezeInputs(); await flushAnswers();
 }
 async function joinRoom(identity, button) {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -387,7 +427,6 @@ function renderJoin(lounge = null) {
   const rooms = lounge ? lounge.rooms || (lounge.exam ? [lounge.exam] : []) : [];
   const key = JSON.stringify(lounge ? [rooms,lounge.centerIntegrated,lounge.centerEntryMode] : null);
   if (renderedState === 'join' && lastLounge === key) return;
-  const firstRender = renderedState !== 'join';
   if (!$('#join-form')) main.innerHTML = joinMarkup;
   examLayoutObserver?.disconnect();
   lastLounge = key; renderedState = 'join'; renderedId = '';
@@ -406,7 +445,6 @@ function renderJoin(lounge = null) {
   const notice = $('#join-room-notice');
   notice.hidden = canJoin && !lateBlocked;
   notice.textContent = lateBlocked ? 'الدخول للطلاب الجدد مقفول. لو المشرف استعاد دخولك، استخدم نفس الكود والرقم.' : 'المدرس لم يفتح القاعة بعد. الصفحة تتحدث تلقائيًا.';
-  if (firstRender) renderDraftDownloads();
   if (lounge?.centerIntegrated && lounge.centerEntryMode !== 'details') { renderCenterEntry(canJoin); return; }
   const entryForm = $('#join-form');
   entryForm.oninput=null;entryForm.onchange=null;
@@ -482,10 +520,17 @@ async function poll() {
     if (joining) return;
     if (sessionExpired) { await pollLounge(); setNetwork(true); return; }
     const measurement=screenMeasurement(session);
-    const response = measurement ? await api('/api/presence',{visible:!document.hidden,screen:measurement}) : await api(`/api/session?visible=${document.hidden?0:1}`);
+    const known = session?.state === 'running' ? `&knownAttempt=${encodeURIComponent(session.id)}&knownRevision=${serverRevision}` : '';
+    const response = measurement ? await api('/api/presence?visible=1'+known,{visible:!document.hidden,screen:measurement}) : await api(`/api/session?visible=${document.hidden?0:1}${known}`);
     if (joining || session !== expectedSession) return;
     setNetwork(true);
-    if (response.session) acceptSession(response.session);
+    if (response.session) {
+      acceptSession(response.session);
+      const accepted = session;
+      await verifyFinalDelivery(response.session);
+      if (joining || session !== accepted) return;
+      if (response.session.state === 'submitted') acceptSession(response.session);
+    }
     else { session = null; expectedSession = null; await pollLounge(); }
     if (session?.state === 'running') flushAnswers();
   } catch (error) {
@@ -493,14 +538,14 @@ async function poll() {
     if (error.status === 401) {
       try { await expiredSession(error.message); } catch { setNetwork(false); }
     } else setNetwork(false);
-  } finally { polling = false; pollTimer = setTimeout(poll, 2200 + Math.random() * 800); }
+  } finally { polling = false; pollTimer = setTimeout(poll, (session?.state === 'running' ? 4000 : 2200) + Math.random() * 800); }
 }
 window.addEventListener('beforeunload', event => {
   if (session?.state === 'running' && (dirty || pendingWrite || finishing)) {
     saveDraft(); event.preventDefault(); event.returnValue = '';
   }
 });
-window.addEventListener('online', () => {poll();flushAnswers();});
+window.addEventListener('online', () => {nextSaveAt = 0; poll();flushAnswers();});
 async function announceVisibility() {
  if (!session || session.state!=='running') return;
  const attemptId = session.id;
@@ -531,7 +576,7 @@ window.addEventListener('pagehide',()=>{
     const send = (path, payload) => fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-Exam-Request':'1'},
       body:JSON.stringify(payload),credentials:'same-origin',keepalive:true}).catch(()=>{});
     // A duplicate revision is idempotent; the draft remains until the server acknowledges it.
-    if (pendingWrite && !session.paused && !conflict && !screenGuardBlocked(session)) send('/api/answers',pendingWrite);
+    if (pendingWrite && !session.paused && !screenGuardBlocked(session)) send('/api/answers',pendingWrite);
     send('/api/presence',presence);
   } else api('/api/presence',presence).catch(()=>{});
 });

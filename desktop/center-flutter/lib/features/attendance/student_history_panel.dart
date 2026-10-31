@@ -776,9 +776,9 @@ class StudentHistoryPanel extends StatelessWidget {
         .map(_scoreLabel)
         .join('، ');
     final lessons = _lessonHistory(history);
-    final recentAttendance = (expanded ? lessons : lessons.take(4)).toList();
+    final attendanceRows = lessons;
     final attendancePayments = store.canCollect
-        ? recentAttendance
+        ? attendanceRows
               .map(
                 (row) => row.record == null
                     ? null
@@ -801,7 +801,7 @@ class StudentHistoryPanel extends StatelessWidget {
         if (store.canCollect) 'الحساب',
         if (expanded) 'التعويض',
       ],
-      recentAttendance.asMap().entries.map((indexed) {
+      attendanceRows.asMap().entries.map((indexed) {
         final row = indexed.value;
         final record = row.record;
         final session = _session(row.sessionId);
@@ -832,7 +832,7 @@ class StudentHistoryPanel extends StatelessWidget {
       }).toList(),
       'سجل الحضور يظهر بعد تسجيل أول حصة أو إغلاقها.',
       cell: (row, column) {
-        final entry = recentAttendance[row];
+        final entry = attendanceRows[row];
         final record = entry.record;
         final absent =
             record == null || record.status == AttendanceStatus.absent;
@@ -875,7 +875,7 @@ class StudentHistoryPanel extends StatelessWidget {
       action: !store.canCollect
           ? null
           : (index) {
-              final record = recentAttendance[index].record;
+              final record = attendanceRows[index].record;
               if (record == null || record.status == AttendanceStatus.absent) {
                 return const Text('—');
               }
@@ -889,6 +889,15 @@ class StudentHistoryPanel extends StatelessWidget {
               );
             },
     );
+    final attendanceViewport = expanded
+        ? attendanceTable
+        : ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: MassarScrollView(
+              key: ValueKey('student-attendance-${student.id}'),
+              child: attendanceTable,
+            ),
+          );
     String nameOf(AcademicRecord record) => expanded
         ? academicLabel(record)
         : activitiesById[record.activityId]?.name ??
@@ -1044,7 +1053,7 @@ class StudentHistoryPanel extends StatelessWidget {
               _section(
                 'الحصص والحضور',
                 Icons.event_available_outlined,
-                attendanceTable,
+                attendanceViewport,
               ),
               _section('الملاحظات', Icons.sticky_note_2_outlined, notesPanel!),
             )
@@ -1052,7 +1061,7 @@ class StudentHistoryPanel extends StatelessWidget {
             _section(
               'الحصص والحضور',
               Icons.event_available_outlined,
-              attendanceTable,
+              attendanceViewport,
             ),
           const SizedBox(height: 12),
           _beside(

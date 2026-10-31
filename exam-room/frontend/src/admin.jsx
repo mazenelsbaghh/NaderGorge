@@ -1,5 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
+import {createPortal} from 'react-dom';
+import NetworkIncidentReport from './NetworkIncidentReport';
 import {api, copyText, downloadFile, confirmAction, number, timeLabel, stateLabels, toast} from '../../web/assets/common.js';
 import {QrCode} from '../../web/assets/qr.js';
 import Editor from './Editor.jsx';
@@ -13,6 +15,7 @@ import Sheets from './Sheets.jsx';
 import LiveTimer from './LiveTimer.jsx';
 import {rosterFilters,screenFilters,rosterStatus,matchesRosterFilter,rosterProblem} from './rosterStatus.js';
 import SelectedTime from './SelectedTime.jsx';
+import ReopenAttempts from './ReopenAttempts.jsx';
 import CancelAttempt from './CancelAttempt.jsx';
 import {rosterOrders,sortRoster,joinedLabel,prioritizeRoster} from './rosterOrder.js';
 import RosterCards from './RosterCards.jsx';
@@ -385,7 +388,7 @@ function Questions({exam}) {return <><div className="section-top padded"><p clas
     <div className="section-top"><h3>{number(index+1)}. {question.text}</h3><span className="badge quiet">{number(question.points)} درجات</span></div>
     <p className="model-answer-preview">الإجابة النموذجية: {question.kind==='mcq'?question.options[question.correct]:question.modelAnswer}</p></article>)}</div></>}
 function Roster({dashboard,tab,request,refresh,busy}) {
-  const [search,setSearch]=useState('');const [order,setOrder]=useState('newest');const [problemsFirst,setProblemsFirst]=useState(true);const [filter,setFilter]=useState('all');const [reviewId,setReviewId]=useState(null);const [cancelTarget,setCancelTarget]=useState(null);const [selectedIds,setSelectedIds]=useState([]);
+  const [search,setSearch]=useState('');const [order,setOrder]=useState('newest');const [problemsFirst,setProblemsFirst]=useState(true);const [filter,setFilter]=useState('all');const [reviewId,setReviewId]=useState(null);const [cancelTarget,setCancelTarget]=useState(null);const [selectedIds,setSelectedIds]=useState([]);const [reopenIds,setReopenIds]=useState([]);
   const exam=dashboard.exam;
   const query=search.toLowerCase().trim();
   const searched=dashboard.attempts.filter(a=>`${a.name||''} ${a.code} ${a.phone||''}`.toLowerCase().includes(query));
@@ -403,6 +406,9 @@ function Roster({dashboard,tab,request,refresh,busy}) {
   const canExtend=a=>exam.state==='running'&&a.joined_at&&!a.cancelled_at&&!a.submitted_at&&a.deadline>dashboard.serverTime;
   const selected=dashboard.attempts.filter(a=>selectedIds.includes(a.id)&&canExtend(a));
   const visibleEligible=attempts.filter(canExtend);
+  const canReopen=a=>exam.state==='running'&&a.joined_at&&!a.cancelled_at&&a.submitted_at;
+  const selectedReopen=dashboard.attempts.filter(a=>reopenIds.includes(a.id)&&canReopen(a));
+  const visibleReopen=attempts.filter(canReopen);
   const toggle=(id,checked)=>setSelectedIds(ids=>checked?[...new Set([...ids,id])]:ids.filter(value=>value!==id));
   const reset=async attempt=>{if(!await confirmAction('استعادة دخول الطالب؟','سيتم تسجيل خروج الجلسة القديمة. يدخل الطالب بنفس الكود والرقم، وتبقى الإجابات والوقت كما هما.'))return;
     try{await request(`/api/attempts/${attempt.id}/reset-login`,{});toast('يمكن للطالب الدخول مجددًا بنفس الكود والرقم');await refresh();}
@@ -418,7 +424,8 @@ function Roster({dashboard,tab,request,refresh,busy}) {
     {tab==='results'&&(centerEmbedded?<details className="center-result-exports"><summary>تنزيل التقارير وإرسال واتساب</summary><div className="whatsapp-send-row"><DownloadReports examId={exam.id} attempts={dashboard.attempts}/><SendReports attempts={dashboard.attempts.filter(a=>a.joined_at)} label="إرسال تقارير كل الطلاب عبر واتساب"/></div></details>:<div className="whatsapp-send-row"><DownloadReports examId={exam.id} attempts={dashboard.attempts}/><SendReports attempts={dashboard.attempts.filter(a=>a.joined_at)} label="إرسال تقارير كل الطلاب عبر واتساب"/></div>)}
     {centerEmbedded?<CenterRosterFilters counts={counts} filter={currentFilter} onChange={setFilter} filters={cardFilters} tab={tab}/>:<RosterCards counts={counts} filter={currentFilter} onChange={setFilter} searching={Boolean(query)} showScreenCards={showScreenCards}/>}
     {exam.state==='running'&&<SelectedTime examId={exam.id} attempts={selected} request={request} refresh={refresh} clear={()=>setSelectedIds([])}/>}
-    <div className="table-scroll"><table><thead><tr>{exam.state==='running'&&<th><input type="checkbox" aria-label="تحديد الطلاب الظاهرين المتاح تمديدهم" disabled={!visibleEligible.length} checked={visibleEligible.length>0&&visibleEligible.every(a=>selectedIds.includes(a.id))} onChange={e=>setSelectedIds(ids=>e.target.checked?[...new Set([...ids,...visibleEligible.map(a=>a.id)])]:ids.filter(id=>!visibleEligible.some(a=>a.id===id)))}/></th>}<th>الطالب</th><th>كود الطالب</th><th>الحالة</th>
+    {exam.state==='running'&&<ReopenAttempts examId={exam.id} attempts={selectedReopen} request={request} refresh={refresh} clear={()=>setReopenIds([])}/>}
+    <div className="table-scroll"><table><thead><tr>{exam.state==='running'&&<><th>تمديد <input type="checkbox" aria-label="تحديد الطلاب الظاهرين المتاح تمديدهم" disabled={!visibleEligible.length} checked={visibleEligible.length>0&&visibleEligible.every(a=>selectedIds.includes(a.id))} onChange={e=>setSelectedIds(ids=>e.target.checked?[...new Set([...ids,...visibleEligible.map(a=>a.id)])]:ids.filter(id=>!visibleEligible.some(a=>a.id===id)))}/></th><th>إعادة فتح <input type="checkbox" aria-label="تحديد المحاولات المسلّمة الظاهرة لإعادة فتحها" disabled={!visibleReopen.length} checked={visibleReopen.length>0&&visibleReopen.every(a=>reopenIds.includes(a.id))} onChange={e=>setReopenIds(ids=>e.target.checked?[...new Set([...ids,...visibleReopen.map(a=>a.id)])]:ids.filter(id=>!visibleReopen.some(a=>a.id===id)))}/></th></>}<th>الطالب</th><th>كود الطالب</th><th>الحالة</th>
       <th>{tab==='results'?'الدرجة':'آخر ظهور'}</th><th>الإجراء</th></tr></thead><tbody>
       {attempts.length?attempts.map(attempt=>{
         const state=statusFor(attempt);const problem=problemFor(attempt);
@@ -426,13 +433,13 @@ function Roster({dashboard,tab,request,refresh,busy}) {
         const rowActions=<>{!attempt.cancelled_at&&tab==='results'&&attempt.submitted_at?<button className="text-button" onClick={()=>setReviewId(attempt.id)}>مراجعة وتصحيح ←</button>:
             !attempt.cancelled_at&&attempt.joined_at&&!attempt.submitted_at?<button className="text-button" disabled={busy} onClick={()=>reset(attempt)}>استعادة الدخول</button>:
             <span className="muted">—</span>}{!attempt.cancelled_at&&exam.state==='running'&&attempt.joined_at&&!attempt.submitted_at&&<button className="text-button" disabled={busy} onClick={async()=>{try{await request(`/api/attempts/${attempt.id}/${attempt.paused?'resume':'pause'}`,{});await refresh();toast(attempt.paused?'تم استكمال الطالب':'تم إيقاف الطالب');}catch(e){toast(e.message,true);}}}>{attempt.paused?'استكمال الطالب':'إيقاف الطالب'}</button>}{!attempt.cancelled_at&&attempt.joined_at&&<button className="text-button cancellation-action" disabled={busy} onClick={()=>setCancelTarget(attempt)}>إلغاء المحاولة</button>}</>;
-        return <tr key={attempt.id} className={problem?'roster-problem-row':''}>{exam.state==='running'&&<td><input type="checkbox" aria-label={`تحديد ${attempt.name} لتمديد الوقت`} disabled={!canExtend(attempt)} checked={canExtend(attempt)&&selectedIds.includes(attempt.id)} onChange={e=>toggle(attempt.id,e.target.checked)}/></td>}<td><strong>{attempt.name||'طالب'}</strong><small dir="ltr">{attempt.phone||'لم تُسجل بياناته'}</small><small>الدخول: {joinedLabel(attempt.joined_at)}</small></td>
+        return <tr key={attempt.id} className={problem?'roster-problem-row':''}>{exam.state==='running'&&<><td><input type="checkbox" aria-label={`تحديد ${attempt.name} لتمديد الوقت`} disabled={!canExtend(attempt)} checked={canExtend(attempt)&&selectedIds.includes(attempt.id)} onChange={e=>toggle(attempt.id,e.target.checked)}/></td><td><input type="checkbox" aria-label={`تحديد ${attempt.name} لإعادة فتح المحاولة`} disabled={!canReopen(attempt)} checked={Boolean(canReopen(attempt)&&reopenIds.includes(attempt.id))} onChange={e=>setReopenIds(ids=>e.target.checked?[...new Set([...ids,attempt.id])]:ids.filter(id=>id!==attempt.id))}/></td></>}<td><strong>{attempt.name||'طالب'}</strong><small dir="ltr">{attempt.phone||'لم تُسجل بياناته'}</small><small>الدخول: {joinedLabel(attempt.joined_at)}</small></td>
           <td><button className="code-button" title="نسخ الكود" onClick={()=>copyText(attempt.code).catch(error=>toast(error.message,true))}>{attempt.code}</button></td>
           <td><span className={`badge ${state.tone}`}>{state.label}</span>{problem&&<small className="roster-problem-note">يحتاج متابعة: {problem}</small>}{canExtend(attempt)&&<small>الوقت المتبقي: <b dir="ltr">{timeLabel(Math.ceil(Math.max(0,attempt.deadline-dashboard.serverTime)))}</b></small>}{attempt.cancelled_at&&<small className="cancellation-reason">سبب الإلغاء: {attempt.cancelReason}</small>}{attempt.screen&&<small className="screen-details">علامة المتصفح: <b dir="ltr">{attempt.screen.current.deviceId.slice(0,8)}</b><br/>الشاشة: <b dir="ltr">{attempt.screen.current.screenWidth} × {attempt.screen.current.screenHeight}</b> · العرض: <b dir="ltr">{attempt.screen.current.width} × {attempt.screen.current.height}</b><br/>{attempt.screen.current.fullscreenSupported?(attempt.screen.current.fullscreen?'ملء الشاشة نشط':'خارج ملء الشاشة'):'ملء الشاشة غير مدعوم'}{attempt.screen.lastEvent&&<><br/>آخر تنبيه: {attempt.screen.lastEvent} · {number(attempt.screen.events)} مرة</>}</small>}{exam.config.screenGuard&&!attempt.screen&&!attempt.submitted_at&&!attempt.cancelled_at&&<small>في انتظار موافقة مراقبة الشاشة</small>}{attempt.departures>0&&<small>غادر الصفحة {number(attempt.departures)} مرة</small>}</td>
           <td>{tab==='results'?(attempt.cancelled_at?'ملغي':attempt.submitted_at?<>{number(attempt.score)} / {number(attempt.maximum)}
             {attempt.pending>0&&<small>متبقي {number(attempt.pending)} مقالي</small>}</>:'لم يسلّم'):seen}</td>
           <td>{centerEmbedded&&tab==='students'?<details className="center-student-actions"><summary>إجراءات الطالب</summary><div>{rowActions}</div></details>:rowActions}</td></tr>;
-      }):<tr><td colSpan={exam.state==='running'?6:5} className="empty">{search||filter!=='all'?'لا يوجد طلاب مطابقون للبحث أو التصفية.':'الطالب يظهر هنا بعد دخوله باسمه ورقمه وكوده.'}</td></tr>}</tbody></table></div>
+      }):<tr><td colSpan={exam.state==='running'?7:5} className="empty">{search||filter!=='all'?'لا يوجد طلاب مطابقون للبحث أو التصفية.':'الطالب يظهر هنا بعد دخوله باسمه ورقمه وكوده.'}</td></tr>}</tbody></table></div>
     {cancelTarget&&<CancelAttempt attempt={cancelTarget} request={request} refresh={refresh} onClose={()=>setCancelTarget(null)}/>}{reviewId&&<Review attempt={dashboard.attempts.find(a=>a.id===reviewId)} exam={exam} request={request}
       onClose={()=>setReviewId(null)} refresh={refresh}/>}</div>;
 }
@@ -501,4 +508,7 @@ function Guide({centerIntegrated=false}){return <><div className="page-heading">
     <li><h2>راجع واحتفظ بنسخة</h2><p>{centerIntegrated?'أغلق القاعة وأكمل تصحيح المقالي، ثم أعد ربط الجهازين. على الهوست راجع وجهة الرصد المختارة، أو حددها لو فُتحت القاعة دون ربط، واضغط تأكيد استيراد الدرجات مرة واحدة. تُرصد الدرجات النهائية فقط، ومنها الصفر، ويظهر عدد المرصودين والباقين وأسباب الانتظار.':'بعد انتهاء الامتحان راجع المقالي واطبع تقرير كل طالب أو احفظه PDF، ثم نزّل نسخة احتياطية.'}</p></li></ol>
     <div className="notice"><strong>حدود نسخة التجربة</strong><p>تصحيح المقالي الذكي يحتاج إنترنت على جهاز الإدارة. إرسال تقارير واتساب يحتاج حسابًا رسميًا وقالبًا معتمدًا وإنترنت على جهاز الإدارة. أبقِ الكمبيوتر مفتوحًا طوال الامتحان.</p></div></section></>}
 
-createRoot(document.getElementById('main')).render(<><ExamHealth/><WhatsAppJobs/><AdminApp/></>);
+createRoot(document.getElementById('main')).render(<>
+  {createPortal(<NetworkIncidentReport/>,document.getElementById('network-incident-shortcut'))}
+  <ExamHealth/><WhatsAppJobs/><AdminApp/>
+</>);

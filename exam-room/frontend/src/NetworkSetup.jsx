@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import PortalConfiguration from './PortalConfiguration';
 import NetworkDiagnostics from './NetworkDiagnostics';
+import OmadaStatistics from './OmadaStatistics';
 import {copyText} from '../../web/assets/common.js';
 import {publishNetworkStatus,useNetworkStatus,verifiedPortalUrl} from './networkStatus.js';
 
@@ -37,7 +38,7 @@ export default function NetworkSetup() {
     finally{setBusy(false);}
   };
   return <section className="panel network-setup"><div className="section-top"><div><span className="context-label">شبكة الامتحان بلا راوتر</span>
-    <h2>تهيئة الاتصال المباشر بالـOmada</h2><p className="help">نسخة الإعداد 0.4.24 — الماك يوزّع عناوين الطلاب، والـOmada يوفّر الواي فاي. لا يحتاج الامتحان إنترنت.</p></div>
+    <h2>تهيئة الاتصال المباشر بالـOmada</h2><p className="help">نسخة الإعداد 0.4.34 — الماك يوزّع عناوين الطلاب، والـOmada يوفّر الواي فاي. لا يحتاج الامتحان إنترنت.</p></div>
     <span className={`badge ${status?.ready?'complete':'quiet'}`}>{status?.ready?'الماك جاهز':!status||status.inspectionError?'لم يتم التأكد':'لم تكتمل التهيئة'}</span></div>
     {!available?<p className="help">افتح هذه الشاشة داخل برنامج مسار على الماك لتفعيل التهيئة.</p>:
     status&&!status.supported?<p className="help">{status.message}</p>:<>
@@ -47,7 +48,7 @@ export default function NetworkSetup() {
         <li><strong>اختبر صفحة الطلاب</strong><p>اتصل بواي فاي الامتحان، ثم افتح الرابط في Chrome أو Samsung Internet: <b dir="ltr">{studentUrl}</b> أو امسح QR الموجود في شاشة الامتحان قبل تسجيل الدخول. استمر في نفس الرابط والمتصفح حتى التسليم.</p>
           {portalUrl&&<p>لو صفحة الدخول التلقائي لم تظهر، افتح نفس الرابط أعلاه. الرابط المحلي <b dir="ltr">http://10.77.0.1/</b> بديل قبل تسجيل الدخول فقط؛ لا تنتقل إليه بعد بدء المحاولة.</p>}</li>
       </ol>
-      <details className="notice"><summary>سامسونج متصل لكن نافذة الدخول لم تظهر؟</summary>
+      <details className="notice"><summary>الموبايل يترك الواي فاي أو لا يفتح الامتحان؟</summary>
         <p>لو الرابط يفتح يدويًا، اتصال الموبايل بالامتحان يعمل؛ النافذة التلقائية تعتمد على نظامه. افتح الامتحان من المتصفح العادي قبل تسجيل الدخول، واستمر في نفس المتصفح حتى التسليم.</p>
         <p>إذا كان الاتصال يتبدل: إعدادات الموبايل ← الاتصالات ← Wi-Fi ← ⋮ ← Intelligent Wi-Fi، وأوقف «Switch to mobile data» أثناء الامتحان، واختر البقاء متصلًا عند ظهور «بلا إنترنت». أسماء الخيارات تختلف حسب الموديل.</p>
         <p>لو الرابط نفسه لا يفتح، راجع وصول شبكة الطلاب إلى الماك، وإعداد Guest Network أو قواعد الحظر في Omada. نجاح الفحص على الماك وحده لا يثبت وصول الموبايلات.</p>
@@ -63,9 +64,12 @@ export default function NetworkSetup() {
       {status?.dhcpDetail&&<p className="help" role="status">فحص توزيع العناوين: {status.dhcpDetail}</p>}
       {status?.dhcpLeases&&<div className="notice" role="status"><strong>عناوين أجهزة الطلاب</strong><p>{status.dhcpLeases.detail}</p>
         {status.dhcpLeases.dhcpLeaseCount!=null&&<p>المحجوز: {status.dhcpLeases.dhcpLeaseCount} من {status.dhcpLeases.capacity}</p>}
+        {status.dhcpLeases.configVerified&&status.dhcpLeases.leaseDataComplete&&status.dhcpLeases.leasesAvailable&&status.dhcpLeases.capacity!=null&&status.dhcpLeases.dhcpLeaseCount!=null&&<p>المتاح لعناوين جديدة: {Math.max(0,status.dhcpLeases.capacity-status.dhcpLeases.dhcpLeaseCount)}</p>}
+        {Number.isFinite(status.dhcpLeases.leaseSeconds)&&<p>مدة حجز العنوان: {Math.ceil(status.dhcpLeases.leaseSeconds/60)} دقيقة. عنوان الجهاز المغادر قد يظل محجوزًا حتى انتهاء مدته؛ العدد المحجوز ليس عدد الطلاب المتصلين الآن.</p>}
         {status.dhcpLeases.findings?.map(finding=><p key={finding.code}>{finding.detail}</p>)}
         <p className="help">الأجهزة المتصلة تجدّد عنوانها تلقائيًا. فحص السجل لا يثبت غياب راوتر آخر يوزّع عناوين على الشبكة.</p></div>}
       <PortalConfiguration status={status} disabled={busy} refresh={refresh} />
+      <OmadaStatistics status={status} disabled={busy} refresh={refresh} />
       <details className="notice"><summary>اختبار القاعة قبل دخول الطلاب</summary><ol>
         <li>تأكد أن الماك هو موزع العناوين الوحيد وأن شبكة الطلاب تسمح بالوصول إليه.</li>
         <li>اختبر سامسونج وآيفون وموبايلًا قديمًا على ترددي الواي فاي، من أماكن مختلفة في القاعة.</li>
@@ -79,7 +83,7 @@ export default function NetworkSetup() {
         <button className="button ghost" onClick={()=>copyText(studentUrl).catch(error=>setMessage(error.message))}>نسخ رابط الطلاب</button></div>
       <NetworkDiagnostics />
       {message&&<p className="help" role="status">{message}</p>}
-      <p className="help">لا تفعّل Portal الداخلي في الـOmada لهذا الاختبار؛ سيضيف صفحة موافقة قبل الامتحان. ظهور نافذة الدخول تلقائيًا يعتمد على نظام الموبايل، لذلك احتفظ برابط الطلاب كبديل.</p>
+      <p className="help">أوقف Portal الداخلي في Omada عند اختيار الدخول بدون نافذة. افتح رابط الطلاب أو QR في المتصفح العادي؛ ردود الفحص المحلية لا تضمن علامة الإنترنت على كل هاتف.</p>
     </>}
   </section>;
 }

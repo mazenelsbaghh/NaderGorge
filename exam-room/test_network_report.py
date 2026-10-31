@@ -92,8 +92,7 @@ class NetworkReportTest(unittest.TestCase):
         with patch.object(network_setup.Path, 'home', return_value=self.root), \
              patch('network_report.sys.executable', str(executable)), \
              patch.object(network_setup, 'command', side_effect=AssertionError('logging must not change or probe hardware')):
-            self.assertTrue(self.api.mark_network_incident()['ok'])
-            result = self.api.export_network_diagnostics()
+            result = self.api.capture_network_incident()
         self.assertTrue(result['ok'])
         self.assertTrue(self.authorized)
         report = json.loads(Path(result['path']).read_text())
@@ -102,6 +101,9 @@ class NetworkReportTest(unittest.TestCase):
         self.assertEqual(report['events'][0]['ip'], '10.77.0.55')
         self.assertEqual(report['backendDiagnostics']['snapshot']['events'][0]['category'], 'address_in_use')
         self.assertEqual(report['networkTimeline']['events'][-1]['kind'], 'user_marker')
+        self.assertEqual(report['incident'], {'time': result['capturedAt'], 'markerSaved': True})
+        self.assertEqual(report['networkTimeline']['events'][-1]['time'], result['capturedAt'])
+        self.assertEqual(report['networkTimeline']['events'][-1]['state']['ethernetDevice'], 'en10')
         self.assertNotIn('PRIVATE-', json.dumps(report))
         self.assertNotIn('00:11:22:33:44:55', json.dumps(report))
 
@@ -135,11 +137,31 @@ class NetworkReportTest(unittest.TestCase):
     def test_export_write_failure_returns_no_saved_artifact_and_does_not_raise(self):
         with patch.object(network_setup.Path, 'home', return_value=self.root), \
              patch('exam_downloads.os.fsync', side_effect=OSError(errno.ENOSPC, 'PRIVATE-PATH')):
-            result = self.api.export_network_diagnostics()
+            result = self.api.capture_network_incident()
         self.assertFalse(result['ok'])
+        self.assertTrue(result['markerSaved'])
         self.assertEqual(result['status'], 'failed')
         self.assertNotIn('path', result)
         self.assertEqual(list((self.root / 'Downloads').iterdir()), [])
+        self.assertEqual(self.timeline.history()['events'][-1]['time'], result['capturedAt'])
+
+    def test_incident_report_survives_dead_backend_and_failed_timeline_write(self):
+        self.stop_server()
+        original_open = network_setup.os.open
+        def open_except_timeline(path, *args, **kwargs):
+            if Path(path) == self.timeline.path:
+                raise PermissionError(errno.EACCES, 'PRIVATE-PATH')
+            return original_open(path, *args, **kwargs)
+        with patch.object(network_setup.Path, 'home', return_value=self.root), \
+             patch('network_timeline.os.open', side_effect=open_except_timeline):
+            result = self.api.capture_network_incident()
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['markerSaved'])
+        self.assertEqual(result['status'], 'partial')
+        report = json.loads(Path(result['path']).read_text())
+        self.assertEqual(report['incident'], {'time': result['capturedAt'], 'markerSaved': False})
+        self.assertEqual(report['backendDiagnostics']['status'], 'unavailable')
+        self.assertNotIn('PRIVATE-', json.dumps(report))
 
     def test_large_and_malformed_backend_event_arrays_are_bounded_and_redacted(self):
         payload = {**self.payload, 'events': [self.backend_event] * 8193 + [{'kind': ['PRIVATE-STUDENT']}],

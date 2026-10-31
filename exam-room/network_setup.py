@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import io
+from http.client import HTTPException
 import ipaddress
 import json
 import os
@@ -126,8 +127,8 @@ def student_service_ready(student_url):
         return False
 
 
-def check_android_portal(student_url=f'http://{EXAM_IP}/'):
-    """Verify the local DNS and HTTP redirect, not AP settings or handset UI."""
+def check_android_portal(student_url=f'http://{EXAM_IP}/', mode=None):
+    """Check the applied HTTP response and exam service, not handset Internet validation."""
     hostname = 'connectivitycheck.gstatic.com'
     ip = parse.urlsplit(student_url).hostname
     try:
@@ -139,28 +140,39 @@ def check_android_portal(student_url=f'http://{EXAM_IP}/'):
     except (OSError, subprocess.TimeoutExpired):
         dns_ready = False
     redirect_ready = False
+    connectivity_ready = False
     opener = request.build_opener(request.ProxyHandler({}), NoPortalRedirect())
     probe = request.Request(parse.urljoin(student_url, '/generate_204'),
                             headers={'Host': hostname})
     try:
-        with opener.open(probe, timeout=3):
-            pass
+        with opener.open(probe, timeout=3) as response:
+            connectivity_ready = response.status == 204 and response.read(1) == b''
     except error.HTTPError as response:
-        redirect_ready = response.code == 302 and response.headers.get('Location') == student_url
+        destination = parse.urljoin(student_url, '/welcome') if mode == 'welcome' else student_url
+        redirect_ready = response.code == 302 and response.headers.get('Location') == destination
         response.close()
     except (OSError, error.URLError):
         pass
     student_ready = student_service_ready(student_url)
     if not dns_ready:
         detail = 'فحص Android: اسم فحص الدخول لا يصل إلى عنوان الماك عبر DNS.'
-    elif not redirect_ready:
+    elif mode == 'direct' and not connectivity_ready:
+        detail = 'الدخول بدون نافذة مختار، لكن فحص HTTP لا يطابقه. حدّث تجهيز الماك بعد إغلاق القاعات.'
+    elif mode == 'welcome' and not (redirect_ready or connectivity_ready):
+        detail = 'بوابة الترحيب لا تطابق الإعداد. حدّث تجهيز الماك بعد إغلاق القاعات.'
+    elif mode not in ('direct', 'welcome') and not redirect_ready:
         detail = 'فحص Android: خدمة الماك لم تُرجع تحويلًا لصفحة الامتحان.'
     elif not student_ready:
-        detail = 'تحويل الدخول يعمل، لكن خدمة الامتحان لا تستجيب. تأكد أن التطبيق مفتوح وراجع سجل التشغيل.'
+        detail = 'فحص الاتصال يعمل، لكن خدمة الامتحان لا تستجيب. تأكد أن التطبيق مفتوح وراجع سجل التشغيل.'
+    elif mode == 'direct':
+        detail = 'فحص HTTP بدون تحويل وصفحة الامتحان يستجيبان. هذا فحص محلي؛ علامة الإنترنت وبقاء الموبايل على الشبكة يحتاجان تجربة فعلية.'
     else:
         detail = 'تحويل الدخول وخدمة الامتحان يستجيبان على الماك. ظهور النافذة على الموبايل يحتاج تجربة فعلية.'
-    return {'ready': dns_ready and redirect_ready and student_ready, 'dnsReady': dns_ready,
-            'httpRedirectReady': redirect_ready, 'studentServiceReady': student_ready, 'detail': detail}
+    expected_response = (connectivity_ready if mode == 'direct' else
+                         redirect_ready or connectivity_ready if mode == 'welcome' else redirect_ready)
+    return {'ready': dns_ready and expected_response and student_ready, 'dnsReady': dns_ready,
+            'httpRedirectReady': redirect_ready, 'httpConnectivityReady': connectivity_ready,
+            'studentServiceReady': student_ready, 'detail': detail}
 
 
 def diagnostic_tail(path, limit=131072):
@@ -190,12 +202,28 @@ def diagnostic_log(path, limit):
 
 
 class NetworkSetupApi:
-    def __init__(self, sleep_protection=None, exam_downloads=None, portal_settings=None, admin_port=8766, timeline=None):
+    def __init__(self, sleep_protection=None, exam_downloads=None, portal_settings=None, admin_port=8766, timeline=None, omada_monitor=None):
         self._sleep_protection = sleep_protection
         self._exam_downloads = exam_downloads
         self._portal_settings = portal_settings
         self._admin_port = admin_port
         self._timeline = timeline
+        self._omada_monitor = omada_monitor
+
+    def configure_omada_monitor(self, host, username, password):
+        if self._omada_monitor is None:
+            return {'ok': False, 'message': 'افتح الربط داخل نسخة الماك الأحدث.'}
+        from omada_monitor import MonitorFailure
+        try:
+            status = self._omada_monitor.configure(host, username, password)
+        except MonitorFailure as failure:
+            messages = {'auth_required': 'لم يقبل Omada بيانات الدخول؛ راجع اسم المستخدم وكلمة السر.',
+                        'unsupported': 'صفحة الجهاز أو إصدارها غير مدعوم؛ لم يُحفظ الربط.',
+                        'certificate_changed': 'تغيرت شهادة الجهاز أثناء الربط؛ افحص الاتصال ثم أعد المحاولة.'}
+            return {'ok': False, 'message': messages.get(failure.state, 'تعذر قراءة الجهاز؛ لم يُحفظ الربط.')}
+        except (OSError, ValueError, HTTPException):
+            return {'ok': False, 'message': 'تعذر الربط؛ راجع العنوان وبيانات الدخول واتصال الكابل. لم تُغيّر إعدادات Omada.'}
+        return {'ok': True, 'message': 'تم حفظ الربط على هذا الماك. الإحصائيات تُقرأ في الخلفية كل ٣٠ ثانية.', 'status': status}
 
     def download_exam_file(self, path, filename, expected_type):
         if self._exam_downloads is None:
@@ -254,7 +282,23 @@ class NetworkSetupApi:
         return report
 
     def export_network_diagnostics(self):
+        return self._save_network_report(self.network_diagnostics())
+
+    def capture_network_incident(self):
+        marker = self.mark_network_incident()
         report = self.network_diagnostics()
+        report['incident'] = {'time': marker['capturedAt'], 'markerSaved': marker['ok']}
+        if not marker['ok']:
+            report['status'] = 'partial'
+        saved = self._save_network_report(report)
+        saved.update(capturedAt=marker['capturedAt'], markerSaved=marker['ok'])
+        if not marker['ok']:
+            saved['message'] = 'تعذر حفظ علامة الوقت في السجل؛ ' + saved['message']
+        elif not saved['ok']:
+            saved['message'] = 'تم تسجيل وقت المشكلة، لكن ' + saved['message']
+        return saved
+
+    def _save_network_report(self, report):
         destination = Path.home() / 'Downloads' / ('Massar-Network-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6] + '.json')
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -266,7 +310,7 @@ class NetworkSetupApi:
                 'message': 'تم حفظ سجل التشخيص في التنزيلات' + ('' if complete else ' مع توضيح الأجزاء غير المتاحة') + ': ' + destination.name}
 
     def mark_network_incident(self):
-        stamp = self._timeline.record('user_marker') if self._timeline else None
+        stamp = self._timeline.record('user_marker', state=self._timeline.current()) if self._timeline else None
         return {'ok': bool(stamp), 'capturedAt': stamp or utc_time(),
                 'message': 'تم تسجيل وقت المشكلة. صدّر سجل التشخيص بعد ذلك.' if stamp else
                            'تعذر حفظ العلامة؛ راجع مساحة التخزين ثم صدّر السجل المتاح.'}
@@ -281,11 +325,12 @@ class NetworkSetupApi:
         try:
             snapshot = self._network_status()
             snapshot['sleepProtection'] = self._sleep_protection.status() if self._sleep_protection else {'active': False}
-            return snapshot
         except (OSError, subprocess.SubprocessError, UnicodeError):
-            return {'supported': sys.platform == 'darwin', 'ready': False, 'inspectionError': True,
+            snapshot = {'supported': sys.platform == 'darwin', 'ready': False, 'inspectionError': True,
                     'message': 'تعذر إكمال فحص الشبكة على macOS. لم يتم تغيير الإعداد؛ ثبّت الهَب والكابل ثم أعد الفحص.',
                     'dhcpDetail': 'لم يمكن التحقق من حالة منفذ Ethernet وخدمات الشبكة.'}
+        snapshot['omada'] = self._omada_monitor.status() if self._omada_monitor else {'state': 'not_configured'}
+        return snapshot
 
     def _network_status(self):
         if sys.platform != 'darwin':
@@ -335,7 +380,8 @@ class NetworkSetupApi:
         else:
             dhcp_detail = dhcp_socket['detail']
         local_ready = bool(wired and wired['active']) and ethernet_address_ready and ethernet_ip == EXAM_IP and dhcp_running and portal_running
-        android_probe = check_android_portal() if local_ready else None
+        portal_status = self._portal_settings.status() if self._portal_settings else {'state': 'unconfigured'}
+        android_probe = check_android_portal(mode=portal_status.get('appliedMode')) if local_ready else None
         return {
             'supported': True,
             'ready': local_ready and dhcp_configuration_ready and dhcp_socket['ready'] is True
@@ -343,7 +389,7 @@ class NetworkSetupApi:
             'androidProbe': android_probe,
             'radioSettingsVerified': False,
             'dhcpLeases': leases,
-            'capport': self._portal_settings.status() if self._portal_settings else {'state': 'unconfigured'},
+            'capport': portal_status,
             'ethernetActive': wired['active'] if wired else False,
             'ethernetAmbiguous': wired['ambiguous'] if wired else False,
             'ethernetService': wired['service'] if wired else '',

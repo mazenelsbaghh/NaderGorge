@@ -97,7 +97,7 @@ func TestSelectedExtensionKeepsOtherDeadlinesAndSharedStudentsContinue(t *testin
 				x, _ = exam(d.sql, eid)
 				selected, _ = attempt(d.sql, ids[0])
 				other, _ := attempt(d.sql, ids[2])
-				if x.State != "running" || selected.Submitted.Valid || !other.Submitted.Valid {
+				if x.State != "running" || selected.Submitted.Valid || other.Submitted.Valid || other.Deadline.Float64 > now() {
 					t.Fatal("shared end ignored personal extension")
 				}
 				if _, _, err = d.join(M{"name": "طالب اختبار ONE", "phone": "01012345678", "code": "ONE"}, ""); err != nil {
@@ -106,7 +106,7 @@ func TestSelectedExtensionKeepsOtherDeadlinesAndSharedStudentsContinue(t *testin
 				if _, _, err = d.join(M{"name": "طالب جديد", "phone": "01012345678", "code": "NEW"}, ""); err == nil {
 					t.Fatal("new arrival got personal extension")
 				}
-				if _, err = d.sql.Exec(`UPDATE attempts SET deadline=? WHERE id=?`, now()-1, ids[0]); err != nil {
+				if _, err = d.sql.Exec(`UPDATE attempts SET deadline=? WHERE exam_id=? AND submitted_at IS NULL`, now()-answerSyncGraceSeconds-1, eid); err != nil {
 					t.Fatal(err)
 				}
 				if err = d.expire(); err != nil {

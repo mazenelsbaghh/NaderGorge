@@ -78,7 +78,7 @@ export function createStudentDiagnostics(sendRequest) {
   }
   async function request(path,payload) {
     const started=performance.now();
-    try {return await sendRequest(path,payload);}
+    try {return await sendRequest(path,payload,undefined,{timeoutMs:path==='/api/answers'?45000:12000});}
     catch(error) {
       const route=path.split('?')[0].slice('/api/'.length);
       if(routes.indexOf(route)>=0)record('request_failed',{route,status:Number.isInteger(error.status)&&error.status>=0&&error.status<=599?error.status:0,durationMs:Math.min(60000,Math.max(0,Math.round(performance.now()-started)))});

@@ -157,7 +157,7 @@ def read_backend_diagnostics(admin_port, directory, opener):
 
 
 def portal_event(candidate):
-    allowed = {'probe', 'capport', 'student_page', 'room_connection', 'student_join', 'answer_save',
+    allowed = {'probe', 'capport', 'welcome_page', 'welcome_accept', 'student_page', 'room_connection', 'student_join', 'answer_save',
                'student_session', 'asset_error', 'request_error'}
     if not isinstance(candidate, dict) or not isinstance(candidate.get('kind'), str) or candidate['kind'] not in allowed or not timestamp(candidate.get('time')):
         return None
@@ -195,7 +195,9 @@ def app_release():
 def report_complete(report):
     timeline = report['networkTimeline']
     recorder = timeline.get('recording', {})
+    omada = report['networkStatus'].get('omada')
     return (timeline['status'] == 'ok' and recorder.get('active') and not recorder.get('writeFailureCount')
+            and (omada is None or omada.get('state') == 'ready')
             and report['backendDiagnostics']['status'] == 'ok'
             and not report['networkStatus'].get('inspectionError') and bool(report['networkStatus'].get('sampledAt'))
             and any(entry['name'] == 'portal-events.jsonl' and entry['status'] == 'ok' for entry in report['portalLogs']['files'])

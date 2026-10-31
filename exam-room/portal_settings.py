@@ -53,7 +53,7 @@ def read_mode(path):
         settings = json.loads(path.read_text())
     except FileNotFoundError:
         return None
-    if not isinstance(settings, dict) or settings.get('mode') not in ('legacy', 'https'):
+    if not isinstance(settings, dict) or settings.get('mode') not in ('direct', 'legacy', 'https', 'welcome'):
         raise ValueError('إعداد طريقة الدخول غير صالح؛ اختر الطريقة من جديد قبل تجهيز الشبكة.')
     return settings['mode']
 
@@ -73,14 +73,14 @@ class PortalSettings:
         installed_mode = read_mode(INSTALLED_MODE)
         if installed_mode:
             return installed_mode
-        return 'https' if (self.directory / 'candidate.json').exists() or INSTALLED_METADATA.exists() else 'legacy'
+        return 'https' if (self.directory / 'candidate.json').exists() or INSTALLED_METADATA.exists() else 'direct'
 
     def _applied_mode(self):
         return read_mode(INSTALLED_MODE) or ('https' if INSTALLED_METADATA.exists() else 'legacy')
 
     def select_mode(self, mode):
-        if mode not in ('legacy', 'https'):
-            raise ValueError('اختر الدخول التقليدي أو الدخول بشهادة HTTPS.')
+        if mode not in ('direct', 'legacy', 'https', 'welcome'):
+            raise ValueError('اختر الدخول بدون نافذة أو الدخول التقليدي أو الدخول بشهادة HTTPS.')
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         staged = None
         try:
@@ -129,7 +129,7 @@ class PortalSettings:
         mode = self._desired_mode()
         # Switching back to local HTTP must work even if a saved certificate
         # has expired or its selection metadata is damaged. Keep it for reuse.
-        if mode == 'legacy':
+        if mode in ('direct', 'legacy', 'welcome'):
             return {'mode': mode}
         candidate = read_metadata(self.directory / 'candidate.json')
         if candidate is None:
@@ -160,6 +160,10 @@ class PortalSettings:
             candidate = None
         public = {'candidate': {key: candidate[key] for key in ('hostname', 'expiresAt', 'daysRemaining')} if candidate else None,
                   'installed': None, 'phoneVerified': False, 'pendingCertificateChange': False, **modes}
+        if applied_mode == 'direct':
+            return {**public, 'state': 'direct', 'detail': 'الدخول بالرابط أو QR بدون تحويل تلقائي. فحوص HTTP المدعومة تُجاب محليًا؛ لا يعني ذلك توفر الإنترنت أو ضمان بقاء كل الموبايلات متصلة.'}
+        if applied_mode == 'welcome':
+            return {**public, 'state': 'welcome', 'detail': 'شاشة ترحيب بزر ابدأ، ثم نجاح فحوص HTTP المدعومة لهذا العنوان لمدة ٤ ساعات. لا توفر إنترنت فعليًا؛ تثبيت الاتصال وفتح المتصفح يعتمدان على الموبايل.'}
         if applied_mode == 'legacy':
             return {**public, 'state': 'legacy', 'detail': 'طريقة الدخول الحالية هي الدخول التقليدي بالعنوان المحلي، بدون شهادة HTTPS.'}
         try:

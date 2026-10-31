@@ -291,7 +291,7 @@ func openDB(path string) (*DB, error) {
 		}
 	}
 	schema := []string{`CREATE TABLE IF NOT EXISTS exams(id TEXT PRIMARY KEY,config TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'draft',created_at REAL NOT NULL,started_at REAL,ended_at REAL)`, `CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,exam_id TEXT NOT NULL REFERENCES exams(id),code TEXT NOT NULL,name TEXT,phone TEXT,token_hash TEXT UNIQUE,joined_at REAL,last_seen REAL,deadline REAL,question_ids TEXT NOT NULL DEFAULT '{}',answers TEXT NOT NULL DEFAULT '{}',revision INTEGER NOT NULL DEFAULT 0,submitted_at REAL,submit_reason TEXT,grades TEXT NOT NULL DEFAULT '{}',UNIQUE(exam_id,code))`, `CREATE INDEX IF NOT EXISTS attempts_by_exam ON attempts(exam_id)`, `CREATE INDEX IF NOT EXISTS attempts_by_deadline ON attempts(deadline) WHERE submitted_at IS NULL`, `CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,created_at REAL NOT NULL,action TEXT NOT NULL,subject_id TEXT NOT NULL)`, `CREATE TABLE IF NOT EXISTS essay_grade_jobs(id TEXT PRIMARY KEY,exam_id TEXT NOT NULL REFERENCES exams(id),state TEXT NOT NULL,model TEXT NOT NULL,total INTEGER NOT NULL,processed INTEGER NOT NULL DEFAULT 0,graded INTEGER NOT NULL DEFAULT 0,skipped INTEGER NOT NULL DEFAULT 0,needs_review INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL DEFAULT '',created_at REAL NOT NULL,updated_at REAL NOT NULL)`, `CREATE UNIQUE INDEX IF NOT EXISTS one_running_essay_job ON essay_grade_jobs ((1)) WHERE state='running'`, `CREATE INDEX IF NOT EXISTS essay_jobs_by_exam ON essay_grade_jobs(exam_id,created_at DESC)`}
-	schema = append(schema, answerRecoverySchema, presenceSchema, cancellationSchema, screenGuardSchema, whatsappSendSchema, whatsappJobsSchema, networkMaintenanceSchema)
+	schema = append(schema, answerRecoverySchema, reopenAttemptSchema, presenceSchema, cancellationSchema, screenGuardSchema, whatsappSendSchema, whatsappJobsSchema, networkMaintenanceSchema)
 	for _, q := range schema {
 		if _, e = s.Exec(q); e != nil {
 			s.Close()
@@ -475,7 +475,7 @@ func studentView(x Exam, a Attempt) M {
 	if a.Cancelled.Valid {
 		state = "cancelled"
 	}
-	return M{"id": a.ID, "name": a.Name.String, "code": a.Code, "examId": x.ID, "title": x.Config["title"], "instructions": x.Config["instructions"], "state": state, "serverTime": now(), "deadline": nullableFloat(a.Deadline), "revision": a.Revision, "submittedAt": nullableFloat(a.Submitted), "questionCount": x.Config["questionCount"], "minutes": x.Config["minutes"], "timerMode": x.Config["timerMode"], "answers": answers, "questions": qs, "paused": a.Paused, "cancelReason": a.CancelReason, "screenGuard": x.Config["screenGuard"] == true}
+	return M{"id": a.ID, "name": a.Name.String, "code": a.Code, "examId": x.ID, "title": x.Config["title"], "instructions": x.Config["instructions"], "state": state, "serverTime": now(), "deadline": nullableFloat(a.Deadline), "syncUntil": a.Deadline.Float64 + answerSyncGraceSeconds, "revision": a.Revision, "submittedAt": nullableFloat(a.Submitted), "questionCount": x.Config["questionCount"], "minutes": x.Config["minutes"], "timerMode": x.Config["timerMode"], "answers": answers, "questions": qs, "paused": a.Paused, "cancelReason": a.CancelReason, "screenGuard": x.Config["screenGuard"] == true}
 }
 func nullableFloat(n sql.NullFloat64) any {
 	if n.Valid {

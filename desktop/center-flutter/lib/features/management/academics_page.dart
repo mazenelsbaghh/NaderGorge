@@ -200,8 +200,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
     LessonSession? session,
     AcademicActivity? activity,
   ) {
-    if (widget.cairo ||
-        session == null ||
+    if (session == null ||
         activity?.kind != AcademicActivityKind.homework ||
         _editing ||
         _homeworkDefaultsQueued ||
@@ -313,19 +312,14 @@ class _AcademicsPageState extends State<AcademicsPage> {
   List<AcademicActivity> _activitiesFor(String? sessionId) {
     if (_preparedLessonId != null && _monthId != null) {
       final activities = widget.store.academicActivities
-          .where(
-            (activity) =>
-                activity.preparedLessonId == _preparedLessonId &&
-                (!widget.cairo || activity.kind == AcademicActivityKind.exam),
-          )
+          .where((activity) => activity.preparedLessonId == _preparedLessonId)
           .toList();
       if (sessionId != null) {
         activities.addAll(
           widget.store.academicActivities.where(
             (activity) =>
                 activity.preparedLessonId == null &&
-                activity.sessionId == sessionId &&
-                (!widget.cairo || activity.kind == AcademicActivityKind.exam),
+                activity.sessionId == sessionId,
           ),
         );
       }
@@ -333,12 +327,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
     }
     return sessionId == null
         ? []
-        : widget.store
-              .academicActivitiesFor(sessionId)
-              .where(
-                (a) => !widget.cairo || a.kind == AcademicActivityKind.exam,
-              )
-              .toList();
+        : widget.store.academicActivitiesFor(sessionId);
   }
 
   bool _canRecordFor(String sessionId) => _activityId == null
@@ -900,7 +889,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
           ? 'حضور مجموعات القاهرة'
           : 'الامتحانات والواجبات — إسكندرية',
       subtitle: widget.cairo
-          ? 'اختر المجموعة والحصة والامتحان. رصد الدرجة يثبت الحضور تلقائيًا، بدون تحصيل أو خصم من الباقة.'
+          ? 'اختر المجموعة والحصة والامتحان أو الواجب. درجة الامتحان تثبت الحضور؛ الواجب للحاضرين فقط وافتراضيًا اتعمل، ثم أدخل أكواد اللي ماعملوش. بدون تحصيل أو خصم من الباقة.'
           : 'جهّز الامتحان أو الواجب للحصة المشتركة، ثم اختر المجموعة لرصد الحاضرين: الكود ثم Enter، الدرجة ثم Enter.',
       child: ManagementBody(
         header: [
@@ -922,21 +911,20 @@ class _AcademicsPageState extends State<AcademicsPage> {
                 icon: const Icon(Icons.quiz_outlined),
                 label: const Text('إضافة امتحان'),
               ),
-              if (!widget.cairo)
-                OutlinedButton.icon(
-                  key: const Key('add-academic-homework'),
-                  onPressed:
-                      _preparedLesson != null &&
-                          !_editing &&
-                          widget.store.canAssess
-                      ? () => _createActivity(
-                          selected,
-                          AcademicActivityKind.homework,
-                        )
-                      : null,
-                  icon: const Icon(Icons.assignment_outlined),
-                  label: const Text('إضافة واجب'),
-                ),
+              OutlinedButton.icon(
+                key: const Key('add-academic-homework'),
+                onPressed:
+                    _preparedLesson != null &&
+                        !_editing &&
+                        widget.store.canAssess
+                    ? () => _createActivity(
+                        selected,
+                        AcademicActivityKind.homework,
+                      )
+                    : null,
+                icon: const Icon(Icons.assignment_outlined),
+                label: const Text('إضافة واجب'),
+              ),
               if (!widget.cairo)
                 OutlinedButton.icon(
                   key: const Key('academics-mobile-homework'),
@@ -1130,7 +1118,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
             ),
           if (selected != null)
             Text(
-              widget.cairo
+              widget.cairo && activity?.kind != AcademicActivityKind.homework
                   ? 'النتائج: ${students.length} من ${roster.length} طالب — حفظ درجة الامتحان يثبت الحضور.'
                   : 'النتائج: ${students.length} من ${roster.length} طالب — الحاضرون والمعوّضون فعليًا فقط.',
             ),
@@ -1288,7 +1276,12 @@ class _AcademicScopeSnapshot {
 
   List<Student> _studentsForSession(CenterStore store, LessonSession? session) {
     if (session == null) return [];
-    if (scope.cairo) {
+    final homework = store.academicActivities.any(
+      (activity) =>
+          activity.id == scope.activityId &&
+          activity.kind == AcademicActivityKind.homework,
+    );
+    if (scope.cairo && !homework) {
       return store
           .studentsForRegion(cairo: true)
           .where((student) => student.groupIds.contains(session.groupId))

@@ -135,7 +135,7 @@ class NativeNetworkUpdateGuardTest(unittest.TestCase):
     def test_native_mode_selection_survives_cancel_without_changing_applied_mode(self):
         settings = PortalSettings(self.directory.name, Path(self.directory.name)/'checker', lambda _: None)
         self.api = network_setup.NetworkSetupApi(portal_settings=settings, admin_port=self.admin_port)
-        for desired, applied in [('legacy', 'https'), ('https', 'legacy')]:
+        for desired, applied in [('legacy', 'https'), ('https', 'legacy'), ('direct', 'https')]:
             with self.subTest(desired=desired):
                 self.installed_mode.write_text(json.dumps({'mode': applied}))
                 # Legacy recovery must reach authorization even with a broken

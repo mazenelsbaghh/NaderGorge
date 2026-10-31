@@ -25,7 +25,7 @@ SOURCE_PREFIXES = ("desktop/center-flutter/", "desktop/center-lan/", "exam-room/
 sys.path.insert(0, str(ROOT / "deploy/production/scripts"))
 from source_manifest import sensitive_path_reason, secret_content_reason_bytes
 from release_images import committed_source_entries
-from windows_package_assets import HISTORICAL_PRIVATE_ASSETS, PRIVATE_INSTALLER_ASSETS, GRADE_REPAIR_ASSET
+from windows_package_assets import HISTORICAL_PRIVATE_ASSETS, PRIVATE_INSTALLER_ASSETS, GRADE_REPAIR_ASSET, ATTENDANCE_REPAIR_ASSET, JABER_ATTENDANCE_REPAIR_ASSET, SHOBRA_ATTENDANCE_REPAIR_ASSET, HARAM_ATTENDANCE_REPAIR_ASSET
 
 GENERATED_PARTS = {"build", "dist", "node_modules", ".dart_tool", "__pycache__", ".pytest_cache", "obj", "bin", "ephemeral"}
 LOCAL_ONLY_SOURCES = {"desktop/center-flutter/scripts/recover-windows-exam-setup.ps1"}
@@ -201,6 +201,16 @@ def baseline_inputs(directory):
     return inputs
 
 
+def verified_attendance_review(review, asset_name, inputs):
+    if not isinstance(review, dict) or review.get("status") != "verified" or review.get("ownerAuthorized") is not True:
+        raise RuntimeError("Attendance repair requires completed owner-authorized verification.")
+    if review.get("repairSha256") != inputs["files"][asset_name] or any(
+            not isinstance(review.get(field), str) or not re.fullmatch(r"[a-f0-9]{64}", review[field])
+            for field in ("sourceSha256", "sourceBackupSha256")):
+        raise RuntimeError("Attendance repair review does not match the private inputs.")
+    return review
+
+
 def private_inputs(baseline, overlay=None):
     # Historical verification always happens first, even when an overlay is supplied.
     historical = baseline_inputs(baseline)
@@ -218,7 +228,7 @@ def private_inputs(baseline, overlay=None):
         raise RuntimeError("Private overlay is not bound to the historical baseline.")
     inputs = private_upload_inputs(directory, manifest, PRIVATE_INSTALLER_ASSETS)
     if any(inputs["files"][name] != value for name, value in historical["files"].items()):
-        raise RuntimeError("Private overlay may only add the reviewed grade repair; historical assets are immutable.")
+        raise RuntimeError("Private overlay may only add reviewed repairs; historical assets are immutable.")
     review_path = directory / "grade-repair-review.json"
     if manifest.get("reviewManifest") != review_path.name or manifest.get("reviewManifestSha256") != digest(review_path.read_bytes()):
         raise RuntimeError("Private overlay review manifest digest mismatch.")
@@ -229,8 +239,14 @@ def private_inputs(baseline, overlay=None):
         raise RuntimeError("Private grade repair requires a reviewed source backup digest.")
     if review.get("installationSeedSha256") != historical["files"]["installation_seed.json"] or review.get("repairSha256") != inputs["files"][GRADE_REPAIR_ASSET]:
         raise RuntimeError("Private grade repair review does not match the installer inputs.")
+    attendance = verified_attendance_review(review.get("attendanceRepair"), ATTENDANCE_REPAIR_ASSET, inputs)
+    jaber = verified_attendance_review(review.get("jaberAttendanceRepair"), JABER_ATTENDANCE_REPAIR_ASSET, inputs)
+    shobra = verified_attendance_review(review.get("shobraAttendanceRepair"), SHOBRA_ATTENDANCE_REPAIR_ASSET, inputs)
+    haram = verified_attendance_review(review.get("haramAttendanceRepair"), HARAM_ATTENDANCE_REPAIR_ASSET, inputs)
     inputs.update({"baselineSha256": historical["sha256"], "reviewManifestSha256": manifest["reviewManifestSha256"],
-                   "sourceBackupSha256": review["sourceBackupSha256"], "repairSha256": review["repairSha256"]})
+                   "sourceBackupSha256": review["sourceBackupSha256"], "repairSha256": review["repairSha256"],
+                   "attendanceRepair": attendance, "jaberAttendanceRepair": jaber,
+                   "shobraAttendanceRepair": shobra, "haramAttendanceRepair": haram})
     return inputs
 
 

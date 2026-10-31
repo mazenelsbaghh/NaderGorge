@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 
-const modeNames={legacy:'دخول محلي بدون شهادة',https:'دخول آمن بشهادة'};
+const modeNames={direct:'دخول بالرابط بدون نافذة تلقائية',welcome:'شاشة ترحيب بزر ابدأ',legacy:'دخول محلي بدون شهادة',https:'دخول آمن بشهادة'};
 
 export default function PortalConfiguration({status, disabled, refresh}) {
   const portal=status?.capport;
@@ -31,6 +31,10 @@ export default function PortalConfiguration({status, disabled, refresh}) {
   return <details className="notice"><summary>طريقة دخول الطلاب</summary>
     <p>المطبّق حاليًا على الشبكة: <strong>{modeNames[appliedMode]||'لم يتم التأكد من الإعداد'}</strong></p>
     <fieldset disabled={disabled||selecting||savingMode}><legend>الطريقة المختارة للتجهيز</legend>
+      <label className="multiple-rooms-option"><input type="radio" name="portal-mode" value="welcome" checked={desiredMode==='welcome'} onChange={()=>selectMode('welcome')} />
+        <span><strong>شاشة ترحيب بزر ابدأ</strong><small>يظهر الترحيب أولًا؛ بعد الضغط تُجاب فحوص HTTP المدعومة بنجاح لهذا الموبايل. يفتح الطالب Chrome أو Safari على 10.77.0.1.</small></span></label>
+      <label className="multiple-rooms-option"><input type="radio" name="portal-mode" value="direct" checked={desiredMode==='direct'} onChange={()=>selectMode('direct')} />
+        <span><strong>دخول بالرابط بدون نافذة تلقائية — موصى به</strong><small>يفتح الطالب رابط الامتحان أو QR في المتصفح. يوقف تحويلات الدخول من الماك ويجيب فحوص HTTP الشائعة محليًا، بدون شهادة.</small></span></label>
       <label className="multiple-rooms-option"><input type="radio" name="portal-mode" value="legacy" checked={desiredMode==='legacy'} onChange={()=>selectMode('legacy')} />
         <span><strong>دخول محلي بدون شهادة</strong><small>يعمل بعنوان 10.77.0.1 ويحاول إظهار إشعار الدخول بالطريقة التقليدية. لا يحتاج شهادة أو تجديدًا.</small></span></label>
       <label className="multiple-rooms-option"><input type="radio" name="portal-mode" value="https" checked={desiredMode==='https'} onChange={()=>selectMode('https')} />
@@ -48,8 +52,10 @@ export default function PortalConfiguration({status, disabled, refresh}) {
     <p className="help">اختار شهادة عامة موثوقة وكاملة fullchain.pem، ثم المفتاح المطابق privkey.pem. شهادة Cloudflare Origin وحدها لا تصلح للموبايلات.</p>
     <button className="button secondary" disabled={disabled||selecting||savingMode||!hostname.trim()} onClick={choose}>{selecting?'جارٍ اختيار وفحص الشهادة…':'اختيار شهادة البوابة وتجديدها'}</button>
     </>}
-    {desiredMode==='legacy'&&<p>الدخول المحلي لا تنتهي صلاحيته بانتهاء شهادة. أي شهادة محفوظة تظل موجودة إذا اخترت تفعيل الدخول الآمن لاحقًا.</p>}
+    {desiredMode==='direct'&&<p>أوقف Portal في إعدادات شبكة الطلاب على Omada أيضًا. قد يظل الموبايل يعرض «بلا إنترنت» لأن بعض فحوصه تحتاج HTTPS حقيقيًا. اختر البقاء متصلًا وأوقف التحويل التلقائي لبيانات الهاتف أثناء الامتحان.</p>}
+    {desiredMode==='welcome'&&<p>اترك Portal الداخلي في Omada مقفولًا لتجنب وجود بوابتين. الماك يعرض الترحيب. بعد «ابدأ» يمكن أن تُغلق نافذة الشبكة، لكن بعض الموبايلات تحتاج اختيار «البقاء متصلًا / استخدام بدون إنترنت» وفتح المتصفح يدويًا. لا يوجد إنترنت فعلي أو ضمان لفتح Chrome تلقائيًا.</p>}
+    {(desiredMode==='legacy'||desiredMode==='direct')&&<p>الدخول المحلي لا تنتهي صلاحيته بانتهاء شهادة. أي شهادة محفوظة تظل موجودة إذا اخترت تفعيل الدخول الآمن لاحقًا.</p>}
     {message&&<p role="status">{message}</p>}
-    <p className="help">الطريقتان تعملان داخل واي فاي الامتحان بلا إنترنت. ظهور الإشعار يعتمد على الموبايل في الحالتين؛ اختبر الأجهزة واحتفظ بالرابط والرمز للدخول.</p>
+    <p className="help">كل الطرق تعمل داخل واي فاي الامتحان بلا إنترنت. سلوك إشعار الشبكة يعتمد على الموبايل؛ اختبر الأجهزة واحتفظ بالرابط والرمز للدخول.</p>
   </details>;
 }

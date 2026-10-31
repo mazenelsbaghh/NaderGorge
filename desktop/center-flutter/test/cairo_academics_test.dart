@@ -119,6 +119,115 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  test(
+    'Cairo homework defaults only actual attendees and preserves exceptions and exams',
+    () async {
+      final homework = await store.saveAcademicActivity(
+        AcademicActivity(
+          preparedLessonId: session.preparedLessonId,
+          kind: AcademicActivityKind.homework,
+          name: 'واجب القاهرة',
+          createdAt: DateTime.now(),
+        ),
+      );
+      AcademicRecord homeworkFor(Student pupil, HomeworkStatus status) =>
+          AcademicRecord(
+            studentId: pupil.id,
+            sessionId: session.id,
+            activityId: homework.id,
+            homework: status,
+            updatedAt: DateTime.now(),
+          );
+      await expectLater(
+        store.saveAcademic(homeworkFor(student, HomeworkStatus.complete)),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.attendances, isEmpty);
+      expect(store.academics, isEmpty);
+      await store.saveAcademic(grade(8));
+      await store.saveStudent(
+        Student(
+          name: 'طالب غائب',
+          code: '102',
+          groupIds: [cairo.id],
+          createdAt: DateTime.now(),
+        ),
+      );
+      final absent = store.students.firstWhere((s) => s.code == '102');
+      final attendanceBefore = store.attendances
+          .map((a) => a.toJson())
+          .toList();
+      final examsBefore = store.academics.map((a) => a.toJson()).toList();
+      await store.recordHomeworkExceptions(
+        sessionId: session.id,
+        activityId: homework.id,
+      );
+      expect(
+        store.academics
+            .singleWhere((r) => r.activityId == homework.id)
+            .homework,
+        HomeworkStatus.complete,
+      );
+      await store.recordHomeworkExceptions(
+        sessionId: session.id,
+        activityId: homework.id,
+        missingStudentId: student.id,
+      );
+      await store.recordHomeworkExceptions(
+        sessionId: session.id,
+        activityId: homework.id,
+      );
+      expect(
+        store.academics
+            .singleWhere((r) => r.activityId == homework.id)
+            .homework,
+        HomeworkStatus.missing,
+      );
+      await store.saveAcademic(homeworkFor(student, HomeworkStatus.incomplete));
+      await store.recordHomeworkExceptions(
+        sessionId: session.id,
+        activityId: homework.id,
+      );
+      expect(
+        store.academics
+            .singleWhere((r) => r.activityId == homework.id)
+            .homework,
+        HomeworkStatus.incomplete,
+      );
+      await expectLater(
+        store.recordHomeworkExceptions(
+          sessionId: session.id,
+          activityId: homework.id,
+          missingStudentId: absent.id,
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      await expectLater(
+        store.saveAcademic(homeworkFor(absent, HomeworkStatus.missing)),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.academics.any((r) => r.studentId == absent.id), isFalse);
+      expect(
+        store.attendances.map((a) => a.toJson()).toList(),
+        attendanceBefore,
+      );
+      expect(
+        store.academics
+            .where((a) => a.activityId == exam.id)
+            .map((a) => a.toJson())
+            .toList(),
+        examsBefore,
+      );
+      expect(store.payments, isEmpty);
+      expect(store.packages, isEmpty);
+      expect(store.centerFees, isEmpty);
+      final saved = store.academics.map((a) => a.toJson()).toList();
+      await store.close();
+      store = await CenterStore.open(directory: directory.path);
+      expect(store.academics.map((a) => a.toJson()).toList(), saved);
+    },
+  );
+
   testWidgets(
     'Cairo roster refreshes grades, activities, membership and permissions while searching',
     (tester) async {

@@ -76,6 +76,10 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/gec_month1_repair_20261013.json',
     'assets/gec_first_secondary_attendance_repair_20261013.json',
     'assets/grade_results_repair_20261015.json',
+    'assets/gec_month2_lesson3_attendance_20261031.json',
+    'assets/jaber_month2_lesson3_attendance_20261031.json',
+    'assets/shobra_month2_lesson3_attendance_20261031.json',
+    'assets/haram_month2_lesson3_attendance_20261031.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,
@@ -345,7 +349,9 @@ extension _BundledCenterDataRepair on CenterStore {
         throw const FormatException('Repair enrollment identity or date');
       }
       final student = insertedStudents[studentId];
-      if (student == null || !(student['groupIds'] as List).contains(groupId)) {
+      if (student == null
+          ? !_repairAddsStudentGroup(patch, studentId, groupId)
+          : !(student['groupIds'] as List).contains(groupId)) {
         throw const FormatException('Repair enrollment student membership');
       }
       final key = '$studentId:$groupId';
@@ -356,6 +362,23 @@ extension _BundledCenterDataRepair on CenterStore {
     }
     return enrollments;
   }
+
+  bool _repairAddsStudentGroup(
+    Map<String, dynamic> patch,
+    String studentId,
+    String groupId,
+  ) => (patch['updates'] as List).any((update) {
+    if (update['collection'] != 'students' || update['id'] != studentId) {
+      return false;
+    }
+    final before = (update['before'] as Map)['groupIds'];
+    final after = (update['after'] as Map)['groupIds'];
+    return before is List &&
+        after is List &&
+        !before.contains(groupId) &&
+        after.contains(groupId) &&
+        after.toSet().containsAll(before);
+  });
 
   void _insertRepairEnrollments(
     Map<String, dynamic> document,

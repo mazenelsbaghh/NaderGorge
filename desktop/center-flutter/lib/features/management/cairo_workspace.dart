@@ -19,7 +19,7 @@ class _CairoWorkspaceState extends State<CairoWorkspace> {
   int _page = 0;
   bool _switching = false;
   static const _labels = [
-    'حضور ورصد الامتحان',
+    'الحضور والامتحانات والواجبات',
     'طلاب القاهرة',
     'مجموعات القاهرة',
     'سناتر القاهرة',

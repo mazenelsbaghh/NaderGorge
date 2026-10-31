@@ -111,6 +111,8 @@ func diagnosticErrorCategory(err error) string {
 			return "conflict"
 		case 429:
 			return "rate_limited"
+		case 408:
+			return "timeout"
 		case 400, 413, 415, 422:
 			return "invalid_request"
 		case 503:
