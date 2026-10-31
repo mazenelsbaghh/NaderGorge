@@ -35,6 +35,7 @@ NATIVE_SOURCE_ROOTS = (
     ("desktop/center-flutter/integration_test", ".dart"),
     ("desktop/center-lan", ".go"),
     ("exam-room", ".go"),
+    ("exam-room/cmd/portal-proxy", ".html"),
     ("exam-room/frontend/src", ".jsx"),
     ("exam-room/frontend/src", ".js"),
     ("exam-room/windows-hotspot", ".cs"),

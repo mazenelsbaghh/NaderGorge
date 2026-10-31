@@ -203,7 +203,7 @@ class WindowsTrialTests(unittest.TestCase):
     def test_git_excludes_cannot_hide_native_inputs_or_wired_browser_test(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            expected = ["desktop/center-flutter/lib/new_feature.dart", "exam-room/center_monitor.go", "exam-room/center_monitor_test.go", "exam-room/tests/center-wired-room.cjs", "exam-room/frontend/src/CenterWhatsAppReports.jsx", "exam-room/frontend/src/templateFields.js", "exam-room/windows-hotspot/HomeworkHotspot.cs"]
+            expected = ["desktop/center-flutter/lib/new_feature.dart", "exam-room/center_monitor.go", "exam-room/center_monitor_test.go", "exam-room/cmd/portal-proxy/welcome.html", "exam-room/tests/center-wired-room.cjs", "exam-room/frontend/src/CenterWhatsAppReports.jsx", "exam-room/frontend/src/templateFields.js", "exam-room/windows-hotspot/HomeworkHotspot.cs"]
             for name in expected + ["exam-room/build/generated.go", "exam-room/windows-hotspot/obj/generated.cs", "desktop/center-flutter/.dart_tool/generated.dart", "desktop/center-flutter/private-import/repair.dart"]:
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)

@@ -20,7 +20,7 @@ python3 desktop/center-flutter/scripts/windows_trial.py scan \
   --output artifacts/private/windows-trial-1.4.6
 ```
 
-Review the generated `source-paths.json`. Scanning includes new unignored files under the desktop and exam source roots, plus Go, Dart and hotspot C# source even when local Git excludes hide a whole project. Private installer JSON, generated build directories and the device-specific `recover-windows-exam-setup.ps1` incident helper are excluded. Missing source files, private paths and secret-like source content stop the operation. Preparation and dispatch reject new or changed build sources omitted from the reviewed allowlist.
+Review the generated `source-paths.json`. Scanning includes new unignored files under the desktop and exam source roots, plus Go, Dart, hotspot C# source and portal-proxy HTML templates even when local Git excludes hide a whole project. Private installer JSON, generated build directories and the device-specific `recover-windows-exam-setup.ps1` incident helper are excluded. Missing source files, private paths and secret-like source content stop the operation. Preparation and dispatch reject new or changed build sources omitted from the reviewed allowlist.
 
 ```sh
 python3 desktop/center-flutter/scripts/windows_trial.py prepare \

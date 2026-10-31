@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مسار · شبكة الامتحان</title>
+<style>
+@font-face{font-family:Tajawal;src:url('/assets/Tajawal-Regular.ttf')}@font-face{font-family:Tajawal;src:url('/assets/Tajawal-Bold.ttf');font-weight:700}
+*{box-sizing:border-box}body{margin:0;background:#f6f7f8;color:#10253e;font:18px/1.8 Tajawal,sans-serif}main{max-width:480px;margin:8vh auto;padding:28px 24px}img{width:108px;height:88px;object-fit:contain}h1{font-size:30px;line-height:1.4;margin:28px 0 14px}p{margin:12px 0}.help{font-size:15px;color:#455568}button{font:700 20px Tajawal,sans-serif;background:#0b716c;color:white;border:0;border-radius:8px;min-height:54px;width:100%;margin-top:20px;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #0b716c;outline-offset:4px}label{display:block;font-size:15px;margin-top:22px}input{width:100%;padding:14px;border:1px solid #a4b6c5;border-radius:8px;background:white;color:#10253e;font:20px sans-serif;text-align:center}footer{margin-top:30px;border-top:1px solid #dce1e6;padding-top:18px;font-size:14px;color:#455568}
+</style></head><body><main>
+<img src="/assets/logo-mark.svg" alt="مسار">
+{{if .Accepted}}
+<h1>كمّل في متصفحك</h1>
+<p>تم تسجيل اختيارك. افتح Chrome أو Safari واكتب عنوان الامتحان:</p>
+<label for="exam-address">اضغط مطولًا على العنوان لنسخه</label><input id="exam-address" dir="ltr" readonly value="http://10.77.0.1/">
+<p class="help">لو ظهرت رسالة «بدون إنترنت»، اختار «البقاء متصلًا» أو «استخدام بدون إنترنت».</p>
+<footer>حلّ الامتحان في المتصفح العادي حتى تقدر ترجع لنفس إجاباتك.</footer>
+{{else}}
+<h1>أهلًا بيك في شبكة الامتحان</h1>
+<p>اضغط «ابدأ» لإكمال خطوة الدخول، وبعدها افتح الامتحان في Chrome أو Safari.</p>
+<form action="/welcome/accept" method="post"><input type="hidden" name="token" value="{{.Token}}"><button type="submit">ابدأ</button></form>
+<footer>الشبكة مخصصة للامتحان المحلي. لا تحتاج باقة إنترنت.</footer>
+{{end}}
+</main></body></html>
