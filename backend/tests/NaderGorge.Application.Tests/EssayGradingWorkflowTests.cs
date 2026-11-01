@@ -15,6 +15,42 @@ namespace NaderGorge.Application.Tests;
 
 public class EssayGradingWorkflowTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GradedEssayFeedbackDuringPendingReviewHonorsPendingResultsSetting(bool showPending)
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "feedback-pending");
+        var (exam, _, gradedQuestion, _, essayBank, _, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        exam.ShowResultsWhileEssayPending = showPending;
+        var pendingQuestion = new ExamQuestion
+        {
+            ExamId = exam.Id, Points = 2, Order = 3,
+            Question = new QuestionBankItem { Type = QuestionType.Essay, Text = "Another explanation", SubjectId = essayBank.SubjectId,
+                CreatedByTeacherId = essayBank.CreatedByTeacherId }
+        };
+        exam.ExamQuestions.Add(pendingQuestion);
+        db.ExamQuestions.Add(pendingQuestion);
+        await db.SaveChangesAsync();
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        attempt.Evaluation = "قيد التصحيح";
+        db.EssaySubmissions.AddRange(
+            new EssaySubmission { StudentExamAttemptId = attempt.Id, StudentId = student.Id,
+                QuestionId = gradedQuestion.QuestionBankItemId, Status = EssaySubmissionStatus.TeacherGraded,
+                AnswerText = "Explanation", TeacherFinalScore = 8, TeacherFeedback = "Reviewed explanation" },
+            new EssaySubmission { StudentExamAttemptId = attempt.Id, StudentId = student.Id,
+                QuestionId = pendingQuestion.QuestionBankItemId, Status = EssaySubmissionStatus.WaitAI,
+                AnswerText = "Pending explanation" });
+        await db.SaveChangesAsync();
+        var response = await new GetExamAttemptResultQueryHandler(db).Handle(new(attempt.Id, student.Id), default);
+        Assert.True(response.Success, response.Message);
+        Assert.Equal("Pending", response.Data!.ResultState);
+        var reviewed = response.Data.Questions.Single(q => q.ExamQuestionId == gradedQuestion.Id);
+        Assert.Equal(showPending ? "Reviewed explanation" : null, reviewed.GradingFeedback);
+        Assert.Null(response.Data.Questions.Single(q => q.ExamQuestionId == pendingQuestion.Id).GradingFeedback);
+    }
+
     [Fact]
     public async Task Missing_teacher_answer_key_still_queues_text_essay_for_ai()
     {
@@ -175,6 +211,16 @@ public class EssayGradingWorkflowTests
         Assert.Equal("A force attracting masses.", completedEssayReview.CorrectOptionText);
         Assert.Equal("A force attracting masses.", completedEssayReview.WrittenCorrection);
         Assert.Equal(manualGrading ? "Teacher says correct" : "AI says correct", completedEssayReview.GradingFeedback);
+        var currentExam = await db.Exams.SingleAsync(e => e.Id == exam.Id);
+        currentExam.ShowScoreToStudents = false;
+        await db.SaveChangesAsync();
+        var hidden = await resultQuery.Handle(new(attempt.Id, student.Id), CancellationToken.None);
+        Assert.False(hidden.Data!.ScoreVisible);
+        Assert.Null(hidden.Data.ScoreAchieved); Assert.Null(hidden.Data.TotalScore);
+        var visibleQuestion = hidden.Data.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
+        Assert.Equal(8m, visibleQuestion.PointsAwarded);
+        Assert.Equal(completedEssayReview.GradingFeedback, visibleQuestion.GradingFeedback);
+
     }
 
     [Theory]

@@ -89,7 +89,8 @@ internal static class ExamResultBuilder
                         ? eq.Question.WrittenCorrection
                         : null,
                     snapshot?.StudentAudioUrl,
-                    !excluded && snapshot?.IsPendingGrading == false ? snapshot.GradingFeedback : null,
+                    !excluded && (resultIsCompleted || exam.ShowResultsWhileEssayPending)
+                        && snapshot?.IsPendingGrading == false ? snapshot.GradingFeedback : null,
                     eq.Points,
                     excluded,
                     !resultIsCompleted && !excluded && eq.Question.Type == QuestionType.Essay
