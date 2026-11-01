@@ -1434,6 +1434,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("exams");
             e.Property(x => x.ShowAnswersToStudents).HasDefaultValue(true);
+            e.Property(x => x.ShowScoreToStudents).HasDefaultValue(true);
             e.HasKey(x => x.Id);
             e.Property(x => x.InternalCode).HasMaxLength(40).IsRequired();
             e.HasIndex(x => x.InternalCode).IsUnique();
@@ -1544,6 +1545,10 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<Homework>(e =>
         {
             e.ToTable("homeworks");
+            e.Property(h => h.ShowAnswersToStudents).HasDefaultValue(true);
+            e.Property(h => h.ShowScoreToStudents).HasDefaultValue(true);
+            e.Property(h => h.EssayGradingMode).HasDefaultValue(ExamEssayGradingMode.AutomaticFullCredit)
+                .HasSentinel((ExamEssayGradingMode)(-1));
             e.HasKey(h => h.Id);
             e.Property(h => h.Title).HasMaxLength(255).IsRequired();
             e.Property(h => h.PassingScoreThreshold).HasColumnType("decimal(18,2)");
@@ -1577,6 +1582,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("homework_answers");
             e.HasKey(a => a.Id);
+            e.Property(a => a.PreciseScoreReceived).HasPrecision(18, 2);
+            e.Property(a => a.GradingFeedback).HasMaxLength(5000);
+            e.Ignore(a => a.AwardedScore);
             e.HasOne(a => a.Submission).WithMany(s => s.Answers).HasForeignKey(a => a.HomeworkSubmissionId);
             e.HasOne(a => a.Question).WithMany().HasForeignKey(a => a.QuestionId);
         });

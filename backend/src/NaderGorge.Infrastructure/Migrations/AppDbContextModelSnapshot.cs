@@ -4733,6 +4733,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("ShowResultsWhileEssayPending")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ShowScoreToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("SingleAttemptOnly")
                         .HasColumnType("boolean");
 
@@ -5738,6 +5743,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(30);
 
+                    b.Property<int>("EssayGradingMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -5761,7 +5771,20 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<decimal?>("PassingScoreThreshold")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("ShowAnswersToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("ShowResultsWhileEssayPending")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowScoreToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("SingleAttemptOnly")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Title")
@@ -5786,8 +5809,16 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("GradingFeedback")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
                     b.Property<Guid>("HomeworkSubmissionId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("PreciseScoreReceived")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("ProvidedAnswer")
                         .IsRequired()

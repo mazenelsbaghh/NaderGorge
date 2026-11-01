@@ -72,8 +72,9 @@ export interface ExamResultDto {
   allowRetake?: boolean;
   partialResult?: PartialExamResultDto | null;
   attemptId: string;
-  scoreAchieved: number;
-  totalScore: number;
+  scoreAchieved: number | null;
+  scoreVisible?: boolean;
+  totalScore: number | null;
   isPassed: boolean;
   blocksNextLesson: boolean;
   evaluation: string;

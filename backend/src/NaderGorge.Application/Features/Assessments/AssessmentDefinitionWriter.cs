@@ -21,6 +21,10 @@ public static class AssessmentDefinitionWriter
         homework.IsMandatory = definition.IsMandatory;
         homework.IsRandomized = definition.IsRandomized;
         homework.ShowResultsWhileEssayPending = definition.ShowResultsWhileEssayPending;
+        homework.EssayGradingMode = definition.EffectiveEssayGradingMode;
+        homework.SingleAttemptOnly = definition.SingleAttemptOnly;
+        homework.ShowAnswersToStudents = definition.ShowAnswersToStudents ?? homework.ShowAnswersToStudents;
+        homework.ShowScoreToStudents = definition.ShowScoreToStudents ?? homework.ShowScoreToStudents;
         homework.ParentNotificationEnabledAt = definition.ParentNotification.Enabled
             ? homework.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
         homework.ParentNotificationSettingsJson = definition.ParentNotification.ToJson();
@@ -52,6 +56,8 @@ public static class AssessmentDefinitionWriter
         exam.EssayGradingMode = definition.EssayGradingMode;
         exam.ShowResultsWhileEssayPending = definition.ShowResultsWhileEssayPending;
         exam.SingleAttemptOnly = definition.SingleAttemptOnly;
+        exam.ShowAnswersToStudents = definition.ShowAnswersToStudents ?? exam.ShowAnswersToStudents;
+        exam.ShowScoreToStudents = definition.ShowScoreToStudents ?? exam.ShowScoreToStudents;
         exam.IsMandatory = definition.IsMandatory;
         exam.IsRandomized = definition.IsRandomized;
         exam.DisplayQuestionCount = definition.DisplayQuestionCount;

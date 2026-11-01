@@ -350,7 +350,7 @@ export function HomeworkViewer({
           <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{attempt.instructions}</p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-black text-primary">
-          <span>الدرجة الكلية: {attempt.totalScore} نقطة</span>
+          {attempt.totalScore != null && <span>الدرجة الكلية: {attempt.totalScore} نقطة</span>}
           {attempt.passingScore && <span>درجة النجاح: {attempt.passingScore} نقطة</span>}
           {attempt.durationMinutes && <span>الزمن: {attempt.durationMinutes} دقيقة</span>}
         </div>

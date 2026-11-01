@@ -2,7 +2,7 @@
 
 import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
 
-import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
+import { AssessmentVisibilitySettings } from './AssessmentVisibilitySettings';
 import { useState } from 'react';
 import { Save, BookOpen, Video, Shuffle, CalendarClock } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
@@ -53,8 +53,10 @@ export function UnifiedAssessmentBuilder({
   // New Toggles
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
+  const [showScoreToStudents, setShowScoreToStudents] = useState(true);
+  const [showAnswersToStudents, setShowAnswersToStudents] = useState(true);
   const [singleAttemptOnly, setSingleAttemptOnly] = useState(false);
-  const [essayGradingMode, setEssayGradingMode] = useState<ExamEssayGradingMode>('Automatic');
+  const [essayGradingMode, setEssayGradingMode] = useState<ExamEssayGradingMode>(isExam ? 'Automatic' : 'AutomaticFullCredit');
   const [showResultsWhileEssayPending, setShowResultsWhileEssayPending] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(
     !isExam && Boolean(initialHomeworkComingSoonOn)
@@ -117,6 +119,8 @@ export function UnifiedAssessmentBuilder({
           essayGradingMode,
           singleAttemptOnly,
           showResultsWhileEssayPending,
+          showScoreToStudents,
+          showAnswersToStudents,
           title,
           description,
           totalScore,
@@ -141,7 +145,11 @@ export function UnifiedAssessmentBuilder({
           parentNotification,
           title,
           instructions: description,
+          essayGradingMode,
+          singleAttemptOnly,
           showResultsWhileEssayPending,
+          showScoreToStudents,
+          showAnswersToStudents,
           isMandatory,
           isRandomized,
           totalScore,
@@ -293,11 +301,12 @@ export function UnifiedAssessmentBuilder({
                 </Checkbox>
               </div>
 
-              {isExam && <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving}
-                showPendingResults={showResultsWhileEssayPending} onPendingResultsChange={setShowResultsWhileEssayPending} />}
+              <ExamEssayGradingSettings mode={essayGradingMode} onChange={setEssayGradingMode} disabled={saving}
+                showPendingResults={showResultsWhileEssayPending} onPendingResultsChange={setShowResultsWhileEssayPending} />
 
-              {isExam && <ExamSingleAttemptSwitch enabled={singleAttemptOnly} onChange={setSingleAttemptOnly} disabled={saving} />}
-              {!isExam && <AssessmentPendingResultsSwitch enabled={showResultsWhileEssayPending} onChange={setShowResultsWhileEssayPending} disabled={saving} />}
+              <ExamSingleAttemptSwitch kind={type} enabled={singleAttemptOnly} onChange={setSingleAttemptOnly} disabled={saving} />
+              <AssessmentVisibilitySettings scoreVisible={showScoreToStudents} onScoreChange={setShowScoreToStudents}
+                answersVisible={showAnswersToStudents} onAnswersChange={setShowAnswersToStudents} disabled={saving} />
 
               {!isExam && (
                 <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">

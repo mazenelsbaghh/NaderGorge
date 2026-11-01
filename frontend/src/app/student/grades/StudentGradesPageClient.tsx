@@ -54,7 +54,7 @@ export default function StudentGradesPageClient() {
               {grade.lessonTitle && <p className="break-words text-sm text-[var(--admin-muted)]">{grade.lessonTitle}</p>}
             </div>
             <div className="shrink-0 sm:text-left">
-              {grade.status === 'Graded' && grade.score !== null && <p className="text-xl font-black tabular-nums" aria-label="الدرجة">{number.format(grade.score)} <span className="text-sm font-normal text-[var(--admin-muted)]">من {number.format(grade.totalScore)}</span></p>}
+              {grade.status === 'Graded' && grade.score !== null && grade.totalScore !== null && <p className="text-xl font-black tabular-nums" aria-label="الدرجة">{number.format(grade.score)} <span className="text-sm font-normal text-[var(--admin-muted)]">من {number.format(grade.totalScore)}</span></p>}
               <p className={`mt-1 text-sm font-bold ${grade.status === 'Graded' ? 'text-[var(--admin-primary)]' : 'text-[var(--admin-muted)]'}`}>{statuses[grade.status]}</p>
             </div>
           </li>)}

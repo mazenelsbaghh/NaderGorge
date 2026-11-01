@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -30,6 +31,15 @@ public sealed record AssessmentDefinitionSnapshot(
     public ExamEssayGradingMode EssayGradingMode { get; init; }
     public bool ShowResultsWhileEssayPending { get; init; }
     public bool SingleAttemptOnly { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ShowAnswersToStudents { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ShowScoreToStudents { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int HomeworkGradingVersion { get; init; }
+    [JsonIgnore]
+    public ExamEssayGradingMode EffectiveEssayGradingMode => Kind == "homework" && HomeworkGradingVersion == 0
+        ? ExamEssayGradingMode.AutomaticFullCredit : EssayGradingMode;
     public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
@@ -69,6 +79,8 @@ public sealed record AssessmentDefinitionSnapshot(
         EssayGradingMode = exam.EssayGradingMode,
         ShowResultsWhileEssayPending = exam.ShowResultsWhileEssayPending,
         SingleAttemptOnly = exam.SingleAttemptOnly,
+        ShowAnswersToStudents = exam.ShowAnswersToStudents,
+        ShowScoreToStudents = exam.ShowScoreToStudents,
         ParentNotification = AssessmentParentNotificationSettings.Read(exam.ParentNotificationSettingsJson),
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
@@ -82,7 +94,7 @@ public sealed record AssessmentDefinitionSnapshot(
 
     public AssessmentDefinitionSnapshot WithEssayGradingScale()
     {
-        if (Kind != "exam" || EssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly) return this;
+        if (EffectiveEssayGradingMode != ExamEssayGradingMode.ModelAnswerOnly) return this;
         var rawMaximum = Questions.Sum(q => q.Points);
         var scoredMaximum = Questions.Where(q => q.Type != (int)QuestionType.Essay).Sum(q => q.Points);
         var ratio = rawMaximum > 0 ? scoredMaximum / rawMaximum : 0;
@@ -126,6 +138,11 @@ public sealed record AssessmentDefinitionSnapshot(
         homework.Questions.Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromHomeworkQuestion).ToArray())
     {
         IsActive = homework.IsActive,
+        HomeworkGradingVersion = 1,
+        EssayGradingMode = homework.EssayGradingMode,
+        SingleAttemptOnly = homework.SingleAttemptOnly,
+        ShowAnswersToStudents = homework.ShowAnswersToStudents,
+        ShowScoreToStudents = homework.ShowScoreToStudents,
         ShowResultsWhileEssayPending = homework.ShowResultsWhileEssayPending,
         ParentNotification = AssessmentParentNotificationSettings.Read(homework.ParentNotificationSettingsJson)
     };
@@ -147,6 +164,7 @@ public sealed record AssessmentDefinitionSnapshot(
             ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             SingleAttemptOnly = current.SingleAttemptOnly,
             ShowAnswersToStudents = current.ShowAnswersToStudents,
+            ShowScoreToStudents = current.ShowScoreToStudents,
             DurationMinutes = snapshot.DurationMinutes, IsMandatory = snapshot.IsMandatory,
             IsRandomized = snapshot.IsRandomized, DisplayQuestionCount = snapshot.DisplayQuestionCount,
             ExamQuestions = snapshot.Questions.Select(q => ToExamQuestion(q, current.Id, optionOrders)).ToList()
@@ -165,6 +183,10 @@ public sealed record AssessmentDefinitionSnapshot(
             PassingScoreThreshold = snapshot.PassingScore, IsMandatory = snapshot.IsMandatory,
             DurationMinutes = snapshot.DurationMinutes,
             IsRandomized = snapshot.IsRandomized,
+            EssayGradingMode = snapshot.EffectiveEssayGradingMode,
+            SingleAttemptOnly = current.SingleAttemptOnly,
+            ShowAnswersToStudents = current.ShowAnswersToStudents,
+            ShowScoreToStudents = current.ShowScoreToStudents,
             ShowResultsWhileEssayPending = current.ShowResultsWhileEssayPending,
             Questions = snapshot.Questions.Select(q => ToHomeworkQuestion(q, current.Id)).ToList()
         };

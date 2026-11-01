@@ -1577,7 +1577,11 @@ public record AttachHomeworkCommand(
     Guid? CurrentUserId = null,
     DateOnly? HomeworkComingSoonOn = null,
     NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null,
-    bool ShowResultsWhileEssayPending = false) : IRequest<ApiResponse<Guid>>;
+    bool ShowResultsWhileEssayPending = false,
+    NaderGorge.Domain.Enums.ExamEssayGradingMode EssayGradingMode = NaderGorge.Domain.Enums.ExamEssayGradingMode.AutomaticFullCredit,
+    bool SingleAttemptOnly = false,
+    bool ShowScoreToStudents = true,
+    bool ShowAnswersToStudents = true) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
 
@@ -1609,6 +1613,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
     public async Task<ApiResponse<Guid>> Handle(AttachHomeworkCommand request, CancellationToken ct)
     {
+        if (!Enum.IsDefined(request.EssayGradingMode)) return ApiResponse<Guid>.Fail("اختر طريقة تصحيح مقالي صحيحة.");
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
@@ -1693,6 +1698,10 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
         }
 
         hw.ShowResultsWhileEssayPending = request.ShowResultsWhileEssayPending;
+        hw.EssayGradingMode = request.EssayGradingMode;
+        hw.SingleAttemptOnly = request.SingleAttemptOnly;
+        hw.ShowScoreToStudents = request.ShowScoreToStudents;
+        hw.ShowAnswersToStudents = request.ShowAnswersToStudents;
         hw.ParentNotificationEnabledAt = parentNotification.Enabled ? hw.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
         hw.ParentNotificationSettingsJson = parentNotification.ToJson();
 

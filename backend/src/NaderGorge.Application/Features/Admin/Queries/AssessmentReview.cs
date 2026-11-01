@@ -79,7 +79,7 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
         {
             var answer = submission.Answers.FirstOrDefault(a => a.QuestionId == q.Id);
             return new AssessmentAnswerReview(q.Id, q.Order, q.BodyText, q.ImageUrl, answer?.ProvidedAnswer,
-                null, q.WrittenCorrection ?? q.CorrectAnswerKey, q.PointsActive, answer?.ScoreReceived);
+                null, q.WrittenCorrection ?? q.CorrectAnswerKey, q.PointsActive, answer?.AwardedScore);
         }).ToList();
         return new(submission.Id, submission.Student.FullName, definition.Title, submission.OverallScore,
             definition.TotalScore, submission.Status.ToString(), submission.SubmittedAt != null, submission.AssistantNotes, questions);

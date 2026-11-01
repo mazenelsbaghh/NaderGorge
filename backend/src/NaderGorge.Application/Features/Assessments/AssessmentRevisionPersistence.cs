@@ -20,7 +20,7 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
         {
             submission.DefinitionSnapshotJson, submission.OverallScore, submission.Status, submission.SubmittedAt,
             submission.GradedAt, submission.StartedAt, submission.AssistantReviewerId,
-            Answers = submission.Answers.Select(a => new { a.Id, a.QuestionId, a.ProvidedAnswer, a.ScoreReceived })
+            Answers = submission.Answers.Select(a => new { a.Id, a.QuestionId, a.ProvidedAnswer, a.ScoreReceived, a.PreciseScoreReceived, a.GradingFeedback })
         });
         var previous = AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson!, "homework", submission.HomeworkId);
         var submitted = submission.Status != SubmissionStatus.InProgress || previous.Revision is not null;
@@ -34,7 +34,8 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
                 submission.Answers.Add(answer);
                 db.HomeworkAnswers.Add(answer);
             }
-            answer.ScoreReceived = grade.Excluded ? 0 : grade.AwardedPoints is decimal points ? checked((int)points) : null;
+            answer.AwardedScore = grade.Excluded ? 0 : grade.AwardedPoints;
+            answer.GradingFeedback = null;
         }
         var grades = write.Revised.Grades;
         submission.OverallScore = Score(write.Revised);

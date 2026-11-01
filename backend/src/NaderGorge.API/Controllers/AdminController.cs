@@ -932,7 +932,7 @@ public class AdminController : ControllerBase
             GetUserId(),
             dto.HomeworkComingSoonOn,
             dto.ParentNotification,
-            dto.ShowResultsWhileEssayPending);
+            dto.ShowResultsWhileEssayPending, dto.EssayGradingMode, dto.SingleAttemptOnly, dto.ShowScoreToStudents, dto.ShowAnswersToStudents);
 
         var result = await _mediator.Send(cmd);
         return result.Success ? Ok(result) : BadRequest(result);
@@ -1633,7 +1633,9 @@ public record AttachHomeworkRequest(
     List<AttachHomeworkQuestionDto> Questions,
     DateOnly? HomeworkComingSoonOn = null,
     NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null,
-    bool ShowResultsWhileEssayPending = false);
+    bool ShowResultsWhileEssayPending = false,
+    Domain.Enums.ExamEssayGradingMode EssayGradingMode = Domain.Enums.ExamEssayGradingMode.AutomaticFullCredit,
+    bool SingleAttemptOnly = false, bool ShowScoreToStudents = true, bool ShowAnswersToStudents = true);
 public record LinkLessonExamRequest(Guid? ExamId);
 public record GenerateLessonMimGameRequest(Guid SourceVideoId);
 public record SetContentStatusRequest(bool IsActive);

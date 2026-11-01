@@ -480,8 +480,6 @@ The user message is a JSON object containing questionText, expectedAnswer, and s
 
 const essayGradingInstruction = `${writtenAnswerGradingInstruction}\n- Return score as a fraction of the question's available marks from 0 to 1, with at most two decimal places. Give 1 for a complete equivalent answer, 0 only when there is no relevant correct credit, and proportional partial credit for correct required parts when other parts are missing or wrong. Use explicit weights in the reference when supplied; otherwise divide the marks fairly across the independently required parts. Do not give zero to the whole answer for one missing part.`;
 
-const homeworkGradingInstruction = `${writtenAnswerGradingInstruction}\n- This homework uses whole-answer grading: score must be exactly 1 for a complete equivalent answer or 0 otherwise. Explain any missing required part and acknowledge correct ideas without promising partial marks.`;
-
 const essayGradingSchema = {
   type: Type.OBJECT,
   properties: { score: { type: Type.NUMBER, minimum: 0, maximum: 1 }, feedback: { type: Type.STRING } },
@@ -492,10 +490,8 @@ export function evaluateEssayWithAI(answerText: string, expectedAnswer?: string,
   return evaluateWrittenAnswerWithAI(essayGradingInstruction, answerText, expectedAnswer, questionText);
 }
 
-export async function evaluateHomeworkWithAI(answerText: string, expectedAnswer?: string, questionText?: string): Promise<EssayAIResult> {
-  const grade = await evaluateWrittenAnswerWithAI(homeworkGradingInstruction, answerText, expectedAnswer, questionText);
-  if (grade.score !== 0 && grade.score !== 1) throw new Error('Homework requires a whole-answer grade.');
-  return grade;
+export function evaluateHomeworkWithAI(answerText: string, expectedAnswer?: string, questionText?: string): Promise<EssayAIResult> {
+  return evaluateWrittenAnswerWithAI(essayGradingInstruction, answerText, expectedAnswer, questionText);
 }
 
 async function evaluateWrittenAnswerWithAI(

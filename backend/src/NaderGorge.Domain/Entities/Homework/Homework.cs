@@ -18,6 +18,10 @@ public class Homework : NaderGorge.Domain.Entities.IArchivableContent
     public DateTime? ArchivedAt { get; set; }
     public Guid? ArchivedByUserId { get; set; }
     public bool ShowResultsWhileEssayPending { get; set; }
+    public bool ShowAnswersToStudents { get; set; } = true;
+    public bool ShowScoreToStudents { get; set; } = true;
+    public bool SingleAttemptOnly { get; set; }
+    public ExamEssayGradingMode EssayGradingMode { get; set; } = ExamEssayGradingMode.AutomaticFullCredit;
     public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }

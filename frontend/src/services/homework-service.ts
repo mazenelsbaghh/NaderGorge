@@ -29,10 +29,10 @@ export interface StartHomeworkAttemptDto {
     submissionId: string;
     title: string;
     instructions?: string;
-    totalScore: number;
-    passingScore?: number;
+    totalScore: number | null;
+    passingScore?: number | null;
     alreadyCompleted: boolean;
-    score?: number;
+    score?: number | null;
     evaluation?: string;
     startedAt: string;
     durationMinutes?: number;
@@ -59,9 +59,12 @@ export interface HomeworkResultDto {
     homeworkId: string;
     submissionId: string;
     title: string;
-    score: number;
-    totalScore: number;
-    passingScore?: number;
+    score: number | null;
+    scoreVisible?: boolean;
+    answersVisible?: boolean;
+    allowRetake?: boolean;
+    totalScore: number | null;
+    passingScore?: number | null;
     isPassed: boolean;
     evaluation?: string;
     submittedAt?: string;
@@ -89,6 +92,8 @@ export interface HomeworkQuestionReviewDto {
     audioUrl?: string;
     imageUrl?: string;
     possibleAnswers?: string[];
+    gradingFeedback?: string | null;
+    isExcludedFromScore?: boolean;
 }
 
 export const homeworkService = {

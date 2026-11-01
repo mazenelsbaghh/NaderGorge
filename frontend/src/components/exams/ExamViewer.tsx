@@ -1,5 +1,7 @@
 'use client';
 
+import { AnswerGradingFeedback } from '@/components/assessment/AnswerGradingFeedback';
+
 import { useState, useEffect, useId, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,16 +49,6 @@ const essayScoreExplanations = {
   Excluded: 'الدرجة بدون المقالي — المقالي غير محتسب في درجة هذا الامتحان.',
 };
 
-function AnswerGradingFeedback({ feedback }: { feedback?: string }) {
-  if (!feedback) return null;
-  return (
-    <div className="mt-3 rounded-xl border border-border/40 bg-background/60 p-4">
-      <p className="text-xs font-black text-muted-foreground">تعليل التصحيح</p>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-7 text-foreground" dir="auto">{feedback}</p>
-    </div>
-  );
-}
-
 // ─── Result Panel ───────────────────────────────────────────────────────────────
 
 export function ExamResultPanel({
@@ -84,8 +76,9 @@ export function ExamResultPanel({
   const resolvedLessonId = lessonId ?? result.lessonId;
   const answeredCount = reviewedQuestions.filter((q) => q.isAnswered).length;
   const skippedCount = reviewedQuestions.filter((q) => !q.isAnswered).length;
-  const accuracy =
-    result.totalScore > 0 ? Math.round((result.scoreAchieved / result.totalScore) * 100) : 0;
+  const scoreVisible = result.scoreVisible !== false && result.scoreAchieved != null && result.totalScore != null;
+  const accuracy = result.totalScore != null && result.totalScore > 0 && result.scoreAchieved != null
+    ? Math.round((result.scoreAchieved / result.totalScore) * 100) : 0;
   const hasReviewData = reviewedQuestions.length > 0;
   const [gradingStatus, setGradingStatus] = useState<ExamAttemptGradingStatusDto | null>(null);
   const [gradingError, setGradingError] = useState('');
@@ -278,15 +271,15 @@ export function ExamResultPanel({
             ) : (
               <XCircle className="h-10 w-10" />
             )}
-            <span className="mt-1 text-xs font-black">{accuracy}%</span>
+            {scoreVisible && <span className="mt-1 text-xs font-black">{accuracy}%</span>}
           </div>
         </div>
 
         {/* Stats row */}
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            { label: 'الدرجة', value: `${result.scoreAchieved} / ${result.totalScore}` },
-            { label: 'الدقة', value: `${accuracy}%` },
+            ...(scoreVisible ? [{ label: 'الدرجة', value: `${result.scoreAchieved} / ${result.totalScore}` }] : []),
+            ...(scoreVisible ? [{ label: 'الدقة', value: `${accuracy}%` }] : []),
             { label: 'التقييم', value: result.evaluation },
             { label: 'الإجابات', value: hasReviewData ? `${answeredCount}` : '—' },
             { label: 'تم تخطيها', value: hasReviewData ? `${skippedCount}` : '—' },

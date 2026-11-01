@@ -51,8 +51,8 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
         if (submission?.SubmittedAt == null) return ApiResponse<bool>.Fail("الواجب غير موجود أو لم يتم تسليمه.");
         var definition = AssessmentDefinitionSnapshot.ResolveHomework(submission.Homework, submission.DefinitionSnapshotJson);
         var maximums = definition.Questions.ToDictionary(q => q.Id, q => (decimal)q.PointsActive);
-        if (!ValidScores(request.Scores, maximums) || request.Scores.Any(s => s.Score != decimal.Truncate(s.Score)))
-            return ApiResponse<bool>.Fail("أدخل درجة صحيحة لكل سؤال بين صفر والحد الأقصى.");
+        if (!ValidScores(request.Scores, maximums) || request.Scores.Any(s => s.Score != decimal.Round(s.Score, 2)))
+            return ApiResponse<bool>.Fail("أدخل درجة لكل سؤال بين صفر والحد الأقصى، بمنزلتين عشريتين كحد أقصى.");
         foreach (var score in request.Scores)
         {
             var answer = submission.Answers.FirstOrDefault(a => a.QuestionId == score.QuestionId);
@@ -62,7 +62,8 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
                 submission.Answers.Add(answer);
                 db.HomeworkAnswers.Add(answer);
             }
-            answer.ScoreReceived = (int)score.Score;
+            if (answer.AwardedScore != score.Score) answer.GradingFeedback = null;
+            answer.AwardedScore = score.Score;
         }
         var revised = submission.DefinitionSnapshotJson is null ? null
             : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId)

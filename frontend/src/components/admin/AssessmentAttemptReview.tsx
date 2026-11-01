@@ -112,7 +112,7 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, student
             <p dir="auto" className="whitespace-pre-wrap break-words">{q.aiFeedback}</p>
           </div>}
           {q.isExcludedFromScore ? <p className="text-sm text-[var(--admin-muted)]">بدون تصحيح، المقالي مستبعد من الدرجة النهائية.</p> : <label className="flex flex-wrap items-center gap-3 text-sm font-bold">درجة السؤال (من {q.maximum})
-            <input aria-label={`درجة السؤال ${index + 1}`} type="number" required min={0} max={q.maximum} step={kind === 'homework' ? 1 : '0.01'} disabled={!review.canGrade || busy} value={scores[q.questionId] ?? ''} onChange={e => setScores(previous => ({ ...previous, [q.questionId]: e.target.value }))} className="min-h-11 w-28 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" />
+            <input aria-label={`درجة السؤال ${index + 1}`} type="number" required min={0} max={q.maximum} step="0.01" disabled={!review.canGrade || busy} value={scores[q.questionId] ?? ''} onChange={e => setScores(previous => ({ ...previous, [q.questionId]: e.target.value }))} className="min-h-11 w-28 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" />
             {q.score == null && <span className="text-[var(--admin-muted)]">لم تُصحّح بعد</span>}
           </label>}
         </section>)}

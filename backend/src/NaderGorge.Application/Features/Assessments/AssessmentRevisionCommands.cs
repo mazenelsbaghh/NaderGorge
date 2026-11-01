@@ -367,7 +367,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
                     Answers = a.Answers.OrderBy(x => x.Id).Select(x => new { x.Id, x.ExamQuestionId, x.SelectedOptionId, x.SubmittedText, x.PointsAwarded, x.HintUsed }) }),
                 Submissions = Submissions.Select(s => new { s.Id, Snapshot = SavedJson(s.DefinitionSnapshotJson), s.Status, s.OverallScore, s.StartedAt, s.SubmittedAt,
                     s.AssistantReviewerId,
-                    Answers = s.Answers.OrderBy(x => x.Id).Select(x => new { x.Id, x.QuestionId, x.ProvidedAnswer, x.ScoreReceived }) }),
+                    Answers = s.Answers.OrderBy(x => x.Id).Select(x => new { x.Id, x.QuestionId, x.ProvidedAnswer, x.ScoreReceived, x.PreciseScoreReceived, x.GradingFeedback }) }),
                 Essays = Evidence.Essays.Select(e => new { e.Id, e.QuestionId, e.StudentExamAttemptId, e.Status, e.TeacherFinalScore, e.GradedByTeacherId }),
                 ManuallyGraded = Evidence.ManualEntityIds.OrderBy(id => id)
             });
@@ -443,7 +443,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         {
             var answer = submission.Answers.SingleOrDefault(a => a.QuestionId == question.Id);
             return new(question.Id, answer?.ProvidedAnswer, null,
-                question.Type == (int)QuestionType.Essay ? answer?.ScoreReceived : answer?.ScoreReceived ?? 0,
+                question.Type == (int)QuestionType.Essay ? answer?.AwardedScore : answer?.AwardedScore ?? 0,
                 submission.AssistantReviewerId.HasValue);
         }
 

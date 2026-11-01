@@ -32,8 +32,16 @@ public static class TeacherEssayGradingPolicy
             || await ManualTeacherIds(db).ContainsAsync(submission.CreatedByTeacherId, ct);
     }
 
-    public static Task<bool> IsManualHomeworkAsync(IAppDbContext db, Guid submissionId, CancellationToken ct) =>
-        db.HomeworkSubmissions.AnyAsync(s => s.Id == submissionId && ManualHomeworkIds(db).Contains(s.HomeworkId), ct);
+    public static async Task<bool> IsManualHomeworkAsync(IAppDbContext db, Guid submissionId, CancellationToken ct)
+    {
+        var submission = await db.HomeworkSubmissions.Where(s => s.Id == submissionId)
+            .Select(s => new { s.HomeworkId, s.DefinitionSnapshotJson, s.Homework.EssayGradingMode }).SingleOrDefaultAsync(ct);
+        if (submission is null) return false;
+        var mode = submission.DefinitionSnapshotJson is null ? submission.EssayGradingMode
+            : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId).EffectiveEssayGradingMode;
+        return !EssayCreditPolicy.IsAutomatic(mode)
+            || await ManualHomeworkIds(db).ContainsAsync(submission.HomeworkId, ct);
+    }
 
     public static async Task<bool> HoldEssayForTeacherAsync(IAppDbContext db, Guid essayId, CancellationToken ct)
     {

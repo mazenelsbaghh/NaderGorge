@@ -56,7 +56,7 @@ public record HomeworkWeaknessDto(
     string PackageName,
     Guid LessonId,
     string LessonTitle,
-    decimal Score,
+    decimal? Score,
     decimal? PassingScore,
     string Status,
     string? AssistantNotes
@@ -135,6 +135,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 e.Id,
                 e.Title,
                 e.TotalScore,
+                e.ShowScoreToStudents,
                 Questions = e.ExamQuestions.Select(eq => new {
                     eq.Id,
                     eq.Order,
@@ -247,8 +248,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     passedExamsSet.Contains(group.Key),
                     items.Max(item => item.LastMissedAt),
                     items.Sum(item => item.TimesMissed),
-                    latestScale?.ScoreAchieved,
-                    latestScale?.Definition.TotalScore,
+                    exam.ShowScoreToStudents ? latestScale?.ScoreAchieved : null,
+                    exam.ShowScoreToStudents ? latestScale?.Definition.TotalScore : null,
                     latestAttempt?.Evaluation,
                     items
                 );
@@ -268,6 +269,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 HomeworkLessonId = s.Homework.LessonId,
                 HomeworkPassingScoreThreshold = s.PassingScoreSnapshot ?? s.Homework.PassingScoreThreshold,
                 s.OverallScore,
+                s.Homework.ShowScoreToStudents,
                 s.Status,
                 s.AssistantNotes
             })
@@ -319,8 +321,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     lessonInfo.PackageName ?? "بدون باقة",
                     s.HomeworkLessonId,
                     lessonInfo.LessonTitle ?? "بدون درس",
-                    s.OverallScore,
-                    s.HomeworkPassingScoreThreshold,
+                    s.ShowScoreToStudents ? s.OverallScore : null,
+                    s.ShowScoreToStudents ? s.HomeworkPassingScoreThreshold : null,
                     s.Status.ToString(),
                     s.AssistantNotes
                 );
@@ -350,7 +352,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
         var accessibleLessonIds = await _access.GetAccessibleLessonIdsAsync(userId, eligibleLessonIds.Keys.ToList(), ct);
         var submissions = await _db.HomeworkSubmissions.AsNoTracking()
             .Where(submission => submission.StudentId == userId && submission.Status == SubmissionStatus.Graded
-                && accessibleLessonIds.Contains(submission.Homework.LessonId) && submission.Homework.IsActive)
+                && accessibleLessonIds.Contains(submission.Homework.LessonId) && submission.Homework.IsActive
+                && submission.Homework.ShowAnswersToStudents)
             .Include(submission => submission.Answers)
             .Include(submission => submission.Homework).ThenInclude(homework => homework.Questions)
             .OrderByDescending(submission => submission.SubmittedAt).ThenBy(submission => submission.Id)

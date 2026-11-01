@@ -126,7 +126,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             && AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", homework.Id).Revision?.RequiresCompletion == true)
             return await new HomeworkRevisionCompletion(_dbContext).Submit(request, submission.Id, cancellationToken);
 
-        homework = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission?.DefinitionSnapshotJson);
+        var definitionJson = submission?.DefinitionSnapshotJson
+            ?? AssessmentDefinitionSnapshot.FromHomework(homework).WithEssayGradingScale().ToJson();
+        homework = AssessmentDefinitionSnapshot.ResolveHomework(homework, definitionJson);
         if (request.Answers.Select(a => a.QuestionId).Distinct().Count() != request.Answers.Count ||
             request.Answers.Any(a => !homework.Questions.Any(q => q.Id == a.QuestionId)))
             return ApiResponse<bool>.Fail("قائمة الإجابات تحتوي على أسئلة مكررة أو غير موجودة في الواجب.");
@@ -143,7 +145,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 Id = Guid.NewGuid(),
                 HomeworkId = request.HomeworkId,
                 StudentId = request.StudentId,
-                DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(homework).ToJson(),
+                DefinitionSnapshotJson = definitionJson,
                 PassingScoreSnapshot = homework.PassingScoreThreshold ?? 0,
                 TotalScoreSnapshot = homework.TotalScore,
                 StartedAt = DateTime.UtcNow
@@ -217,8 +219,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 case QuestionType.Essay:
                 {
                     // Essay questions: leave as null (pending manual review)
-                    answer.ScoreReceived = null;
-                    hasEssayQuestions = true;
+                    var excluded = homework.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly;
+                    answer.AwardedScore = excluded ? 0 : null;
+                    hasEssayQuestions |= !excluded;
                     break;
                 }
             }

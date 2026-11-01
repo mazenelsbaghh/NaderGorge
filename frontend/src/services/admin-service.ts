@@ -2053,6 +2053,9 @@ export const adminService = {
       homeworkComingSoonOn?: string | null;
       showResultsWhileEssayPending?: boolean;
       singleAttemptOnly?: boolean;
+      essayGradingMode?: import('./exam-service').ExamEssayGradingMode;
+      showScoreToStudents?: boolean;
+      showAnswersToStudents?: boolean;
       parentNotification?: AssessmentParentNotificationSettings;
       questions: {
         text: string;
@@ -2159,6 +2162,8 @@ export const adminService = {
     singleAttemptOnly?: boolean;
     showResultsWhileEssayPending?: boolean;
     essayGradingMode?: import('@/services/exam-service').ExamEssayGradingMode;
+    showScoreToStudents?: boolean;
+    showAnswersToStudents?: boolean;
     parentNotification?: AssessmentParentNotificationSettings;
     title: string;
     description: string;

@@ -1,5 +1,5 @@
 export interface PartialAssessmentResultDto {
-  scoreAchieved: number;
-  totalScore: number;
+  scoreAchieved: number | null;
+  totalScore: number | null;
   pendingQuestionCount: number;
 }

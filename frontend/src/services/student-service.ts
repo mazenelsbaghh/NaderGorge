@@ -141,7 +141,7 @@ export interface HomeworkWeaknessDto {
   packageName: string;
   lessonId: string;
   lessonTitle: string;
-  score: number;
+  score: number | null;
   passingScore?: number;
   status: string;
   assistantNotes?: string;
@@ -153,8 +153,8 @@ export interface HomeworkMistakeGroupDto {
   homeworkTitle: string;
   lessonId: string;
   packageId?: string;
-  score: number;
-  totalScore: number;
+  score: number | null;
+  totalScore: number | null;
   items: { questionId: string; order: number; questionText: string; yourAnswer: string;
     correctAnswer?: string; scoreReceived: number; maxPoints: number; imageUrl?: string }[];
 }
@@ -323,7 +323,7 @@ export interface StudentGradeDto {
   lessonTitle: string | null;
   status: 'Graded' | 'PendingReview' | 'Missed';
   score: number | null;
-  totalScore: number;
+  totalScore: number | null;
   attemptedAt: string;
 }
 export interface StudentGradesDto {

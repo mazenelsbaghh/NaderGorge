@@ -4,7 +4,7 @@ using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record PartialExamResultDto(decimal ScoreAchieved, decimal TotalScore, int PendingQuestionCount);
+public record PartialExamResultDto(decimal? ScoreAchieved, decimal? TotalScore, int PendingQuestionCount);
 
 public record ExamQuestionReviewDto(
     Guid ExamQuestionId,
@@ -89,7 +89,7 @@ internal static class ExamResultBuilder
                         ? eq.Question.WrittenCorrection
                         : null,
                     snapshot?.StudentAudioUrl,
-                    resultIsCompleted && !excluded ? snapshot?.GradingFeedback : null,
+                    !excluded && snapshot?.IsPendingGrading == false ? snapshot.GradingFeedback : null,
                     eq.Points,
                     excluded,
                     !resultIsCompleted && !excluded && eq.Question.Type == QuestionType.Essay
@@ -100,8 +100,8 @@ internal static class ExamResultBuilder
 
         return new ExamResultDto(
             attempt.Id,
-            scale.ScoreAchieved,
-            exam.TotalScore,
+            exam.ShowScoreToStudents ? scale.ScoreAchieved : null,
+            exam.ShowScoreToStudents ? exam.TotalScore : null,
             scale.IsPassed,
             blocksNextLesson,
             attempt.Evaluation ?? "غير مقيم",
@@ -114,7 +114,8 @@ internal static class ExamResultBuilder
                 ? PartialResult(exam, attempt, questionReviews) : null,
             AnswersVisible: exam.ShowAnswersToStudents,
             ExamId: exam.Id,
-            EssayScoreStatus: EssayScoreStatus(exam, questionReviews)
+            EssayScoreStatus: EssayScoreStatus(exam, questionReviews),
+            ScoreVisible: exam.ShowScoreToStudents
         );
     }
 
@@ -133,8 +134,8 @@ internal static class ExamResultBuilder
         var graded = reviews.Where(q => !q.IsPendingGrading && !q.IsExcludedFromScore).ToArray();
         var rawMaximum = reviews.Where(q => !q.IsExcludedFromScore).Sum(q => q.MaximumPoints ?? 0);
         var scale = rawMaximum > 0 ? exam.TotalScore / rawMaximum : 0;
-        return new(attempt.IsTimeExpired ? 0 : Math.Round(graded.Sum(q => q.PointsAwarded) * scale, 2),
-            Math.Round(graded.Sum(q => q.MaximumPoints ?? 0) * scale, 2), reviews.Count(q => q.IsPendingGrading));
+        return new(exam.ShowScoreToStudents ? attempt.IsTimeExpired ? 0 : Math.Round(graded.Sum(q => q.PointsAwarded) * scale, 2) : null,
+            exam.ShowScoreToStudents ? Math.Round(graded.Sum(q => q.MaximumPoints ?? 0) * scale, 2) : null, reviews.Count(q => q.IsPendingGrading));
     }
 
     public static Dictionary<Guid, QuestionReviewSnapshot> BuildQuestionReviewSnapshots(IEnumerable<StudentAnswer> answers, Exam exam)

@@ -41,7 +41,8 @@ public sealed class WebhookHomeworkGradedCommandHandler(IAppDbContext db)
         if (request.Grades is null || request.Grades.Length == 0 || request.Grades.Length > 500
             || request.Grades.Select(g => g.AnswerId).Distinct().Count() != request.Grades.Length
             || !eligible.SetEquals(request.Grades.Select(g => g.AnswerId))
-            || request.Grades.Any(g => g.Score is not (0m or 1m) || string.IsNullOrWhiteSpace(g.Feedback) || g.Feedback.Length > 4000))
+            || request.Grades.Any(g => g.Score is < 0m or > 1m || g.Score != decimal.Round(g.Score, 2)
+                || string.IsNullOrWhiteSpace(g.Feedback) || g.Feedback.Length > 4000))
             return ApiResponse<HomeworkGradingReceipt>.Fail("Invalid homework evaluation result.");
 
         var definition = AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson!, "homework", submission.HomeworkId);
@@ -49,10 +50,12 @@ public sealed class WebhookHomeworkGradedCommandHandler(IAppDbContext db)
         foreach (var grade in request.Grades)
         {
             var answer = submission.Answers.Single(a => a.Id == grade.AnswerId);
-            answer.ScoreReceived = grade.Score == 1 ? checked((int)questions[answer.QuestionId].Points) : 0;
+            answer.AwardedScore = EssayCreditPolicy.AwardedPoints(definition.EffectiveEssayGradingMode,
+                questions[answer.QuestionId].Points, grade.Score);
+            answer.GradingFeedback = EssayCreditPolicy.Explain(definition.EffectiveEssayGradingMode, grade.Feedback.Trim());
         }
         definition = definition.WithGrades(submission.Answers.Where(a => eligible.Contains(a.Id))
-            .ToDictionary(a => a.QuestionId, a => ((decimal)a.ScoreReceived!.Value, false)));
+            .ToDictionary(a => a.QuestionId, a => (a.AwardedScore!.Value, false)));
         Complete(submission, definition);
         db.AuditLogs.Add(new AuditLog
         {
@@ -70,11 +73,11 @@ public sealed class WebhookHomeworkGradedCommandHandler(IAppDbContext db)
         submission.DefinitionSnapshotJson = definition.ToJson();
         submission.TotalScoreSnapshot = definition.TotalScore;
         submission.PassingScoreSnapshot ??= definition.PassingScore ?? 0;
-        if (submission.Answers.Any(a => a.ScoreReceived is null && definition.Questions.Any(q => q.Id == a.QuestionId)
+        if (submission.Answers.Any(a => a.AwardedScore is null && definition.Questions.Any(q => q.Id == a.QuestionId)
                 && definition.Revision?.Answers.Any(r => r.QuestionId == a.QuestionId && r.Excluded) != true)
             || definition.Revision?.RequiresReview == true || definition.Revision?.RequiresCompletion == true) return;
         submission.OverallScore = definition.Revision?.ScaledScore(definition.TotalScore)
-            ?? GradingEvaluationService.CalculateScaledScore(submission.Answers.Sum(a => a.ScoreReceived ?? 0),
+            ?? GradingEvaluationService.CalculateScaledScore(submission.Answers.Sum(a => a.AwardedScore ?? 0),
                 definition.Questions.Sum(q => q.Points), definition.TotalScore);
         submission.Status = SubmissionStatus.Graded;
         submission.GradedAt = DateTime.UtcNow;

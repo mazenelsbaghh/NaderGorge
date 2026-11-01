@@ -16,6 +16,95 @@ namespace NaderGorge.Application.Tests;
 
 public sealed class HomeworkSubmissionTests
 {
+    [Fact]
+    public void ExistingHomeworkJobsKeepFingerprintAndFullCreditPolicyAfterUpgrade()
+    {
+        // This is the callback identity emitted before homework supported exam credit modes.
+        const string legacyDefinition = """
+        {"SchemaVersion":1,"Kind":"homework","AssessmentId":"00000000-0000-0000-0000-000000000001","Title":"Legacy","Description":null,"TotalScore":10,"PassingScore":5,"DurationMinutes":null,"IsMandatory":true,"IsRandomized":false,"DisplayQuestionCount":null,"Questions":[],"ReserveQuestions":[],"Revision":null,"CompletionStartedAt":null,"RevisionId":null,"IsActive":true,"UsesAssignedQuestionPoints":false,"EssayGradingMode":0,"ShowResultsWhileEssayPending":false,"SingleAttemptOnly":false,"ParentNotification":{"Enabled":false,"TemplateId":null,"TemplateFingerprint":null,"Parameters":[]}}
+        """;
+        var submission = new HomeworkSubmission
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000002"), HomeworkId = Guid.Parse("00000000-0000-0000-0000-000000000001"), DefinitionSnapshotJson = legacyDefinition,
+            Answers = [new HomeworkAnswer { Id = Guid.Parse("00000000-0000-0000-0000-000000000003"), QuestionId = Guid.Parse("00000000-0000-0000-0000-000000000004"), ProvidedAnswer = "Explain" }]
+        };
+        Assert.Equal("2E227FCEF1DB6EFC5D6D820FB94D867613DE80DF5CBDDECFF1287DB6741ED968", HomeworkEvaluationQueue.Fingerprint(submission));
+        var definition = AssessmentDefinitionSnapshot.Read(legacyDefinition, "homework", submission.HomeworkId);
+        Assert.Equal(NaderGorge.Domain.Enums.ExamEssayGradingMode.AutomaticFullCredit, definition.EffectiveEssayGradingMode);
+        submission.Answers.Single().AwardedScore = 1.5m;
+        Assert.NotEqual("2E227FCEF1DB6EFC5D6D820FB94D867613DE80DF5CBDDECFF1287DB6741ED968", HomeworkEvaluationQueue.Fingerprint(submission));
+    }
+
+    [Theory]
+    [InlineData(NaderGorge.Domain.Enums.ExamEssayGradingMode.Automatic, true, 10, "PendingReview")]
+    [InlineData(NaderGorge.Domain.Enums.ExamEssayGradingMode.Manual, false, 10, "PendingReview")]
+    [InlineData(NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly, false, 5, "Graded")]
+    public async Task HomeworkGradingModeControlsQueueAndExcludesModelOnlyEssayFromPassScale(
+        NaderGorge.Domain.Enums.ExamEssayGradingMode mode, bool queued, decimal maximum, string status)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "201000000090");
+        var lesson = new Lesson { Title = "Lesson", ContentSectionId = Guid.NewGuid() };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Work", TotalScore = 10,
+            PassingScoreThreshold = 5, EssayGradingMode = mode };
+        var essay = new HomeworkQuestion { BodyText = "Explain", PointsActive = 5,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay };
+        var choice = new HomeworkQuestion { BodyText = "Choose", PointsActive = 5,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ, PossibleAnswers = ["A", "B"], CorrectAnswerKey = "A" };
+        homework.Questions = [essay, choice];
+        db.Lessons.Add(lesson); db.Homeworks.Add(homework);
+        await db.SaveChangesAsync();
+        await new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        var response = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(essay.Id, "Explanation"), new(choice.Id, "A")]), default);
+        Assert.True(response.Success, response.Message);
+        var saved = await db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync();
+        Assert.Equal(status, saved.Status.ToString());
+        Assert.Equal(maximum, saved.TotalScoreSnapshot);
+        Assert.Equal(maximum / 2, saved.PassingScoreSnapshot);
+        Assert.Equal(queued, await db.OutboxEvents.AnyAsync(e => e.Type == HomeworkEvaluationQueue.EventType));
+        if (mode == NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly)
+        {
+            Assert.Equal(5, saved.OverallScore);
+            Assert.Equal(0, saved.Answers.Single(a => a.QuestionId == essay.Id).AwardedScore);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task FailedHomeworkCanOnlyStartAgainWhenSingleAttemptIsDisabled(bool singleAttempt)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "201000000089");
+        var lesson = new Lesson { Title = "Lesson", ContentSectionId = Guid.NewGuid() };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Work", TotalScore = 10,
+            PassingScoreThreshold = 5, SingleAttemptOnly = singleAttempt };
+        var choice = new HomeworkQuestion { BodyText = "Choose", PointsActive = 10, PossibleAnswers = ["A", "B"], CorrectAnswerKey = "A" };
+        homework.Questions = [choice]; db.Lessons.Add(lesson); db.Homeworks.Add(homework);
+        await db.SaveChangesAsync();
+        var starter = new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService());
+        var first = await starter.Handle(new(homework.Id, student.Id), default);
+        var response = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(choice.Id, "B")]), default);
+        Assert.True(response.Success, response.Message);
+        var second = await starter.Handle(new(homework.Id, student.Id), default);
+        Assert.True(second.Success, second.Message);
+        Assert.Equal(singleAttempt, second.Data!.AlreadyCompleted);
+        Assert.Equal(singleAttempt, first.Data!.SubmissionId == second.Data.SubmissionId);
+        if (singleAttempt)
+        {
+            var resubmitted = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+                new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+                .Handle(new(homework.Id, student.Id, [new(choice.Id, "A")]), default);
+            Assert.False(resubmitted.Success);
+            Assert.Equal("B", (await db.HomeworkAnswers.SingleAsync()).ProvidedAnswer);
+        }
+    }
+
     [Theory]
     [InlineData("explanation", false, true)]
     [InlineData("", false, true)]

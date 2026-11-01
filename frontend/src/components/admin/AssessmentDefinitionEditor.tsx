@@ -2,7 +2,7 @@
 
 import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
 
-import { AssessmentPendingResultsSwitch } from './AssessmentPendingResultsSwitch';
+import { AssessmentVisibilitySettings } from './AssessmentVisibilitySettings';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { assessmentContentPath } from '@/lib/assessment-navigation';
@@ -108,14 +108,16 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
               <label className="space-y-2"><span>عدد الأسئلة المعروضة، فارغ لعرض الكل</span><input type="number" min="1" max={definition.questions.length} className="admin-input w-full" value={definition.displayQuestionCount ?? ''} onChange={event => updateDefinition({ displayQuestionCount: event.target.value ? Number(event.target.value) : null })} /></label>
             </>}
           </div>
-          {kind === 'exam' && <ExamEssayGradingSettings mode={definition.essayGradingMode ?? 'Automatic'}
-            onChange={essayGradingMode => updateDefinition({ essayGradingMode })} disabled={busy}
+          <ExamEssayGradingSettings mode={definition.essayGradingMode ?? (kind === 'homework' ? 'AutomaticFullCredit' : 'Automatic')}
+            onChange={essayGradingMode => updateDefinition({ essayGradingMode, ...(kind === 'homework' ? { homeworkGradingVersion: 1 } : {}) })} disabled={busy}
             showPendingResults={definition.showResultsWhileEssayPending ?? false}
-            onPendingResultsChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} />}
-          {kind === 'exam' && <ExamSingleAttemptSwitch enabled={definition.singleAttemptOnly ?? false}
-            onChange={singleAttemptOnly => updateDefinition({ singleAttemptOnly })} disabled={busy} />}
-          {kind === 'homework' && <AssessmentPendingResultsSwitch enabled={definition.showResultsWhileEssayPending ?? false}
-            onChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} disabled={busy} />}
+            onPendingResultsChange={showResultsWhileEssayPending => updateDefinition({ showResultsWhileEssayPending })} />
+          <ExamSingleAttemptSwitch kind={kind} enabled={definition.singleAttemptOnly ?? false}
+            onChange={singleAttemptOnly => updateDefinition({ singleAttemptOnly })} disabled={busy} />
+          <AssessmentVisibilitySettings scoreVisible={definition.showScoreToStudents !== false}
+            onScoreChange={showScoreToStudents => updateDefinition({ showScoreToStudents })}
+            answersVisible={definition.showAnswersToStudents !== false}
+            onAnswersChange={showAnswersToStudents => updateDefinition({ showAnswersToStudents })} disabled={busy} />
           <div className="flex flex-wrap gap-6">
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isActive} onChange={event => updateDefinition({ isActive: event.target.checked })} />متاح للطلاب</label>
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isMandatory} onChange={event => updateDefinition({ isMandatory: event.target.checked })} />{label} إلزامي</label>

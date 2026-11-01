@@ -224,7 +224,7 @@ export default function StudentMistakesPageClient() {
                   <h3 className="mt-3 text-lg font-black text-[var(--admin-text)]">{item.homeworkTitle}</h3>
                   <p className="mt-1 text-sm font-bold text-[var(--admin-muted)]">{item.packageName} · {item.lessonTitle}</p>
                   <p className="mt-3 text-sm font-bold text-[var(--admin-text)]">
-                    الدرجة: {item.score}
+                    {item.score != null ? `الدرجة: ${item.score}` : 'الدرجة غير معروضة'}
                     {item.passingScore != null ? <span className="text-[var(--admin-muted)]"> / حد النجاح {item.passingScore}</span> : null}
                   </p>
                   {item.assistantNotes && (

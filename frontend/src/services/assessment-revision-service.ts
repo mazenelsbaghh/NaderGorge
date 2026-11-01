@@ -28,6 +28,9 @@ export interface AssessmentDefinition {
   essayGradingMode?: ExamEssayGradingMode;
   showResultsWhileEssayPending?: boolean;
   singleAttemptOnly?: boolean;
+  homeworkGradingVersion?: number;
+  showAnswersToStudents?: boolean | null;
+  showScoreToStudents?: boolean | null;
 }
 export interface RevisionPolicy {
   previousAttempts: 'Preserve' | 'Regrade';

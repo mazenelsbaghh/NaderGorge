@@ -34,7 +34,7 @@ public static class AssessmentAttemptRegrader
         var grades = AssessmentRevisionPlanner.Plan(oldGrades, revised.Select(q => new RevisionQuestion(q.Id, q.Points)).ToArray(),
             recalculated, change.Policy);
         if (change.Policy.PreviousAttempts == PreviousAttemptsPolicy.Preserve) return new(previous, grades);
-        if (change.Proposed.Kind == "exam" && change.Proposed.EssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly)
+        if (change.Proposed.EffectiveEssayGradingMode == ExamEssayGradingMode.ModelAnswerOnly)
         {
             var essayIds = change.Proposed.Questions.Where(q => q.Type == (int)QuestionType.Essay).Select(q => q.Id).ToHashSet();
             grades = grades with { Answers = grades.Answers.Select(a => essayIds.Contains(a.QuestionId)

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AnswerGradingFeedback } from '@/components/assessment/AnswerGradingFeedback';
 import { PartialAssessmentResultSummary } from '@/components/assessment/PartialAssessmentResultSummary';
 import { useEffect, useState } from 'react';
 import { homeworkService } from '@/services/homework-service';
@@ -37,11 +38,11 @@ export function HomeworkResultPanel({
   const router = useRouter();
   const [refreshed, setRefreshed] = useState<HomeworkResultDto | null>(null);
   const [refreshFailed, setRefreshFailed] = useState(false);
-  const result = initialResult.status === 'PendingReview' && refreshed?.submissionId === initialResult.submissionId
+  const result = refreshed?.submissionId === initialResult.submissionId
     ? refreshed : initialResult;
 
   useEffect(() => {
-    if (result.status !== 'PendingReview') return;
+    if (result.status !== 'PendingReview' && result.answersVisible !== false && result.scoreVisible !== false) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const refresh = async () => {
@@ -53,7 +54,7 @@ export function HomeworkResultPanel({
           if (updated.submissionId !== result.submissionId) return;
           setRefreshed(updated);
           setRefreshFailed(false);
-          if (updated.status === 'Graded') {
+          if (updated.status === 'Graded' && updated.answersVisible !== false && updated.scoreVisible !== false) {
             invalidateMany(['student:homeworks', 'assessments', 'content:packages', 'student:lessons']);
             router.refresh();
             return;
@@ -63,16 +64,17 @@ export function HomeworkResultPanel({
         if (controller.signal.aborted) return;
         setRefreshFailed(true);
       }
-      timer = setTimeout(refresh, 5000);
+      timer = setTimeout(refresh, result.status === 'PendingReview' ? 5000 : 30000);
     };
-    timer = setTimeout(refresh, 3000);
+    timer = setTimeout(refresh, result.status === 'PendingReview' ? 3000 : 15000);
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [result.homeworkId, result.submissionId, result.status, router]);
+  }, [result.homeworkId, result.submissionId, result.status, result.answersVisible, result.scoreVisible, router]);
   const isPendingReview = result.status === 'PendingReview';
   const reviewedQuestions = result.questionReviews ?? [];
-  const wrongQuestions = reviewedQuestions.filter((q) => q.isCorrect === false);
-  const accuracy =
-    result.totalScore > 0 ? Math.round((result.score / result.totalScore) * 100) : 0;
+  const wrongQuestions = reviewedQuestions.filter((q) => q.isCorrect === false && !q.isExcludedFromScore);
+  const scoreVisible = result.scoreVisible !== false && result.score != null && result.totalScore != null;
+  const accuracy = result.totalScore != null && result.totalScore > 0 && result.score != null
+    ? Math.round((result.score / result.totalScore) * 100) : 0;
   const hasReviewData = reviewedQuestions.length > 0;
 
   const returnHref = lessonId && packageId
@@ -84,7 +86,7 @@ export function HomeworkResultPanel({
     <section className="space-y-4 rounded-xl border border-border bg-card p-6" dir="rtl" aria-live="polite">
       <Clock3 className="h-8 w-8 text-primary" />
       <h2 className="text-2xl font-bold">الواجب قيد التصحيح</h2>
-      <p className="text-sm leading-7 text-muted-foreground">إجاباتك محفوظة. ستظهر درجتك بعد اعتماد تصحيح المقالي.</p>
+      <p className="text-sm leading-7 text-muted-foreground">إجاباتك محفوظة. سنحدّث حالة التصحيح تلقائيًا بعد اعتماد مراجعة المقالي.</p>
       {refreshError && <p role="status" className="text-sm text-muted-foreground">{refreshError}</p>}
       <Link href={returnHref} className="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">العودة للحصة</Link>
     </section>
@@ -93,7 +95,7 @@ export function HomeworkResultPanel({
   return (
     <div className="space-y-6 pb-16" dir="rtl">
       {isPendingReview && result.partialResult && <PartialAssessmentResultSummary partial={result.partialResult}
-        returnHref={returnHref} returnLabel="العودة للحصة" error={refreshError} canContinue />}
+        returnHref={returnHref} returnLabel="العودة للحصة" error={refreshError} canContinue answersVisible={result.answersVisible !== false} />}
       {/* ─── Score Hero ─── */}
       {!isPendingReview && <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -131,7 +133,7 @@ export function HomeworkResultPanel({
             </div>
 
             <h2 className="text-4xl font-black text-foreground sm:text-5xl">
-              {result.isPassed ? 'أحسنت!' : 'حاول مرة أخرى'}
+              {result.isPassed ? 'أحسنت!' : result.allowRetake === false ? 'راجع إجاباتك' : 'حاول مرة أخرى'}
             </h2>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
@@ -153,14 +155,14 @@ export function HomeworkResultPanel({
             ) : (
               <XCircle className="h-10 w-10" />
             )}
-            <span className="mt-1 text-xs font-black">{`${accuracy}%`}</span>
+            {scoreVisible && <span className="mt-1 text-xs font-black">{`${accuracy}%`}</span>}
           </div>
         </div>
 
         {/* Stats row */}
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'الدرجة', value: `${result.score} / ${result.totalScore}` },
+            ...(scoreVisible ? [{ label: 'الدرجة', value: `${result.score} / ${result.totalScore}` }] : []),
             { label: 'إجابات صحيحة', value: `${result.correctAnswers}` },
             { label: 'إجابات خاطئة', value: `${result.wrongAnswers}` },
             { label: 'التقييم', value: result.evaluation || '—' },
@@ -177,7 +179,7 @@ export function HomeworkResultPanel({
 
         {/* CTA button */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-          {result.status === 'Graded' && !result.isPassed && onRestart && (
+          {result.status === 'Graded' && !result.isPassed && result.allowRetake !== false && onRestart && (
             <button
               type="button"
               onClick={() => { void onRestart(); }}
@@ -246,6 +248,7 @@ export function HomeworkResultPanel({
                   </p>
                 )}
                 <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
+                <AnswerGradingFeedback feedback={q.gradingFeedback} />
               </article>
             ))}
           </div>
@@ -279,7 +282,7 @@ export function HomeworkResultPanel({
                   <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-black text-muted-foreground border border-border/50">
                     سؤال {q.order}
                   </span>
-                  {q.scoreReceived != null && <span className="text-xs font-bold text-muted-foreground">{q.scoreReceived} / {q.maxPoints} نقطة</span>}
+                  {!q.isExcludedFromScore && q.scoreReceived != null && <span className="text-xs font-bold text-muted-foreground">{q.scoreReceived} / {q.maxPoints} نقطة</span>}
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-black ${
                       q.isCorrect
@@ -289,7 +292,7 @@ export function HomeworkResultPanel({
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
                     }`}
                   >
-                    {q.isCorrect ? 'صحيحة ✓' : q.isCorrect === false ? 'خاطئة ✗' : 'قيد التصحيح'}
+                    {q.isExcludedFromScore ? 'إجابة نموذجية — خارج الدرجة' : q.isCorrect ? 'صحيحة ✓' : q.isCorrect === false ? (q.scoreReceived != null && q.scoreReceived > 0 ? 'صحيحة جزئيًا' : 'خاطئة ✗') : 'قيد التصحيح'}
                   </span>
                 </div>
 
@@ -338,13 +341,14 @@ export function HomeworkResultPanel({
                     </div>
                   )}
                 </div>
+                <AnswerGradingFeedback feedback={q.gradingFeedback} />
               </article>
             ))}
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-10 text-center">
             <BookOpen className="mx-auto mb-3 h-8 w-8 text-primary/40" />
-            <p className="text-sm font-bold text-muted-foreground">لا توجد تفاصيل أسئلة متاحة لهذه النتيجة بعد.</p>
+            <p className="text-sm font-bold text-muted-foreground">{result.answersVisible === false ? 'الإجابات والتصحيح لم يتم إظهارهما بعد.' : 'لا توجد تفاصيل أسئلة متاحة لهذه النتيجة بعد.'}</p>
           </div>
         )}
       </motion.section>

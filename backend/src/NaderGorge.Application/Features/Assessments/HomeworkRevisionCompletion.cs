@@ -95,10 +95,13 @@ public sealed class HomeworkRevisionCompletion(IAppDbContext db)
                 db.HomeworkAnswers.Add(answer);
             }
             answer.ProvidedAnswer = provided.GetValueOrDefault(grade.QuestionId)?.ProvidedAnswer ?? string.Empty;
-            var points = expired || string.IsNullOrWhiteSpace(answer.ProvidedAnswer) ? 0
+            var excluded = questions[grade.QuestionId].Type == (int)NaderGorge.Domain.Entities.QuestionType.Essay
+                && definition.EffectiveEssayGradingMode == NaderGorge.Domain.Enums.ExamEssayGradingMode.ModelAnswerOnly;
+            var points = expired || excluded || string.IsNullOrWhiteSpace(answer.ProvidedAnswer) ? 0
                 : AssessmentAttemptRegrader.AutomaticGrade(questions[grade.QuestionId],
                     new(grade.QuestionId, answer.ProvidedAnswer, null, null, false), "homework");
-            answer.ScoreReceived = points is null ? null : checked((int)points.Value);
+            answer.AwardedScore = points;
+            answer.GradingFeedback = null;
             return grade with { RequiresCompletion = false, AwardedPoints = points, ManuallyGraded = false };
         }).ToArray();
         var revision = definition.Revision! with { Answers = updated };

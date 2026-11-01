@@ -10,7 +10,7 @@ namespace NaderGorge.Application.Features.Student.Queries;
 public record GetStudentGradesQuery(Guid UserId, string Kind = "all", int Page = 1)
     : IRequest<ApiResponse<StudentGradesDto>>;
 public record StudentGradeDto(Guid Id, string Kind, string Title, string? LessonTitle,
-    string Status, decimal? Score, decimal TotalScore, DateTime AttemptedAt);
+    string Status, decimal? Score, decimal? TotalScore, DateTime AttemptedAt);
 public record StudentGradesDto(List<StudentGradeDto> Items, int TotalCount, int Page, int PageSize);
 
 public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
@@ -38,7 +38,7 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
         {
             Id = attempt.Id, AssessmentId = attempt.ExamId, Kind = "exam", Title = attempt.Exam.Title,
             Snapshot = attempt.DefinitionSnapshotJson, TotalScore = attempt.Exam.TotalScore,
-            Score = attempt.ScoreAchieved,
+            Score = attempt.ScoreAchieved, ScoreVisible = attempt.Exam.ShowScoreToStudents,
             AwardedPoints = attempt.Answers.Sum(answer => answer.PointsAwarded),
             IsPassed = attempt.IsPassed, IsTimeExpired = attempt.IsTimeExpired,
             Status = attempt.Evaluation == "قيد التصحيح" ? "PendingReview" : "Graded",
@@ -55,7 +55,7 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
             Id = submission.Id, AssessmentId = submission.HomeworkId, Kind = "homework", Title = submission.Homework.Title,
             Snapshot = submission.DefinitionSnapshotJson,
             TotalScore = submission.TotalScoreSnapshot ?? submission.Homework.TotalScore,
-            Score = submission.OverallScore,
+            Score = submission.OverallScore, ScoreVisible = submission.Homework.ShowScoreToStudents,
             AwardedPoints = 0, IsPassed = false, IsTimeExpired = false,
             Status = submission.Status == SubmissionStatus.Graded ? "Graded"
                 : submission.Status == SubmissionStatus.Missed ? "Missed" : "PendingReview",
@@ -76,8 +76,8 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
                 row.IsPassed, row.IsTimeExpired, row.AwardedPoints)
             : null;
         return new(row.Id, row.Kind, snapshot?.Title ?? row.Title, row.LessonTitle, row.Status,
-            row.Status == "Graded" ? scale?.ScoreAchieved ?? row.Score : null,
-            scale?.Definition.TotalScore ?? snapshot?.TotalScore ?? row.TotalScore, row.AttemptedAt);
+            row.ScoreVisible && row.Status == "Graded" ? scale?.ScoreAchieved ?? row.Score : null,
+            row.ScoreVisible ? scale?.Definition.TotalScore ?? snapshot?.TotalScore ?? row.TotalScore : null, row.AttemptedAt);
     }
 
     private sealed class GradeRecord
@@ -90,6 +90,7 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
         public string? LessonTitle { get; init; }
         public string Status { get; init; } = "";
         public decimal Score { get; init; }
+        public bool ScoreVisible { get; init; }
         public decimal AwardedPoints { get; init; }
         public bool IsPassed { get; init; }
         public bool IsTimeExpired { get; init; }

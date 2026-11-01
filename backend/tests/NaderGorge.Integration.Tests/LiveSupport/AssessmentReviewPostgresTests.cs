@@ -22,6 +22,87 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 public sealed class AssessmentReviewPostgresTests
 {
     [Theory]
+    [InlineData("unchanged", "الشرح القديم المحفوظ")]
+    [InlineData("manual", null)]
+    [InlineData("regraded", null)]
+    [InlineData("mismatched-score", null)]
+    [InlineData("existing-feedback", "الشرح الأحدث")]
+    public async Task HistoricalHomeworkExplanationsRecoverWithoutOverwritingLaterReview(string scenario, string? expected)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var answer = Assert.Single(seed.Submission.Answers);
+        answer.ScoreReceived = scenario == "mismatched-score" ? 0 : 4;
+        if (scenario == "existing-feedback") answer.GradingFeedback = "الشرح الأحدث";
+        seed.Submission.Status = SubmissionStatus.Graded;
+        seed.Submission.OverallScore = 20;
+        if (scenario == "manual") seed.Submission.AssistantReviewerId = seed.Teacher.UserId;
+        fixture.Db.AuditLogs.Add(new AuditLog
+        {
+            Action = "HomeworkAIGraded", EntityId = seed.Submission.Id, CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new[] { new HomeworkAIGrade(answer.Id, 1, "الشرح القديم المحفوظ") })
+        });
+        if (scenario == "regraded") fixture.Db.AuditLogs.Add(new AuditLog
+        { Action = "AssessmentAttemptRegraded", EntityId = seed.Submission.Id });
+        await fixture.Db.SaveChangesAsync();
+        var migration = new NaderGorge.Infrastructure.Migrations.AddHomeworkGradingParityAndScoreVisibility();
+        var backfill = Assert.Single(migration.UpOperations.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.SqlOperation>()).Sql;
+        await fixture.Db.Database.ExecuteSqlRawAsync(backfill);
+        await fixture.Db.Database.ExecuteSqlRawAsync(backfill);
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.HomeworkAnswers.SingleAsync(a => a.Id == answer.Id);
+        Assert.Equal(expected, saved.GradingFeedback);
+        Assert.Equal(20, (await fixture.Db.HomeworkSubmissions.SingleAsync(s => s.Id == seed.Submission.Id)).OverallScore);
+        Assert.False(await fixture.Db.OutboxEvents.AnyAsync(e => e.Type == HomeworkEvaluationQueue.EventType));
+    }
+
+    [Theory]
+    [InlineData(ExamEssayGradingMode.Automatic, 0.7, 2.8)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullCredit, 0.7, 0)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCredit, 0.7, 2)]
+    [InlineData(ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent, 0.7, 4)]
+    public async Task HomeworkAIKeepsFractionalMarksAndExplanationWhileHidingOnlyAggregateScore(
+        ExamEssayGradingMode mode, decimal fraction, decimal points)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        seed.Homework.EssayGradingMode = mode;
+        seed.Homework.ShowScoreToStudents = false;
+        seed.Homework.SingleAttemptOnly = true;
+        seed.Submission.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(seed.Homework).ToJson();
+        await fixture.Db.SaveChangesAsync();
+        var response = await new WebhookHomeworkGradedCommandHandler(fixture.Db).Handle(new(seed.Submission.Id,
+            HomeworkEvaluationQueue.Fingerprint(seed.Submission), [new(seed.Submission.Answers.Single().Id, fraction, "إجابة جيدة لأن التعليل صحيح")]), default);
+        Assert.True(response.Success, response.Message);
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync(s => s.Id == seed.Submission.Id);
+        Assert.Equal(points, Assert.Single(saved.Answers).AwardedScore);
+        Assert.Equal(points * 5, saved.OverallScore);
+        var reader = new GetHomeworkResultQueryHandler(fixture.Db, new AccessCheckService(fixture.Db));
+        var hidden = await reader.Handle(new(seed.Homework.Id, seed.Submission.StudentId), default);
+        Assert.True(hidden.Success, hidden.Message);
+        Assert.False(hidden.Data!.ScoreVisible);
+        Assert.Null(hidden.Data.Score); Assert.Null(hidden.Data.TotalScore); Assert.Null(hidden.Data.PassingScore);
+        Assert.True(hidden.Data.AnswersVisible); Assert.False(hidden.Data.AllowRetake);
+        var review = Assert.Single(hidden.Data.QuestionReviews);
+        Assert.Equal(points, review.ScoreReceived);
+        Assert.Contains("التعليل صحيح", review.GradingFeedback);
+        var current = await fixture.Db.Homeworks.SingleAsync(h => h.Id == seed.Homework.Id);
+        current.ShowScoreToStudents = true;
+        await fixture.Db.SaveChangesAsync();
+        var revealed = await reader.Handle(new(seed.Homework.Id, seed.Submission.StudentId), default);
+        Assert.Equal(points * 5, revealed.Data!.Score);
+        Assert.Equal(20, revealed.Data.TotalScore);
+        current.ShowAnswersToStudents = false;
+        await fixture.Db.SaveChangesAsync();
+        var withheld = await reader.Handle(new(seed.Homework.Id, seed.Submission.StudentId), default);
+        Assert.Empty(withheld.Data!.QuestionReviews);
+        Assert.Equal(points * 5, withheld.Data.Score);
+    }
+
+    [Theory]
     [InlineData("StudentActivity", true)]
     [InlineData("QuestionEdit", false)]
     [InlineData("ConcurrentDefinitionChange", false)]
@@ -624,8 +705,10 @@ public sealed class AssessmentReviewPostgresTests
         Assert.Equal("A", (await fixture.Db.QuestionOptions.SingleAsync(o => o.QuestionBankItemId == bank.Id && o.IsCorrect)).Text);
     }
 
-    [Fact]
-    public async Task HomeworkReviewShowsAnswerAndManualGradePersistsScaledScoreAndAudit()
+    [Theory]
+    [InlineData(3)]
+    [InlineData(1.5)]
+    public async Task HomeworkReviewShowsAnswerAndManualGradePersistsScaledScoreAndAudit(decimal points)
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
@@ -636,13 +719,13 @@ public sealed class AssessmentReviewPostgresTests
         Assert.Equal("إجابة الطالب المقالي", Assert.Single(review.Data!.Questions).Answer);
         Assert.True(review.Data.CanGrade);
         var graded = await new GradeAssessmentCommandHandler(fixture.Db, auth).Handle(new(target,
-            [new(seed.Homework.Questions.Single().Id, 3)], "راجع السبب"), default);
+            [new(seed.Homework.Questions.Single().Id, points)], "راجع السبب"), default);
         Assert.True(graded.Success);
         fixture.Db.ChangeTracker.Clear();
         var saved = await fixture.Db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync(s => s.Id == seed.Submission.Id);
-        Assert.Equal(15m, saved.OverallScore);
+        Assert.Equal(points * 5, saved.OverallScore);
         Assert.Equal(SubmissionStatus.Graded, saved.Status);
-        Assert.Equal(3, Assert.Single(saved.Answers).ScoreReceived);
+        Assert.Equal(points, Assert.Single(saved.Answers).AwardedScore);
         Assert.Equal(seed.Teacher.UserId, saved.AssistantReviewerId);
         Assert.Equal("راجع السبب", saved.AssistantNotes);
         Assert.True(await fixture.Db.AuditLogs.AnyAsync(a => a.EntityId == saved.Id && a.Action == "AssessmentManuallyGraded"));
@@ -669,7 +752,7 @@ public sealed class AssessmentReviewPostgresTests
     [Theory]
     [InlineData(-1)]
     [InlineData(5)]
-    [InlineData(1.5)]
+    [InlineData(1.555)]
     public async Task InvalidHomeworkGradeCannotPartiallyChangeAnswers(decimal score)
     {
         await using var fixture = new PostgresLiveSupportFixture();

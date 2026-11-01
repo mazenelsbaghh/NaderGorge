@@ -6,9 +6,9 @@ export function PartialAssessmentResultSummary({ partial, returnHref, returnLabe
   answersVisible?: boolean; scoreExplanation?: string;
 }) {
   return <section aria-label="النتيجة الجزئية" aria-live="polite" className="space-y-4 rounded-xl border border-border bg-card p-6 text-start" dir="rtl">
-    <h2 className="text-2xl font-bold text-foreground">درجتك في الأسئلة المصححة</h2>
-    <p className="text-2xl font-bold tabular-nums text-foreground">{partial.totalScore > 0
-      ? `${partial.scoreAchieved} من ${partial.totalScore}` : 'لا توجد درجات مصححة بعد'}</p>
+    <h2 className="text-2xl font-bold text-foreground">{partial.scoreAchieved == null ? 'تصحيح إجاباتك' : 'درجتك في الأسئلة المصححة'}</h2>
+    {partial.scoreAchieved != null && partial.totalScore != null && <p className="text-2xl font-bold tabular-nums text-foreground">{partial.totalScore > 0
+      ? `${partial.scoreAchieved} من ${partial.totalScore}` : 'لا توجد درجات مصححة بعد'}</p>}
     {scoreExplanation && <p className="text-sm font-bold leading-7 text-foreground">{scoreExplanation}</p>}
     <p className="text-sm leading-7 text-muted-foreground">النتيجة غير نهائية. {partial.pendingQuestionCount} سؤال مقالي قيد التصحيح، ودرجاتها تُضاف بعد اعتماد التصحيح. {answersVisible ? 'الإجابات النموذجية ظاهرة في المراجعة.' : 'سنقوم بإبلاغك عند ظهور الإجابات.'}</p>
     {canContinue && <p className="text-sm leading-7 text-foreground">تقدر تكمل الحصة عادي أثناء انتظار التصحيح.</p>}

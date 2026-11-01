@@ -5,14 +5,14 @@ import { Redis } from 'ioredis';
 import { evaluateHomework, type HomeworkEvaluationData } from './evaluateHomework.js';
 import { setAIServiceRuntimeFactoryForTests } from '../services/geminiService.js';
 
-test('homework grades survive callback outages and resume without another provider request', async context => {
+for (const score of [1, 0.7]) test(`homework grades (${score}) survive callback outages and resume without another provider request`, async context => {
   const originalFetch = globalThis.fetch;
   const originalGet = Redis.prototype.get;
   Redis.prototype.get = async () => null;
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
   setAIServiceRuntimeFactoryForTests(() => ({
     config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: '{"score":1,"feedback":"Correct reasoning"}' }) } } as never,
+    developer: { models: { generateContent: async () => ({ text: JSON.stringify({ score, feedback: 'Correct reasoning' }) }) } } as never,
   }));
   const job = {
     id: 'homework-evaluation', data: { SubmissionId: 'submission', Fingerprint: 'A'.repeat(64), Questions: [
@@ -23,7 +23,7 @@ test('homework grades survive callback outages and resume without another provid
   } as unknown as Job<HomeworkEvaluationData>;
   globalThis.fetch = async () => new Response('private diagnostics', { status: 503 });
   await assert.rejects(evaluateHomework(job), /status 503/);
-  assert.deepEqual(job.data.grades?.map(g => [g.answerId, g.score]), [['written', 1], ['blank', 0]]);
+  assert.deepEqual(job.data.grades?.map(g => [g.answerId, g.score]), [['written', score], ['blank', 0]]);
   setAIServiceRuntimeFactoryForTests(() => { throw new Error('provider unavailable'); });
   let delivered: unknown;
   globalThis.fetch = async (url, init) => {

@@ -13,6 +13,7 @@ public enum QuestionType
 public class Exam : BaseEntity, IArchivableContent
 {
     public bool ShowAnswersToStudents { get; set; } = true;
+    public bool ShowScoreToStudents { get; set; } = true;
     public ExamEssayGradingMode EssayGradingMode { get; set; }
     public bool ShowResultsWhileEssayPending { get; set; }
     public bool SingleAttemptOnly { get; set; }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
@@ -13,24 +14,31 @@ public sealed record HomeworkEvaluationPayload(Guid SubmissionId, string Fingerp
 public static class HomeworkEvaluationQueue
 {
     public const string EventType = "HomeworkEvaluationQueued";
+    private sealed record AnswerFingerprint(Guid Id, Guid QuestionId, string ProvidedAnswer, int? ScoreReceived)
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? PreciseScoreReceived { get; init; }
+    }
 
     public static string Fingerprint(HomeworkSubmission submission) => Convert.ToHexString(SHA256.HashData(
         Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             submission.Id, Definition = submission.DefinitionSnapshotJson is null ? null
                 : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId),
-            Answers = submission.Answers.OrderBy(a => a.Id).Select(a => new { a.Id, a.QuestionId, a.ProvidedAnswer, a.ScoreReceived })
+            Answers = submission.Answers.OrderBy(a => a.Id).Select(a => new AnswerFingerprint(a.Id, a.QuestionId, a.ProvidedAnswer, a.ScoreReceived)
+                { PreciseScoreReceived = a.PreciseScoreReceived })
         }))));
 
     public static HomeworkEvaluationQuestion[] Questions(HomeworkSubmission submission)
     {
         if (submission.DefinitionSnapshotJson is null) return [];
         var definition = AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId);
+        if (!EssayCreditPolicy.IsAutomatic(definition.EffectiveEssayGradingMode)) return [];
         if (definition.Revision?.RequiresCompletion == true) return [];
         return definition.Questions.Where(q => q.Type == (int)NaderGorge.Domain.Entities.Homework.QuestionType.Essay
             && !string.IsNullOrWhiteSpace(q.Text)
             && definition.Revision?.Answers.Any(a => a.QuestionId == q.Id && a.Excluded) != true)
-            .Join(submission.Answers.Where(a => a.ScoreReceived is null && !a.ProvidedAnswer.StartsWith("/uploads/audio/", StringComparison.Ordinal)),
+            .Join(submission.Answers.Where(a => a.AwardedScore is null && !a.ProvidedAnswer.StartsWith("/uploads/audio/", StringComparison.Ordinal)),
                 q => q.Id, a => a.QuestionId,
                 (q, a) => new HomeworkEvaluationQuestion(a.Id, q.Text, a.ProvidedAnswer, q.WrittenCorrection ?? ""))
             .ToArray();

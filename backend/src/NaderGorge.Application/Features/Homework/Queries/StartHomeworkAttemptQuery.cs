@@ -15,7 +15,7 @@ public record StartHomeworkAttemptDto(
     Guid SubmissionId,
     string Title,
     string? Instructions,
-    decimal TotalScore,
+    decimal? TotalScore,
     decimal? PassingScore,
     bool AlreadyCompleted,
     decimal? Score,
@@ -182,8 +182,11 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         var attemptDefinition = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission?.DefinitionSnapshotJson);
         var previousAttemptPassed = submission?.Status == SubmissionStatus.Graded
             && submission.OverallScore >= (attemptDefinition.PassingScoreThreshold ?? 0);
-        if (submission?.Status != SubmissionStatus.Graded || previousAttemptPassed)
+        if (submission?.Status != SubmissionStatus.Graded || previousAttemptPassed || homework.SingleAttemptOnly)
             homework = attemptDefinition;
+        if (submission is null || (submission.Status == SubmissionStatus.Graded && !previousAttemptPassed && !homework.SingleAttemptOnly))
+            homework = AssessmentDefinitionSnapshot.ResolveHomework(homework,
+                AssessmentDefinitionSnapshot.FromHomework(homework).WithEssayGradingScale().ToJson());
 
         // Build questions list (without correct answers for security)
         var baseQuery = homework.Questions.AsEnumerable();
@@ -220,7 +223,7 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         // If existing Graded submission
         if (submission != null && submission.Status == SubmissionStatus.Graded)
         {
-            if (previousAttemptPassed)
+            if (previousAttemptPassed || homework.SingleAttemptOnly)
             {
                 var durationMinutes = homework.DurationMinutes;
                 var remainingSeconds = RemainingSeconds(durationMinutes, submission.StartedAt);
@@ -230,15 +233,15 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                     submission.Id,
                     homework.Title,
                     homework.Description,
-                    homework.TotalScore,
-                    homework.PassingScoreThreshold,
+                    homework.ShowScoreToStudents ? homework.TotalScore : null,
+                    homework.ShowScoreToStudents ? homework.PassingScoreThreshold : null,
                     AlreadyCompleted: true,
-                    Score: submission.OverallScore,
+                    Score: homework.ShowScoreToStudents ? submission.OverallScore : null,
                     Evaluation: submission.Evaluation,
                     submission.StartedAt,
                     durationMinutes,
                     remainingSeconds,
-                    questions
+                    []
                 ), "Homework already completed.");
             }
             else
@@ -261,15 +264,15 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 submission.Id,
                 homework.Title,
                 homework.Description,
-                homework.TotalScore,
-                homework.PassingScoreThreshold,
+                homework.ShowScoreToStudents ? homework.TotalScore : null,
+                homework.ShowScoreToStudents ? homework.PassingScoreThreshold : null,
                 AlreadyCompleted: submission.Status == SubmissionStatus.PendingReview,
-                Score: submission.Status == SubmissionStatus.PendingReview ? submission.OverallScore : null,
+                Score: submission.Status == SubmissionStatus.PendingReview && homework.ShowScoreToStudents ? submission.OverallScore : null,
                 Evaluation: submission.Status == SubmissionStatus.PendingReview ? submission.Evaluation : null,
                 submission.StartedAt,
                 durationMinutes,
                 remainingSeconds,
-                questions,
+                submission.Status == SubmissionStatus.PendingReview ? [] : questions,
                 revisionDefinition?.Revision?.RequiresCompletion == true ? revisionDefinition.RevisionId : null
             ));
         }
@@ -295,8 +298,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             newSubmission.Id,
             homework.Title,
             homework.Description,
-            homework.TotalScore,
-            homework.PassingScoreThreshold,
+            homework.ShowScoreToStudents ? homework.TotalScore : null,
+            homework.ShowScoreToStudents ? homework.PassingScoreThreshold : null,
             AlreadyCompleted: false,
             Score: null,
             Evaluation: null,
