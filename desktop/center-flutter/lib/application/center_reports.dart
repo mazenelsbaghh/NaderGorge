@@ -9,15 +9,18 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/homework_status.dart';
 import '../domain/models.dart';
+import '../domain/lesson_attendance_counts.dart';
 import 'center_store.dart';
 
 part 'student_card_reports.dart';
+part 'attendance_summary_report.dart';
 
 enum CenterReportKind {
   students,
   groups,
   sessions,
   attendance,
+  attendanceSummary,
   packages,
   payments,
   exams,
@@ -154,6 +157,7 @@ abstract final class CenterReports {
     CenterReportKind.groups => 'المجموعات',
     CenterReportKind.sessions => 'الحصص',
     CenterReportKind.attendance => 'الحضور والغياب',
+    CenterReportKind.attendanceSummary => 'حضور الحصص بالشهر',
     CenterReportKind.packages => 'الأشهر والباقات السابقة',
     CenterReportKind.payments => 'المدفوعات',
     CenterReportKind.exams => 'الامتحانات',
@@ -207,6 +211,7 @@ abstract final class CenterReports {
         CenterReportKind.groups => context.groupReport(),
         CenterReportKind.sessions => context.sessionReport(),
         CenterReportKind.attendance => context.attendanceReport(),
+        CenterReportKind.attendanceSummary => context.attendanceSummaryReport(),
         CenterReportKind.packages => context.packageReport(),
         CenterReportKind.payments => context.paymentReport(),
         CenterReportKind.exams => context.examReport(),

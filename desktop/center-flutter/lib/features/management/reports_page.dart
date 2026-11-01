@@ -33,6 +33,8 @@ class _ReportsPageState extends State<ReportsPage> {
   String? _activityId;
   String? _homeworkMonthId, _homeworkLessonId;
   final Set<String> _homeworkGroups = {};
+  String? _attendanceMonthId;
+  final Set<String> _attendanceGroups = {};
   CenterReportKind _kind = CenterReportKind.students;
   String? _studentId, _groupId, _sessionId, _subjectId, _centerId, _gradeId;
   DateTimeRange? _range;
@@ -61,8 +63,14 @@ class _ReportsPageState extends State<ReportsPage> {
     activityId: _activityId,
     groupIds: _kind == CenterReportKind.homework
         ? Set.of(_homeworkGroups)
+        : _kind == CenterReportKind.attendanceSummary
+        ? Set.of(_attendanceGroups)
         : const {},
-    studyMonthId: _kind == CenterReportKind.homework ? _homeworkMonthId : null,
+    studyMonthId: _kind == CenterReportKind.homework
+        ? _homeworkMonthId
+        : _kind == CenterReportKind.attendanceSummary
+        ? _attendanceMonthId
+        : null,
     preparedLessonId: _kind == CenterReportKind.homework
         ? _homeworkLessonId
         : null,
@@ -153,6 +161,8 @@ class _ReportsPageState extends State<ReportsPage> {
     _activityId = null;
     _homeworkMonthId = _homeworkLessonId = null;
     _homeworkGroups.clear();
+    _attendanceMonthId = null;
+    _attendanceGroups.clear();
   });
 
   Future<void> _pickRange() async {
@@ -358,6 +368,7 @@ class _ReportsPageState extends State<ReportsPage> {
       onChanged: (id) => setState(() {
         select(id);
         _homeworkGroups.clear();
+        _attendanceGroups.clear();
         _groupId = _sessionId = _activityId = null;
       }),
     ),
@@ -556,6 +567,59 @@ class _ReportsPageState extends State<ReportsPage> {
     ];
   }
 
+  Future<void> _pickAttendanceGroups() async {
+    final selected = _attendanceGroups.isEmpty
+        ? _groups.map((group) => group.id).toSet()
+        : Set<String>.of(_attendanceGroups);
+    final picked = await showDialog<Set<String>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: const Text('مجموعات حضور الحصص'),
+          content: SizedBox(
+            width: 520,
+            height: 360,
+            child: ListView(
+              children: [
+                for (final group in _groups)
+                  CheckboxListTile(
+                    title: Text(widget.store.groupLabel(group.id)),
+                    value: selected.contains(group.id),
+                    onChanged: (checked) => update(() {
+                      if (checked!) {
+                        selected.add(group.id);
+                      } else {
+                        selected.remove(group.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: selected.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, selected),
+              child: const Text('تطبيق المجموعات'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(
+        () => _attendanceGroups
+          ..clear()
+          ..addAll(picked),
+      );
+    }
+  }
+
   Widget _filters() {
     final groupIds = _groups.map((group) => group.id).toSet();
     final sessions =
@@ -604,11 +668,51 @@ class _ReportsPageState extends State<ReportsPage> {
                       _homeworkStatus = HomeworkStatus.missing;
                       _groupId = _sessionId = null;
                     }
+                    if (_kind == CenterReportKind.attendanceSummary) {
+                      _groupId = _sessionId = null;
+                    }
                     _activityId = null;
                     _unassignedOnly = false;
                   }),
                 ),
               ),
+              if (_kind == CenterReportKind.attendanceSummary) ...[
+                OutlinedButton.icon(
+                  key: const Key('attendance-summary-groups'),
+                  onPressed: _pickAttendanceGroups,
+                  icon: const Icon(Icons.groups_outlined),
+                  label: Text(switch (_attendanceGroups.length) {
+                    0 => 'كل المجموعات',
+                    1 => 'مجموعة واحدة مختارة',
+                    _ => '${_attendanceGroups.length} مجموعات مختارة',
+                  }),
+                ),
+                SizedBox(
+                  width: 230,
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(
+                      'attendance-summary-month-$_attendanceMonthId',
+                    ),
+                    initialValue: _attendanceMonthId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'الشهر الدراسي',
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('كل الشهور'),
+                      ),
+                      for (final month in widget.store.studyMonths)
+                        DropdownMenuItem(
+                          value: month.id,
+                          child: Text(month.name),
+                        ),
+                    ],
+                    onChanged: (id) => setState(() => _attendanceMonthId = id),
+                  ),
+                ),
+              ],
               if (_kind == CenterReportKind.reviews)
                 SizedBox(
                   width: 190,
@@ -852,7 +956,8 @@ class _ReportsPageState extends State<ReportsPage> {
                 _gradeId,
                 (id) => _gradeId = id,
               ),
-              if (_kind != CenterReportKind.homework)
+              if (_kind != CenterReportKind.homework &&
+                  _kind != CenterReportKind.attendanceSummary)
                 SizedBox(
                   width: 290,
                   child: DropdownButtonFormField<String>(
@@ -880,7 +985,8 @@ class _ReportsPageState extends State<ReportsPage> {
                     }),
                   ),
                 ),
-              if (_kind != CenterReportKind.homework)
+              if (_kind != CenterReportKind.homework &&
+                  _kind != CenterReportKind.attendanceSummary)
                 SizedBox(
                   width: 290,
                   child: DropdownButtonFormField<String>(
@@ -1071,7 +1177,7 @@ class _ReportsPageState extends State<ReportsPage> {
               )
             : ManagementTable.builder(
                 key: ValueKey(
-                  '$_kind-$_activityId-$_studentId-$_groupId-$_sessionId-$_subjectId-$_centerId-$_gradeId-$_range-$_unassignedOnly-$_reviewMode-$_paymentMode-$_debtStatus-$_debtKind-$_attendanceCorrections-$_closingMode-$_examStatus-${_exactScore.text}-${_minScore.text}-${_maxScore.text}-$_homeworkStatus',
+                  '$_kind-$_activityId-$_studentId-$_groupId-$_sessionId-$_subjectId-$_centerId-$_gradeId-$_range-$_unassignedOnly-$_reviewMode-$_paymentMode-$_debtStatus-$_debtKind-$_attendanceCorrections-$_closingMode-$_examStatus-${_exactScore.text}-${_minScore.text}-${_maxScore.text}-$_homeworkStatus-$_attendanceMonthId-${_attendanceGroups.join(',')}',
                 ),
                 columns: report.columns,
                 rowCount: report.rows.length,

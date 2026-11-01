@@ -213,6 +213,55 @@ void main() {
   }
 
   testWidgets(
+    'monthly attendance shows class counts and preserves group selection',
+    (tester) async {
+      await tester.runAsync(() async {
+        await openReports(tester, const Size(1366, 900));
+        await chooseReport(tester, 'حضور الحصص بالشهر');
+        expect(find.text('إجمالي الحضور المسجل: 2'), findsOneWidget);
+        final monthField = find.byWidgetPredicate(
+          (widget) =>
+              widget is DropdownButtonFormField<String> &&
+              widget.key.toString().contains('attendance-summary-month-'),
+        );
+        await tester.tap(monthField);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(store.studyMonths.first.name).last);
+        await tester.pumpAndSettle();
+        expect(find.text('إجمالي الحضور المسجل: 2'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('attendance-summary-groups')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(
+            CheckboxListTile,
+            store.groupLabel(store.groups.last.id),
+          ),
+        );
+        await tester.tap(find.text('تطبيق المجموعات'));
+        await tester.pumpAndSettle();
+        expect(find.text('مجموعة واحدة مختارة'), findsOneWidget);
+        expect(find.text('إجمالي الحضور المسجل: 2'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await capture(tester, 'monthly-attendance-summary');
+        await tester.tap(find.byKey(const Key('attendance-summary-groups')));
+        await tester.pumpAndSettle();
+        for (final group in store.groups) {
+          await tester.tap(
+            find.widgetWithText(CheckboxListTile, store.groupLabel(group.id)),
+          );
+        }
+        await tester.tap(find.text('تطبيق المجموعات'));
+        await tester.pumpAndSettle();
+        expect(find.text('إجمالي الحضور المسجل: 0'), findsOneWidget);
+        expect(
+          find.textContaining('لا توجد سجلات تطابق الفلاتر'),
+          findsOneWidget,
+        );
+      });
+    },
+  );
+
+  testWidgets(
     'student code and unassigned filters update table and export only actual displayed payments at desktop widths',
     (tester) async {
       await tester.runAsync(() async {
