@@ -22,6 +22,8 @@ python3 desktop/center-flutter/scripts/windows_trial.py scan \
 
 Review the generated `source-paths.json`. Scanning includes new unignored files under the desktop and exam source roots, plus Go, Dart, hotspot C# source and portal-proxy HTML templates even when local Git excludes hide a whole project. Private installer JSON, generated build directories and the device-specific `recover-windows-exam-setup.ps1` incident helper are excluded. Missing source files, private paths and secret-like source content stop the operation. Preparation and dispatch reject new or changed build sources omitted from the reviewed allowlist.
 
+When unrelated work is present, prepare a source-only forward Git commit without changing the working index or checkout, and pass its full SHA as `--source-commit` to both `scan` and `prepare`. This mode reads the version and reviewed source from immutable Git blobs; all changed paths in that commit must still be included. Sealing preserves unrelated working files and builds the reviewed commit's contents. The sealed source and normal private-input, privacy, native-build and delivery checks remain mandatory.
+
 ```sh
 python3 desktop/center-flutter/scripts/windows_trial.py prepare \
   --parent 626db1c8b355e5ba6539a4c0655e0395e216697e \

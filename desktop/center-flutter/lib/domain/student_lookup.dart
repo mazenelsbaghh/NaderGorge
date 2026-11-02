@@ -44,6 +44,40 @@ Iterable<String> studentIdentifiers(Student student) {
   ];
 }
 
+class StudentCodeAllocator {
+  StudentCodeAllocator(Iterable<Student> students) {
+    for (final student in students) {
+      reserve(student);
+    }
+  }
+
+  final _occupied = <String>{};
+  var _next = BigInt.from(10000);
+
+  void reserve(Student student) {
+    _occupied.addAll(
+      studentIdentifiers(student).map(normalizeStudentIdentifier),
+    );
+    final code = normalizeStudentIdentifier(student.code);
+    if (!RegExp(r'^[0-9]+$').hasMatch(code)) return;
+    final number = BigInt.parse(code);
+    _occupied.add(number.toString());
+    if (number >= _next) _next = number + BigInt.one;
+  }
+
+  String get nextCode {
+    // Fill gaps without reusing legacy aliases or full barcodes.
+    for (var candidate = 1000; candidate <= 9999; candidate++) {
+      if (!_occupied.contains('$candidate')) return '$candidate';
+    }
+    var candidate = _next;
+    while (_occupied.contains(candidate.toString())) {
+      candidate += BigInt.one;
+    }
+    return candidate.toString();
+  }
+}
+
 List<Student> studentsWithIdentifier(Iterable<Student> students, String input) {
   final query = normalizeStudentIdentifier(input);
   if (query.isEmpty) {

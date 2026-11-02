@@ -1191,28 +1191,7 @@ class CenterStore extends ChangeNotifier {
   }
 
   /// Proposed code for display; registration allocates again inside the transaction.
-  String get nextStudentCode {
-    final occupied = <String>{};
-    var next = BigInt.from(10000);
-    for (final student in _state.students) {
-      occupied.addAll(
-        studentIdentifiers(student).map(normalizeStudentIdentifier),
-      );
-      final code = normalizeStudentIdentifier(student.code);
-      if (!RegExp(r'^[0-9]+$').hasMatch(code)) continue;
-      final number = BigInt.parse(code);
-      occupied.add(number.toString());
-      if (number >= next) next = number + BigInt.one;
-    }
-    // Fill four-digit gaps without reusing legacy aliases or full barcodes.
-    for (var candidate = 1000; candidate <= 9999; candidate++) {
-      if (!occupied.contains('$candidate')) return '$candidate';
-    }
-    while (occupied.contains(next.toString())) {
-      next += BigInt.one;
-    }
-    return next.toString();
-  }
+  String get nextStudentCode => StudentCodeAllocator(_state.students).nextCode;
 
   /// Enrolls a new student with an automatically allocated, permanent code.
   Future<Student> registerStudent(Student draft) async {

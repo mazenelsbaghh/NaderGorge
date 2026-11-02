@@ -5,6 +5,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import subprocess
+from types import SimpleNamespace
 from unittest.mock import patch
 import zipfile
 
@@ -89,6 +91,50 @@ def rebind_overlay(directory, entries=None, review_changes=None):
 
 
 class WindowsTrialTests(unittest.TestCase):
+    def test_committed_trial_preserves_unrelated_work_and_rejects_omitted_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            def git(*arguments):
+                return subprocess.check_output(["git", *arguments], cwd=root).decode().strip()
+            git("init", "-q")
+            git("config", "user.name", "Synthetic Test")
+            git("config", "user.email", "synthetic@example.invalid")
+            version_path = "desktop/center-flutter/pubspec.yaml"
+            exam_path = "exam-room/core.go"
+            for name, text in ((version_path, "version: 1.0.0+1\n"), (exam_path, "package main\n")):
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(text)
+            git("add", ".")
+            git("commit", "-qm", "synthetic parent")
+            parent = git("rev-parse", "HEAD")
+            (root / version_path).write_text("version: 1.0.1+2\n")
+            git("add", version_path)
+            git("commit", "-qm", "reviewed version")
+            candidate = git("rev-parse", "HEAD")
+            (root / exam_path).write_text("package main\n// ongoing unrelated work\n")
+            (root / version_path).write_text("version: 9.9.9+9\n")
+            index_before = (root / ".git/index").read_bytes()
+            with patch.object(trial, "ROOT", root):
+                document = {"repository": trial.REPO, "channel": "private-trial", "parent": parent,
+                            "version": "1.0.1+2", "branch": "codex/trial-committed-source",
+                            "sourceCommit": candidate, "files": [trial.source_entry(version_path, candidate)]}
+                trial.assert_source_unchanged(document)
+                with self.assertRaises(RuntimeError):
+                    trial.assert_scope_complete({**document, "files": []})
+                with self.assertRaises(RuntimeError):
+                    trial.committed_changed_paths(candidate, parent)
+                output = root / "artifacts/private/trial"
+                trial.save_json(output / "source-inventory.json", document)
+                trial.seal(SimpleNamespace(output=output, verified=True))
+                sealed = trial.read_json(output / "source-candidate.json")
+                self.assertEqual(sealed["commit"], sealed["sourceCommit"])
+                trial.assert_sealed_commit(sealed)
+                self.assertEqual(b"version: 1.0.1+2\n", trial.git("show", sealed["commit"] + ":" + version_path))
+                self.assertEqual(b"package main\n", trial.git("show", sealed["commit"] + ":" + exam_path))
+            self.assertEqual(index_before, (root / ".git/index").read_bytes())
+            self.assertIn("ongoing unrelated work", (root / exam_path).read_text())
+            self.assertEqual("version: 9.9.9+9\n", (root / version_path).read_text())
+
     def test_private_overlay_adds_only_verified_repair_and_binds_all_inputs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

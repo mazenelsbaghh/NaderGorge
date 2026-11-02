@@ -94,11 +94,23 @@ def source_path(name):
     return path
 
 
-def source_entry(name):
+def source_content(name, commit=None):
+    if commit is not None:
+        source_path(name)
+        if not re.fullmatch(r"[a-f0-9]{40}", commit):
+            raise RuntimeError("Committed source requires a full Git SHA.")
+        metadata = git("ls-tree", commit, "--", name).decode().split()
+        if len(metadata) != 4 or metadata[0] not in {"100644", "100755"} or metadata[1] != "blob":
+            raise RuntimeError("Committed source must be a regular Git blob: " + name)
+        return git("show", commit + ":" + name)
     path = ROOT / source_path(name)
     if not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(ROOT):
         raise RuntimeError("Source must be an existing regular file: " + name)
-    content = path.read_bytes()
+    return path.read_bytes()
+
+
+def source_entry(name, commit=None):
+    content = source_content(name, commit)
     if secret_content_reason_bytes(content, name)[0]:
         raise RuntimeError("Source content failed privacy review: " + name)
     return {"path": name, "sha256": digest(content)}
@@ -146,9 +158,22 @@ def changed_source_paths(parent):
 
 
 def assert_scope_complete(document):
-    omitted = set(changed_source_paths(document["parent"])) - {entry["path"] for entry in document["files"]}
+    source_commit = document.get("sourceCommit")
+    changed = committed_changed_paths(document["parent"], source_commit) if source_commit else changed_source_paths(document["parent"])
+    omitted = set(changed) - {entry["path"] for entry in document["files"]}
     if omitted:
         raise RuntimeError("Changed/new build source omitted from allowlist: " + ", ".join(sorted(omitted)))
+
+
+def committed_changed_paths(parent, source_commit):
+    if not re.fullmatch(r"[a-f0-9]{40}", source_commit):
+        raise RuntimeError("Committed source requires a full Git SHA.")
+    if git("rev-list", "--parents", "-n", "1", source_commit).decode().split() != [source_commit, parent]:
+        raise RuntimeError("Committed source must be one forward commit on the reviewed parent.")
+    names = [name.decode() for name in git("diff", "--name-only", "-z", parent, source_commit).split(b"\0") if name]
+    for name in names:
+        source_entry(name, source_commit)
+    return names
 
 
 def private_archive(payload, expected):
@@ -267,13 +292,16 @@ def prepare(args):
         raise RuntimeError("An explicit unique source allowlist is required.")
     if "desktop/center-flutter/pubspec.yaml" not in names:
         raise RuntimeError("The source allowlist must include the trial version.")
-    versions = re.findall(r"^version:\s*(\S+)", (ROOT / "desktop/center-flutter/pubspec.yaml").read_text(), re.M)
+    source_commit = getattr(args, "source_commit", None)
+    versions = re.findall(r"^version:\s*(\S+)", source_content("desktop/center-flutter/pubspec.yaml", source_commit).decode(), re.M)
     if versions != [args.version]:
         raise RuntimeError("The trial version differs from pubspec.yaml.")
     document = {"schemaVersion": 1, "channel": "private-trial", "repository": REPO,
                 "parent": args.parent, "version": args.version, "branch": args.branch,
-                "files": [source_entry(name) for name in sorted(names)],
+                "files": [source_entry(name, source_commit) for name in sorted(names)],
                 "privateInputs": private_inputs(args.baseline, getattr(args, "private_overlay", None)), "productionPromoted": False}
+    if source_commit:
+        document["sourceCommit"] = source_commit
     assert_scope_complete(document)
     if (args.output / "source-candidate.json").exists():
         raise RuntimeError("This trial is already sealed; use a fresh trial directory for changed source.")
@@ -286,7 +314,7 @@ def assert_source_unchanged(document):
     if document["repository"] != REPO or document["channel"] != "private-trial":
         raise RuntimeError("Unexpected trial destination.")
     for entry in document["files"]:
-        if source_entry(entry["path"]) != entry:
+        if source_entry(entry["path"], document.get("sourceCommit")) != entry:
             raise RuntimeError("Reviewed source changed: " + entry["path"])
     assert_scope_complete(document)
 
@@ -318,7 +346,7 @@ def seal(args):
     environment = dict(os.environ, GIT_INDEX_FILE=str(trial_index.resolve()))
     git("read-tree", document["parent"], env=environment)
     for entry in document["files"]:
-        content = (ROOT / entry["path"]).read_bytes()
+        content = source_content(entry["path"], document.get("sourceCommit"))
         if digest(content) != entry["sha256"]:
             raise RuntimeError("Source changed while sealing the trial.")
         blob = git("hash-object", "-w", "--stdin", content=content).decode().strip()
@@ -337,6 +365,8 @@ def seal(args):
     if (index_path.read_bytes() if index_path.exists() else None) != index_before:
         raise RuntimeError("The working index changed concurrently; review it before dispatch.")
     document.update({"commit": commit, "changedPaths": sorted(actual)})
+    if document.get("sourceCommit"):
+        document["sourceCommit"] = commit
     save_json(candidate_path, document)
     print(json.dumps({"sealed": True, "commit": commit, "branch": document["branch"]}))
 
@@ -433,6 +463,7 @@ def main():
     parser.add_argument("--version")
     parser.add_argument("--branch")
     parser.add_argument("--verified", action="store_true")
+    parser.add_argument("--source-commit", help="Build a reviewed forward Git commit without including unrelated working changes")
     args = parser.parse_args()
     args.output = args.output.resolve()
     if not args.output.is_relative_to(ROOT / "artifacts/private"):
@@ -440,7 +471,7 @@ def main():
     if args.action == "scan":
         if not args.parent or not re.fullmatch(r"[a-f0-9]{40}", args.parent):
             parser.error("scan requires an exact --parent SHA")
-        paths = changed_source_paths(args.parent)
+        paths = committed_changed_paths(args.parent, args.source_commit) if args.source_commit else changed_source_paths(args.parent)
         save_json(args.output / "source-paths.json", paths)
         print(json.dumps({"changedSourceFiles": len(paths), "allowlist": str(args.output / "source-paths.json")}))
     elif args.action == "prepare":

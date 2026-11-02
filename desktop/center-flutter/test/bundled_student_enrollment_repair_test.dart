@@ -39,6 +39,10 @@ enum _Scenario {
   duplicateEnrollment,
   invalidDate,
   laterValidationFailure,
+  // 2026-11-02: Cairo attendance was blocked by codes issued after preparation.
+  allocatedCodeCollision,
+  allocatedAlreadyInserted,
+  allocatedCodeRollback,
 }
 
 void main() {
@@ -113,7 +117,9 @@ void main() {
         final enrollmentKey = '$_studentId:$groupId';
         final importedStudent = Student(
           id: _studentId,
-          code: scenario == _Scenario.laterValidationFailure
+          code:
+              scenario == _Scenario.laterValidationFailure ||
+                  scenario == _Scenario.allocatedCodeCollision
               ? '00100'
               : '00200',
           name: 'imported student',
@@ -143,6 +149,26 @@ void main() {
           case _Scenario.duplicateEnrollment:
           case _Scenario.laterValidationFailure:
             break;
+          case _Scenario.allocatedCodeCollision:
+            for (final code in ['1000', '01001']) {
+              initial.students.add(
+                importedStudent.copyWith(id: 'taken-$code', code: code),
+              );
+              initial.enrollments['taken-$code:$groupId'] = _enrolledAt;
+            }
+            initial.students.add(
+              importedStudent.copyWith(
+                id: 'barcode-holder',
+                code: '2000',
+                barcode: '1002',
+              ),
+            );
+            initial.enrollments['barcode-holder:$groupId'] = _enrolledAt;
+          case _Scenario.allocatedAlreadyInserted:
+            initial.students.add(importedStudent.copyWith(code: '1004'));
+            initial.enrollments[enrollmentKey] = _enrolledAt;
+          case _Scenario.allocatedCodeRollback:
+            enrollment['enrolledAt'] = 'invalid-date';
         }
         validateState(initial);
         final unchanged = initial.toJson();
@@ -152,7 +178,11 @@ void main() {
           'requiredSessionId': initial.sessions.single.id,
           'updates': [],
           'inserts': [
-            {'collection': 'students', 'value': importedStudent.toJson()},
+            {
+              'collection': 'students',
+              'value': importedStudent.toJson(),
+              if (scenario.name.startsWith('allocated')) 'allocateCode': true,
+            },
           ],
           'enrollmentInserts': [
             enrollment,
@@ -162,13 +192,18 @@ void main() {
         };
         final applies =
             scenario == _Scenario.newStudent ||
-            scenario == _Scenario.alreadyInsertedWithoutMarker;
+            scenario == _Scenario.alreadyInsertedWithoutMarker ||
+            scenario == _Scenario.allocatedCodeCollision ||
+            scenario == _Scenario.allocatedAlreadyInserted;
         final expected = CenterState.fromJson(
           Map<String, dynamic>.from(jsonDecode(jsonEncode(unchanged))),
         );
         if (applies) {
           if (scenario == _Scenario.newStudent) {
             expected.students.add(importedStudent);
+          }
+          if (scenario == _Scenario.allocatedCodeCollision) {
+            expected.students.add(importedStudent.copyWith(code: '1003'));
           }
           expected.enrollments[enrollmentKey] = _enrolledAt;
           expected.appliedDataRepairs.add(_repairId);

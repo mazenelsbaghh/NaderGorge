@@ -144,6 +144,7 @@ extension _BundledCenterDataRepair on CenterStore {
           return;
         }
         final document = _state.toJson();
+        _allocateRepairStudentCodes(document, patch);
         final guardedIds = (patch['guardedStudentIds'] as List? ?? const [])
             .cast<String>()
             .toSet();
@@ -274,6 +275,68 @@ extension _BundledCenterDataRepair on CenterStore {
           !_repairValuesMatch(current, guard['after'])) {
         throw _DataRepairConflict(current.keys.toList());
       }
+    }
+  }
+
+  void _allocateRepairStudentCodes(
+    Map<String, dynamic> document,
+    Map<String, dynamic> patch,
+  ) {
+    final inserts = (patch['inserts'] as List)
+        .cast<Map>()
+        .where((insert) => insert['collection'] == 'students')
+        .toList();
+    if (!inserts.any((insert) => insert['allocateCode'] == true)) return;
+    final reserved = _reservedRepairStudents(document, inserts);
+    final existing = {for (final student in reserved) student.id: student};
+    final codes = StudentCodeAllocator(reserved);
+    for (final insert in inserts.where(
+      (insert) => insert['allocateCode'] == true,
+    )) {
+      _assignRepairStudentCode(insert, existing, codes);
+    }
+  }
+
+  List<Student> _reservedRepairStudents(
+    Map<String, dynamic> document,
+    List<Map> inserts,
+  ) {
+    final reserved = _repairRows(
+      document,
+      'students',
+    ).map(Student.fromJson).toList();
+    final existingIds = reserved.map((student) => student.id).toSet();
+    for (final insert in inserts.where(
+      (insert) => insert['allocateCode'] != true,
+    )) {
+      final student = Student.fromJson(
+        Map<String, dynamic>.from(insert['value'] as Map),
+      );
+      if (!existingIds.contains(student.id)) reserved.add(student);
+    }
+    return reserved;
+  }
+
+  void _assignRepairStudentCode(
+    Map insert,
+    Map<String, Student> existing,
+    StudentCodeAllocator codes,
+  ) {
+    final profile = Map<String, dynamic>.from(insert['value'] as Map);
+    final student = Student.fromJson(profile);
+    if (student.barcode.isNotEmpty) {
+      throw const FormatException(
+        'Cannot allocate a code for an issued barcode',
+      );
+    }
+    final current = existing[student.id];
+    // Import-time codes must not claim a number assigned since preparation.
+    profile['code'] = current?.code ?? codes.nextCode;
+    insert['value'] = profile;
+    if (current == null) {
+      final allocated = Student.fromJson(profile);
+      codes.reserve(allocated);
+      existing[student.id] = allocated;
     }
   }
 
