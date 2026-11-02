@@ -3,6 +3,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
@@ -14,6 +15,9 @@ public sealed class SaveExamDraftCommandHandler(IAppDbContext db) : IRequestHand
 {
     public async Task<ApiResponse<ExamDraftDto>> Handle(SaveExamDraftCommand request, CancellationToken ct)
     {
+        if (request.Draft.Answers?.Values.Any(StudentAnswerPolicy.IsAudioReference) == true)
+            return ApiResponse<ExamDraftDto>.Fail(StudentAnswerPolicy.AudioDisabledMessage, ["EXAM_DRAFT_INVALID"]);
+
         await using var transaction = await db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await ExamDraftState.Lock(db, request.Scope, ct);
         var state = await ExamDraftState.Read(db, request.Scope, ct);

@@ -92,6 +92,8 @@ internal sealed record ExamDraftState(StudentExamAttempt Attempt, AssessmentDefi
         if (draft is null || request.DraftVersion != draft.Version)
             return ApiResponse<List<AnswerSubmissionDto>>.Fail("تغيّرت الإجابات المحفوظة. راجعها قبل التسليم.", ["EXAM_DRAFT_CONFLICT"]);
         var answers = Parse(draft);
+        if (answers.Values.Any(StudentAnswerPolicy.IsAudioReference))
+            return ApiResponse<List<AnswerSubmissionDto>>.Fail(StudentAnswerPolicy.AudioDisabledMessage);
         var submissions = definition.Questions.Where(q => answers.TryGetValue(q.Id, out var answer)
             && !string.IsNullOrWhiteSpace(answer)).Select(q => q.Type switch
             {

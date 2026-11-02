@@ -5,7 +5,6 @@ using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
-using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
@@ -150,39 +149,10 @@ public class StudentController : ControllerBase
     }
 
     [HttpPost("upload-audio")]
-    public async Task<IActionResult> UploadStudentAudio(
-        [FromForm] Microsoft.AspNetCore.Http.IFormFile audio,
-        [FromServices] ISharedFileStorage sharedStorage,
-        CancellationToken cancellationToken)
-    {
-        if (audio == null || audio.Length == 0)
-        {
-            return BadRequest(ApiResponse.Fail("لم يتم رفع أي ملف."));
-        }
+    public IActionResult UploadStudentAudio() => StatusCode(
+        StatusCodes.Status410Gone,
+        ApiResponse.Fail("تم إيقاف رفع الإجابات الصوتية في الواجب والامتحان. اكتب إجابتك ثم أرسلها."));
 
-        var contentType = audio.ContentType?.ToLowerInvariant() ?? "";
-        var extension = System.IO.Path.GetExtension(audio.FileName)?.ToLowerInvariant() ?? "";
-
-        var allowedExtensions = new[] { ".mp3", ".wav", ".m4a", ".webm", ".ogg", ".aac", ".amr", ".flac" };
-        var isAudioExtension = allowedExtensions.Contains(extension);
-        var isAudioMime = contentType.StartsWith("audio/");
-
-        if (!isAudioMime || !isAudioExtension)
-        {
-            return BadRequest(ApiResponse.Fail("عذراً، يجب اختيار ملف صوتي فقط."));
-        }
-
-        var safeFileName = $"{Guid.NewGuid():N}{extension}";
-        await using var audioStream = audio.OpenReadStream();
-        await sharedStorage.WriteAsync(
-            SharedFileArea.Public,
-            Path.Combine("uploads", "audio", safeFileName),
-            audioStream,
-            cancellationToken);
-
-        var relativeUrl = $"/uploads/audio/{safeFileName}";
-        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
-    }
 }
 
 public class UpdateStudentProfileDto

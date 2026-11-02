@@ -434,17 +434,6 @@ export const studentService = {
     return res.data?.data;
   },
 
-  uploadAudio: async (file: File): Promise<{ url: string }> => {
-    const formData = new FormData();
-    formData.append('audio', file);
-    const res = await apiClient.post('/student/upload-audio', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return res.data?.data;
-  },
-
   acknowledgeTrackingPopup: async (): Promise<void> => {
     await apiClient.post('/student/acknowledge-tracking-popup');
   }

@@ -34,6 +34,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
     {
+        if (request.Answers.Any(answer => StudentAnswerPolicy.IsAudioReference(answer.ProvidedAnswer)))
+            return ApiResponse<bool>.Fail(StudentAnswerPolicy.AudioDisabledMessage);
+
         var homework = await _dbContext.Homeworks
             .ReadyForStudents()
             .Include(h => h.Questions.Where(q => !q.IsRetired))

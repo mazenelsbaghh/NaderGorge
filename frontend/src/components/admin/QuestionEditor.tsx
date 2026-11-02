@@ -6,7 +6,6 @@ import { NumberField } from '@/components/ui/number-field';
 import { Dropdown } from '@/components/ui/dropdown';
 import dynamic from 'next/dynamic';
 import { FindTheMistakeBuilder } from './FindTheMistakeBuilder';
-import { studentService } from '@/services/student-service';
 import { adminService } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import toast from 'react-hot-toast';
@@ -331,8 +330,8 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                   if (file) {
                     setUploading(true);
                     try {
-                      const res = await studentService.uploadAudio(file);
-                      onChange(index, { ...question, audioUrl: res.url, audioFile: file });
+                      const res = await adminService.uploadQuestionExplanationAudio(file);
+                      onChange(index, { ...question, audioUrl: res, audioFile: file });
                     } catch (err) {
                       console.error("Failed to upload audio", err);
                     } finally {

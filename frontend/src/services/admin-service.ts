@@ -1517,6 +1517,15 @@ export const adminService = {
     return res.data?.data;
   },
 
+  uploadQuestionExplanationAudio: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('audio', file);
+    const res = await apiClient.post<ApiResponse<string>>('/admin/questions/explanation-audio', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data.data;
+  },
+
   uploadQuestionAudio: async (questionId: string, file: File) => {
     const formData = new FormData();
     formData.append('audio', file);

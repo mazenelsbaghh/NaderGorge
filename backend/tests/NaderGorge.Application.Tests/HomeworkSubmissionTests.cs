@@ -16,6 +16,33 @@ namespace NaderGorge.Application.Tests;
 
 public sealed class HomeworkSubmissionTests
 {
+    [Theory]
+    [InlineData("/uploads/audio/old.webm")]
+    [InlineData("https://example.test/uploads/audio/old.mp3")]
+    public async Task AudioHomeworkIsRejectedBeforeAnyAnswersOrGradesAreSaved(string audio)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "audio-disabled-homework");
+        var lesson = new Lesson { Title = "Lesson", ContentSectionId = Guid.NewGuid() };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Work", TotalScore = 10,
+            Questions = [new HomeworkQuestion { BodyText = "Explain", PointsActive = 10,
+                QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay }] };
+        db.Lessons.Add(lesson); db.Homeworks.Add(homework); await db.SaveChangesAsync();
+        await new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        var response = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(homework.Questions.Single().Id, audio)]), default);
+        Assert.False(response.Success);
+        Assert.Contains("الإجابات الصوتية", response.Message);
+        db.ChangeTracker.Clear();
+        var submission = await db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync();
+        Assert.Equal(SubmissionStatus.InProgress, submission.Status);
+        Assert.Null(submission.SubmittedAt);
+        Assert.Empty(submission.Answers);
+        Assert.Empty(await db.OutboxEvents.ToListAsync());
+    }
+
     [Fact]
     public void ExistingHomeworkJobsKeepFingerprintAndFullCreditPolicyAfterUpgrade()
     {
@@ -108,9 +135,8 @@ public sealed class HomeworkSubmissionTests
     [Theory]
     [InlineData("explanation", false, true)]
     [InlineData("", false, true)]
-    [InlineData("/uploads/audio/answer.webm", false, false)]
     [InlineData("explanation", true, false)]
-    public async Task SubmittedWrittenHomeworkDurablyQueuesAIWhileAudioAndExpiredAnswersDoNot(string answer, bool expired, bool queued)
+    public async Task SubmittedWrittenHomeworkDurablyQueuesAIUnlessExpired(string answer, bool expired, bool queued)
     {
         await using var db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "201000000093");

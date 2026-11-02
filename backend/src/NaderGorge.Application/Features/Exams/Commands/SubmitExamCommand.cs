@@ -76,8 +76,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     private async Task<ApiResponse<ExamResultDto>> HandleOnce(
         SubmitExamCommand request, CancellationToken ct, int progressConflictRetries)
     {
-        if (request.Answers?.Any(answer => !string.IsNullOrWhiteSpace(answer.AudioUrl)) == true)
-            return ApiResponse<ExamResultDto>.Fail("الإجابات الصوتية غير مسموح بها في الامتحان. اكتب إجابتك ثم أرسلها.");
+        if (request.Answers?.Any(answer => !string.IsNullOrWhiteSpace(answer.AudioUrl)
+            || StudentAnswerPolicy.IsAudioReference(answer.AnswerText)
+            || StudentAnswerPolicy.IsAudioReference(answer.SelectedText)) == true)
+            return ApiResponse<ExamResultDto>.Fail(StudentAnswerPolicy.AudioDisabledMessage);
 
         var exam = await _db.Exams
             .AsNoTracking()
