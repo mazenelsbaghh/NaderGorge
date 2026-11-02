@@ -86,3 +86,4 @@ artifacts/teacher-defaults/production-teachers.txt
 
 # Synthetic PostgreSQL fixture for the staged finance migration regression.
 !deploy/production/tests/fixtures/finance-activation.sql
+worker/.tmp/grading-rubrics-v*/
