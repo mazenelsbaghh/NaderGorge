@@ -1,3 +1,5 @@
+import { gradingRuntime } from './test-support/writtenGrading.js';
+import { setAIServiceRuntimeFactoryForTests } from './services/geminiService.js';
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'fs';
@@ -76,129 +78,38 @@ test('Job cancellation flow works correctly', async () => {
   }, /Job cancellation requested/);
 });
 
-test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers callback', async () => {
-  let calledUrl = '';
-  let calledBody: any = null;
-  
-  globalThis.fetch = async (url: RequestInfo | URL, options?: RequestInit) => {
-    const urlString = String(url);
-    if (urlString.includes('callbacks/essay-graded')) {
-      calledUrl = urlString;
-      calledBody = JSON.parse(options?.body as string);
-      return Response.json({ success: true, data: { essaySubmissionId: 'sub-789', status: 'TeacherGraded' } });
-    } else {
-      // Gemini API mock response
-      const geminiResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({ isCorrect: true, feedback: 'إجابة رائعة يا بطل!' })
-                }
-              ]
-            }
-          }
-        ]
-      };
-      return {
-        ok: true,
-        status: 200,
-        headers: {
-          get: (name: string) => {
-            if (name.toLowerCase() === 'content-type') return 'application/json';
-            return null;
-          },
-          entries: () => []
-        },
-        json: async () => geminiResponse,
-        text: async () => JSON.stringify(geminiResponse)
-      } as unknown as Response;
-    }
+test('processEvaluateEssayJob persists a calculated AI grade through its callback', async context => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => { globalThis.fetch = originalFetch; setAIServiceRuntimeFactoryForTests(); });
+  const provider = gradingRuntime(context, { met: 1, total: 1, answer: 'إجابة الطالب', feedback: 'إجابة رائعة يا بطل!' });
+  setAIServiceRuntimeFactoryForTests(() => provider);
+  let delivered: any;
+  globalThis.fetch = async (_url, options) => {
+    delivered = JSON.parse(String(options?.body));
+    return Response.json({ success: true, data: { essaySubmissionId: 'sub-789', status: 'TeacherGraded' } });
   };
-
-  const progressCalls: any[] = [];
-  const dummyJob: any = {
-    id: 'essay-job-456',
-    data: {
-      essaySubmissionId: 'sub-789',
-      questionText: 'ما المقصود بالتشبيه؟',
-      answerText: 'إجابة الطالب',
-      expectedAnswer: 'الإجابة النموذجية'
-    },
-    updateProgress: async (p: any) => {
-      progressCalls.push(p);
-    },
-    updateData: async (data: unknown) => {
-      dummyJob.data = data;
-    }
-  };
-
-  const result = await processEvaluateEssayJob(dummyJob);
-  assert.deepStrictEqual(result, { success: true, score: 1, feedback: 'إجابة رائعة يا بطل!' });
-  assert.strictEqual(calledUrl, 'http://localhost:5245/api/v1/internal/callbacks/essay-graded');
-  assert.strictEqual(calledBody.essaySubmissionId, 'sub-789');
-  assert.strictEqual(calledBody.aiScore, 1);
-  assert.strictEqual(calledBody.aiFeedback, 'إجابة رائعة يا بطل!');
-  assert.ok(progressCalls.length > 0);
+  const job: any = { id: 'essay-job-456', data: { essaySubmissionId: 'sub-789', questionText: 'ما المقصود بالتشبيه؟',
+    answerText: 'إجابة الطالب', expectedAnswer: 'الإجابة النموذجية' },
+    updateProgress: async () => {}, updateData: async (next: unknown) => { job.data = next; } };
+  const grade = await processEvaluateEssayJob(job);
+  assert.equal(grade.success, true);
+  assert.equal(grade.score, 1);
+  assert.equal(delivered.aiScore, 1);
+  assert.equal(delivered.essaySubmissionId, 'sub-789');
+  assert.ok(delivered.aiFeedback.endsWith('إجابة رائعة يا بطل!'));
 });
 
-test('processEvaluateEssayJob throws error to trigger queue retry if callback fails', async () => {
-  globalThis.fetch = async (url: RequestInfo | URL, options?: RequestInit) => {
-    const urlString = String(url);
-    if (urlString.includes('callbacks/essay-graded')) {
-      return {
-        ok: false,
-        status: 500,
-        headers: {
-          get: (n: string) => null,
-          entries: () => []
-        },
-        text: async () => 'Internal Server Error'
-      } as unknown as Response;
-    } else {
-      const geminiResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({ isCorrect: false, feedback: 'محاولة جيدة ولكن غير صحيحة.' })
-                }
-              ]
-            }
-          }
-        ]
-      };
-      return {
-        ok: true,
-        status: 200,
-        headers: {
-          get: (name: string) => {
-            if (name.toLowerCase() === 'content-type') return 'application/json';
-            return null;
-          },
-          entries: () => []
-        },
-        json: async () => geminiResponse,
-        text: async () => JSON.stringify(geminiResponse)
-      } as unknown as Response;
-    }
-  };
-
-  const dummyJob: any = {
-    id: 'essay-job-retry',
-    data: {
-      essaySubmissionId: 'sub-retry',
-      answerText: 'wrong answer', questionText: 'Question', expectedAnswer: 'Correct answer'
-    },
-    updateProgress: async () => {},
-    updateData: async (data: unknown) => { dummyJob.data = data; }
-  };
-
-  await assert.rejects(async () => {
-    await processEvaluateEssayJob(dummyJob);
-  }, /Essay callback failed with status 500/);
+test('processEvaluateEssayJob keeps failed callbacks retryable with a saved rubric grade', async context => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => { globalThis.fetch = originalFetch; setAIServiceRuntimeFactoryForTests(); });
+  const provider = gradingRuntime(context, { met: 0, total: 1, answer: 'wrong answer', feedback: 'محاولة جيدة ولكن غير صحيحة.' });
+  setAIServiceRuntimeFactoryForTests(() => provider);
+  globalThis.fetch = async () => new Response('Internal Server Error', { status: 500 });
+  const job: any = { id: 'essay-job-retry', data: { essaySubmissionId: 'sub-retry', answerText: 'wrong answer',
+    questionText: 'Question', expectedAnswer: 'Correct answer' },
+    updateProgress: async () => {}, updateData: async (next: unknown) => { job.data = next; } };
+  await assert.rejects(processEvaluateEssayJob(job), /Essay callback failed with status 500/);
+  assert.equal(job.data.evaluation.score, 0);
 });
 
 test('extractAudioFromVideo refuses to route YouTube through third-party downloaders', async () => {

@@ -1,3 +1,4 @@
+import { gradingRuntime } from '../test-support/writtenGrading.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Job } from 'bullmq';
@@ -10,10 +11,8 @@ test('2026-09-09 callback outage preserves AI result for retry without regenerat
   const originalGet = Redis.prototype.get;
   Redis.prototype.get = async () => null;
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
-  setAIServiceRuntimeFactoryForTests(() => ({
-    config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: '{"isCorrect":true,"feedback":"original feedback"}' }) } } as never,
-  }));
+  const provider = gradingRuntime(context, { met: 3, total: 4, answer: 'answer', feedback: 'original feedback' });
+  setAIServiceRuntimeFactoryForTests(() => provider);
   const job = {
     id: 'essay-checkpoint', data: { essaySubmissionId: 'essay', questionId: 'question', studentId: 'student',
       questionText: 'Question', expectedAnswer: 'Teacher answer', answerText: 'answer' } as EvaluateEssayJobData,
@@ -21,7 +20,9 @@ test('2026-09-09 callback outage preserves AI result for retry without regenerat
   } as unknown as Job<EvaluateEssayJobData>;
   globalThis.fetch = async () => new Response('private backend diagnostics', { status: 503 });
   await assert.rejects(processEvaluateEssayJob(job), error => error instanceof Error && !error.message.includes('private backend diagnostics'));
-  assert.deepEqual(job.data.evaluation, { isCorrect: true, feedback: 'original feedback' });
+  assert.equal(job.data.evaluation?.score, 0.75);
+  assert.ok(job.data.evaluation?.feedback.endsWith('original feedback'));
+  const savedFeedback = job.data.evaluation!.feedback;
   // The provider is now unavailable. Delivery must still succeed from the checkpoint.
   setAIServiceRuntimeFactoryForTests(() => { throw new Error('provider unavailable'); });
   let delivered: unknown;
@@ -31,7 +32,27 @@ test('2026-09-09 callback outage preserves AI result for retry without regenerat
   };
   const result = await processEvaluateEssayJob(job);
   assert.equal(result.success, true);
-  assert.deepEqual(delivered, { essaySubmissionId: 'essay', aiScore: 1, aiFeedback: 'original feedback' });
+  assert.deepEqual(delivered, { essaySubmissionId: 'essay', aiScore: 0.75, aiFeedback: savedFeedback });
+});
+
+test('legacy boolean queue checkpoints still deliver saved marks without re-evaluation', async context => {
+  const originalFetch = globalThis.fetch;
+  const originalGet = Redis.prototype.get;
+  Redis.prototype.get = async () => null;
+  context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
+  setAIServiceRuntimeFactoryForTests(() => { throw new Error('provider unavailable'); });
+  const job = { id: 'legacy-essay', data: { essaySubmissionId: 'essay', answerText: 'answer',
+    evaluation: { isCorrect: true, feedback: 'Saved reason' } }, updateProgress: async () => {},
+  } as unknown as Job<EvaluateEssayJobData>;
+  let delivered: { aiScore: number } | undefined;
+  globalThis.fetch = async (_url, init) => {
+    delivered = JSON.parse(String(init?.body));
+    return Response.json({ success: true, data: { essaySubmissionId: 'essay', status: 'TeacherGraded' } });
+  };
+
+  await processEvaluateEssayJob(job);
+
+  assert.equal(delivered?.aiScore, 1);
 });
 
 test('HTTP success without a matching saved result keeps the evaluation retryable', async context => {

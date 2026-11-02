@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
-import { evaluateEssayWithAI } from '../services/geminiService.js';
+import { evaluateHomeworkWithAI } from '../services/geminiService.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 
 interface HomeworkQuestion {
@@ -29,9 +29,9 @@ export async function evaluateHomework(job: Job<HomeworkEvaluationData>) {
     await throwIfCancellationRequested(job);
     if (grades.some(grade => grade.answerId === question.AnswerId)) continue;
     const evaluation = question.AnswerText.trim()
-      ? await evaluateEssayWithAI(question.AnswerText, question.ExpectedAnswer, question.QuestionText)
-      : { isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' };
-    grades.push({ answerId: question.AnswerId, score: evaluation.isCorrect ? 1 : 0, feedback: evaluation.feedback });
+      ? await evaluateHomeworkWithAI(question.AnswerText, question.ExpectedAnswer, question.QuestionText)
+      : { score: 0, isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' };
+    grades.push({ answerId: question.AnswerId, score: evaluation.score, feedback: evaluation.feedback });
     // Preserve each paid evaluation across provider failures and callback retries.
     await job.updateData({ ...job.data, grades: [...grades] });
     await job.updateProgress(Math.round(grades.length / questions.length * 90));
