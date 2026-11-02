@@ -9,7 +9,7 @@ namespace NaderGorge.API.Controllers;
 [ApiController]
 [Route("api/teacher/reports")]
 [Authorize(Roles = "Teacher")]
-public sealed class TeacherReportsController : ControllerBase
+public sealed partial class TeacherReportsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IReportExportService _exporter;

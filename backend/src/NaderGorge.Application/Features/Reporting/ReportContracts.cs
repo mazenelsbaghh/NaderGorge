@@ -93,6 +93,10 @@ public sealed record ReportDefinitionDto(
 
 public sealed record ReportExportDto(byte[] Content, string ContentType, string FileName);
 public sealed record StudentLedgerFilter(EducationStage? Stage = null, StudyTrack? StudyTrack = null);
+public sealed record StudentCourseSummaryFilter(EducationStage? Stage = null, Guid? PackageId = null,
+    GradeLevel? Grade = null, int Page = 1, int PageSize = 20);
+public sealed record StudentCourseSummaryReport(IReadOnlyList<ReportColumnDto> Columns,
+    IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows, int TotalStudents, int Page, int PageSize);
 
 public interface IReportExportService
 {
@@ -101,6 +105,8 @@ public interface IReportExportService
 
 public interface IStudentLedgerExportService
 {
+    Task<StudentCourseSummaryReport> ReadCourseSummaryAsync(Guid teacherId, StudentCourseSummaryFilter filter, CancellationToken ct);
+    Task<ReportExportDto> ExportCourseSummaryAsync(Guid teacherId, Guid actorUserId, StudentCourseSummaryFilter filter, CancellationToken ct);
     Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, CancellationToken ct);
     Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, StudentLedgerFilter filter, CancellationToken ct);
     Task<ReportExportDto> ExportForTeacherAsync(Guid actorUserId, CancellationToken ct);
