@@ -1,3 +1,4 @@
+import { cachedWrittenGrading } from './writtenGradingCache.js';
 import { mimSceneInstructions, mimSceneSchema, parseWrittenScene, type WritingContext } from './mimSceneWriter.js';
 import { FileState, GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { Agent, setGlobalDispatcher } from 'undici';
@@ -500,15 +501,23 @@ async function evaluateWrittenAnswerWithAI(
   if (!questionText?.trim())
     throw new Error('Essay grading requires the question text.');
   const runtime = createRuntime();
-  const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
-    model: runtime.config.textModel,
-    contents: JSON.stringify({ questionText, expectedAnswer: expectedAnswer?.trim() || '', studentAnswer: answerText }),
-    config: {
-      systemInstruction: gradingInstruction, responseMimeType: 'application/json', responseSchema: essayGradingSchema,
-      thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }, temperature: 0, maxOutputTokens: 2048, abortSignal,
-    },
-  }), ESSAY_GRADING_TIMEOUT_MS);
-  return parseWrittenAnswerGrade(response.text);
+  const source = { questionText, expectedAnswer: expectedAnswer?.trim() || '', studentAnswer: answerText };
+  return cachedWrittenGrading({ kind: 'direct-grade', model: runtime.config.textModel,
+    instruction: gradingInstruction, schema: essayGradingSchema, thinkingLevel: 'LOW', source }, async () => {
+    const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
+      model: runtime.config.textModel,
+      contents: JSON.stringify(source),
+      config: {
+        systemInstruction: gradingInstruction, responseMimeType: 'application/json', responseSchema: essayGradingSchema,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }, temperature: 0, maxOutputTokens: 2048, abortSignal,
+      },
+    }), ESSAY_GRADING_TIMEOUT_MS);
+    const usage = response.usageMetadata;
+    console.log('[written-grading-usage]', { model: runtime.config.textModel,
+      inputTokens: usage?.promptTokenCount, outputTokens: usage?.candidatesTokenCount,
+      thinkingTokens: usage?.thoughtsTokenCount, cachedInputTokens: usage?.cachedContentTokenCount });
+    return parseWrittenAnswerGrade(response.text);
+  });
 }
 
 function parseWrittenAnswerGrade(responseText: string | undefined): EssayAIResult {

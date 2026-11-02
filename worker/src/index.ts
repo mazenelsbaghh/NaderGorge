@@ -2,6 +2,8 @@ import { parseWritingContext } from './services/mimSceneWriter.js';
 import { installMimEpisodeRoutes } from './server/mimEpisodeRoutes.js';
 import { generateMimStudioScene } from './services/geminiService.js';
 import { installAIProviderMonitor } from './services/aiProviderMonitor.js';
+import { installWrittenGradingCache } from './services/writtenGradingCache.js';
+import { withWrittenGradingRetryPolicy } from './services/writtenGradingRetry.js';
 import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -62,6 +64,9 @@ const JOB_RETENTION_OPTIONS = {
 const redis = createRedisConnection();
 installSystemLogCapture(redis);
 installAIProviderMonitor(redis);
+const gradingCacheRedis = createRedisConnection({ commandTimeout: 1_000, maxRetriesPerRequest: 1, enableOfflineQueue: false });
+gradingCacheRedis.on('error', () => console.warn('[written-grading-cache] Redis connection unavailable.'));
+installWrittenGradingCache(gradingCacheRedis);
 monitorRedisSentinelAvailability(redis);
 const pool = databasePool();
 
@@ -214,14 +219,14 @@ async function startAIWorker() {
 }
 
 async function startEssayWorker() {
-  const worker = new Worker('ai-essay-grading', async (job) => {
+  const worker = new Worker('ai-essay-grading', async (job) => withWrittenGradingRetryPolicy(async () => {
     if (job.name === 'evaluate-homework') {
       const homework = await import('./jobs/evaluateHomework.js');
       return homework.evaluateHomework(job);
     }
     const processor = await import('./jobs/evaluateEssay.js');
     return await processor.processEvaluateEssayJob(job);
-  }, { connection, concurrency: 3 });
+  }), { connection, concurrency: 3 });
 
   worker.on('completed', job => {
     console.log(`[Essay Worker] Job ${job.id} has completed successfully!`);
