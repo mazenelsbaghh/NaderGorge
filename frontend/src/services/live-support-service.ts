@@ -4,6 +4,7 @@ import { createClientId } from '@/lib/client-id';
 import type { LiveSupportChannel } from '@/lib/live-support-channel';
 
 const invalidateSupport = (keys: string[] = ['support:staff', 'support:dashboard']) => invalidateMany(keys);
+const WHATSAPP_CAMPAIGN_AUDIENCE_TIMEOUT_MS = 65_000;
 
 export type LiveSupportConversationStatus = 'Waiting' | 'Assigned' | 'Active' | 'Closed' | 'Abandoned';
 export type LiveSupportParticipantType = 'Student' | 'Guest';
@@ -743,7 +744,7 @@ export const liveSupportService = {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignAudiencePreview>>(
       '/live-support/whatsapp/campaigns/audience/preview',
       payload,
-      { signal },
+      { signal, timeout: WHATSAPP_CAMPAIGN_AUDIENCE_TIMEOUT_MS },
     );
     return response.data.data;
   },
@@ -760,7 +761,7 @@ export const liveSupportService = {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignDraft>>(
       '/live-support/whatsapp/campaigns/drafts',
       payload,
-      { headers: { 'Idempotency-Key': idempotencyKey } },
+      { headers: { 'Idempotency-Key': idempotencyKey }, timeout: WHATSAPP_CAMPAIGN_AUDIENCE_TIMEOUT_MS },
     );
     invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
     return response.data.data;
@@ -783,7 +784,7 @@ export const liveSupportService = {
         confirmationPhrase: payload.confirmationPhrase,
         idempotencyKey,
       },
-      { headers: { 'Idempotency-Key': idempotencyKey } },
+      { headers: { 'Idempotency-Key': idempotencyKey }, timeout: WHATSAPP_CAMPAIGN_AUDIENCE_TIMEOUT_MS },
     );
     invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
     return response.data.data;
