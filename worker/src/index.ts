@@ -4,6 +4,7 @@ import { generateMimStudioScene } from './services/geminiService.js';
 import { installAIProviderMonitor } from './services/aiProviderMonitor.js';
 import { installWrittenGradingCache } from './services/writtenGradingCache.js';
 import { withWrittenGradingRetryPolicy } from './services/writtenGradingRetry.js';
+import { WRITTEN_GRADING_CONCURRENCY } from './jobs/writtenGradingConcurrency.js';
 import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -226,7 +227,7 @@ async function startEssayWorker() {
     }
     const processor = await import('./jobs/evaluateEssay.js');
     return await processor.processEvaluateEssayJob(job);
-  }), { connection, concurrency: 3 });
+  }), { connection, concurrency: WRITTEN_GRADING_CONCURRENCY });
 
   worker.on('completed', job => {
     console.log(`[Essay Worker] Job ${job.id} has completed successfully!`);

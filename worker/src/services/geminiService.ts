@@ -1,6 +1,6 @@
 import { cachedWrittenGrading } from './writtenGradingCache.js';
 import { mimSceneInstructions, mimSceneSchema, parseWrittenScene, type WritingContext } from './mimSceneWriter.js';
-import { FileState, GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
+import { FileState, GoogleGenAI, Type } from '@google/genai';
 import { Agent, setGlobalDispatcher } from 'undici';
 import fs from 'fs';
 import path from 'path';
@@ -460,6 +460,8 @@ export async function analyzeVideoChapters(
   return { srtContent, chapters };
 }
 
+export const WRITTEN_GRADING_MODEL = 'gemini-2.5-flash';
+const WRITTEN_GRADING_THINKING = { thinkingBudget: 0 };
 const ESSAY_GRADING_TIMEOUT_MS = 30_000;
 
 const writtenAnswerGradingInstruction = `You are an Egyptian school teacher grading a single written answer.
@@ -502,18 +504,18 @@ async function evaluateWrittenAnswerWithAI(
     throw new Error('Essay grading requires the question text.');
   const runtime = createRuntime();
   const source = { questionText, expectedAnswer: expectedAnswer?.trim() || '', studentAnswer: answerText };
-  return cachedWrittenGrading({ kind: 'direct-grade', model: runtime.config.textModel,
-    instruction: gradingInstruction, schema: essayGradingSchema, thinkingLevel: 'LOW', source }, async () => {
+  return cachedWrittenGrading({ kind: 'direct-grade', model: WRITTEN_GRADING_MODEL,
+    instruction: gradingInstruction, schema: essayGradingSchema, thinkingConfig: WRITTEN_GRADING_THINKING, source }, async () => {
     const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
-      model: runtime.config.textModel,
+      model: WRITTEN_GRADING_MODEL,
       contents: JSON.stringify(source),
       config: {
         systemInstruction: gradingInstruction, responseMimeType: 'application/json', responseSchema: essayGradingSchema,
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }, temperature: 0, maxOutputTokens: 2048, abortSignal,
+        thinkingConfig: WRITTEN_GRADING_THINKING, temperature: 0, maxOutputTokens: 2048, abortSignal,
       },
     }), ESSAY_GRADING_TIMEOUT_MS);
     const usage = response.usageMetadata;
-    console.log('[written-grading-usage]', { model: runtime.config.textModel,
+    console.log('[written-grading-usage]', { model: WRITTEN_GRADING_MODEL,
       inputTokens: usage?.promptTokenCount, outputTokens: usage?.candidatesTokenCount,
       thinkingTokens: usage?.thoughtsTokenCount, cachedInputTokens: usage?.cachedContentTokenCount });
     return parseWrittenAnswerGrade(response.text);

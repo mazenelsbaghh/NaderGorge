@@ -2,6 +2,7 @@ import { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { evaluateEssayWithAI } from '../services/geminiService.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
+import { withWrittenGradingSlot } from './writtenGradingConcurrency.js';
 const API_URL = (() => {
   const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
   return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
@@ -32,7 +33,10 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
 
     // A callback retry must not pay for (or wait for) the same AI evaluation again.
     const parsed = job.data.evaluation ?? (answerText.trim()
-      ? await evaluateEssayWithAI(answerText, expectedAnswer, questionText)
+      ? await withWrittenGradingSlot(async () => {
+          await throwIfCancellationRequested(job);
+          return evaluateEssayWithAI(answerText, expectedAnswer, questionText);
+        })
       : { score: 0, isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' });
     if (!job.data.evaluation) await job.updateData({ ...job.data, evaluation: parsed });
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
