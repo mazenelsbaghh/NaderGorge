@@ -238,7 +238,7 @@ test('English lesson mindmap accepts verified English visible text (2026-08-10 r
   assert.match(imageUrl, /\/mindmaps\/english-language-regression_run_/);
 });
 
-test('essay request uses the configured text model with the exact grading inputs', async () => {
+test('essay requests use Gemini 2.5 Flash with compatible thinking settings', async () => {
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
@@ -246,7 +246,8 @@ test('essay request uses the configured text model with the exact grading inputs
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
   assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { score: 1, isCorrect: true, feedback: 'برافو عليك' });
-  assert.equal(sent.model, 'text-model');
+  assert.equal(sent.model, 'gemini-2.5-flash');
+  assert.deepEqual(sent.config.thinkingConfig, { thinkingBudget: 0 });
   assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
   assert.deepEqual(sent.config.responseSchema.required, ['score', 'feedback']);
 });
