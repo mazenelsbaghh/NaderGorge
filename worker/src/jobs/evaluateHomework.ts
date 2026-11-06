@@ -2,6 +2,9 @@ import type { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { evaluateHomeworkWithAI } from '../services/geminiService.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
+import { withWrittenGradingSlot } from './writtenGradingConcurrency.js';
+
+const HOMEWORK_QUESTION_CONCURRENCY = 3;
 
 interface HomeworkQuestion {
   AnswerId: string;
@@ -24,22 +27,42 @@ export async function evaluateHomework(job: Job<HomeworkEvaluationData>) {
     || new Set(questions.map(q => q.AnswerId)).size !== questions.length) {
     throw new Error('Invalid homework evaluation payload.');
   }
-  const grades = [...(job.data.grades ?? [])];
-  for (const question of questions) {
-    await throwIfCancellationRequested(job);
-    if (grades.some(grade => grade.answerId === question.AnswerId)) continue;
-    const evaluation = question.AnswerText.trim()
-      ? await evaluateHomeworkWithAI(question.AnswerText, question.ExpectedAnswer, question.QuestionText)
-      : { score: 0, isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' };
-    grades.push({ answerId: question.AnswerId, score: evaluation.score, feedback: evaluation.feedback });
-    // Preserve each paid evaluation across provider failures and callback retries.
-    await job.updateData({ ...job.data, grades: [...grades] });
-    await job.updateProgress(Math.round(grades.length / questions.length * 90));
-  }
+  const grades = await gradePendingQuestions(job, questions);
   await throwIfCancellationRequested(job);
   await deliverGrades({ submissionId, fingerprint, grades });
   await job.updateProgress(100);
   return { success: true };
+}
+
+async function gradePendingQuestions(job: Job<HomeworkEvaluationData>, questions: HomeworkQuestion[]) {
+  const grades = [...(job.data.grades ?? [])];
+  const savedAnswerIds = new Set(grades.map(grade => grade.answerId));
+  const pending = questions.filter(question => !savedAnswerIds.has(question.AnswerId));
+  for (let offset = 0; offset < pending.length; offset += HOMEWORK_QUESTION_CONCURRENCY) {
+    const batch = pending.slice(offset, offset + HOMEWORK_QUESTION_CONCURRENCY);
+    const outcomes = await Promise.allSettled(batch.map(question => gradeQuestion(job, question)));
+    const completed = outcomes.flatMap(outcome => outcome.status === 'fulfilled' ? [outcome.value] : []);
+    if (completed.length) {
+      grades.push(...completed);
+      // Keep paid results even when another question fails; write one checkpoint per batch.
+      await job.updateData({ ...job.data, grades: [...grades] });
+      await job.updateProgress(Math.round(grades.length / questions.length * 90));
+    }
+    const failed = outcomes.find(outcome => outcome.status === 'rejected');
+    if (failed) throw failed.reason;
+  }
+  return grades;
+}
+
+async function gradeQuestion(job: Job<HomeworkEvaluationData>, question: HomeworkQuestion): Promise<HomeworkGrade> {
+  await throwIfCancellationRequested(job);
+  const evaluation = question.AnswerText.trim()
+    ? await withWrittenGradingSlot(async () => {
+        await throwIfCancellationRequested(job);
+        return evaluateHomeworkWithAI(question.AnswerText, question.ExpectedAnswer, question.QuestionText);
+      })
+    : { score: 0, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' };
+  return { answerId: question.AnswerId, score: evaluation.score, feedback: evaluation.feedback };
 }
 
 async function deliverGrades(payload: { submissionId: string; fingerprint: string; grades: HomeworkGrade[] }) {
