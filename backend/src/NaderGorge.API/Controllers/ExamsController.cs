@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
 using NaderGorge.Application.Features.Exams;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Common;
 using System.Security.Claims;
 using NaderGorge.API.Filters;
@@ -24,6 +25,14 @@ public class ExamsController : ControllerBase
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+    [HttpGet("{id:guid}/entry-summary")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> GetEntrySummary(Guid id, CancellationToken ct)
+    {
+        var summary = await _mediator.Send(new GetAssessmentEntrySummaryQuery(id, GetUserId(), AssessmentEntryKind.Exam), ct);
+        return summary.Success ? Ok(summary) : NotFound(summary);
+    }
 
     [HttpPost("{id:guid}/start")]
     public async Task<IActionResult> StartExamAttempt(Guid id)

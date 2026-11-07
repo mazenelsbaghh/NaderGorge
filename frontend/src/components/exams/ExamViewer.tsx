@@ -1,7 +1,6 @@
 'use client';
 
 import { AnswerGradingFeedback } from '@/components/assessment/AnswerGradingFeedback';
-import { AssessmentQuestionSummary } from '@/components/assessments/AssessmentQuestionSummary';
 
 import { useState, useEffect, useId, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1012,7 +1011,6 @@ export function ExamViewer({
       {/* ─── Exam header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{examTitle}</h1>
-        <AssessmentQuestionSummary questions={orderedQuestions} />
         {attempt.revisionId && (
           <p role="status" className="mt-3 rounded-xl bg-muted p-3 text-sm leading-7 text-foreground">
             استكمال الأسئلة المضافة فقط. إجاباتك السابقة محفوظة، والدرجة النهائية تشمل المحاولة كاملة.

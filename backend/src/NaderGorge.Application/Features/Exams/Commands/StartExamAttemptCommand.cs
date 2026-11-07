@@ -262,7 +262,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             }
             else
             {
-                allQuestions = allQuestions.OrderBy(q => q.Order);
+                allQuestions = allQuestions.OrderBy(q => q.Order).ThenBy(q => q.Id);
             }
 
             if (exam.DisplayQuestionCount.HasValue && exam.DisplayQuestionCount.Value > 0)

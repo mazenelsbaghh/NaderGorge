@@ -24,7 +24,6 @@ import { normalizeQuestionRichText } from '@/lib/question-text';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { QuestionImage } from '@/components/assessment/QuestionImage';
-import { AssessmentQuestionSummary } from '@/components/assessments/AssessmentQuestionSummary';
 
 // ─── Question Card ──────────────────────────────────────────────────────────────
 
@@ -316,7 +315,6 @@ export function HomeworkViewer({
       {/* ─── Homework header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{attempt.title}</h1>
-        <AssessmentQuestionSummary questions={questions} />
         {attempt.revisionId && (
           <p role="status" className="mt-3 rounded-xl bg-muted p-3 text-sm leading-7 text-foreground">
             استكمال الأسئلة المضافة فقط. إجاباتك السابقة محفوظة، والدرجة النهائية تشمل المحاولة كاملة.
