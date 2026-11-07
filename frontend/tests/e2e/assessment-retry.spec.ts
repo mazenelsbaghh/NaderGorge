@@ -394,6 +394,12 @@ for (const [routeName, label] of [['exams', 'الامتحان'], ['homework', '�
     await studentSession(page);
     let starts = 0;
     await page.route(`**/api/${routeName}/${assessmentId}/latest-result`, route => reply(route, null, 404));
+    await page.route(`**/api/${routeName}/${assessmentId}/entry-summary`, route => reply(route, {
+      total: 40,
+      essay: { minimum: 20, maximum: 20 },
+      multipleChoice: { minimum: 20, maximum: 20 },
+      findTheMistake: { minimum: 0, maximum: 0 },
+    }));
     await page.route(`**/api/${routeName}/${assessmentId}/start`, route => {
       starts++;
       return route.fulfill({ status: 403, json: { message: 'اختبار طلب البدء بعد التأكيد' } });
@@ -401,6 +407,8 @@ for (const [routeName, label] of [['exams', 'الامتحان'], ['homework', '�
     await page.goto(`/student/${routeName}/${assessmentId}`);
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText(`هل أنت متأكد من دخول ${label}؟`);
+    await expect(dialog).toContainText('عدد الأسئلة: ٤٠ · ٢٠ مقالي · ٢٠ اختياري');
+    await expect(page.getByRole('timer')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('entry-confirmation.png') });
     await expect(dialog.getByRole('button', { name: 'إلغاء', exact: true })).toBeFocused();
     expect(starts).toBe(0);

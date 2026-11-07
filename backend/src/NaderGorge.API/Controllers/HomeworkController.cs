@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Homework.Commands;
 using NaderGorge.Application.Features.Homework.Queries;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.API.Extensions;
 using NaderGorge.API.Filters;
 
@@ -18,6 +19,14 @@ public class HomeworkController : ControllerBase
     public HomeworkController(IMediator mediator) => _mediator = mediator;
 
     private Guid GetUserId() => User.RequireUserId();
+
+    [HttpGet("{homeworkId:guid}/entry-summary")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> GetEntrySummary(Guid homeworkId, CancellationToken ct)
+    {
+        var summary = await _mediator.Send(new GetAssessmentEntrySummaryQuery(homeworkId, GetUserId(), AssessmentEntryKind.Homework), ct);
+        return summary.Success ? Ok(summary) : NotFound(summary);
+    }
 
     [HttpGet("pending")]
     public async Task<IActionResult> GetPendingHomework()

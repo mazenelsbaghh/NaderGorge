@@ -84,6 +84,7 @@ function ExamPageClientContent() {
   const confirmationDialog = confirmation ? (
     <AssessmentStartConfirmation
       kind="exam"
+      assessmentId={examId}
       onConfirm={() => {
         setConfirmation(null);
         void startExam();

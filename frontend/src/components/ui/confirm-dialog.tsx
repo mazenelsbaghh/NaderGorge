@@ -8,7 +8,9 @@ interface ConfirmDialogProps {
   open: boolean;
   title: string;
   description: string;
+  details?: string;
   confirmLabel?: string;
+  confirmDisabled?: boolean;
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'primary';
   onConfirm: () => void;
@@ -19,7 +21,9 @@ export function ConfirmDialog({
   open,
   title,
   description,
+  details,
   confirmLabel = 'تأكيد',
+  confirmDisabled = false,
   cancelLabel = 'إلغاء',
   variant = 'danger',
   onConfirm,
@@ -78,6 +82,11 @@ export function ConfirmDialog({
           className="px-6 pb-6 text-sm leading-relaxed text-[var(--admin-muted)] text-center font-medium"
         >
           {description}
+          {details && (
+            <span className="mt-3 block font-bold text-[var(--admin-text)]" aria-live="polite">
+              {details}
+            </span>
+          )}
         </p>
 
         <div className="flex flex-col-reverse items-stretch justify-center gap-3 sm:flex-row sm:items-center">
@@ -92,7 +101,8 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className={`h-11 rounded-xl px-8 text-sm font-bold text-white transition-[color,background-color,transform] active:translate-y-px ${
+            disabled={confirmDisabled}
+            className={`h-11 rounded-xl px-8 text-sm font-bold text-white transition-[color,background-color,transform] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 ${
               isD
                 ? 'bg-red-600 hover:bg-red-700'
                 : isP

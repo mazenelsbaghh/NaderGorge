@@ -75,6 +75,7 @@ function HomeworkPageClientContent() {
   const confirmationDialog = confirmation ? (
     <AssessmentStartConfirmation
       kind="homework"
+      assessmentId={homeworkId}
       onConfirm={() => {
         const action = confirmation === 'restart' ? loadHomework : loadHomework;
         setConfirmation(null);
