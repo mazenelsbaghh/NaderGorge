@@ -214,7 +214,6 @@ void main() {
       });
       try {
         final endpoints = await LanDiscovery.search(
-          timeout: const Duration(milliseconds: 250),
           discoveryPort: socket.port,
           targets: [InternetAddress.loopbackIPv4],
         );
