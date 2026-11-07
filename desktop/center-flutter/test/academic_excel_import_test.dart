@@ -8,6 +8,58 @@ import 'package:massar_center/domain/models.dart';
 import 'package:xml/xml.dart';
 
 void main() {
+  test('Cairo attendance reads status exports and phone-only lists', () {
+    final workbook = readCairoAttendanceExcel(
+      _xlsx(
+        [
+          ['01234', 'حسن تجريبي', 'حاضر', '01000000011'],
+          ['01235', 'طالب غائب', 'غائب', '01000000012'],
+        ],
+        headers: ['كود الطالب', 'اسم الطالب', 'الحالة', 'رقم الهاتف'],
+        moreSheets: {
+          'كشف هاتف': _sheet(
+            [
+              ['الاسم ', 'ورقم التليفون'],
+              ['سلمى تجريبية', _Cell('1000000013', type: 'n')],
+            ],
+            headers: ['كشف السبت'],
+          ),
+        },
+      ),
+    );
+    expect(workbook.rows.map((row) => row.present), [true, false, true]);
+    expect(workbook.rows.first.code, '01234');
+    expect(workbook.rows.last.number, 3);
+
+    final learner = Student(
+      id: 'phone-only',
+      name: 'سلمى تجريبية',
+      code: '01236',
+      phone: '01000000013',
+      groupIds: ['selected'],
+      createdAt: DateTime.utc(2026),
+    );
+    final matcher = CairoAttendanceMatcher([learner]);
+    expect(matcher.match(workbook.rows.last)?.id, learner.id);
+    expect(matcher.match(workbook.rows.first), isNull);
+  });
+
+  test('Cairo legacy reader rejects a cyclic Excel allocation chain', () {
+    final bytes = Uint8List(1536);
+    bytes[0] = 0xd0;
+    final data = ByteData.sublistView(bytes);
+    data.setUint16(30, 9, Endian.little);
+    data.setUint16(32, 6, Endian.little);
+    data.setUint32(44, 1, Endian.little);
+    data.setUint32(48, 1, Endian.little);
+    for (var offset = 80; offset < 512; offset += 4) {
+      data.setUint32(offset, 0xffffffff, Endian.little);
+    }
+    data.setUint32(512, 0xfffffffd, Endian.little);
+    data.setUint32(516, 1, Endian.little);
+    expect(() => readCairoAttendanceExcel(bytes), throwsFormatException);
+  });
+
   test(
     'accepts the exam application Arabic export without renaming columns',
     () {

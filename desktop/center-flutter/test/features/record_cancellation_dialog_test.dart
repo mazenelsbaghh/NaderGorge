@@ -203,6 +203,37 @@ void main() {
     });
   }
 
+  testWidgets('registration edits the receipt beside cancellation', (
+    tester,
+  ) async {
+    await open(tester);
+    final edit = find.byKey(ValueKey('edit-payment-${payment.id}'));
+    expect(
+      find.byKey(ValueKey('cancel-payment-${payment.id}')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+
+    final amount = find.widgetWithText(TextFormField, 'المبلغ المحصّل بالجنيه');
+    expect(tester.widget<TextFormField>(amount).controller!.text, '75.00');
+    await tester.enterText(amount, '60.00');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سبب التعديل'),
+      'مراجعة مبلغ التحصيل',
+    );
+    await mutate(
+      tester,
+      () => tester.tap(find.text('حفظ التعديل')),
+      'تعديل الدفع',
+    );
+    expect(store.paymentCollectedFor(payment.id), 6000);
+    expect(store.attendances.single.id, attendance.id);
+    expect(find.text('حفظ التعديل'), findsNothing);
+    expectCodeFocus(tester);
+  });
+
   for (final isPayment in [true, false]) {
     for (final both in [false, true]) {
       testWidgets(

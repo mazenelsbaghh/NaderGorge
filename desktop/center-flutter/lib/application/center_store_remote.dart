@@ -728,6 +728,19 @@ class _RemoteCenterStore extends CenterStore {
   Future<void> saveAcademic(AcademicRecord value) =>
       _send('saveAcademic', value.toJson());
   @override
+  Future<int> importCairoAttendance({
+    required String groupId,
+    required String preparedLessonId,
+    required List<String> studentIds,
+  }) async =>
+      (await _command('importCairoAttendance', {
+            'groupId': groupId,
+            'preparedLessonId': preparedLessonId,
+            'studentIds': studentIds,
+          }))
+          as int;
+
+  @override
   Future<void> importAcademicGrades(AcademicImportCommand command) =>
       _send('importAcademicGrades', command.toJson());
 
@@ -1041,6 +1054,19 @@ class _RemoteCenterStore extends CenterStore {
     'reason': reason,
     'method': method,
   });
+  @override
+  Future<void> editPayment({
+    required PaymentRecord reviewed,
+    required int paidAmount,
+    required String method,
+    required String reason,
+  }) => _send('editPayment', {
+    'reviewed': reviewed.toJson(),
+    'paidAmount': paidAmount,
+    'method': method,
+    'reason': reason,
+  });
+
   @override
   Future<void> correctPaymentMethod({
     required String paymentId,

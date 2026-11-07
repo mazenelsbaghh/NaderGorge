@@ -187,6 +187,7 @@ abstract final class CenterReports {
     CorrectionAction.entryCorrected => 'تصحيح طريقة الدخول',
     CorrectionAction.absencePresent => 'تصحيح غياب إلى حضور',
     CorrectionAction.paymentMethod => 'تصحيح طريقة الدفع',
+    CorrectionAction.paymentEdited => 'تعديل الدفع',
     CorrectionAction.paymentCanceled => 'إلغاء الدفع',
     CorrectionAction.packageRefund => 'استرداد باقة',
     CorrectionAction.packageOnlineAllocation => 'تحويل من دفعة الشهر للأونلاين',
@@ -1375,7 +1376,8 @@ class _ReportContext {
 
   List<Object?> _collectionRow(PaymentRecord payment) => [
     _timeLabel(payment.createdAt),
-    payment.collectedAmount == 0 && payment.netAmount > 0
+    store.effectivePaymentRecord(payment.id).collectedAmount == 0 &&
+            payment.netAmount > 0
         ? 'تسجيل استحقاق دون تحصيل'
         : 'تحصيل',
     students[payment.studentId]!.code,
@@ -1388,7 +1390,7 @@ class _ReportContext {
     reportAmount(payment.baseAmount),
     payment.discountPercent,
     reportAmount(payment.baseAmount - payment.netAmount),
-    reportAmount(payment.collectedAmount),
+    reportAmount(store.effectivePaymentRecord(payment.id).collectedAmount),
     store.effectivePaymentMethod(payment.id),
     payment.method,
     _paymentCurrentStatus(payment),
@@ -1526,7 +1528,7 @@ class _ReportContext {
       for (final payment in collections)
         _ReportMoneyMovement(
           time: payment.createdAt,
-          amount: payment.collectedAmount,
+          amount: store.effectivePaymentRecord(payment.id).collectedAmount,
           method: store.effectivePaymentMethod(payment.id),
           sessionId: payment.sessionId,
           kind: DebtKind.lesson,

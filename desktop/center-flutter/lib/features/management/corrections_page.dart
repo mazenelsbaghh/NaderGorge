@@ -1113,6 +1113,7 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
     CorrectionAction.entryCorrected => 'تغيير طريقة دخول الحصة',
     CorrectionAction.absencePresent => 'تصحيح غياب إلى حضور',
     CorrectionAction.paymentMethod => 'تصحيح وسيلة الدفع',
+    CorrectionAction.paymentEdited => 'تعديل الدفع',
     CorrectionAction.paymentCanceled => 'إلغاء الدفع',
     CorrectionAction.packageRefund => 'استرداد باقة',
     CorrectionAction.packageOnlineAllocation => 'تحويل من دفعة الشهر للأونلاين',
@@ -1141,7 +1142,9 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
       if (original != null)
         'التسجيل الأصلي: ${attendanceLabel(original.status)}',
       if (payment != null)
-        'المبلغ الأصلي: ${money(store.paymentCollectedFor(payment.id))} · خصم ${percentText(payment.discountPercent)}%',
+        'المبلغ الأصلي: ${money(payment.collectedAmount)} · خصم ${percentText(payment.discountPercent)}%',
+      if (record.oldPaidAmount != null)
+        'المبلغ المحصّل: ${money(record.oldPaidAmount!)} ← ${money(record.newPaidAmount!)}',
       if (record.oldMethod != null)
         'وسيلة الدفع: ${record.oldMethod} ← ${record.newMethod ?? '—'}',
       if (record.action == CorrectionAction.packageOnlineAllocation)

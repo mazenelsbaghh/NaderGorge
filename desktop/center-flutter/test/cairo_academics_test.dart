@@ -510,6 +510,92 @@ void main() {
     await store.saveCatalog(center.copyWith(name: 'اسم جديد'));
     expect(store.isCairoGroup(cairo.id), isTrue);
   });
+  testWidgets(
+    'Cairo registration opens file import for a lesson without an exam',
+    (tester) async {
+      final month = (await tester.runAsync(
+        () => store.saveStudyMonth(
+          StudyMonth(
+            name: 'شهر الحضور فقط',
+            lessons: [const PreparedLesson(number: 1)],
+          ),
+        ),
+      ))!;
+      await openAcademicPage(tester);
+      await tester.tap(
+        find.byKey(
+          ValueKey(
+            'academic-month-${store.studyMonthForLesson(session.preparedLessonId!)!.id}',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(month.name).last);
+      await tester.pumpAndSettle();
+      expect(
+        store.sessionForPreparedLesson(cairo.id, month.lessons.single.id),
+        isNull,
+      );
+
+      await tester.tap(find.byKey(const Key('cairo-import-attendance')));
+      await tester.pumpAndSettle();
+      expect(find.text('استيراد حضور القاهرة من Excel'), findsOneWidget);
+      expect(find.text('اختيار ملفات الحضور'), findsOneWidget);
+      expect(store.attendances, isEmpty);
+      await tester.tap(find.text('رجوع'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => store.importCairoAttendance(
+          groupId: cairo.id,
+          preparedLessonId: month.lessons.single.id,
+          studentIds: [student.id],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('الحضور المسجّل: 1 من 1 طالب.'), findsOneWidget);
+      expect(find.text(student.name), findsOneWidget);
+    },
+  );
+
+  test(
+    'attendance-only import creates the selected Cairo lesson once',
+    () async {
+      final month = await store.saveStudyMonth(
+        StudyMonth(
+          name: 'شهر بلا امتحان',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      final lesson = month.lessons.single;
+      Future<int> import(String groupId, List<String> ids) =>
+          store.importCairoAttendance(
+            groupId: groupId,
+            preparedLessonId: lesson.id,
+            studentIds: ids,
+          );
+      await expectLater(
+        import(alex.id, [student.id]),
+        throwsA(isA<CenterException>()),
+      );
+      await expectLater(
+        import(cairo.id, [student.id, 'unknown']),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.sessionForPreparedLesson(cairo.id, lesson.id), isNull);
+
+      expect(await import(cairo.id, [student.id, student.id]), 1);
+      expect(await import(cairo.id, [student.id]), 0);
+      final saved = store.sessionForPreparedLesson(cairo.id, lesson.id)!;
+      expect(saved.monthNumber, month.number);
+      expect(saved.startsAtKnown, isFalse);
+      expect(store.attendances.single.sessionId, saved.id);
+      expect(store.attendances.single.status, AttendanceStatus.present);
+      expect(store.academics, isEmpty);
+      expect(store.payments, isEmpty);
+      expect(store.packages, isEmpty);
+    },
+  );
+
   test('academic staff can open a Cairo lesson and record its exam', () async {
     await store.saveStaff(
       name: 'موظف الرصد',

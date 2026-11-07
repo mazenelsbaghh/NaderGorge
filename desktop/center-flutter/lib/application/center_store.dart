@@ -44,6 +44,7 @@ part 'center_store_prepaid_coverage.dart';
 part 'center_store_center_fees.dart';
 part 'center_store_study_months.dart';
 part 'center_store_academic_import.dart';
+part 'center_store_cairo_attendance.dart';
 part 'center_store_exam_integration.dart';
 part 'center_store_exam_monitor.dart';
 part 'center_store_exam_import.dart';
@@ -461,26 +462,18 @@ class CenterStore extends ChangeNotifier {
     return _state.packages.where((e) => !voids.contains(e.id));
   }
 
-  String effectivePaymentMethod(String paymentId) {
-    final edits = _state.corrections.where(
-      (e) =>
-          e.action == CorrectionAction.paymentMethod &&
-          e.paymentId == paymentId,
-    );
-    return edits.lastOrNull?.newMethod ??
-        _state.payments.firstWhere((e) => e.id == paymentId).method;
-  }
+  String effectivePaymentMethod(String paymentId) =>
+      effectivePaymentRecord(paymentId).method;
+
+  PaymentRecord effectivePaymentRecord(String paymentId) =>
+      _readIndex?.paymentsById[paymentId] ??
+      _financialPayments.firstWhere((payment) => payment.id == paymentId);
 
   Iterable<PaymentRecord> get _financialPayments {
-    final methods = <String, String>{};
-    for (final edit in _state.corrections.where(
-      (e) => e.action == CorrectionAction.paymentMethod,
-    )) {
-      methods[edit.paymentId!] = edit.newMethod!;
-    }
-    return _state.payments.map(
-      (e) => methods.containsKey(e.id) ? e.copyWith(method: methods[e.id]!) : e,
-    );
+    final index = _readIndex;
+    if (index != null) return index.paymentsById.values;
+    final edits = _PaymentEdits(_state.corrections);
+    return _state.payments.map(edits.apply);
   }
 
   Iterable<PaymentRecord> get _activePayments {
@@ -1701,17 +1694,63 @@ class CenterStore extends ChangeNotifier {
           package.remaining < 1) {
         return false;
       }
-      if (forClosure == null ||
-          !package.purchasedAt.isAfter(forClosure.startsAt)) {
-        return true;
-      }
-      return _paymentsForStudent(studentId).any(
-        (payment) =>
-            payment.id == package.paymentId &&
-            (payment.sessionId == forClosure.id ||
-                _followsMakeupMonthPurchase(package, payment, forClosure)),
-      );
+      if (forClosure == null) return true;
+      final payment =
+          _readIndex?.paymentsById[package.paymentId] ??
+          _state.payments.firstWhere((row) => row.id == package.paymentId);
+      final month = _packageStudyMonthNumber(package, payment);
+      if (month != null && month != forClosure.monthNumber) return false;
+      return !package.purchasedAt.isAfter(forClosure.startsAt) ||
+          payment.sessionId == forClosure.id ||
+          _followsMakeupMonthPurchase(package, payment, forClosure);
     });
+  }
+
+  Map<String, int> eligiblePackageBalances(
+    String studentId,
+    String groupId,
+    String sessionId,
+  ) {
+    final session = _session(sessionId);
+    final month = _state.studyMonths
+        .where((month) => month.number == session.monthNumber)
+        .firstOrNull;
+    final attendance = _attendancesForStudent(
+      studentId,
+    ).where((entry) => entry.sessionId == sessionId).firstOrNull;
+    final currentSlot =
+        session.status == SessionStatus.open && attendance?.packageId == null
+        ? 1
+        : 0;
+    final futureSlots = month?.lessons
+        .where(
+          (lesson) =>
+              lesson.kind == SessionKind.counted &&
+              lesson.number > session.number,
+        )
+        .length;
+    final slots = futureSlots == null ? null : futureSlots + currentSlot;
+    return {
+      for (final package in _eligiblePackages(
+        studentId,
+        groupId,
+        forClosure: session,
+      ))
+        package.id: package.monthPlanId == null || slots == null
+            ? package.remaining
+            : min(package.remaining, slots),
+    };
+  }
+
+  int? _packageStudyMonthNumber(PrepaidPackage package, PaymentRecord payment) {
+    final planId = package.monthPlanId;
+    if (planId == null) return null;
+    return _state.studyMonths
+            .where((month) => month.id == planId)
+            .firstOrNull
+            ?.number ??
+        _legacyStudyMonthNumber(package.monthPlanName!) ??
+        sessionById(payment.sessionId)?.monthNumber;
   }
 
   bool _followsMakeupMonthPurchase(
@@ -2950,6 +2989,12 @@ class CenterStore extends ChangeNotifier {
     },
   );
 
+  Future<int> importCairoAttendance({
+    required String groupId,
+    required String preparedLessonId,
+    required List<String> studentIds,
+  }) => _importCairoAttendance(groupId, preparedLessonId, studentIds);
+
   Future<void> importAcademicGrades(AcademicImportCommand command) =>
       _importAcademicGrades(command);
 
@@ -3285,6 +3330,9 @@ class CenterStore extends ChangeNotifier {
 
   String _correctionAudit() {
     final e = _state.corrections.last;
+    if (e.action == CorrectionAction.paymentEdited) {
+      return 'تعديل دفع — كود ${_student(e.studentId!).code} — ${_auditAmount(e.oldPaidAmount!)} (${e.oldMethod}) إلى ${_auditAmount(e.newPaidAmount!)} (${e.newMethod}) — السبب ${e.reason} — سجل ${e.id}';
+    }
     final refunded = _state.refunds
         .where((r) => r.correctionId == e.id)
         .fold(0, (s, r) => s + r.amount);
@@ -3458,6 +3506,57 @@ class CenterStore extends ChangeNotifier {
       ),
     );
   }, auditDescription: _correctionAudit);
+
+  Future<void> editPayment({
+    required PaymentRecord reviewed,
+    required int paidAmount,
+    required String method,
+    required String reason,
+  }) => _change('payment_edit', 'تعديل الدفع', () async {
+    _correctionReason(reason);
+    final payment = _activePayment(reviewed.id);
+    if (payment.collectedAmount != reviewed.collectedAmount ||
+        payment.method != reviewed.method) {
+      throw const CenterException('تغيّرت الدفعة. افتح التعديل من جديد.');
+    }
+    _requireFinancialOpen(payment.sessionId);
+    final newMethod = method.trim();
+    _validatePaymentEdit(payment, paidAmount, newMethod);
+    _state.corrections.add(
+      CorrectionRecord(
+        id: _uuid.v4(),
+        action: CorrectionAction.paymentEdited,
+        studentId: payment.studentId,
+        sessionId: payment.sessionId,
+        paymentId: payment.id,
+        oldMethod: payment.method,
+        newMethod: newMethod,
+        oldPaidAmount: payment.collectedAmount,
+        newPaidAmount: paidAmount,
+        reason: reason.trim(),
+        staffId: currentUser!.id,
+        createdAt: DateTime.now(),
+      ),
+    );
+  }, auditDescription: _correctionAudit);
+
+  void _validatePaymentEdit(PaymentRecord payment, int amount, String method) {
+    _validatedPaidAmount(payment.netAmount, amount);
+    if (method.isEmpty ||
+        (amount == payment.collectedAmount && method == payment.method)) {
+      throw const CenterException('غيّر المبلغ أو اختر طريقة دفع مختلفة.');
+    }
+    if (amount != payment.collectedAmount &&
+        !canEditPaymentAmount(payment.id)) {
+      throw const CenterException(
+        'المبلغ مرتبط بسداد مديونية أو تحويل للأونلاين. يمكن تعديل طريقة الدفع فقط.',
+      );
+    }
+  }
+
+  bool canEditPaymentAmount(String paymentId) =>
+      _settledAmount(paymentId, DebtKind.lesson) == 0 &&
+      onlineAllocatedAmount(paymentId) == 0;
 
   int onlineAllocatedAmount(String paymentId) => _state.corrections
       .where(
@@ -4348,11 +4447,11 @@ class CenterStore extends ChangeNotifier {
             )
         ? 1
         : 0;
-    return _eligiblePackages(
+    return eligiblePackageBalances(
       studentId,
       session.groupId,
-      forClosure: session,
-    ).fold(reserved, (total, package) => total + package.remaining);
+      sessionId,
+    ).values.fold(reserved, (total, remaining) => total + remaining);
   }
 
   int remainingFor(String studentId, String groupId) {
@@ -4419,11 +4518,11 @@ class CenterStore extends ChangeNotifier {
         'اختر مجموعة أصلية مسجلًا فيها الطالب بنفس المادة والصف.',
       );
     }
-    return _eligiblePackages(
+    return eligiblePackageBalances(
       studentId,
       sourceGroupId,
-      forClosure: _session(targetSessionId),
-    ).fold(0, (total, package) => total + package.remaining);
+      targetSessionId,
+    ).values.fold(0, (total, remaining) => total + remaining);
   }
 
   List<AttendanceRecord> eligibleMakeups(
@@ -4933,7 +5032,8 @@ void validateState(CenterState state) {
   final paymentCanceledAt = <String, DateTime>{};
   final voidPackages = <String>{};
   final reopenedClosings = <String>{};
-  final effectiveMethods = <String, String>{};
+  final paymentEdits = _PaymentEdits(const []);
+  final amountEditsByPayment = <String, List<CorrectionRecord>>{};
   check(
     state.cardSettings.price == null || state.cardSettings.price! >= 0,
     'سعر الكارت المحفوظ غير صالح.',
@@ -5048,8 +5148,10 @@ void validateState(CenterState state) {
         'الباقة الملغاة لا تطابق التصحيح أو ألغيت مرتين.',
       );
     }
-    if (e.action == CorrectionAction.paymentMethod) {
-      final payment = payments[e.paymentId];
+    if (e.action == CorrectionAction.paymentMethod ||
+        e.action == CorrectionAction.paymentEdited) {
+      final original = payments[e.paymentId];
+      final payment = original == null ? null : paymentEdits.apply(original);
       check(
         payment != null &&
             payment.studentId == e.studentId &&
@@ -5057,12 +5159,24 @@ void validateState(CenterState state) {
             !e.voidsPayment &&
             !e.voidsPackage &&
             e.attendanceId == null &&
-            e.oldMethod == (effectiveMethods[e.paymentId] ?? payment.method) &&
+            e.oldMethod == payment.method &&
             (e.newMethod?.trim().isNotEmpty ?? false) &&
-            e.oldMethod != e.newMethod,
-        'سجل تغيير وسيلة الدفع غير متسلسل أو لا يطابق العملية.',
+            (e.oldMethod != e.newMethod || e.oldPaidAmount != e.newPaidAmount),
+        'سجل تعديل الدفع غير متسلسل أو لا يطابق العملية.',
       );
-      effectiveMethods[e.paymentId!] = e.newMethod!;
+      if (e.action == CorrectionAction.paymentEdited) {
+        final amount = e.newPaidAmount;
+        check(
+          !voidPayments.contains(e.paymentId) &&
+              e.oldPaidAmount == payment!.collectedAmount &&
+              amount != null &&
+              amount >= 0 &&
+              amount <= payment.netAmount,
+          'مبلغ تعديل الدفع غير صالح أو لا يطابق المبلغ السابق.',
+        );
+        amountEditsByPayment.putIfAbsent(payment!.id, () => []).add(e);
+      }
+      paymentEdits.add(e);
     } else if (e.action == CorrectionAction.packageOnlineAllocation) {
       final payment = payments[e.paymentId];
       final package = packages[e.packageId];
@@ -5175,7 +5289,9 @@ void validateState(CenterState state) {
     final studentId = lesson?.studentId ?? card?.studentId;
     final createdAt = lesson?.createdAt ?? card?.createdAt;
     final due = lesson?.netAmount ?? card?.netAmount;
-    final collected = lesson?.collectedAmount ?? card?.collectedAmount;
+    final collected = lesson == null
+        ? card?.collectedAmount
+        : paymentEdits.apply(lesson).collectedAmount;
     check(
       studentId != null &&
           studentId == settlement.studentId &&
@@ -5213,7 +5329,7 @@ void validateState(CenterState state) {
   )) {
     final payment = payments[allocation.paymentId]!;
     final received =
-        payment.collectedAmount +
+        paymentEdits.apply(payment).collectedAmount +
         state.debtSettlements
             .where(
               (settlement) =>
@@ -5246,7 +5362,7 @@ void validateState(CenterState state) {
           r.sessionId == payment.sessionId &&
           r.packageId == payment.packageId &&
           r.amount ==
-              payment.collectedAmount +
+              paymentEdits.apply(payment).collectedAmount +
                   (settlementsByPayment[(DebtKind.lesson, payment.id)] ?? 0) &&
           r.amount >= 0 &&
           r.method.trim().isNotEmpty &&
@@ -6053,7 +6169,14 @@ void validateState(CenterState state) {
         payment != null &&
             payment.studentId == review.studentId &&
             payment.sessionId == review.sessionId &&
-            payment.collectedAmount == review.expectedAmount &&
+            ((amountEditsByPayment[payment.id] ?? const <CorrectionRecord>[])
+                        .where(
+                          (edit) => !edit.createdAt.isAfter(review.createdAt),
+                        )
+                        .lastOrNull
+                        ?.newPaidAmount ??
+                    payment.collectedAmount) ==
+                review.expectedAmount &&
             reviewedPayments.add(payment.id),
         'المراجعة مكررة أو لا تطابق هوية الدفع والمبلغ المحفوظ.',
       );
@@ -6070,11 +6193,7 @@ void validateState(CenterState state) {
   late final paymentsBySession = _recordsBy(
     state.payments
         .where((record) => record.sessionId != null)
-        .map(
-          (record) => record.copyWith(
-            method: effectiveMethods[record.id] ?? record.method,
-          ),
-        ),
+        .map(paymentEdits.apply),
     (record) => record.sessionId!,
   );
   late final cardPaymentsBySession = _recordsBy(
@@ -6151,7 +6270,7 @@ void validateState(CenterState state) {
           closing.summary.coverageClassificationVersion ?? 0,
       attendances: sessionAttendances,
       payments: sessionPayments,
-      packagePurchasePayments: purchasePayments,
+      packagePurchasePayments: purchasePayments.map(paymentEdits.apply),
       packages: relatedPackages,
       cardPayments: cardPaymentsBySession[closing.sessionId] ?? const [],
       centerFees:
@@ -6190,19 +6309,14 @@ void validateState(CenterState state) {
           .map((e) => e.replacementAttendanceId)
           .whereType<String>()
           .toSet();
-      final priorMethods = <String, String>{};
-      for (final e in priorCorrections.where(
-        (e) => e.action == CorrectionAction.paymentMethod,
-      )) {
-        priorMethods[e.paymentId!] = e.newMethod!;
-      }
+      final priorEdits = _PaymentEdits(priorCorrections);
       historical = buildSessionFinancialSummary(
         session: session,
         coverageClassificationVersion:
             closing.summary.coverageClassificationVersion ?? 0,
-        packagePurchasePayments: purchasePayments.where(
-          (payment) => !payment.createdAt.isAfter(closing.createdAt),
-        ),
+        packagePurchasePayments: purchasePayments
+            .where((payment) => !payment.createdAt.isAfter(closing.createdAt))
+            .map(priorEdits.apply),
         packages: relatedPackages,
         centerFees:
             (feesBySession[closing.sessionId] ?? const <CenterFeeRecord>[])
@@ -6227,7 +6341,7 @@ void validateState(CenterState state) {
         payments:
             (rawPaymentsBySession[closing.sessionId] ?? const <PaymentRecord>[])
                 .where((e) => !e.createdAt.isAfter(closing.createdAt))
-                .map((e) => e.copyWith(method: priorMethods[e.id] ?? e.method)),
+                .map(priorEdits.apply),
         refunds: (refundsBySession[closing.sessionId] ?? const <RefundRecord>[])
             .where((e) => !e.createdAt.isAfter(closing.createdAt)),
       );

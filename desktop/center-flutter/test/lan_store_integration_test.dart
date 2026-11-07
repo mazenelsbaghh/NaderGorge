@@ -1132,6 +1132,48 @@ void main() {
   );
 
   test(
+    'a Cairo attendance-only import is reconciled after a lost LAN reply',
+    () async {
+      final center = h.host.catalogs.firstWhere(
+        (entry) => entry.kind == CatalogKind.center,
+      );
+      await h.host.saveCatalog(center.copyWith(region: 'cairo'));
+      final month = await h.host.saveStudyMonth(
+        StudyMonth(
+          name: 'حضور فقط',
+          lessons: [const PreparedLesson(number: 1)],
+        ),
+      );
+      await h.remote.refreshRemote();
+
+      h.loseNextCommandReply = true;
+      await expectLater(
+        h.remote.importCairoAttendance(
+          groupId: h.group.id,
+          preparedLessonId: month.lessons.single.id,
+          studentIds: [h.student.id],
+        ),
+        throwsA(isA<LanConnectionException>()),
+      );
+      await h.remote.refreshRemote();
+      final session = h.remote.sessionForPreparedLesson(
+        h.group.id,
+        month.lessons.single.id,
+      )!;
+      expect(h.remote.attendanceCount(session.id), 1);
+      expect(h.host.academics, isEmpty);
+      expect(h.host.payments, isEmpty);
+      expect(
+        h.host.audit.where(
+          (record) => record.action == 'cairo_attendance_import',
+        ),
+        hasLength(1),
+      );
+      expect(await h.pendingFile.exists(), isFalse);
+    },
+  );
+
+  test(
     'Excel grade batch on secondary commits once with Cairo attendance after a lost reply',
     () async {
       final center = h.host.catalogs.firstWhere(
@@ -2034,6 +2076,36 @@ void main() {
       expect(h.host.allPayments, hasLength(2));
       expect(h.host.refunds, hasLength(1));
       expect(h.host.currentUser!.name, 'manager');
+    },
+  );
+
+  test(
+    'a lost receipt edit reply reconciles without duplicating the edit',
+    () async {
+      await h.remote.collectAndAttend(
+        EntryRequest(
+          studentId: h.student.id,
+          sessionId: h.lesson.id,
+          mode: EntryMode.single,
+        ),
+      );
+      final payment = h.remote.payments.single;
+      h.loseNextCommandReply = true;
+      await expectLater(
+        h.remote.editPayment(
+          reviewed: payment,
+          paidAmount: 4000,
+          method: 'نقدي',
+          reason: 'تصحيح المبلغ المحصّل',
+        ),
+        throwsA(isA<LanConnectionException>()),
+      );
+      await h.remote.refreshRemote();
+      expect(h.remote.paymentCollectedFor(payment.id), 4000);
+      expect(h.host.paymentCollectedFor(payment.id), 4000);
+      expect(h.host.corrections.single.action, CorrectionAction.paymentEdited);
+      expect(h.host.attendances, hasLength(1));
+      expect(await h.pendingFile.exists(), isFalse);
     },
   );
 

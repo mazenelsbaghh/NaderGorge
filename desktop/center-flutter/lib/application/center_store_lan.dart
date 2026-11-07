@@ -382,6 +382,12 @@ extension CenterStoreLanHost on CenterStore {
         return null;
       case 'saveAcademic':
         await saveAcademic(AcademicRecord.fromJson(a));
+      case 'importCairoAttendance':
+        return importCairoAttendance(
+          groupId: a['groupId'] as String,
+          preparedLessonId: a['preparedLessonId'] as String,
+          studentIds: List<String>.from(a['studentIds'] as List),
+        );
       case 'importAcademicGrades':
         await importAcademicGrades(AcademicImportCommand.fromJson(a));
       case 'recordIntegratedExamResult':
@@ -525,6 +531,15 @@ extension CenterStoreLanHost on CenterStore {
           attendanceId: a['attendanceId'] as String,
           reason: a['reason'] as String,
           method: a['method'] as String,
+        );
+      case 'editPayment':
+        await editPayment(
+          reviewed: PaymentRecord.fromJson(
+            a['reviewed'] as Map<String, dynamic>,
+          ),
+          paidAmount: a['paidAmount'] as int,
+          method: a['method'] as String,
+          reason: a['reason'] as String,
         );
       case 'correctPaymentMethod':
         await correctPaymentMethod(

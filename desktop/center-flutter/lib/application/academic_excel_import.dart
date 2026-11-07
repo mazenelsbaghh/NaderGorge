@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:excel2003/excel2003.dart';
 import 'package:path/path.dart' as path;
 import 'package:xml/xml.dart';
 import 'package:xml/xml_events.dart';
@@ -13,6 +14,8 @@ import '../domain/student_lookup.dart';
 
 part 'academic_excel_import_reader.dart';
 part 'academic_excel_import_matching.dart';
+part 'cairo_attendance_excel.dart';
+part 'cairo_attendance_legacy_xls.dart';
 
 abstract final class AcademicExcelLimits {
   static const maxFileBytes = 8 * 1024 * 1024;

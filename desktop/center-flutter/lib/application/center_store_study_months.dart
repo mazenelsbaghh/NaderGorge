@@ -87,16 +87,7 @@ extension _StudyMonthsStore on CenterStore {
         );
       }
       final lesson = month.lessons.firstWhere((l) => l.id == preparedLessonId);
-      final existing =
-          sessionForPreparedLesson(groupId, preparedLessonId) ??
-          _state.sessions
-              .where(
-                (s) =>
-                    s.groupId == groupId &&
-                    s.monthNumber == month.number &&
-                    s.number == lesson.number,
-              )
-              .firstOrNull;
+      final existing = _preparedLessonInstance(groupId, month, lesson);
       if (existing != null && existing.status != SessionStatus.open) {
         throw const CenterException(
           'هذه الحصة مغلقة أو ملغاة؛ افتح سجلها للمراجعة أو إعادة الفتح.',
@@ -134,6 +125,21 @@ extension _StudyMonthsStore on CenterStore {
     }, commitWhen: () => changed);
     return started;
   }
+
+  LessonSession? _preparedLessonInstance(
+    String groupId,
+    StudyMonth month,
+    PreparedLesson lesson,
+  ) =>
+      sessionForPreparedLesson(groupId, lesson.id) ??
+      _state.sessions
+          .where(
+            (session) =>
+                session.groupId == groupId &&
+                session.monthNumber == month.number &&
+                session.number == lesson.number,
+          )
+          .firstOrNull;
 
   bool _syncStudyMonthPlans(
     CenterState state,

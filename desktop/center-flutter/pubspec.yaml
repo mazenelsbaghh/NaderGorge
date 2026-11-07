@@ -1,7 +1,7 @@
 name: massar_center
 description: تطبيق نادر جورج لإدارة السناتر أوفلاين
 publish_to: none
-version: 1.4.18+39
+version: 1.4.19+40
 environment:
   sdk: ^3.11.0
 dependencies:
@@ -25,6 +25,7 @@ dependencies:
   archive: 4.0.9
   xml: 6.6.1
   webview_windows: 0.4.0
+  excel2003: 1.0.0
 
 dev_dependencies:
   flutter_test:

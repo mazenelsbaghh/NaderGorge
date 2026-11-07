@@ -63,13 +63,9 @@ class _CenterReadIndex {
     #payments,
     [state.payments, state.corrections],
     () => List.unmodifiable(
-      state.payments
-          .where((payment) => !_corrections.voidPayments.contains(payment.id))
-          .map(
-            (payment) => _corrections.methods.containsKey(payment.id)
-                ? payment.copyWith(method: _corrections.methods[payment.id]!)
-                : payment,
-          ),
+      paymentsById.values.where(
+        (payment) => !_corrections.voidPayments.contains(payment.id),
+      ),
     ),
   );
   late final List<PrepaidPackage> packages = _read(
@@ -128,10 +124,15 @@ class _CenterReadIndex {
     state.sessions,
     (session) => session.id,
   );
-  late final paymentsById = _byId(
+  late final paymentsById = _read<Map<String, PaymentRecord>>(
     #paymentsById,
-    state.payments,
-    (payment) => payment.id,
+    [state.payments, state.corrections],
+    () {
+      final edits = _PaymentEdits(state.corrections);
+      return Map.unmodifiable({
+        for (final payment in state.payments) payment.id: edits.apply(payment),
+      });
+    },
   );
   late final groupsById = _byId(#groupsById, state.groups, (group) => group.id);
   late final allAttendancesByStudent = _grouped(
@@ -236,15 +237,36 @@ class _CorrectionReadIndex {
       }
       if (correction.voidsPayment) voidPayments.add(correction.paymentId!);
       if (correction.voidsPackage) voidPackages.add(correction.packageId!);
-      if (correction.action == CorrectionAction.paymentMethod) {
-        methods[correction.paymentId!] = correction.newMethod!;
-      }
     }
   }
   final voidAttendances = <String>{};
   final voidPayments = <String>{};
   final voidPackages = <String>{};
-  final methods = <String, String>{};
+}
+
+class _PaymentEdits {
+  _PaymentEdits(Iterable<CorrectionRecord> corrections) {
+    corrections.forEach(add);
+  }
+
+  final _methods = <String, String>{};
+  final _amounts = <String, int>{};
+
+  void add(CorrectionRecord correction) {
+    if (correction.action == CorrectionAction.paymentMethod ||
+        correction.action == CorrectionAction.paymentEdited) {
+      _methods[correction.paymentId!] = correction.newMethod!;
+    }
+    if (correction.action == CorrectionAction.paymentEdited) {
+      _amounts[correction.paymentId!] = correction.newPaidAmount!;
+    }
+  }
+
+  PaymentRecord apply(PaymentRecord payment) {
+    final method = _methods[payment.id];
+    if (method == null) return payment;
+    return payment.copyWith(method: method, paidAmount: _amounts[payment.id]);
+  }
 }
 
 Map<K, List<T>> _recordsBy<T, K>(Iterable<T> records, K Function(T) key) {

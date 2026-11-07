@@ -10,6 +10,7 @@ import 'academic_quick_entry.dart';
 import '../../lan/lan_controller.dart';
 import 'mobile_homework_dialog.dart';
 import 'academic_excel_import_dialog.dart';
+import 'cairo_attendance_import_dialog.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
@@ -237,6 +238,40 @@ class _AcademicsPageState extends State<AcademicsPage> {
     } else {
       await _edit(student, session);
     }
+  }
+
+  Future<void> _importCairoAttendance() async {
+    final group = _groupId, month = _month, lesson = _preparedLesson;
+    if (_editing ||
+        group == null ||
+        month == null ||
+        lesson == null ||
+        !widget.store.canAssess) {
+      return;
+    }
+    setState(() => _editing = true);
+    try {
+      final count = await showDialog<int>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => CairoAttendanceImportDialog(
+          store: widget.store,
+          groupId: group,
+          month: month,
+          lesson: lesson,
+        ),
+      );
+      if (mounted && count != null) {
+        setState(
+          () => _lastSaved = count == 0
+              ? 'الحضور المحدد مسجّل بالفعل.'
+              : 'تم تسجيل حضور $count طالب من Excel.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
+    _focusCode();
   }
 
   Future<void> _importExcel(
@@ -784,8 +819,10 @@ class _AcademicsPageState extends State<AcademicsPage> {
               ? _groupId
               : null,
           isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'المجموعة التي بدأت الحصة',
+          decoration: InputDecoration(
+            labelText: widget.cairo
+                ? 'مجموعة القاهرة'
+                : 'المجموعة التي بدأت الحصة',
           ),
           items: [
             const DropdownMenuItem(
@@ -877,19 +914,26 @@ class _AcademicsPageState extends State<AcademicsPage> {
     final legacy = activity == null;
     final exam = activity?.kind == AcademicActivityKind.exam;
     final legacyAvailable = snapshot.legacyAvailable;
-    final roster = snapshot.roster;
+    final attendanceOnly = widget.cairo && activity == null && !legacyAvailable;
+    final attendance = snapshot.attendance;
+    final roster = attendanceOnly
+        ? snapshot.roster.where((student) {
+            final status = attendance[student.id]?.status;
+            return status == AttendanceStatus.present ||
+                status == AttendanceStatus.makeup;
+          }).toList()
+        : snapshot.roster;
     final students = _matches(roster);
     final quickStudent = widget.store.students
         .where((student) => student.id == _quickStudentId)
         .firstOrNull;
     final records = snapshot.records;
-    final attendance = snapshot.attendance;
     return ManagementPanel(
       title: widget.cairo
           ? 'حضور مجموعات القاهرة'
           : 'الامتحانات والواجبات — إسكندرية',
       subtitle: widget.cairo
-          ? 'اختر المجموعة والحصة والامتحان أو الواجب. درجة الامتحان تثبت الحضور؛ الواجب للحاضرين فقط وافتراضيًا اتعمل، ثم أدخل أكواد اللي ماعملوش. بدون تحصيل أو خصم من الباقة.'
+          ? 'اختر الشهر والحصة والمجموعة. استورد الحضور من Excel أو ثبّته برصد الامتحان. رصد الواجب متاح للحاضرين.'
           : 'جهّز الامتحان أو الواجب للحصة المشتركة، ثم اختر المجموعة لرصد الحاضرين: الكود ثم Enter، الدرجة ثم Enter.',
       child: ManagementBody(
         header: [
@@ -940,6 +984,19 @@ class _AcademicsPageState extends State<AcademicsPage> {
                   icon: const Icon(Icons.phone_android),
                   label: const Text('واجب الموبايل'),
                 ),
+              if (widget.cairo)
+                OutlinedButton.icon(
+                  key: const Key('cairo-import-attendance'),
+                  onPressed:
+                      !_editing &&
+                          _groupId != null &&
+                          _preparedLesson != null &&
+                          widget.store.canAssess
+                      ? _importCairoAttendance
+                      : null,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('استيراد حضور Excel'),
+                ),
               Tooltip(
                 message:
                     'اختر المجموعة وحصة بدأت وامتحانًا باسم ودرجة نهائية أولًا.',
@@ -954,12 +1011,18 @@ class _AcademicsPageState extends State<AcademicsPage> {
                       ? () => _importExcel(selected, activity!)
                       : null,
                   icon: const Icon(Icons.upload_file),
-                  label: const Text('استيراد Excel'),
+                  label: Text(
+                    widget.cairo ? 'استيراد درجات Excel' : 'استيراد Excel',
+                  ),
                 ),
               ),
               if ((selected != null || _preparedLesson != null) &&
                   activities.isEmpty)
-                const Text('أضف امتحانًا أو واجبًا باسم لهذه الحصة.'),
+                Text(
+                  widget.cairo
+                      ? 'تقدر تستورد الحضور مباشرة حتى لو الحصة من غير امتحان.'
+                      : 'أضف امتحانًا أو واجبًا باسم لهذه الحصة.',
+                ),
               if ((selected != null || _preparedLesson != null) &&
                   activity?.kind == AcademicActivityKind.exam &&
                   activity?.maxScoreKnown == false)
@@ -1037,7 +1100,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                   enabled:
                       selected != null &&
                       !_editing &&
-                      _canRecordFor(selected.id),
+                      (attendanceOnly || _canRecordFor(selected.id)),
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     labelText: activity?.kind == AcademicActivityKind.homework
@@ -1118,18 +1181,22 @@ class _AcademicsPageState extends State<AcademicsPage> {
             ),
           if (selected != null)
             Text(
-              widget.cairo && activity?.kind != AcademicActivityKind.homework
+              attendanceOnly
+                  ? 'الحضور المسجّل: ${students.length} من ${roster.length} طالب.'
+                  : widget.cairo &&
+                        activity?.kind != AcademicActivityKind.homework
                   ? 'النتائج: ${students.length} من ${roster.length} طالب — حفظ درجة الامتحان يثبت الحضور.'
                   : 'النتائج: ${students.length} من ${roster.length} طالب — الحاضرون والمعوّضون فعليًا فقط.',
             ),
           const SizedBox(height: 12),
         ],
         child: selected == null
-            ? const EmptySection(
-                message:
-                    'اختر الشهر والحصة لتجهيز الامتحان أو الواجب، ثم المجموعة التي بدأت الحصة لرصد الحاضرين فقط.',
+            ? EmptySection(
+                message: widget.cairo
+                    ? 'اختر الشهر والحصة ومجموعة القاهرة لعرض الحضور أو استيراده.'
+                    : 'اختر الشهر والحصة لتجهيز الامتحان أو الواجب، ثم المجموعة التي بدأت الحصة لرصد الحاضرين فقط.',
               )
-            : !_canRecordFor(selected.id)
+            : !attendanceOnly && !_canRecordFor(selected.id)
             ? const EmptySection(
                 message: 'أضف امتحانًا أو واجبًا أولًا، ثم اختر اسمه للرصد.',
               )
@@ -1146,10 +1213,9 @@ class _AcademicsPageState extends State<AcademicsPage> {
                   'الكود',
                   'الطالب',
                   'الحضور',
-                  if (legacy || !exam) 'الواجب',
-                  if (legacy || exam) 'الامتحان',
-                  'ملاحظات',
-                  'الرصد',
+                  if (!attendanceOnly && (legacy || !exam)) 'الواجب',
+                  if (!attendanceOnly && (legacy || exam)) 'الامتحان',
+                  if (!attendanceOnly) ...['ملاحظات', 'الرصد'],
                 ],
                 rowCount: students.length,
                 rowBuilder: (index) {
@@ -1173,7 +1239,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                               : attendanceLabel(attendance[student.id]!.status),
                         ),
                       ),
-                      if (legacy || !exam)
+                      if (!attendanceOnly && (legacy || !exam))
                         DataCell(
                           Text(
                             _quickHomeworkLabel(
@@ -1181,7 +1247,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                             ),
                           ),
                         ),
-                      if (legacy || exam)
+                      if (!attendanceOnly && (legacy || exam))
                         DataCell(
                           Text(
                             record?.examAbsent == true
@@ -1198,28 +1264,30 @@ class _AcademicsPageState extends State<AcademicsPage> {
                                 : null,
                           ),
                         ),
-                      DataCell(
-                        SizedBox(
-                          width: 180,
-                          child: Text(
-                            record?.notes ?? '—',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      if (!attendanceOnly)
+                        DataCell(
+                          SizedBox(
+                            width: 180,
+                            child: Text(
+                              record?.notes ?? '—',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
-                      ),
-                      DataCell(
-                        TextButton.icon(
-                          onPressed:
-                              widget.store.canAssess &&
-                                  !_editing &&
-                                  _canRecordFor(selected.id)
-                              ? () => _edit(student, selected)
-                              : null,
-                          icon: const Icon(Icons.edit_note),
-                          label: const Text('رصد'),
+                      if (!attendanceOnly)
+                        DataCell(
+                          TextButton.icon(
+                            onPressed:
+                                widget.store.canAssess &&
+                                    !_editing &&
+                                    _canRecordFor(selected.id)
+                                ? () => _edit(student, selected)
+                                : null,
+                            icon: const Icon(Icons.edit_note),
+                            label: const Text('رصد'),
+                          ),
                         ),
-                      ),
                     ],
                   );
                 },

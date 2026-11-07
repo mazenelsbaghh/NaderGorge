@@ -74,6 +74,103 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  for (final lateLesson in [2, 4]) {
+    test(
+      'monthly payment at lesson $lateLesson expires before the next month',
+      () async {
+        Future<StudyMonth> month(String name) => store.saveStudyMonth(
+          StudyMonth(
+            name: name,
+            lessons: [for (var n = 1; n <= 4; n++) PreparedLesson(number: n)],
+          ),
+        );
+        Future<LessonSession> start(StudyMonth month, int number) =>
+            store.startPreparedLesson(
+              groupId: groupId,
+              preparedLessonId: month.lessons[number - 1].id,
+            );
+        EntryRequest monthlyEntry(StudyMonth month, LessonSession lesson) =>
+            EntryRequest(
+              studentId: studentId,
+              sessionId: lesson.id,
+              mode: EntryMode.package,
+              monthPlanId: month.id,
+            );
+
+        final currentMonth = await month('شهر التجربة');
+        final nextMonth = await month('الشهر التالي');
+        final purchaseLesson = await start(currentMonth, lateLesson);
+        await store.collectAndAttend(
+          monthlyEntry(currentMonth, purchaseLesson),
+        );
+        final originalPackage = store.packages.single;
+        expect(
+          store.eligibleRemainingFor(studentId, purchaseLesson.id),
+          4 - lateLesson,
+        );
+        await store.closeSession(purchaseLesson.id);
+        for (var n = lateLesson + 1; n <= 4; n++) {
+          final lesson = await start(currentMonth, n);
+          final entry = monthlyEntry(currentMonth, lesson);
+          expect(store.entryConfirmationFor(entry).netAmount, 0);
+          await store.collectAndAttend(entry);
+          expect(store.attendances.last.packageId, originalPackage.id);
+          await store.closeSession(lesson.id);
+        }
+
+        final firstNextLesson = await start(nextMonth, 1);
+        final entry = monthlyEntry(nextMonth, firstNextLesson);
+        expect(store.eligibleRemainingFor(studentId, firstNextLesson.id), 0);
+        expect(store.entryConfirmationFor(entry).netAmount, 15750);
+        await store.collectAndAttend(entry);
+        expect(store.payments, hasLength(2));
+        expect(store.attendances.last.packageId, isNot(originalPackage.id));
+        expect(store.packages.last.monthPlanId, nextMonth.id);
+      },
+    );
+  }
+
+  test(
+    'receipt edit preserves original attendance and archived cash closing',
+    () async {
+      final lesson = await session(1);
+      await enter(lesson, mode: EntryMode.single);
+      final original = store.payments.single;
+      final attendance = store.attendances.single;
+      await store.closeSession(lesson.id);
+      await store.finalizeSession(sessionId: lesson.id, actualCash: 7500);
+      final archived = store.closings.single;
+
+      Future<void> edit() => store.editPayment(
+        reviewed: original,
+        paidAmount: 5000,
+        method: 'إنستاباي',
+        reason: 'مطابقة التحصيل الفعلي',
+      );
+      await expectLater(edit(), throwsA(isA<CenterException>()));
+      await store.reopenFinancialClosing(
+        closingId: archived.id,
+        reason: 'مراجعة الإيصال',
+      );
+      await edit();
+      await expectLater(edit(), throwsA(isA<CenterException>()));
+
+      expect(store.paymentCollectedFor(original.id), 5000);
+      expect(store.paymentDebtFor(original.id), 2500);
+      expect(store.effectivePaymentMethod(original.id), 'إنستاباي');
+      expect(store.allPayments.single.toJson(), original.toJson());
+      expect(store.attendances.single.toJson(), attendance.toJson());
+      expect(store.allClosings.single.toJson(), archived.toJson());
+      expect(store.sessionFinancialSummary(lesson.id).expectedCash, 0);
+      await store.finalizeSession(sessionId: lesson.id, actualCash: 0);
+
+      await store.close();
+      store = await CenterStore.open(directory: directory.path);
+      expect(store.paymentCollectedFor(original.id), 5000);
+      expect(store.allClosings.first.toJson(), archived.toJson());
+    },
+  );
+
   for (final role in [StaffRole.cashier, StaffRole.assistant]) {
     test(
       '${role.name} can create groups but cannot edit groups or catalogs',

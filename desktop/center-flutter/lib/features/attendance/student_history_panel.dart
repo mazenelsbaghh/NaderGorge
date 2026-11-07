@@ -1,5 +1,6 @@
 import 'package:massar_center/shared/scrollable_dialog.dart';
 import 'package:flutter/material.dart';
+import 'payment_edit_dialog.dart';
 import 'record_cancellation_dialog.dart';
 import '../management/student_profile_page.dart';
 import 'online_payment_allocation_action.dart';
@@ -57,6 +58,19 @@ class StudentHistoryPanel extends StatelessWidget {
       ),
     );
   });
+
+  Future<void> _editPayment(BuildContext context, String paymentId) =>
+      _openModal(() async {
+        if (!context.mounted || !actionsEnabled || !store.canCollect) return;
+        await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => PaymentEditDialog(
+            store: store,
+            payment: store.effectivePaymentRecord(paymentId),
+          ),
+        );
+      });
 
   Future<void> _allocateOnline(BuildContext context, PaymentRecord payment) =>
       _openModal(() async {
@@ -1138,6 +1152,14 @@ class StudentHistoryPanel extends StatelessWidget {
                               ? () => _allocateOnline(context, record)
                               : null,
                           child: const Text('تحويل للأونلاين'),
+                        ),
+                      if (active)
+                        TextButton(
+                          key: ValueKey('edit-payment-${record.id}'),
+                          onPressed: actionsEnabled
+                              ? () => _editPayment(context, record.id)
+                              : null,
+                          child: const Text('تعديل الدفع'),
                         ),
                       Tooltip(
                         message: allocated

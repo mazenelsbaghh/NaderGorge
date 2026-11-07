@@ -142,6 +142,7 @@ enum CorrectionAction {
   entryCorrected,
   absencePresent,
   paymentMethod,
+  paymentEdited,
   paymentCanceled,
   packageRefund,
   packageOnlineAllocation,
@@ -162,6 +163,8 @@ class CorrectionRecord {
     this.oldMethod,
     this.newMethod,
     this.onlineAmount,
+    this.oldPaidAmount,
+    this.newPaidAmount,
     this.voidsPayment = false,
     this.voidsPackage = false,
     required this.reason,
@@ -182,7 +185,7 @@ class CorrectionRecord {
   final bool voidsPayment, voidsPackage;
 
   /// Part of an existing receipt assigned to online; never a new cash movement.
-  final int? onlineAmount;
+  final int? onlineAmount, oldPaidAmount, newPaidAmount;
   final DateTime createdAt;
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -197,6 +200,8 @@ class CorrectionRecord {
     'oldMethod': oldMethod,
     'newMethod': newMethod,
     if (onlineAmount != null) 'onlineAmount': onlineAmount,
+    if (oldPaidAmount != null) 'oldPaidAmount': oldPaidAmount,
+    if (newPaidAmount != null) 'newPaidAmount': newPaidAmount,
     'voidsPayment': voidsPayment,
     'voidsPackage': voidsPackage,
     'reason': reason,
@@ -216,6 +221,8 @@ class CorrectionRecord {
     oldMethod: j['oldMethod'] as String?,
     newMethod: j['newMethod'] as String?,
     onlineAmount: j['onlineAmount'] as int?,
+    oldPaidAmount: j['oldPaidAmount'] as int?,
+    newPaidAmount: j['newPaidAmount'] as int?,
     voidsPayment: j['voidsPayment'] as bool,
     voidsPackage: j['voidsPackage'] as bool,
     reason: j['reason'] as String,

@@ -9,13 +9,7 @@ extension CenterStoreDebts on CenterStore {
       .fold<int>(0, (sum, e) => sum + e.amount);
 
   int paymentCollectedFor(String paymentId) {
-    final payment =
-        _readIndex?.paymentsById[paymentId] ??
-        _find<PaymentRecord>(
-          _state.payments,
-          (e) => e.id == paymentId,
-          'عملية الدفع غير موجودة.',
-        );
+    final payment = effectivePaymentRecord(paymentId);
     return payment.collectedAmount + _settledAmount(paymentId, DebtKind.lesson);
   }
 
@@ -29,13 +23,7 @@ extension CenterStoreDebts on CenterStore {
   }
 
   int paymentDebtFor(String paymentId) {
-    final payment =
-        _readIndex?.paymentsById[paymentId] ??
-        _find<PaymentRecord>(
-          _state.payments,
-          (e) => e.id == paymentId,
-          'عملية الدفع غير موجودة.',
-        );
+    final payment = effectivePaymentRecord(paymentId);
     return _voidPaymentIds.contains(paymentId)
         ? 0
         : payment.netAmount - paymentCollectedFor(paymentId);

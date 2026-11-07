@@ -79,6 +79,27 @@ class _AcademicWorkbookReader {
   final _numberFormats = <String?>[];
 
   AcademicExcelWorkbook read(AcademicExcelScoreColumns columns) {
+    final sheets = <AcademicExcelSheet>[];
+    final warnings = <String>[];
+    for (final (name, sheetPath) in _sheetSources()) {
+      final rows = _readSheet(sheetPath, columns);
+      if (rows == null) {
+        warnings.add(
+          'لم تُقرأ الورقة «$name»: عناوين الأعمدة لا تطابق نموذج النتائج A:S.',
+        );
+      } else {
+        sheets.add(AcademicExcelSheet(name: name, rows: rows));
+      }
+    }
+    if (sheets.isEmpty) {
+      throw const FormatException(
+        'لم توجد ورقة نتائج بالعناوين المطلوبة بالترتيب من A إلى S.',
+      );
+    }
+    return AcademicExcelWorkbook(sheets: sheets, warnings: warnings);
+  }
+
+  Iterable<(String, String)> _sheetSources() sync* {
     final workbook = _xml('xl/workbook.xml');
     final date1904 = _elements(
       workbook,
@@ -128,8 +149,6 @@ class _AcademicWorkbookReader {
       }
     }
     _readStyles();
-    final sheets = <AcademicExcelSheet>[];
-    final warnings = <String>[];
     final sourceSheets = _elements(workbook, 'sheet').toList();
     if (sourceSheets.isEmpty ||
         sourceSheets.length > AcademicExcelLimits.maxSheets) {
@@ -148,21 +167,8 @@ class _AcademicWorkbookReader {
       if (sheetPath == null || !usedPaths.add(sheetPath)) {
         throw const FormatException('تعذر تحديد ورقة Excel بشكل فريد.');
       }
-      final rows = _readSheet(sheetPath, columns);
-      if (rows == null) {
-        warnings.add(
-          'لم تُقرأ الورقة «$name»: عناوين الأعمدة لا تطابق نموذج النتائج A:S.',
-        );
-      } else {
-        sheets.add(AcademicExcelSheet(name: name, rows: rows));
-      }
+      yield (name, sheetPath);
     }
-    if (sheets.isEmpty) {
-      throw const FormatException(
-        'لم توجد ورقة نتائج بالعناوين المطلوبة بالترتيب من A إلى S.',
-      );
-    }
-    return AcademicExcelWorkbook(sheets: sheets, warnings: warnings);
   }
 
   XmlDocument _xml(String name) {
@@ -289,50 +295,14 @@ class _AcademicWorkbookReader {
     String sheetPath,
     AcademicExcelScoreColumns columns,
   ) {
-    final document = _xml(sheetPath);
     final rows = <AcademicExcelRow>[];
     var hasHeader = false;
-    var previousRow = 0;
-    for (final row in _elements(document, 'row')) {
-      if (++_rowCount >
-          AcademicExcelLimits.maxRows + AcademicExcelLimits.maxSheets) {
-        throw const FormatException('عدد صفوف Excel أكبر من ١٠ آلاف صف.');
-      }
-      final rowNumber = int.tryParse(row.getAttribute('r') ?? '');
-      if (rowNumber == null ||
-          rowNumber <= previousRow ||
-          rowNumber > AcademicExcelLimits.maxRows + 1) {
-        throw const FormatException(
-          'ترتيب صفوف Excel غير سليم أو يتجاوز الحد المسموح.',
-        );
-      }
-      previousRow = rowNumber;
+    for (final (rowNumber, cells) in _sheetRows(sheetPath)) {
       final values = List.filled(academicExcelColumns.length, '');
       final errors = <String>[];
       final warnings = <String>[];
-      final usedColumns = <int>{};
       var extraValues = false;
-      for (final cell in row.childElements.where((e) => e.name.local == 'c')) {
-        if (++_cellCount >
-            AcademicExcelLimits.maxCells + 19 * AcademicExcelLimits.maxSheets) {
-          throw const FormatException('عدد خلايا Excel أكبر من الحد المسموح.');
-        }
-        final reference = cell.getAttribute('r') ?? '';
-        final match = RegExp(
-          r'^([A-Z]{1,3})([1-9][0-9]{0,6})$',
-        ).firstMatch(reference);
-        if (match == null || int.parse(match.group(2)!) != rowNumber) {
-          throw const FormatException('عنوان خلية Excel غير سليم.');
-        }
-        var column = 0;
-        for (final letter in match.group(1)!.codeUnits) {
-          column = column * 26 + letter - 64;
-        }
-        if (!usedColumns.add(column) || column > 16384) {
-          throw const FormatException(
-            'ملف Excel يحتوي على خلية مكررة أو عنوان غير سليم.',
-          );
-        }
+      for (final (column, cell) in cells) {
         final value = _readCell(cell, column, errors, warnings);
         if (column <= 19) {
           values[column - 1] = value;
@@ -354,6 +324,52 @@ class _AcademicWorkbookReader {
       }
     }
     return hasHeader ? rows : null;
+  }
+
+  Iterable<(int, List<(int, XmlElement)>)> _sheetRows(String sheetPath) sync* {
+    final document = _xml(sheetPath);
+    var previousRow = 0;
+    for (final row in _elements(document, 'row')) {
+      if (++_rowCount >
+          AcademicExcelLimits.maxRows + AcademicExcelLimits.maxSheets) {
+        throw const FormatException('عدد صفوف Excel أكبر من ١٠ آلاف صف.');
+      }
+      final rowNumber = int.tryParse(row.getAttribute('r') ?? '');
+      if (rowNumber == null ||
+          rowNumber <= previousRow ||
+          rowNumber > AcademicExcelLimits.maxRows + 1) {
+        throw const FormatException(
+          'ترتيب صفوف Excel غير سليم أو يتجاوز الحد المسموح.',
+        );
+      }
+      previousRow = rowNumber;
+      final cells = <(int, XmlElement)>[];
+      final usedColumns = <int>{};
+      for (final cell in row.childElements.where((e) => e.name.local == 'c')) {
+        if (++_cellCount >
+            AcademicExcelLimits.maxCells + 19 * AcademicExcelLimits.maxSheets) {
+          throw const FormatException('عدد خلايا Excel أكبر من الحد المسموح.');
+        }
+        final reference = cell.getAttribute('r') ?? '';
+        final match = RegExp(
+          r'^([A-Z]{1,3})([1-9][0-9]{0,6})$',
+        ).firstMatch(reference);
+        if (match == null || int.parse(match.group(2)!) != rowNumber) {
+          throw const FormatException('عنوان خلية Excel غير سليم.');
+        }
+        var column = 0;
+        for (final letter in match.group(1)!.codeUnits) {
+          column = column * 26 + letter - 64;
+        }
+        if (!usedColumns.add(column) || column > 16384) {
+          throw const FormatException(
+            'ملف Excel يحتوي على خلية مكررة أو عنوان غير سليم.',
+          );
+        }
+        cells.add((column, cell));
+      }
+      yield (rowNumber, cells);
+    }
   }
 
   String _readCell(

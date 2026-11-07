@@ -3867,12 +3867,23 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         ? currentStudent.groupIds.map(store.groupLabel).join('، ')
         : store.groupLabel(makeupGroupId);
     final balanceGroupId = makeupGroupId ?? sourceGroup?.id ?? currentGroup?.id;
+    final balances = currentSession == null || balanceGroupId == null
+        ? null
+        : store.eligiblePackageBalances(
+            currentStudent.id,
+            balanceGroupId,
+            currentSession.id,
+          );
     final activePackages =
         store
             .packagesForStudent(currentStudent.id, groupId: balanceGroupId)
             .where(
               (package) =>
-                  package.groupId == balanceGroupId && package.remaining > 0,
+                  package.groupId == balanceGroupId &&
+                  (balances == null
+                          ? package.remaining
+                          : balances[package.id] ?? 0) >
+                      0,
             )
             .toList()
           ..sort(
@@ -4290,7 +4301,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                 activePackages
                     .map(
                       (package) =>
-                          '${package.monthPlanName ?? 'شهر'} · ${package.remaining} من ${package.totalSessions} حصص',
+                          '${package.monthPlanName ?? 'شهر'} · ${balances?[package.id] ?? package.remaining} من ${package.totalSessions} حصص',
                     )
                     .join(' · '),
                 key: const Key('active-month-packages'),
