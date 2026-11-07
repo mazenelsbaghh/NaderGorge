@@ -9,6 +9,7 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
 (async()=>{
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'massar-whatsapp-bindings-'));
  const engine=spawn(process.argv[2],['--center-integrated','--data-dir',directory,'--port','18975','--admin-port','18976']);
+ const stopped=new Promise(resolve=>engine.once('close',resolve));
  engine.stderr.resume();const lines=readline.createInterface({input:engine.stdout});let browser;
  try{
   const ready=await Promise.race([
@@ -40,10 +41,22 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
   await expect(page.getByRole('heading',{name:'رسائل واتساب',exact:true})).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByLabel('قالب رسالة التقرير').selectOption('parent');
-  assert.deepEqual(await page.locator('.whatsapp-fields select').evaluateAll(elements=>elements.map(element=>element.value)),['name','name','lesson','month','center','time','score','maximum','homework']);
+  const headerSource=page.getByRole('button',{name:/^العنوان · المتغير 1/});
+  const headerOptions=page.getByRole('group',{name:'العنوان · المتغير 1',exact:true});
+  await expect(headerSource).toHaveAccessibleName('العنوان · المتغير 1 اسم الطالب');
+  // Regression: the native dropdown did not reliably appear inside the Windows webview.
+  await headerSource.click();
+  await expect(headerOptions.getByRole('button',{name:'كود الطالب',exact:true})).toBeVisible();
+  await headerOptions.getByRole('button',{name:'كود الطالب',exact:true}).click();
+  await expect(headerSource).toHaveAccessibleName('العنوان · المتغير 1 كود الطالب');
+  await headerSource.press('Enter');
+  await expect(headerOptions).toBeVisible();
+  await headerSource.press('Escape');
+  await expect(headerOptions).toBeHidden();
   await page.getByRole('button',{name:'تثبيت ربط المتغيرات',exact:true}).click();
   await expect(page.getByRole('button',{name:'ربط المتغيرات مثبت',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:/^معاينة الرسائل/}).click();
+  await expect(page.locator('.whatsapp-message').filter({hasText:'ولي أمر 001'})).toBeVisible();
   await expect(page.locator('.whatsapp-message').filter({hasText:'جاب 8 من 10 وعمل الواجب'})).toBeVisible();
   await expect(page.locator('.whatsapp-message').filter({hasText:'جاب 9 من 12 ولم يعمل الواجب'})).toBeVisible();
   await expect(page.getByRole('cell').filter({hasText:'مستبعد من الإرسال'})).toBeVisible();
@@ -70,6 +83,8 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
   await page.getByLabel('قالب رسالة التقرير').selectOption('parent');
   await expect(page.getByRole('button',{name:'ربط المتغيرات مثبت',exact:true})).toBeDisabled();
   await expect(page.getByText('ربط المتغيرات مثبت · تعديل الربط',{exact:true})).toBeVisible();
+  await page.getByText('ربط المتغيرات مثبت · تعديل الربط',{exact:true}).click();
+  await expect(headerSource).toHaveAccessibleName('العنوان · المتغير 1 كود الطالب');
   const settingsUrl=new URL(await page.getByRole('link',{name:'إعداد حساب واتساب والقوالب'}).getAttribute('href'),url);
   assert.equal(settingsUrl.searchParams.get('embedded'),'center');assert.equal(settingsUrl.searchParams.get('theme'),'light');
   await page.goto(settingsUrl.href);
@@ -88,5 +103,5 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
   assert.equal(sends,0);assert.deepEqual(errors,[]);
   if(output)await page.screenshot({path:path.join(output,'whatsapp-all-rejected.png'),fullPage:true});
   console.log('PASS: inline form, one-time scoped bindings, actual /10 and /12, rejected absent rows, fresh preview after recipient change, persistence across batches, schema invalidation, embedded links; no messages sent.');
- }finally{await browser?.close();lines.close();engine.kill('SIGTERM');await fs.rm(directory,{recursive:true,force:true});}
+ }finally{await browser?.close();lines.close();engine.kill('SIGTERM');await stopped;await fs.rm(directory,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

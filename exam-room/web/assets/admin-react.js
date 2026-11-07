@@ -9129,7 +9129,7 @@ function te({ disabled: e = !1 }) {
 	}) : null;
 }
 //#endregion
-//#region ../web/assets/common.js
+//#region exam-room/web/assets/common.js
 var k = (e, t = document) => t.querySelector(e), A = (e) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(e), ne = (e) => e < 10 ? "0" + e : String(e), re = (e) => `${ne(Math.floor(Math.max(0, e) / 60))}:${ne(Math.floor(Math.max(0, e) % 60))}`, j = {
 	draft: "مسودة",
 	waiting: "قاعة الانتظار مفتوحة",
@@ -9236,7 +9236,7 @@ function ue(e, t) {
 	return k("#confirm-title").textContent = e, k("#confirm-copy").textContent = t, ae(n, `${e}\n${t}`);
 }
 //#endregion
-//#region ../web/assets/qr.js
+//#region exam-room/web/assets/qr.js
 var de;
 ((e) => {
 	let t = class t {
@@ -10333,7 +10333,7 @@ function P({ config: e, onSave: t, onCancel: n, onDirty: r }) {
 	})] });
 }
 //#endregion
-//#region src/networkStatus.js
+//#region exam-room/frontend/src/networkStatus.js
 var F = null, _e = /* @__PURE__ */ new Set();
 function ve(e) {
 	F = e, _e.forEach((e) => e());
@@ -10351,7 +10351,7 @@ function xe(e) {
 	return typeof n != "string" || !/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]+$/i.test(n) ? "" : `https://${n.toLowerCase()}/`;
 }
 //#endregion
-//#region src/ExamHealth.jsx
+//#region exam-room/frontend/src/ExamHealth.jsx
 function I() {
 	let [e, t] = (0, x.useState)(null), [n, r] = (0, x.useState)(!1);
 	if ((0, x.useEffect)(() => {
@@ -10393,7 +10393,7 @@ function I() {
 	});
 }
 //#endregion
-//#region src/RecoverAnswers.jsx
+//#region exam-room/frontend/src/RecoverAnswers.jsx
 function Se({ attempt: e, exam: t, request: n, refresh: r }) {
 	let [i, a] = (0, x.useState)(null), [o, s] = (0, x.useState)(""), [c, l] = (0, x.useState)(!1);
 	if (!e.submitted_at || e.cancelled_at) return null;
@@ -10491,7 +10491,7 @@ function Se({ attempt: e, exam: t, request: n, refresh: r }) {
 	});
 }
 //#endregion
-//#region src/PortalConfiguration.jsx
+//#region exam-room/frontend/src/PortalConfiguration.jsx
 var Ce = {
 	direct: "دخول بالرابط بدون نافذة تلقائية",
 	welcome: "شاشة ترحيب بزر ابدأ",
@@ -10649,7 +10649,7 @@ function we({ status: e, disabled: t, refresh: n }) {
 	});
 }
 //#endregion
-//#region src/NetworkDiagnostics.jsx
+//#region exam-room/frontend/src/NetworkDiagnostics.jsx
 var Te = {
 	probe: "فحص الدخول التلقائي",
 	welcome_page: "فتح شاشة الترحيب",
@@ -10867,7 +10867,7 @@ function Ae() {
 	});
 }
 //#endregion
-//#region src/OmadaStatistics.jsx
+//#region exam-room/frontend/src/OmadaStatistics.jsx
 var je = {
 	not_configured: "لم يتم الربط",
 	ready: "القراءة تعمل",
@@ -11034,7 +11034,7 @@ function Pe({ status: e, refresh: t, disabled: n }) {
 	});
 }
 //#endregion
-//#region src/NetworkSetup.jsx
+//#region exam-room/frontend/src/NetworkSetup.jsx
 function Fe() {
 	let e = be(), t = xe(e), n = t || "http://10.77.0.1/", [r, i] = (0, x.useState)(!!window.pywebview?.api?.network_status), [a, o] = (0, x.useState)(!1), [s, c] = (0, x.useState)(!1), l = (0, x.useRef)(!1), [u, d] = (0, x.useState)(""), f = async (e = !1) => {
 		let t = window.pywebview?.api;
@@ -11267,7 +11267,7 @@ function Fe() {
 	});
 }
 //#endregion
-//#region src/Storage.jsx
+//#region exam-room/frontend/src/Storage.jsx
 var Ie = (e) => e >= 1024 ** 3 ? `${A(e / 1024 ** 3)} GB` : e >= 1024 ** 2 ? `${A(e / 1024 ** 2)} MB` : `${A(e / 1024)} KB`, Le = (e) => (/* @__PURE__ */ new Date(e * 1e3)).toLocaleString("ar-EG", {
 	dateStyle: "medium",
 	timeStyle: "short"
@@ -11574,7 +11574,7 @@ function Re({ token: e, onWhatsApp: t, centerIntegrated: n = !1 }) {
 	] });
 }
 //#endregion
-//#region src/whatsappTemplateFields.js
+//#region exam-room/frontend/src/whatsappTemplateFields.js
 var ze = /\{\{\s*([0-9]+|[a-z][a-z0-9_]*)\s*\}\}/g, Be = {
 	1: "name",
 	2: "lesson",
@@ -11660,7 +11660,7 @@ function Je(e, t) {
 	return (e?.components || []).flatMap((e) => e.type === "HEADER" && e.format === "TEXT" ? [r("header", e.text)] : e.type === "BODY" ? [r("body", e.text)] : e.type === "FOOTER" ? [e.text] : []).join("\n");
 }
 //#endregion
-//#region src/WhatsApp.jsx
+//#region exam-room/frontend/src/WhatsApp.jsx
 var Ye = {
 	accepted: "قبل واتساب الرسالة",
 	failed: "لم تُرسل",
@@ -11669,7 +11669,59 @@ var Ye = {
 	preparing: "تجهيز التقرير",
 	sending: "جارٍ الإرسال"
 }, Xe = (e) => (e?.components || []).find((e) => e.type === "BODY")?.text || "";
-function Ze({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
+function Ze({ label: e, source: t, disabled: n, onChange: r }) {
+	let [i, a] = (0, x.useState)(!1), o = (0, x.useRef)(null), s = (0, x.useId)(), c = i && !n, l = () => {
+		o.current.focus(), a(!1);
+	};
+	return /* @__PURE__ */ (0, S.jsxs)("div", {
+		className: "whatsapp-source-picker",
+		onBlur: (e) => {
+			e.currentTarget.contains(e.relatedTarget) || a(!1);
+		},
+		onKeyDown: (e) => {
+			c && e.key === "Escape" && (e.stopPropagation(), l());
+		},
+		children: [
+			/* @__PURE__ */ (0, S.jsx)("span", {
+				id: `${s}-label`,
+				children: e
+			}),
+			/* @__PURE__ */ (0, S.jsxs)("button", {
+				ref: o,
+				className: "button secondary",
+				type: "button",
+				disabled: n,
+				"aria-labelledby": `${s}-label ${s}-source`,
+				"aria-expanded": c,
+				"aria-controls": s,
+				onClick: () => a(!c),
+				children: [/* @__PURE__ */ (0, S.jsx)("span", {
+					id: `${s}-source`,
+					children: He[t] || "اختر بيانات الطالب"
+				}), /* @__PURE__ */ (0, S.jsx)("span", {
+					"aria-hidden": "true",
+					children: "▾"
+				})]
+			}),
+			/* @__PURE__ */ (0, S.jsx)("div", {
+				id: s,
+				className: "whatsapp-source-options",
+				role: "group",
+				"aria-labelledby": `${s}-label`,
+				hidden: !c,
+				children: Object.entries(He).map(([e, n]) => /* @__PURE__ */ (0, S.jsx)("button", {
+					type: "button",
+					"aria-pressed": e === t,
+					onClick: () => {
+						r(e), l();
+					},
+					children: n
+				}, e))
+			})
+		]
+	});
+}
+function Qe({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
 	let c = e.find((e) => e.id === t && e.reportSupported), l = Ue(c), u = We(c, o, s), d = e.filter((e) => e.reportSupported), f = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), p = (t) => {
 		n(t), i(Ke(e.find((e) => e.id === t), o, s));
 	}, m = (e, t) => i(l.map((n, i) => i === e ? {
@@ -11701,23 +11753,12 @@ function Ze({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 		open: !u || void 0,
 		children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: f ? "ربط المتغيرات مثبت · تعديل الربط" : "حدد بيانات متغيرات القالب" }), /* @__PURE__ */ (0, S.jsx)("div", {
 			className: "whatsapp-fields",
-			children: l.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: [
-				e.scope === "header" ? "العنوان" : e.scope === "button" ? "زر الرابط" : "نص الرسالة",
-				" · المتغير ",
-				e.position,
-				/* @__PURE__ */ (0, S.jsxs)("select", {
-					disabled: a,
-					value: r[t]?.source || "",
-					onChange: (e) => m(t, { source: e.target.value }),
-					children: [/* @__PURE__ */ (0, S.jsx)("option", {
-						value: "",
-						children: "اختر بيانات الطالب"
-					}), Object.entries(He).map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("option", {
-						value: e,
-						children: t
-					}, e))]
-				})
-			] }), r[t]?.source === "literal" && /* @__PURE__ */ (0, S.jsxs)("label", { children: ["النص الثابت", /* @__PURE__ */ (0, S.jsx)("input", {
+			children: l.map((e, t) => /* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)(Ze, {
+				label: `${e.scope === "header" ? "العنوان" : e.scope === "button" ? "زر الرابط" : "نص الرسالة"} · المتغير ${e.position}`,
+				source: r[t]?.source,
+				disabled: a,
+				onChange: (e) => m(t, { source: e })
+			}), r[t]?.source === "literal" && /* @__PURE__ */ (0, S.jsxs)("label", { children: ["النص الثابت", /* @__PURE__ */ (0, S.jsx)("input", {
 				disabled: a,
 				maxLength: 1e3,
 				value: r[t]?.text || "",
@@ -11726,7 +11767,7 @@ function Ze({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 		})]
 	}, `${c.id}:${c.bindingSchema}:${!!u}`)] })] });
 }
-function Qe({ token: e, returnBatchId: t = "" }) {
+function $e({ token: e, returnBatchId: t = "" }) {
 	let [n, r] = (0, x.useState)(null), [i, a] = (0, x.useState)([]), [o, s] = (0, x.useState)([]), [c, l] = (0, x.useState)(""), [u, d] = (0, x.useState)(""), [f, p] = (0, x.useState)({
 		phoneNumberId: "",
 		businessAccountId: "",
@@ -12070,8 +12111,8 @@ function Qe({ token: e, returnBatchId: t = "" }) {
 	});
 }
 //#endregion
-//#region src/SendReports.jsx
-function $e({ attempts: e, label: t = "إرسال عبر واتساب", centerBatchId: n = "", recipientKind: r = "student", reportKind: i = "exam" }) {
+//#region exam-room/frontend/src/SendReports.jsx
+function et({ attempts: e, label: t = "إرسال عبر واتساب", centerBatchId: n = "", recipientKind: r = "student", reportKind: i = "exam" }) {
 	let a = !!n, [o, s] = (0, x.useState)(null), [c, l] = (0, x.useState)(""), [u, d] = (0, x.useState)([]), [f, p] = (0, x.useState)(null), [m, h] = (0, x.useState)(!1), [g, _] = (0, x.useState)(""), [v, y] = (0, x.useState)(""), b = a ? e : e.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0), C = JSON.stringify([
 		n,
 		r,
@@ -12237,7 +12278,7 @@ function $e({ attempts: e, label: t = "إرسال عبر واتساب", centerBa
 					className: "notice",
 					children: o.syncError
 				}),
-				/* @__PURE__ */ (0, S.jsx)(Ze, {
+				/* @__PURE__ */ (0, S.jsx)(Qe, {
 					templates: o.templates,
 					templateId: c,
 					setTemplateId: ie,
@@ -12350,8 +12391,8 @@ function $e({ attempts: e, label: t = "إرسال عبر واتساب", centerBa
 	})] });
 }
 //#endregion
-//#region src/WhatsAppJobs.jsx
-var et = {
+//#region exam-room/frontend/src/WhatsAppJobs.jsx
+var tt = {
 	queued: "في دور الإرسال",
 	running: "جارٍ الإرسال",
 	completed: "اكتمل الإرسال",
@@ -12359,7 +12400,7 @@ var et = {
 	stopped: "تم الإيقاف",
 	interrupted: "توقف عند إغلاق البرنامج"
 };
-function tt() {
+function nt() {
 	let [e, t] = (0, x.useState)([]), [n, r] = (0, x.useState)(""), [i, a] = (0, x.useState)(""), o = async () => {
 		let e = await N("/api/whatsapp/jobs");
 		t(e.items);
@@ -12429,7 +12470,7 @@ function tt() {
 							/* @__PURE__ */ (0, S.jsxs)("strong", { children: [
 								e.title,
 								" · ",
-								e.stopping && e.state === "running" ? "يتوقف بعد الدفعة الحالية" : et[e.state]
+								e.stopping && e.state === "running" ? "يتوقف بعد الدفعة الحالية" : tt[e.state]
 							] }),
 							["queued", "running"].includes(e.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "text-button",
@@ -12473,18 +12514,18 @@ function tt() {
 	});
 }
 //#endregion
-//#region src/CenterWhatsAppReports.jsx
-var nt = {
+//#region exam-room/frontend/src/CenterWhatsAppReports.jsx
+var rt = {
 	followup: "متابعة الحضور والواجب والدرجة",
 	attendance: "الحضور والغياب",
 	homework: "عمل الواجب أو لم يعمل",
 	grade: "درجة الطالب"
 };
-function rt(e) {
+function it(e) {
 	let t = String(e || "").replace(/[٠-٩۰-۹]/g, (e) => String(e.charCodeAt(0) - (e <= "٩" ? 1632 : 1776))).replace(/[\s()-]/g, "");
 	return t.startsWith("0020") ? t = "0" + t.slice(4) : t.startsWith("+20") ? t = "0" + t.slice(3) : t.startsWith("20") && t.length === 12 && (t = "0" + t.slice(2)), /^01[0125]\d{8}$/.test(t);
 }
-function it({ batchId: e }) {
+function at({ batchId: e }) {
 	let [t, n] = (0, x.useState)(null), [r, i] = (0, x.useState)(""), [a, o] = (0, x.useState)(/* @__PURE__ */ new Set()), [s, c] = (0, x.useState)("guardian");
 	if ((0, x.useEffect)(() => {
 		let t = !0;
@@ -12506,14 +12547,14 @@ function it({ batchId: e }) {
 		className: "loading",
 		children: "جارٍ تحميل الطلاب وبيانات الرسائل…"
 	});
-	let l = (e) => s === "guardian" ? e.guardianPhone : e.phone, u = t.records.filter((e) => a.has(e.id)), d = u.filter((e) => rt(l(e))), f = t.records.length > 0 && t.records.every((e) => a.has(e.id)), p = t.messageKind || "followup";
+	let l = (e) => s === "guardian" ? e.guardianPhone : e.phone, u = t.records.filter((e) => a.has(e.id)), d = u.filter((e) => it(l(e))), f = t.records.length > 0 && t.records.every((e) => a.has(e.id)), p = t.messageKind || "followup";
 	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
 		/* @__PURE__ */ (0, S.jsxs)("header", {
 			className: "page-heading",
 			children: [/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("h1", { children: "رسائل واتساب" }), /* @__PURE__ */ (0, S.jsxs)("p", { children: [
 				t.title,
 				" · ",
-				nt[p] || nt.followup
+				rt[p] || rt.followup
 			] })] }), /* @__PURE__ */ (0, S.jsx)("a", {
 				className: "button secondary",
 				href: qe("whatsapp", e),
@@ -12577,7 +12618,7 @@ function it({ batchId: e }) {
 						/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.name, /* @__PURE__ */ (0, S.jsx)("small", { children: e.code })] }),
 						/* @__PURE__ */ (0, S.jsxs)("td", {
 							dir: "ltr",
-							children: [l(e) || "غير مسجل", /* @__PURE__ */ (0, S.jsx)("small", { children: rt(l(e)) ? "" : "لن يدخل الإرسال" })]
+							children: [l(e) || "غير مسجل", /* @__PURE__ */ (0, S.jsx)("small", { children: it(l(e)) ? "" : "لن يدخل الإرسال" })]
 						}),
 						/* @__PURE__ */ (0, S.jsxs)("td", { children: [e.group, /* @__PURE__ */ (0, S.jsxs)("small", { children: [
 							e.lesson,
@@ -12591,18 +12632,18 @@ function it({ batchId: e }) {
 				})
 			] })]
 		}),
-		/* @__PURE__ */ (0, S.jsx)($e, {
+		/* @__PURE__ */ (0, S.jsx)(et, {
 			attempts: d,
 			centerBatchId: e,
 			recipientKind: s,
 			reportKind: p
 		}),
-		/* @__PURE__ */ (0, S.jsx)(tt, {})
+		/* @__PURE__ */ (0, S.jsx)(nt, {})
 	] });
 }
 //#endregion
-//#region src/CenterSetup.jsx
-var at = [
+//#region exam-room/frontend/src/CenterSetup.jsx
+var ot = [
 	{
 		kind: "grades",
 		title: "الصفوف الدراسية",
@@ -12631,13 +12672,13 @@ var at = [
 		key: "groupId"
 	}
 ];
-function ot({ catalog: e, request: t, refresh: n }) {
+function st({ catalog: e, request: t, refresh: n }) {
 	let [r, i] = (0, x.useState)({}), [a, o] = (0, x.useState)({}), [s, c] = (0, x.useState)(!1), l = (e, t) => i((n) => {
 		let r = {
 			...n,
 			[e]: t
-		}, i = at.findIndex((t) => t.kind === e);
-		return at.slice(i + 1).forEach((e) => delete r[e.kind]), r;
+		}, i = ot.findIndex((t) => t.kind === e);
+		return ot.slice(i + 1).forEach((e) => delete r[e.kind]), r;
 	}), u = async (e, i) => {
 		i.preventDefault();
 		let s = (a[e.kind] || "").trim();
@@ -12682,7 +12723,7 @@ function ot({ catalog: e, request: t, refresh: n }) {
 		] })
 	}), /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "catalog-grid",
-		children: at.map((t) => {
+		children: ot.map((t) => {
 			let n = t.parent && r[t.parent], i = (e?.[t.kind] || []).filter((e) => !t.parent || e[t.key] === n), c = !t.parent || !!n;
 			return /* @__PURE__ */ (0, S.jsxs)("section", {
 				className: "panel catalog-column",
@@ -12740,7 +12781,7 @@ function ot({ catalog: e, request: t, refresh: n }) {
 					className: "help catalog-empty",
 					children: [
 						"اختر ",
-						at.find((e) => e.kind === t.parent)?.singular,
+						ot.find((e) => e.kind === t.parent)?.singular,
 						" أولًا."
 					]
 				})]
@@ -12749,8 +12790,8 @@ function ot({ catalog: e, request: t, refresh: n }) {
 	})] });
 }
 //#endregion
-//#region src/DownloadReports.jsx
-function st({ examId: e, attempts: t }) {
+//#region exam-room/frontend/src/DownloadReports.jsx
+function ct({ examId: e, attempts: t }) {
 	let [n, r] = (0, x.useState)(!1), i = t.filter((e) => !e.cancelled_at && e.submitted_at && e.pending === 0).length;
 	return /* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("button", {
 		className: "button secondary small",
@@ -12774,8 +12815,8 @@ function st({ examId: e, attempts: t }) {
 	})] });
 }
 //#endregion
-//#region src/Sheets.jsx
-function ct({ catalog: e, exams: t }) {
+//#region exam-room/frontend/src/Sheets.jsx
+function lt({ catalog: e, exams: t }) {
 	let [n, r] = (0, x.useState)(!1), i = async () => {
 		r(!0);
 		try {
@@ -12873,11 +12914,11 @@ function ct({ catalog: e, exams: t }) {
 							onClick: i,
 							children: n ? "جارٍ تجهيز الشيت…" : "تنزيل شيت Excel ↓"
 						}),
-						/* @__PURE__ */ (0, S.jsx)(st, {
+						/* @__PURE__ */ (0, S.jsx)(ct, {
 							examId: s,
 							attempts: h
 						}),
-						/* @__PURE__ */ (0, S.jsx)($e, {
+						/* @__PURE__ */ (0, S.jsx)(et, {
 							attempts: h,
 							label: "إرسال تقارير المجموعة عبر واتساب"
 						})
@@ -12922,8 +12963,8 @@ function ct({ catalog: e, exams: t }) {
 	] });
 }
 //#endregion
-//#region src/LiveTimer.jsx
-function lt({ dashboard: e, request: t, refresh: n }) {
+//#region exam-room/frontend/src/LiveTimer.jsx
+function ut({ dashboard: e, request: t, refresh: n }) {
 	let [r, i] = (0, x.useState)(Date.now()), [a, o] = (0, x.useState)(5), [s, c] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
 		let e = setInterval(() => i(Date.now()), 1e3);
@@ -12999,8 +13040,8 @@ function lt({ dashboard: e, request: t, refresh: n }) {
 	});
 }
 //#endregion
-//#region src/rosterStatus.js
-var ut = [
+//#region exam-room/frontend/src/rosterStatus.js
+var dt = [
 	["all", "الكل"],
 	["solving", "يحل الآن"],
 	["waiting", "في الانتظار"],
@@ -13013,7 +13054,7 @@ var ut = [
 	["pending", "بانتظار التصحيح"],
 	["graded", "تم التصحيح"],
 	["cancelled", "ملغي"]
-], dt = [
+], ft = [
 	["fullscreen", "ملء الشاشة"],
 	["fullscreen_exit", "خارج ملء الشاشة"],
 	["screen_reduced", "مساحة عرض أقل"],
@@ -13021,7 +13062,7 @@ var ut = [
 	["fullscreen_unsupported", "ملء الشاشة غير مدعوم"],
 	["screen_missing", "بدون بيانات شاشة"]
 ];
-function ft(e, t, n) {
+function pt(e, t, n) {
 	return e.cancelled_at ? {
 		key: "cancelled",
 		tone: "disconnected",
@@ -13064,9 +13105,9 @@ function ft(e, t, n) {
 		label: "لم يسلّم"
 	};
 }
-function pt(e, t, n) {
+function mt(e, t, n) {
 	if (n === "all") return !0;
-	if (dt.some(([e]) => e === n)) {
+	if (ft.some(([e]) => e === n)) {
 		if (e.cancelled_at || e.submitted_at) return !1;
 		let t = e.screen?.current;
 		if (n === "screen_missing") return !t;
@@ -13079,9 +13120,9 @@ function pt(e, t, n) {
 	}
 	return n === "active" ? !e.cancelled_at && !e.submitted_at : n === "submitted" ? !e.cancelled_at && !!e.submitted_at : n === "pending" ? !e.cancelled_at && !!e.submitted_at && e.pending > 0 : n === "graded" ? !e.cancelled_at && !!e.submitted_at && e.pending === 0 : t.key === n;
 }
-function mt(e, t, n) {
+function ht(e, t, n) {
 	if (!e.joined_at || e.cancelled_at || e.submitted_at || !["waiting", "running"].includes(t.state)) return "";
-	let r = ft(e, t, n);
+	let r = pt(e, t, n);
 	return [
 		"paused",
 		"away",
@@ -13090,8 +13131,8 @@ function mt(e, t, n) {
 	].includes(r.key) ? r.label : t.state === "running" && t.config.screenGuard && e.screen?.issue || "";
 }
 //#endregion
-//#region src/SelectedTime.jsx
-function ht({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
+//#region exam-room/frontend/src/SelectedTime.jsx
+function gt({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 	let [a, o] = (0, x.useState)(5), [s, c] = (0, x.useState)(!1), l = async (a) => {
 		if (!s && t.length) {
 			c(!0);
@@ -13156,8 +13197,8 @@ function ht({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 	});
 }
 //#endregion
-//#region src/ReopenAttempts.jsx
-function gt({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
+//#region exam-room/frontend/src/ReopenAttempts.jsx
+function _t({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 	let [a, o] = (0, x.useState)(10), [s, c] = (0, x.useState)(!1);
 	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "selected-time",
@@ -13210,8 +13251,8 @@ function gt({ examId: e, attempts: t, request: n, refresh: r, clear: i }) {
 	});
 }
 //#endregion
-//#region src/CancelAttempt.jsx
-function _t({ attempt: e, request: t, refresh: n, onClose: r }) {
+//#region exam-room/frontend/src/CancelAttempt.jsx
+function vt({ attempt: e, request: t, refresh: n, onClose: r }) {
 	let [i, a] = (0, x.useState)(""), [o, s] = (0, x.useState)(!1), [c, l] = (0, x.useState)("");
 	return /* @__PURE__ */ (0, S.jsx)("div", {
 		className: "send-overlay",
@@ -13282,8 +13323,8 @@ function _t({ attempt: e, request: t, refresh: n, onClose: r }) {
 	});
 }
 //#endregion
-//#region src/rosterOrder.js
-var vt = [
+//#region exam-room/frontend/src/rosterOrder.js
+var yt = [
 	["newest", "أحدث دخول أولًا"],
 	["oldest", "أقدم دخول أولًا"],
 	["seen", "أحدث ظهور أولًا"],
@@ -13293,10 +13334,10 @@ var vt = [
 	["highest", "أعلى درجة بعد التصحيح"],
 	["lowest", "أقل درجة بعد التصحيح"],
 	["deadline", "الأقرب لانتهاء الوقت"]
-], yt = new Intl.Collator("ar", {
+], bt = new Intl.Collator("ar", {
 	numeric: !0,
 	sensitivity: "base"
-}), bt = new Intl.DateTimeFormat("ar-EG", {
+}), xt = new Intl.DateTimeFormat("ar-EG", {
 	day: "numeric",
 	month: "short",
 	hour: "2-digit",
@@ -13304,15 +13345,15 @@ var vt = [
 	second: "2-digit",
 	timeZone: "Africa/Cairo"
 });
-function xt(e, t) {
+function St(e, t) {
 	return t === "newest" || t === "oldest" ? e.joined_at || null : t === "seen" ? e.last_seen || null : t === "submitted" ? e.submitted_at || null : t === "highest" || t === "lowest" ? !e.cancelled_at && e.submitted_at && e.pending === 0 ? e.score : null : t === "deadline" && !e.cancelled_at && !e.submitted_at && e.deadline || null;
 }
-function St(e, t) {
+function Ct(e, t) {
 	return [...e].sort((e, n) => {
 		let r = 0;
-		if (t === "name" || t === "code") r = yt.compare(String(e[t] || ""), String(n[t] || ""));
+		if (t === "name" || t === "code") r = bt.compare(String(e[t] || ""), String(n[t] || ""));
 		else {
-			let i = xt(e, t), a = xt(n, t);
+			let i = St(e, t), a = St(n, t);
 			if (i === null && a !== null) return 1;
 			if (a === null && i !== null) return -1;
 			i !== null && a !== null && (r = [
@@ -13321,20 +13362,20 @@ function St(e, t) {
 				"deadline"
 			].includes(t) ? i - a : a - i);
 		}
-		return r || yt.compare(String(e.code), String(n.code)) || String(e.id).localeCompare(String(n.id));
+		return r || bt.compare(String(e.code), String(n.code)) || String(e.id).localeCompare(String(n.id));
 	});
 }
-function Ct(e) {
-	return e ? bt.format(/* @__PURE__ */ new Date(e * 1e3)) : "لم يدخل بعد";
+function wt(e) {
+	return e ? xt.format(/* @__PURE__ */ new Date(e * 1e3)) : "لم يدخل بعد";
 }
-function wt(e, t) {
+function Tt(e, t) {
 	let n = [], r = [];
 	for (let i of e) (t(i) ? n : r).push(i);
 	return [...n, ...r];
 }
 //#endregion
-//#region src/RosterCards.jsx
-function Tt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: i }) {
+//#region exam-room/frontend/src/RosterCards.jsx
+function Et({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: i }) {
 	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "roster-card-area",
 		"aria-label": "حالات الطلاب",
@@ -13348,10 +13389,10 @@ function Tt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: 
 			}),
 			[{
 				label: "حالات الطلاب",
-				filters: ut
+				filters: dt
 			}, ...i ? [{
 				label: "مراقبة الشاشة",
-				filters: dt
+				filters: ft
 			}] : []].map((r) => /* @__PURE__ */ (0, S.jsxs)(x.Fragment, { children: [r.label === "مراقبة الشاشة" && /* @__PURE__ */ (0, S.jsx)("h3", {
 				className: "screen-card-heading",
 				children: "آخر حالة للشاشة · المحاولات غير المسلّمة"
@@ -13382,7 +13423,7 @@ function Tt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: 
 				role: "status",
 				children: [
 					"المعروض: ",
-					[...ut, ...dt].find(([e]) => e === t)?.[1],
+					[...dt, ...ft].find(([e]) => e === t)?.[1],
 					" · ",
 					A(e[t]),
 					" طالب"
@@ -13392,8 +13433,8 @@ function Tt({ counts: e, filter: t, onChange: n, searching: r, showScreenCards: 
 	});
 }
 //#endregion
-//#region src/ScreenControls.jsx
-function Et({ exam: e, request: t, refresh: n }) {
+//#region exam-room/frontend/src/ScreenControls.jsx
+function Dt({ exam: e, request: t, refresh: n }) {
 	let [r, i] = (0, x.useState)(!1), a = async (r) => {
 		i(!0);
 		try {
@@ -13429,8 +13470,8 @@ function Et({ exam: e, request: t, refresh: n }) {
 	});
 }
 //#endregion
-//#region src/AbsenceControls.jsx
-function Dt({ exam: e, request: t, refresh: n }) {
+//#region exam-room/frontend/src/AbsenceControls.jsx
+function Ot({ exam: e, request: t, refresh: n }) {
 	let [r, i] = (0, x.useState)(e.config.absenceSeconds || 0), [a, o] = (0, x.useState)(!1);
 	return (0, x.useEffect)(() => i(e.config.absenceSeconds || 0), [e.config.absenceSeconds]), /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "panel padded",
@@ -13478,15 +13519,15 @@ function Dt({ exam: e, request: t, refresh: n }) {
 	});
 }
 //#endregion
-//#region src/centerRoomSelection.js
-function Ot(e, t, n = !1) {
+//#region exam-room/frontend/src/centerRoomSelection.js
+function kt(e, t, n = !1) {
 	if (n) return null;
 	let r = e.find((e) => e.id === t), i = e.find((e) => ["waiting", "running"].includes(e.state));
 	return r ? r.state === "closed" && i && i.createdAt > r.createdAt ? i.id : null : i?.id || e[0]?.id || null;
 }
 //#endregion
-//#region src/centerEmbeddedTheme.js
-var kt = {
+//#region exam-room/frontend/src/centerEmbeddedTheme.js
+var At = {
 	light: {
 		canvas: "#F6F7F8",
 		surface: "#FFFFFF",
@@ -13523,7 +13564,7 @@ var kt = {
 		textOnNav: "#E6EDF5",
 		onPrimary: "#092625"
 	}
-}, At = {
+}, jt = {
 	canvas: "canvas",
 	surface: "paper",
 	ink: "ink",
@@ -13541,8 +13582,8 @@ var kt = {
 	textOnNav: "center-text-on-nav",
 	onPrimary: "on-primary"
 };
-function jt(e) {
-	let t = e?.mode === "dark" ? "dark" : "light", n = { ...kt[t] };
+function Mt(e) {
+	let t = e?.mode === "dark" ? "dark" : "light", n = { ...At[t] };
 	for (let t of Object.keys(n)) {
 		let r = e?.colors?.[t] ?? (t === "onPrimary" ? e?.onPrimary : void 0);
 		typeof r == "string" && /^#[\da-f]{6}$/i.test(r) && (n[t] = r);
@@ -13552,20 +13593,20 @@ function jt(e) {
 		colors: n
 	};
 }
-function Mt(e, t) {
+function Nt(e, t) {
 	if (new URLSearchParams(e.location.search).get("embedded") !== "center") return !1;
 	t.documentElement.classList.add("center-embedded-root"), t.body.classList.add("center-embedded");
 	let n = (e) => {
-		let n = jt(e), r = t.documentElement;
+		let n = Mt(e), r = t.documentElement;
 		r.dataset.centerTheme = n.mode, r.style.colorScheme = n.mode;
-		for (let [e, t] of Object.entries(At)) r.style.setProperty(`--${t}`, n.colors[e]);
+		for (let [e, t] of Object.entries(jt)) r.style.setProperty(`--${t}`, n.colors[e]);
 		return r.style.setProperty("--navy", n.colors.ink), !0;
 	};
 	return e.applyMassarCenterTheme = n, n(e.__massarCenterTheme || { mode: new URLSearchParams(e.location.search).get("theme") }), !0;
 }
 //#endregion
-//#region src/centerNativeNavigation.js
-var Nt = /* @__PURE__ */ new Set([
+//#region exam-room/frontend/src/centerNativeNavigation.js
+var Pt = /* @__PURE__ */ new Set([
 	"room",
 	"exams",
 	"sheets",
@@ -13573,11 +13614,11 @@ var Nt = /* @__PURE__ */ new Set([
 	"whatsapp",
 	"storage",
 	"guide"
-]), Pt = /* @__PURE__ */ new WeakMap();
-function Ft(e) {
-	return e === "editor" ? "exams" : Nt.has(e) ? e : null;
+]), Ft = /* @__PURE__ */ new WeakMap();
+function It(e) {
+	return e === "editor" ? "exams" : Pt.has(e) ? e : null;
 }
-function It(e, t, n) {
+function Lt(e, t, n) {
 	e.chrome.webview.postMessage({
 		kind: "massar-center-navigation",
 		nonce: t.nonce,
@@ -13585,18 +13626,18 @@ function It(e, t, n) {
 		...n
 	});
 }
-function Lt(e, t, n) {
-	let r = Pt.get(e), i = Ft(t);
-	r && i && (r.view = i, It(e, r, {
+function Rt(e, t, n) {
+	let r = Ft.get(e), i = It(t);
+	r && i && (r.view = i, Lt(e, r, {
 		action: "state",
 		destination: i,
 		...n ? { requestId: n } : {}
 	}));
 }
-function Rt(e, t, { navigate: n, canLeave: r, onError: i }) {
+function zt(e, t, { navigate: n, canLeave: r, onError: i }) {
 	let a = new URLSearchParams(e.location.search), o = e.__massarCenterNavigationNonce;
 	if (a.get("embedded") !== "center" || a.get("native-shell") !== "1" || e.location.protocol !== "http:" || e.location.hostname !== "127.0.0.1" || e.top !== e || typeof o != "string" || !/^[a-f0-9]{48}$/.test(o) || !e.chrome?.webview?.postMessage || !e.chrome?.webview?.addEventListener) return () => {};
-	let s = Pt.get(e);
+	let s = Ft.get(e);
 	if (!s) {
 		let t = e.crypto.getRandomValues(/* @__PURE__ */ new Uint8Array(16));
 		s = {
@@ -13604,38 +13645,38 @@ function Rt(e, t, { navigate: n, canLeave: r, onError: i }) {
 			documentId: Array.from(t, (e) => e.toString(16).padStart(2, "0")).join(""),
 			view: "room",
 			tail: Promise.resolve()
-		}, Pt.set(e, s);
+		}, Ft.set(e, s);
 	}
 	s.navigate = n, s.canLeave = r, s.onError = i, t.body.classList.add("center-native-shell");
 	let c = (t) => {
 		let n = t.data;
-		n?.kind !== "massar-center-navigation" || n.nonce !== s.nonce || n.documentId !== s.documentId || !Number.isSafeInteger(n.requestId) || n.requestId < 1 || !["navigate", "leave"].includes(n.action) || n.action === "navigate" && !Nt.has(n.destination) || (s.tail = s.tail.then(async () => {
+		n?.kind !== "massar-center-navigation" || n.nonce !== s.nonce || n.documentId !== s.documentId || !Number.isSafeInteger(n.requestId) || n.requestId < 1 || !["navigate", "leave"].includes(n.action) || n.action === "navigate" && !Pt.has(n.destination) || (s.tail = s.tail.then(async () => {
 			try {
 				if (n.action === "leave") {
 					let t = await s.canLeave();
-					It(e, s, {
+					Lt(e, s, {
 						action: "leave-result",
 						requestId: n.requestId,
 						allowed: t === !0
 					});
-				} else Lt(e, await s.navigate(n.destination) === !0 ? n.destination : s.view, n.requestId);
+				} else Rt(e, await s.navigate(n.destination) === !0 ? n.destination : s.view, n.requestId);
 			} catch (t) {
-				n.action === "leave" ? It(e, s, {
+				n.action === "leave" ? Lt(e, s, {
 					action: "leave-result",
 					requestId: n.requestId,
 					allowed: !1
-				}) : Lt(e, s.view, n.requestId), s.onError?.(t);
+				}) : Rt(e, s.view, n.requestId), s.onError?.(t);
 			}
 		}));
 	};
-	return e.chrome.webview.addEventListener("message", c), It(e, s, {
+	return e.chrome.webview.addEventListener("message", c), Lt(e, s, {
 		action: "ready",
 		destination: s.view
 	}), () => e.chrome.webview.removeEventListener("message", c);
 }
 //#endregion
-//#region src/admin.jsx
-var zt = Mt(window, document), Bt = {
+//#region exam-room/frontend/src/admin.jsx
+var Bt = Nt(window, document), Vt = {
 	whatsapp: "واتساب السنتر",
 	"whatsapp-center": "إرسال تقرير السنتر",
 	sheets: "شيتات",
@@ -13645,16 +13686,16 @@ var zt = Mt(window, document), Bt = {
 	storage: "الإعدادات والبيانات",
 	guide: "دليل التشغيل",
 	editor: "تجهيز امتحان"
-}, Vt = ["waiting", "running"], Ht = "احفظ الدرجة وأغلق مراجعة الطالب أولًا", Ut = () => !!document.getElementById("review-panel");
-function Wt() {
-	if (Ut()) throw Error(Ht);
+}, Ht = ["waiting", "running"], Ut = "احفظ الدرجة وأغلق مراجعة الطالب أولًا", Wt = () => !!document.getElementById("review-panel");
+function Gt() {
+	if (Wt()) throw Error(Ut);
 	if (Array.from(document.querySelectorAll("dialog[open],[role=dialog]")).some((e) => e.getClientRects().length > 0)) throw Error("أكمل العملية المفتوحة أو أغلق النافذة أولًا");
 }
-var Gt = (e) => /* @__PURE__ */ (0, S.jsx)("span", {
+var Kt = (e) => /* @__PURE__ */ (0, S.jsx)("span", {
 	className: `badge ${e}`,
 	children: j[e]
 });
-function Kt({ url: e }) {
+function qt({ url: e }) {
 	let t = fe.encodeText(e, fe.Ecc.MEDIUM), n = [];
 	for (let e = 0; e < t.size; e++) for (let r = 0; r < t.size; r++) t.getModule(r, e) && n.push(`M${r + 4},${e + 4}h1v1h-1z`);
 	return /* @__PURE__ */ (0, S.jsxs)("figure", {
@@ -13678,7 +13719,7 @@ function Kt({ url: e }) {
 		})]
 	});
 }
-function qt() {
+function L() {
 	let [e, t] = (0, x.useState)(null), [n, r] = (0, x.useState)(!1), [i, a] = (0, x.useState)([]), [o, s] = (0, x.useState)([]), [c, l] = (0, x.useState)({
 		grades: [],
 		centers: [],
@@ -13718,7 +13759,7 @@ function qt() {
 			}
 		}
 	}, pe = async (e) => {
-		if (zt && Wt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
+		if (Bt && Gt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
 		k(!0);
 		try {
 			return v.current === "editor" && E.current && !await ue("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.") ? !1 : (e === "sheets" && await Promise.all([oe(), ce()]), e === "exams" && await se(), e === "catalog" && await ce(), y(e), D(!1), !0);
@@ -13734,7 +13775,7 @@ function qt() {
 				n && (history.replaceState(null, "", location.pathname + location.search), await N("/api/center/browser-login", { capability: n }));
 				let i = await N("/api/bootstrap");
 				if (!e) return;
-				if (ie.current = i.token, t(i), i.centerIntegrated && !zt) {
+				if (ie.current = i.token, t(i), i.centerIntegrated && !Bt) {
 					let e = document.createElement("p");
 					e.className = "notice", e.textContent = "اختر الامتحان والمجموعة والحصة على الساكند من الدليل المحفوظ، وافتح القاعة دون اتصال بالهوست. بعد التصحيح أعد الاتصال وحمّل الدرجات.", document.querySelector(".sidebar")?.appendChild(e);
 				}
@@ -13747,7 +13788,7 @@ function qt() {
 				a(o.exams), s(c.templates), l(u);
 				let d = o.exams;
 				if (d.length) {
-					let t = d.find((e) => Vt.includes(e.state)) || d[0], n = await N(`/api/exams/${t.id}`);
+					let t = d.find((e) => Ht.includes(e.state)) || d[0], n = await N(`/api/exams/${t.id}`);
 					e && (p(n), h(t.id));
 				}
 				e && r(!0);
@@ -13758,11 +13799,11 @@ function qt() {
 			e = !1;
 		};
 	}, []), (0, x.useEffect)(() => {
-		document.body.classList.toggle("center-whatsapp-view", zt && g === "whatsapp-center"), document.querySelectorAll(".nav-item").forEach((e) => {
+		document.body.classList.toggle("center-whatsapp-view", Bt && g === "whatsapp-center"), document.querySelectorAll(".nav-item").forEach((e) => {
 			e.classList.toggle("active", e.dataset.view === g), e.dataset.view === g ? e.setAttribute("aria-current", "page") : e.removeAttribute("aria-current");
 		});
 		let e = document.getElementById("page-location");
-		e && (e.textContent = Bt[g]);
+		e && (e.textContent = Vt[g]);
 	}, [g]), (0, x.useEffect)(() => {
 		let e = (e) => {
 			let t = e.target.closest(".nav-item");
@@ -13792,7 +13833,7 @@ function qt() {
 					let e = await N("/api/exams");
 					if (!n) return;
 					a(e.exams);
-					let t = !!(document.querySelector("#review-panel,dialog[open]") || document.activeElement?.matches("input,textarea,select")), r = Ot(e.exams, m, t);
+					let t = !!(document.querySelector("#review-panel,dialog[open]") || document.activeElement?.matches("input,textarea,select")), r = kt(e.exams, m, t);
 					if (r) {
 						let e = await N(`/api/exams/${r}`);
 						n && (p(e), h(r), ne(!0));
@@ -13821,13 +13862,13 @@ function qt() {
 		let e = document.getElementById("admin-connection");
 		e && (e.classList.toggle("offline", !A), e.textContent = A ? "● متصل بجهاز الإدارة" : "انقطع الاتصال بجهاز الإدارة");
 	}, [A]), (0, x.useEffect)(() => {
-		if (n) return Rt(window, document, {
+		if (n) return zt(window, document, {
 			navigate: async (e) => {
 				if (te.current) throw Error("انتظر انتهاء العملية الحالية");
 				return pe(e);
 			},
 			canLeave: () => {
-				if (Wt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
+				if (Gt(), te.current) throw Error("انتظر انتهاء العملية الحالية");
 				return v.current !== "editor" || !E.current || ue("مغادرة التعديلات بدون حفظ؟", "التغييرات التي كتبتها لم تُحفظ.");
 			},
 			onError: (e) => M(e.message, !0)
@@ -13838,7 +13879,7 @@ function qt() {
 		w,
 		O
 	]), (0, x.useEffect)(() => {
-		n && Lt(window, g);
+		n && Rt(window, g);
 	}, [n, g]), (0, x.useEffect)(() => {
 		let e = (e) => {
 			v.current === "editor" && E.current && (e.preventDefault(), e.returnValue = "");
@@ -13889,17 +13930,17 @@ function qt() {
 				children: "إعادة المحاولة"
 			})
 		]
-	}) : e ? g === "sheets" ? /* @__PURE__ */ (0, S.jsx)(ct, {
+	}) : e ? g === "sheets" ? /* @__PURE__ */ (0, S.jsx)(lt, {
 		catalog: c,
 		exams: i
 	}) : g === "storage" ? /* @__PURE__ */ (0, S.jsx)(Re, {
 		centerIntegrated: e.centerIntegrated,
 		token: e.token,
 		onWhatsApp: () => y("whatsapp")
-	}) : g === "whatsapp-center" ? /* @__PURE__ */ (0, S.jsx)(it, { batchId: new URLSearchParams(location.search).get("batch") || "" }) : g === "whatsapp" ? /* @__PURE__ */ (0, S.jsx)(Qe, {
+	}) : g === "whatsapp-center" ? /* @__PURE__ */ (0, S.jsx)(at, { batchId: new URLSearchParams(location.search).get("batch") || "" }) : g === "whatsapp" ? /* @__PURE__ */ (0, S.jsx)($e, {
 		token: e.token,
 		returnBatchId: new URLSearchParams(location.search).get("batch") || ""
-	}) : g === "guide" ? /* @__PURE__ */ (0, S.jsx)(on, { centerIntegrated: e.centerIntegrated }) : g === "catalog" ? /* @__PURE__ */ (0, S.jsx)(ot, {
+	}) : g === "guide" ? /* @__PURE__ */ (0, S.jsx)(sn, { centerIntegrated: e.centerIntegrated }) : g === "catalog" ? /* @__PURE__ */ (0, S.jsx)(st, {
 		catalog: c,
 		request: ae,
 		refresh: ce
@@ -13908,11 +13949,11 @@ function qt() {
 		onDirty: D,
 		onSave: me,
 		onCancel: () => pe("exams").catch((e) => M(e.message, !0))
-	}, u || "new") : g === "exams" ? /* @__PURE__ */ (0, S.jsx)(L, {
+	}, u || "new") : g === "exams" ? /* @__PURE__ */ (0, S.jsx)(Jt, {
 		templates: o,
 		onEdit: F,
 		onNew: () => F(null)
-	}) : zt ? /* @__PURE__ */ (0, S.jsx)(Zt, {
+	}) : Bt ? /* @__PURE__ */ (0, S.jsx)(Qt, {
 		dashboard: f,
 		bootstrap: e,
 		busy: O,
@@ -13920,7 +13961,7 @@ function qt() {
 		request: ae,
 		refresh: () => de(m),
 		onLibrary: () => pe("exams").catch((e) => M(e.message, !0)),
-		launcher: /* @__PURE__ */ (0, S.jsx)(Jt, {
+		launcher: /* @__PURE__ */ (0, S.jsx)(Yt, {
 			centerIntegrated: e.centerIntegrated,
 			catalog: c,
 			templates: o,
@@ -13931,14 +13972,14 @@ function qt() {
 			request: ae,
 			currentId: m
 		})
-	}) : f ? /* @__PURE__ */ (0, S.jsx)(en, {
+	}) : f ? /* @__PURE__ */ (0, S.jsx)(tn, {
 		dashboard: f,
 		bootstrap: e,
 		busy: O,
 		onState: ge,
 		request: ae,
 		refresh: () => de(m),
-		launcher: /* @__PURE__ */ (0, S.jsx)(Jt, {
+		launcher: /* @__PURE__ */ (0, S.jsx)(Yt, {
 			centerIntegrated: e.centerIntegrated,
 			catalog: c,
 			templates: o,
@@ -13949,7 +13990,7 @@ function qt() {
 			request: ae,
 			currentId: m
 		})
-	}, m) : /* @__PURE__ */ (0, S.jsx)(Jt, {
+	}, m) : /* @__PURE__ */ (0, S.jsx)(Yt, {
 		centerIntegrated: e.centerIntegrated,
 		catalog: c,
 		templates: o,
@@ -13963,7 +14004,7 @@ function qt() {
 		children: "جارٍ فتح قاعة السنتر…"
 	});
 }
-function L({ templates: e, onEdit: t, onNew: n }) {
+function Jt({ templates: e, onEdit: t, onNew: n }) {
 	let [r, i] = (0, x.useState)(""), a = e.filter((e) => String(e.config.title || "").toLowerCase().includes(r.toLowerCase()));
 	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 		className: "page-heading",
@@ -14018,8 +14059,8 @@ function L({ templates: e, onEdit: t, onNew: n }) {
 		})]
 	})] });
 }
-function Jt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy: a, currentId: o, request: s, centerIntegrated: c = !1 }) {
-	let [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)(""), [p, m] = (0, x.useState)(""), [h, g] = (0, x.useState)(""), [_, v] = (0, x.useState)(""), y = (t, n, r) => (e[t] || []).filter((e) => e[n] === r), b = n.filter((e) => Vt.includes(e.state)), [C, w] = (0, x.useState)(null), [T, E] = (0, x.useState)(!1);
+function Yt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy: a, currentId: o, request: s, centerIntegrated: c = !1 }) {
+	let [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)(""), [p, m] = (0, x.useState)(""), [h, g] = (0, x.useState)(""), [_, v] = (0, x.useState)(""), y = (t, n, r) => (e[t] || []).filter((e) => e[n] === r), b = n.filter((e) => Ht.includes(e.state)), [C, w] = (0, x.useState)(null), [T, E] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
 		let e = !0;
 		return N("/api/settings/rooms").then((t) => {
@@ -14075,7 +14116,7 @@ function Jt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy:
 					A(e.submitted),
 					" تسليم"
 				] })] }),
-				Gt(e.state),
+				Kt(e.state),
 				/* @__PURE__ */ (0, S.jsx)("span", {
 					className: "exam-open-label",
 					children: "عرض ←"
@@ -14108,7 +14149,7 @@ function Jt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy:
 						children: [A(b.length), " قاعة مفتوحة"]
 					})]
 				}),
-				zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
+				Bt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 					className: "center-room-options",
 					children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "إعدادات القاعات" }), ee]
 				}) : ee,
@@ -14199,20 +14240,20 @@ function Jt({ catalog: e, templates: t, exams: n, onOpen: r, onHistory: i, busy:
 						})
 					]
 				})] }),
-				c && /* @__PURE__ */ (0, S.jsx)(Yt, {
+				c && /* @__PURE__ */ (0, S.jsx)(Xt, {
 					templates: t,
 					onOpen: r,
 					disabled: a || T || C === null || !C && b.length > 0
 				})
 			]
 		}),
-		n.length > 0 && (zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
+		n.length > 0 && (Bt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 			className: "center-room-history",
 			children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "سجل الجلسات والنتائج" }), te]
 		}) : te)
 	] });
 }
-function Yt({ templates: e, onOpen: t, disabled: n }) {
+function Xt({ templates: e, onOpen: t, disabled: n }) {
 	let [r, i] = (0, x.useState)(""), [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)(""), [d, f] = (0, x.useState)({
 		contexts: [],
 		updatedAt: null
@@ -14357,14 +14398,14 @@ function Yt({ templates: e, onOpen: t, disabled: n }) {
 			className: "help",
 			children: "أضف نموذجًا من مكتبة الامتحانات أولًا."
 		}),
-		/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "قاعة مرتبطة بكشف مجهّز سابقًا — اختياري" }), /* @__PURE__ */ (0, S.jsx)(Xt, {
+		/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "قاعة مرتبطة بكشف مجهّز سابقًا — اختياري" }), /* @__PURE__ */ (0, S.jsx)(Zt, {
 			templates: e,
 			onOpen: t,
 			disabled: n
 		})] })
 	] });
 }
-function Xt({ templates: e, onOpen: t, disabled: n }) {
+function Zt({ templates: e, onOpen: t, disabled: n }) {
 	let [r, i] = (0, x.useState)([]), [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)(""), [l, u] = (0, x.useState)("");
 	(0, x.useEffect)(() => {
 		let e = !0;
@@ -14442,10 +14483,10 @@ function Xt({ templates: e, onOpen: t, disabled: n }) {
 		})
 	] });
 }
-function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, onLibrary: o, launcher: s }) {
+function Qt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, onLibrary: o, launcher: s }) {
 	let c = e?.exam, l = () => c ? c.state === "closed" ? "grades" : "monitor" : "setup", [u, d] = (0, x.useState)(l), f = (e) => {
 		if (e !== u) try {
-			Wt(), d(e);
+			Gt(), d(e);
 		} catch (e) {
 			M(e.message, !0);
 		}
@@ -14493,7 +14534,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 					className: "center-room-context",
 					children: [
 						/* @__PURE__ */ (0, S.jsxs)("div", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: c.config.title }), /* @__PURE__ */ (0, S.jsx)("p", { children: v })] }),
-						Gt(c.state),
+						Kt(c.state),
 						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							onClick: () => f(c.state === "closed" ? "grades" : "monitor"),
@@ -14516,7 +14557,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						className: "center-room-summary",
 						"aria-label": "ملخص القاعة",
 						children: [
-							Gt(c.state),
+							Kt(c.state),
 							/* @__PURE__ */ (0, S.jsxs)("span", { children: [/* @__PURE__ */ (0, S.jsx)("strong", { children: A(m.length) }), " دخلوا القاعة"] }),
 							/* @__PURE__ */ (0, S.jsxs)("span", { children: [
 								/* @__PURE__ */ (0, S.jsx)("strong", { children: A(u === "grades" ? h.length - g.length : h.length) }),
@@ -14540,7 +14581,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 								onClick: () => r("start"),
 								children: "ابدأ الامتحان للجميع ←"
 							}),
-							Vt.includes(c.state) && /* @__PURE__ */ (0, S.jsx)("button", {
+							Ht.includes(c.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "button secondary danger-text",
 								disabled: n,
 								onClick: () => r("close"),
@@ -14549,7 +14590,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						]
 					})]
 				}),
-				c.state === "running" && /* @__PURE__ */ (0, S.jsx)(lt, {
+				c.state === "running" && /* @__PURE__ */ (0, S.jsx)(ut, {
 					dashboard: e,
 					request: i,
 					refresh: a
@@ -14558,7 +14599,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 					className: "center-room-disclosures",
 					children: [/* @__PURE__ */ (0, S.jsxs)("details", {
 						className: "center-room-link",
-						children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "رابط دخول الطلاب ورمز QR" }), /* @__PURE__ */ (0, S.jsx)($t, {
+						children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "رابط دخول الطلاب ورمز QR" }), /* @__PURE__ */ (0, S.jsx)(en, {
 							exam: c,
 							bootstrap: t
 						})]
@@ -14566,12 +14607,12 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						className: "center-room-settings",
 						children: [
 							/* @__PURE__ */ (0, S.jsx)("summary", { children: "الأسئلة وإعدادات المراقبة" }),
-							/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "عرض أسئلة الجلسة" }), /* @__PURE__ */ (0, S.jsx)(tn, { exam: c })] }),
-							Vt.includes(c.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Dt, {
+							/* @__PURE__ */ (0, S.jsxs)("details", { children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "عرض أسئلة الجلسة" }), /* @__PURE__ */ (0, S.jsx)(nn, { exam: c })] }),
+							Ht.includes(c.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Ot, {
 								exam: c,
 								request: i,
 								refresh: a
-							}), /* @__PURE__ */ (0, S.jsx)(Et, {
+							}), /* @__PURE__ */ (0, S.jsx)(Dt, {
 								exam: c,
 								request: i,
 								refresh: a
@@ -14586,7 +14627,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 				/* @__PURE__ */ (0, S.jsx)("section", {
 					className: "center-room-roster",
 					"aria-label": u === "grades" ? "التصحيح والرصد" : "متابعة الطلاب",
-					children: /* @__PURE__ */ (0, S.jsx)(nn, {
+					children: /* @__PURE__ */ (0, S.jsx)(rn, {
 						dashboard: e,
 						tab: u === "grades" ? "results" : "students",
 						request: i,
@@ -14598,7 +14639,7 @@ function Zt({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 		]
 	});
 }
-function Qt({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
+function $t({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
 	let a = i === "results" ? [
 		"all",
 		"pending",
@@ -14644,7 +14685,7 @@ function Qt({ counts: e, filter: t, onChange: n, filters: r, tab: i }) {
 		})]
 	});
 }
-function $t({ exam: e, bootstrap: t }) {
+function en({ exam: e, bootstrap: t }) {
 	let n = xe(be()), [r, i] = (0, x.useState)(""), a = n || (t.studentUrls.includes(r) ? r : t.studentUrls[0]);
 	return /* @__PURE__ */ (0, S.jsxs)("section", {
 		className: "join-panel",
@@ -14717,10 +14758,10 @@ function $t({ exam: e, bootstrap: t }) {
 				className: "help",
 				children: "شارك الرابط بعد اتصال الطلاب بنفس الشبكة. يختار الطالب «البقاء متصلًا بالشبكة» ويوقف التحويل التلقائي لبيانات الهاتف. الرابط والرمز للطلاب الجدد؛ من بدأ الامتحان يستمر في نفس العنوان والمتصفح حتى التسليم."
 			})
-		] }), a && /* @__PURE__ */ (0, S.jsx)(Kt, { url: a })]
+		] }), a && /* @__PURE__ */ (0, S.jsx)(qt, { url: a })]
 	});
 }
-function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, launcher: o }) {
+function tn({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refresh: a, launcher: o }) {
 	let s = e.exam, [c, l] = (0, x.useState)(s.state === "closed" ? "results" : "students");
 	(0, x.useEffect)(() => {
 		s.state === "closed" && l("results");
@@ -14744,7 +14785,7 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 				/* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "exam-meta",
 					children: [
-						Gt(s.state),
+						Kt(s.state),
 						/* @__PURE__ */ (0, S.jsxs)("span", { children: [A(s.config.questionCount), " أسئلة"] }),
 						/* @__PURE__ */ (0, S.jsxs)("span", { children: [A(s.config.minutes), " دقيقة"] }),
 						/* @__PURE__ */ (0, S.jsx)("span", { children: s.config.timerMode === "shared" ? "نهاية موحدة" : "وقت مستقل لكل طالب" })
@@ -14765,7 +14806,7 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 						onClick: () => r("start"),
 						children: "ابدأ الامتحان للجميع ←"
 					}),
-					Vt.includes(s.state) && /* @__PURE__ */ (0, S.jsx)("button", {
+					Ht.includes(s.state) && /* @__PURE__ */ (0, S.jsx)("button", {
 						className: "button secondary danger-text",
 						disabled: n,
 						onClick: () => r("close"),
@@ -14774,16 +14815,16 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 				]
 			})]
 		}),
-		s.state === "running" && /* @__PURE__ */ (0, S.jsx)(lt, {
+		s.state === "running" && /* @__PURE__ */ (0, S.jsx)(ut, {
 			dashboard: e,
 			request: i,
 			refresh: a
 		}),
-		Vt.includes(s.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Dt, {
+		Ht.includes(s.state) && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)(Ot, {
 			exam: s,
 			request: i,
 			refresh: a
-		}), /* @__PURE__ */ (0, S.jsx)(Et, {
+		}), /* @__PURE__ */ (0, S.jsx)(Dt, {
 			exam: s,
 			request: i,
 			refresh: a
@@ -14803,7 +14844,7 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 		}),
 		/* @__PURE__ */ (0, S.jsxs)("div", {
 			className: `room-overview room-state-${s.state}`,
-			children: [/* @__PURE__ */ (0, S.jsx)($t, {
+			children: [/* @__PURE__ */ (0, S.jsx)(en, {
 				exam: s,
 				bootstrap: t
 			}), /* @__PURE__ */ (0, S.jsxs)("section", {
@@ -14838,7 +14879,7 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 					className: "muted",
 					children: [A(e.attempts.length), " طالب في الجلسة"]
 				})]
-			}), c === "questions" ? /* @__PURE__ */ (0, S.jsx)(tn, { exam: s }) : /* @__PURE__ */ (0, S.jsx)(nn, {
+			}), c === "questions" ? /* @__PURE__ */ (0, S.jsx)(nn, { exam: s }) : /* @__PURE__ */ (0, S.jsx)(rn, {
 				dashboard: e,
 				tab: c,
 				request: i,
@@ -14848,7 +14889,7 @@ function en({ dashboard: e, bootstrap: t, busy: n, onState: r, request: i, refre
 		})
 	] });
 }
-function tn({ exam: e }) {
+function nn({ exam: e }) {
 	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "section-top padded",
 		children: /* @__PURE__ */ (0, S.jsx)("p", {
@@ -14873,8 +14914,8 @@ function tn({ exam: e }) {
 		})] }, e.id))
 	})] });
 }
-function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
-	let [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)("newest"), [l, u] = (0, x.useState)(!0), [d, f] = (0, x.useState)("all"), [p, m] = (0, x.useState)(null), [h, g] = (0, x.useState)(null), [_, v] = (0, x.useState)([]), [y, b] = (0, x.useState)([]), C = e.exam, w = a.toLowerCase().trim(), T = e.attempts.filter((e) => `${e.name || ""} ${e.code} ${e.phone || ""}`.toLowerCase().includes(w)), E = (t) => ft(t, C, e.serverTime), D = C.config.screenGuard === !0 || e.attempts.some((e) => e.screen), O = D ? [...ut, ...dt] : ut, ee = zt ? [...O, ["problem", "يحتاج متابعة"]] : O, te = (t, n) => n === "problem" ? !!mt(t, C, e.serverTime) : pt(t, E(t), n), k = Object.fromEntries(ee.map(([e]) => [e, T.filter((t) => te(t, e)).length])), ne = ee.some(([e]) => e === d) ? d : "all", j = St(T.filter((e) => te(e, ne)), s), ie = (t) => mt(t, C, e.serverTime), N = j.filter(ie).length, ae = l ? wt(j, ie) : j, se = (t) => C.state === "running" && t.joined_at && !t.cancelled_at && !t.submitted_at && t.deadline > e.serverTime, ce = e.attempts.filter((e) => _.includes(e.id) && se(e)), de = ae.filter(se), fe = (e) => C.state === "running" && e.joined_at && !e.cancelled_at && e.submitted_at, pe = e.attempts.filter((e) => y.includes(e.id) && fe(e)), me = ae.filter(fe), he = (e, t) => v((n) => t ? [.../* @__PURE__ */ new Set([...n, e])] : n.filter((t) => t !== e)), ge = async (e) => {
+function rn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
+	let [a, o] = (0, x.useState)(""), [s, c] = (0, x.useState)("newest"), [l, u] = (0, x.useState)(!0), [d, f] = (0, x.useState)("all"), [p, m] = (0, x.useState)(null), [h, g] = (0, x.useState)(null), [_, v] = (0, x.useState)([]), [y, b] = (0, x.useState)([]), C = e.exam, w = a.toLowerCase().trim(), T = e.attempts.filter((e) => `${e.name || ""} ${e.code} ${e.phone || ""}`.toLowerCase().includes(w)), E = (t) => pt(t, C, e.serverTime), D = C.config.screenGuard === !0 || e.attempts.some((e) => e.screen), O = D ? [...dt, ...ft] : dt, ee = Bt ? [...O, ["problem", "يحتاج متابعة"]] : O, te = (t, n) => n === "problem" ? !!ht(t, C, e.serverTime) : mt(t, E(t), n), k = Object.fromEntries(ee.map(([e]) => [e, T.filter((t) => te(t, e)).length])), ne = ee.some(([e]) => e === d) ? d : "all", j = Ct(T.filter((e) => te(e, ne)), s), ie = (t) => ht(t, C, e.serverTime), N = j.filter(ie).length, ae = l ? Tt(j, ie) : j, se = (t) => C.state === "running" && t.joined_at && !t.cancelled_at && !t.submitted_at && t.deadline > e.serverTime, ce = e.attempts.filter((e) => _.includes(e.id) && se(e)), de = ae.filter(se), fe = (e) => C.state === "running" && e.joined_at && !e.cancelled_at && e.submitted_at, pe = e.attempts.filter((e) => y.includes(e.id) && fe(e)), me = ae.filter(fe), he = (e, t) => v((n) => t ? [.../* @__PURE__ */ new Set([...n, e])] : n.filter((t) => t !== e)), ge = async (e) => {
 		if (await ue("استعادة دخول الطالب؟", "سيتم تسجيل خروج الجلسة القديمة. يدخل الطالب بنفس الكود والرقم، وتبقى الإجابات والوقت كما هما.")) try {
 			await n(`/api/attempts/${e.id}/reset-login`, {}), M("يمكن للطالب الدخول مجددًا بنفس الكود والرقم"), await r();
 		} catch (e) {
@@ -14903,7 +14944,7 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 						children: ["ترتيب الطلاب", /* @__PURE__ */ (0, S.jsx)("select", {
 							value: s,
 							onChange: (e) => c(e.target.value),
-							children: vt.map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("option", {
+							children: yt.map(([e, t]) => /* @__PURE__ */ (0, S.jsx)("option", {
 								value: e,
 								children: t
 							}, e))
@@ -14935,63 +14976,63 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 			t === "results" && /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("p", {
 				className: "results-note",
 				children: "الاختيارات تُصحح تلقائيًا. راجع المقالي قبل طباعة التقارير. الدرجات لا تظهر للطلاب."
-			}), zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
+			}), Bt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "center-batch-grading",
-				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "التصحيح الجماعي للمقالي وإعداداته" }), /* @__PURE__ */ (0, S.jsx)(rn, {
+				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "التصحيح الجماعي للمقالي وإعداداته" }), /* @__PURE__ */ (0, S.jsx)(an, {
 					exam: C,
 					dashboard: e,
 					request: n,
 					refresh: r
 				})]
-			}) : /* @__PURE__ */ (0, S.jsx)(rn, {
+			}) : /* @__PURE__ */ (0, S.jsx)(an, {
 				exam: C,
 				dashboard: e,
 				request: n,
 				refresh: r
 			})] }),
-			t === "results" && (zt ? /* @__PURE__ */ (0, S.jsxs)("details", {
+			t === "results" && (Bt ? /* @__PURE__ */ (0, S.jsxs)("details", {
 				className: "center-result-exports",
 				children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "تنزيل التقارير وإرسال واتساب" }), /* @__PURE__ */ (0, S.jsxs)("div", {
 					className: "whatsapp-send-row",
-					children: [/* @__PURE__ */ (0, S.jsx)(st, {
+					children: [/* @__PURE__ */ (0, S.jsx)(ct, {
 						examId: C.id,
 						attempts: e.attempts
-					}), /* @__PURE__ */ (0, S.jsx)($e, {
+					}), /* @__PURE__ */ (0, S.jsx)(et, {
 						attempts: e.attempts.filter((e) => e.joined_at),
 						label: "إرسال تقارير كل الطلاب عبر واتساب"
 					})]
 				})]
 			}) : /* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "whatsapp-send-row",
-				children: [/* @__PURE__ */ (0, S.jsx)(st, {
+				children: [/* @__PURE__ */ (0, S.jsx)(ct, {
 					examId: C.id,
 					attempts: e.attempts
-				}), /* @__PURE__ */ (0, S.jsx)($e, {
+				}), /* @__PURE__ */ (0, S.jsx)(et, {
 					attempts: e.attempts.filter((e) => e.joined_at),
 					label: "إرسال تقارير كل الطلاب عبر واتساب"
 				})]
 			})),
-			zt ? /* @__PURE__ */ (0, S.jsx)(Qt, {
+			Bt ? /* @__PURE__ */ (0, S.jsx)($t, {
 				counts: k,
 				filter: ne,
 				onChange: f,
 				filters: ee,
 				tab: t
-			}) : /* @__PURE__ */ (0, S.jsx)(Tt, {
+			}) : /* @__PURE__ */ (0, S.jsx)(Et, {
 				counts: k,
 				filter: ne,
 				onChange: f,
 				searching: !!w,
 				showScreenCards: D
 			}),
-			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(ht, {
+			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(gt, {
 				examId: C.id,
 				attempts: ce,
 				request: n,
 				refresh: r,
 				clear: () => v([])
 			}),
-			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(gt, {
+			C.state === "running" && /* @__PURE__ */ (0, S.jsx)(_t, {
 				examId: C.id,
 				attempts: pe,
 				request: n,
@@ -15075,7 +15116,7 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 									dir: "ltr",
 									children: a.phone || "لم تُسجل بياناته"
 								}),
-								/* @__PURE__ */ (0, S.jsxs)("small", { children: ["الدخول: ", Ct(a.joined_at)] })
+								/* @__PURE__ */ (0, S.jsxs)("small", { children: ["الدخول: ", wt(a.joined_at)] })
 							] }),
 							/* @__PURE__ */ (0, S.jsx)("td", { children: /* @__PURE__ */ (0, S.jsx)("button", {
 								className: "code-button",
@@ -15156,7 +15197,7 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 									" مقالي"
 								] })
 							] }) : "لم يسلّم" : c }),
-							/* @__PURE__ */ (0, S.jsx)("td", { children: zt && t === "students" ? /* @__PURE__ */ (0, S.jsxs)("details", {
+							/* @__PURE__ */ (0, S.jsx)("td", { children: Bt && t === "students" ? /* @__PURE__ */ (0, S.jsxs)("details", {
 								className: "center-student-actions",
 								children: [/* @__PURE__ */ (0, S.jsx)("summary", { children: "إجراءات الطالب" }), /* @__PURE__ */ (0, S.jsx)("div", { children: l })]
 							}) : l })
@@ -15168,13 +15209,13 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 					children: a || d !== "all" ? "لا يوجد طلاب مطابقون للبحث أو التصفية." : "الطالب يظهر هنا بعد دخوله باسمه ورقمه وكوده."
 				}) }) })] })
 			}),
-			h && /* @__PURE__ */ (0, S.jsx)(_t, {
+			h && /* @__PURE__ */ (0, S.jsx)(vt, {
 				attempt: h,
 				request: n,
 				refresh: r,
 				onClose: () => g(null)
 			}),
-			p && /* @__PURE__ */ (0, S.jsx)(an, {
+			p && /* @__PURE__ */ (0, S.jsx)(on, {
 				attempt: e.attempts.find((e) => e.id === p),
 				exam: C,
 				request: n,
@@ -15184,7 +15225,7 @@ function nn({ dashboard: e, tab: t, request: n, refresh: r, busy: i }) {
 		]
 	});
 }
-function rn({ exam: e, dashboard: t, request: n, refresh: r }) {
+function an({ exam: e, dashboard: t, request: n, refresh: r }) {
 	let [i, a] = (0, x.useState)(!1), [o, s] = (0, x.useState)(null), [c, l] = (0, x.useState)(!1), [u, d] = (0, x.useState)(""), [f, p] = (0, x.useState)(!1), m = t.attempts.reduce((e, t) => e + (t.cancelled_at ? 0 : t.pending || 0), 0);
 	(0, x.useEffect)(() => {
 		let t = !0;
@@ -15319,7 +15360,7 @@ function rn({ exam: e, dashboard: t, request: n, refresh: r }) {
 		]
 	});
 }
-function an({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
+function on({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 	let [a, o] = (0, x.useState)(!1);
 	if (!e) return null;
 	let s = e.questionIds.map((e) => t.config.questions.find((t) => t.id === e)).filter(Boolean), c = async (t, r) => {
@@ -15354,7 +15395,7 @@ function an({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 						e.pending ? /* @__PURE__ */ (0, S.jsx)("span", {
 							className: "badge waiting",
 							children: "أكمل المقالي لفتح التقرير"
-						}) : zt ? /* @__PURE__ */ (0, S.jsx)("button", {
+						}) : Bt ? /* @__PURE__ */ (0, S.jsx)("button", {
 							className: "button secondary small",
 							disabled: a,
 							onClick: async () => {
@@ -15373,7 +15414,7 @@ function an({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 							href: `/report/${e.id}`,
 							children: "فتح تقرير الطالب / تنزيل PDF ↗"
 						}),
-						/* @__PURE__ */ (0, S.jsx)($e, { attempts: [e] }),
+						/* @__PURE__ */ (0, S.jsx)(et, { attempts: [e] }),
 						/* @__PURE__ */ (0, S.jsx)("button", {
 							className: "text-button",
 							disabled: a,
@@ -15458,7 +15499,7 @@ function an({ attempt: e, exam: t, request: n, onClose: r, refresh: i }) {
 		]
 	});
 }
-function on({ centerIntegrated: e = !1 }) {
+function sn({ centerIntegrated: e = !1 }) {
 	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsx)("div", {
 		className: "page-heading",
 		children: /* @__PURE__ */ (0, S.jsxs)("div", { children: [
@@ -15485,7 +15526,7 @@ function on({ centerIntegrated: e = !1 }) {
 (0, b.createRoot)(document.getElementById("main")).render(/* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [
 	(0, y.createPortal)(/* @__PURE__ */ (0, S.jsx)(te, {}), document.getElementById("network-incident-shortcut")),
 	/* @__PURE__ */ (0, S.jsx)(I, {}),
-	/* @__PURE__ */ (0, S.jsx)(tt, {}),
-	/* @__PURE__ */ (0, S.jsx)(qt, {})
+	/* @__PURE__ */ (0, S.jsx)(nt, {}),
+	/* @__PURE__ */ (0, S.jsx)(L, {})
 ] }));
 //#endregion
