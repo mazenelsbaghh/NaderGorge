@@ -7,7 +7,7 @@ import path from 'path';
 import { randomUUID } from 'node:crypto';
 import { execFile, execFileSync } from 'child_process';
 import { promisify } from 'node:util';
-import { readAIConfig, type AIConfig } from './aiConfig.js';
+import { DEFAULT_IMAGE_MODEL, readAIConfig, type AIConfig } from './aiConfig.js';
 import { executeGeminiRequest, executeRetriableGeminiRequest, GeminiDeveloperApiError } from './aiProvider.js';
 import { classifyAIError } from './aiErrors.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
@@ -766,10 +766,12 @@ export async function generateChapterMindmap(
     const photoPaths = typeof teacherPhotoPathOrPaths === 'string'
       ? [teacherPhotoPathOrPaths]
       : (teacherPhotoPathOrPaths || []);
+    const model = runtime.config.imageModel;
+    const imageSize = model === DEFAULT_IMAGE_MODEL ? '2K' : '4K';
     const request = {
-      model: runtime.config.imageModel,
+      model,
       contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths, options) }],
-      config: { imageConfig: { aspectRatio: '16:9', imageSize: '4K' } },
+      config: { imageConfig: { aspectRatio: '16:9', imageSize } },
     } as any;
     const response = await executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
       ...request,

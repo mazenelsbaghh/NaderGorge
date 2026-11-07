@@ -1,3 +1,5 @@
+export const DEFAULT_IMAGE_MODEL = 'gemini-nano-banana-2.1';
+
 export interface AIConfig {
   primaryProvider: 'developer';
   textModel: string;
@@ -17,6 +19,6 @@ export function readAIConfig(): AIConfig {
     primaryProvider: 'developer',
     developerApiKey,
     textModel: optional('AI_TEXT_MODEL') || 'gemini-3.1-flash-lite',
-    imageModel: optional('AI_IMAGE_MODEL') || 'gemini-3-pro-image',
+    imageModel: optional('AI_IMAGE_MODEL') || DEFAULT_IMAGE_MODEL,
   };
 }

@@ -15,5 +15,5 @@ test('AI configuration always uses the Gemini Developer API defaults', () => {
   const config = readAIConfig();
   assert.equal(config.primaryProvider, 'developer');
   assert.equal(config.textModel, 'gemini-3.1-flash-lite');
-  assert.equal(config.imageModel, 'gemini-3-pro-image');
+  assert.equal(config.imageModel, 'gemini-nano-banana-2.1');
 });
