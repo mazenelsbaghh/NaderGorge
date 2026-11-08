@@ -46,17 +46,29 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
   await expect(headerSource).toHaveAccessibleName('العنوان · المتغير 1 اسم الطالب');
   // Regression: the native dropdown did not reliably appear inside the Windows webview.
   await headerSource.click();
-  await expect(headerOptions.getByRole('button',{name:'كود الطالب',exact:true})).toBeVisible();
-  await headerOptions.getByRole('button',{name:'كود الطالب',exact:true}).click();
+  const codeOption=headerOptions.getByRole('button',{name:'كود الطالب',exact:true});
+  await expect(codeOption).toBeVisible();
+  await headerSource.focus();
+  // Reproduce focus leaving the trigger between pointer down and the option click.
+  await codeOption.evaluate(option=>option.addEventListener('pointerdown',()=>document.activeElement.blur(),{once:true}));
+  await codeOption.click();
   await expect(headerSource).toHaveAccessibleName('العنوان · المتغير 1 كود الطالب');
   await headerSource.press('Enter');
   await expect(headerOptions).toBeVisible();
   await headerSource.press('Escape');
   await expect(headerOptions).toBeHidden();
+  const bodySource=page.getByRole('button',{name:/^نص الرسالة · المتغير 1 /});
+  await headerSource.click();
+  await bodySource.click();
+  await expect(headerOptions).toBeHidden();
+  const bodyOptions=page.getByRole('group',{name:'نص الرسالة · المتغير 1',exact:true});
+  await bodyOptions.getByRole('button',{name:'نص ثابت',exact:true}).press('Enter');
+  await page.getByLabel('النص الثابت').fill('اسم تجريبي');
   await page.getByRole('button',{name:'تثبيت ربط المتغيرات',exact:true}).click();
   await expect(page.getByRole('button',{name:'ربط المتغيرات مثبت',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:/^معاينة الرسائل/}).click();
   await expect(page.locator('.whatsapp-message').filter({hasText:'ولي أمر 001'})).toBeVisible();
+  await expect(page.locator('.whatsapp-message').filter({hasText:'الطالب اسم تجريبي'})).toHaveCount(2);
   await expect(page.locator('.whatsapp-message').filter({hasText:'جاب 8 من 10 وعمل الواجب'})).toBeVisible();
   await expect(page.locator('.whatsapp-message').filter({hasText:'جاب 9 من 12 ولم يعمل الواجب'})).toBeVisible();
   await expect(page.getByRole('cell').filter({hasText:'مستبعد من الإرسال'})).toBeVisible();
@@ -74,10 +86,10 @@ const {chromium,expect}=createRequire(path.resolve(__dirname,'../../frontend/pac
    if(output)await page.screenshot({path:path.join(output,`whatsapp-inline-form-${width}.png`),fullPage:true});
   }
   await page.setViewportSize({width:1280,height:900});
-  await page.getByLabel('المستلم').selectOption('student');
+  await page.getByRole('radio',{name:'الطالب',exact:true}).click();
   await expect(page.getByRole('button',{name:/^إرسال الرسائل الجديدة/})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'تثبيت ربط المتغيرات',exact:true})).toBeEnabled();
-  await page.getByLabel('المستلم').selectOption('guardian');
+  await page.getByRole('radio',{name:'ولي الأمر',exact:true}).click();
   await expect(page.getByRole('button',{name:'ربط المتغيرات مثبت',exact:true})).toBeDisabled();
   url.searchParams.set('batch','second');await page.goto(url.href);
   await page.getByLabel('قالب رسالة التقرير').selectOption('parent');

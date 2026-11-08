@@ -11670,33 +11670,40 @@ var Ye = {
 	sending: "جارٍ الإرسال"
 }, Xe = (e) => (e?.components || []).find((e) => e.type === "BODY")?.text || "";
 function Ze({ label: e, source: t, disabled: n, onChange: r }) {
-	let [i, a] = (0, x.useState)(!1), o = (0, x.useRef)(null), s = (0, x.useId)(), c = i && !n, l = () => {
-		o.current.focus(), a(!1);
+	let [i, a] = (0, x.useState)(!1), o = (0, x.useRef)(null), s = (0, x.useRef)(null), c = (0, x.useId)(), l = i && !n;
+	(0, x.useEffect)(() => {
+		let e = o.current;
+		if (!l || !e) return;
+		let t = (t) => {
+			e.contains(t.target) || a(!1);
+		};
+		return document.addEventListener("click", t), () => document.removeEventListener("click", t);
+	}, [l]);
+	let u = () => {
+		s.current.focus({ preventScroll: !0 }), a(!1);
 	};
 	return /* @__PURE__ */ (0, S.jsxs)("div", {
+		ref: o,
 		className: "whatsapp-source-picker",
-		onBlur: (e) => {
-			e.currentTarget.contains(e.relatedTarget) || a(!1);
-		},
 		onKeyDown: (e) => {
-			c && e.key === "Escape" && (e.stopPropagation(), l());
+			l && e.key === "Escape" && (e.stopPropagation(), u());
 		},
 		children: [
 			/* @__PURE__ */ (0, S.jsx)("span", {
-				id: `${s}-label`,
+				id: `${c}-label`,
 				children: e
 			}),
 			/* @__PURE__ */ (0, S.jsxs)("button", {
-				ref: o,
+				ref: s,
 				className: "button secondary",
 				type: "button",
 				disabled: n,
-				"aria-labelledby": `${s}-label ${s}-source`,
-				"aria-expanded": c,
-				"aria-controls": s,
-				onClick: () => a(!c),
+				"aria-labelledby": `${c}-label ${c}-source`,
+				"aria-expanded": l,
+				"aria-controls": c,
+				onClick: () => a(!l),
 				children: [/* @__PURE__ */ (0, S.jsx)("span", {
-					id: `${s}-source`,
+					id: `${c}-source`,
 					children: He[t] || "اختر بيانات الطالب"
 				}), /* @__PURE__ */ (0, S.jsx)("span", {
 					"aria-hidden": "true",
@@ -11704,16 +11711,16 @@ function Ze({ label: e, source: t, disabled: n, onChange: r }) {
 				})]
 			}),
 			/* @__PURE__ */ (0, S.jsx)("div", {
-				id: s,
+				id: c,
 				className: "whatsapp-source-options",
 				role: "group",
-				"aria-labelledby": `${s}-label`,
-				hidden: !c,
+				"aria-labelledby": `${c}-label`,
+				hidden: !l,
 				children: Object.entries(He).map(([e, n]) => /* @__PURE__ */ (0, S.jsx)("button", {
 					type: "button",
 					"aria-pressed": e === t,
 					onClick: () => {
-						r(e), l();
+						e !== t && r(e), u();
 					},
 					children: n
 				}, e))
@@ -11724,10 +11731,7 @@ function Ze({ label: e, source: t, disabled: n, onChange: r }) {
 function Qe({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMappings: i, disabled: a = !1, recipientKind: o = "student", reportKind: s = "exam" }) {
 	let c = e.find((e) => e.id === t && e.reportSupported), l = Ue(c), u = We(c, o, s), d = e.filter((e) => e.reportSupported), f = !!(u && JSON.stringify(u.mappings) === JSON.stringify(r)), p = (t) => {
 		n(t), i(Ke(e.find((e) => e.id === t), o, s));
-	}, m = (e, t) => i(l.map((n, i) => i === e ? {
-		...r[i],
-		...t
-	} : r[i] || { source: "" }));
+	}, m = (e, t) => i(l.map((n, i) => i === e ? t : r[i] || { source: "" }));
 	return /* @__PURE__ */ (0, S.jsxs)(S.Fragment, { children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["قالب رسالة التقرير", /* @__PURE__ */ (0, S.jsxs)("select", {
 		className: "whatsapp-template-list",
 		size: Math.max(2, Math.min(6, d.length + 1)),
@@ -11762,7 +11766,10 @@ function Qe({ templates: e, templateId: t, setTemplateId: n, mappings: r, setMap
 				disabled: a,
 				maxLength: 1e3,
 				value: r[t]?.text || "",
-				onChange: (e) => m(t, { text: e.target.value })
+				onChange: (e) => m(t, {
+					source: "literal",
+					text: e.target.value
+				})
 			})] })] }, e.key))
 		})]
 	}, `${c.id}:${c.bindingSchema}:${!!u}`)] })] });
@@ -12565,17 +12572,24 @@ function at({ batchId: e }) {
 			className: "panel padded",
 			children: [/* @__PURE__ */ (0, S.jsxs)("div", {
 				className: "section-top",
-				children: [/* @__PURE__ */ (0, S.jsxs)("label", { children: ["المستلم", /* @__PURE__ */ (0, S.jsxs)("select", {
-					value: s,
-					onChange: (e) => c(e.target.value),
-					children: [/* @__PURE__ */ (0, S.jsx)("option", {
-						value: "guardian",
-						children: "ولي الأمر"
-					}), /* @__PURE__ */ (0, S.jsx)("option", {
-						value: "student",
-						children: "الطالب"
-					})]
-				})] }), /* @__PURE__ */ (0, S.jsxs)("p", {
+				children: [/* @__PURE__ */ (0, S.jsxs)("fieldset", {
+					className: "whatsapp-recipients",
+					children: [
+						/* @__PURE__ */ (0, S.jsx)("legend", { children: "المستلم" }),
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: [/* @__PURE__ */ (0, S.jsx)("input", {
+							type: "radio",
+							name: "report-recipient",
+							checked: s === "guardian",
+							onChange: () => c("guardian")
+						}), " ولي الأمر"] }),
+						/* @__PURE__ */ (0, S.jsxs)("label", { children: [/* @__PURE__ */ (0, S.jsx)("input", {
+							type: "radio",
+							name: "report-recipient",
+							checked: s === "student",
+							onChange: () => c("student")
+						}), " الطالب"] })
+					]
+				}), /* @__PURE__ */ (0, S.jsxs)("p", {
 					role: "status",
 					children: [
 						A(d.length),

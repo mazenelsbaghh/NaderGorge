@@ -6,16 +6,25 @@ export const templateText=t=>(t?.components||[]).find(c=>c.type==='BODY')?.text|
 
 function TemplateSourcePicker({label,source,disabled,onChange}) {
   const [expanded,setExpanded]=useState(false);
+  const picker=useRef(null);
   const trigger=useRef(null);
   const id=useId();
   const visible=expanded&&!disabled;
+  useEffect(()=>{
+    const root=picker.current;
+    if(!visible||!root)return;
+    // The embedded view can blur the trigger before an option receives its click.
+    const dismissOutside=event=>{
+      if(!root.contains(event.target))setExpanded(false);
+    };
+    document.addEventListener('click',dismissOutside);
+    return()=>document.removeEventListener('click',dismissOutside);
+  },[visible]);
   const close=()=>{
-    trigger.current.focus();
+    trigger.current.focus({preventScroll:true});
     setExpanded(false);
   };
-  return <div className="whatsapp-source-picker" onBlur={event=>{
-    if(!event.currentTarget.contains(event.relatedTarget))setExpanded(false);
-  }} onKeyDown={event=>{
+  return <div ref={picker} className="whatsapp-source-picker" onKeyDown={event=>{
     if(visible&&event.key==='Escape'){
       event.stopPropagation();
       close();
@@ -30,7 +39,7 @@ function TemplateSourcePicker({label,source,disabled,onChange}) {
     <div id={id} className="whatsapp-source-options" role="group" aria-labelledby={`${id}-label`} hidden={!visible}>
       {Object.entries(templateSources).map(([sourceId,sourceLabel])=><button key={sourceId}
         type="button" aria-pressed={sourceId===source} onClick={()=>{
-          onChange(sourceId);
+          if(sourceId!==source)onChange(sourceId);
           close();
         }}>{sourceLabel}</button>)}
     </div>
@@ -44,12 +53,12 @@ export function TemplateFields({templates,templateId,setTemplateId,mappings,setM
   const available=templates.filter(t=>t.reportSupported);
   const isSaved=Boolean(saved&&JSON.stringify(saved.mappings)===JSON.stringify(mappings));
   const choose=id=>{setTemplateId(id);setMappings(initialTemplateMappings(templates.find(t=>t.id===id),recipientKind,reportKind));};
-  const change=(index,values)=>setMappings(positions.map((_,i)=>i===index?{...mappings[i],...values}:mappings[i]||{source:''}));
+  const change=(index,mapping)=>setMappings(positions.map((_,i)=>i===index?mapping:mappings[i]||{source:''}));
   return <><label>قالب رسالة التقرير<select className="whatsapp-template-list" size={Math.max(2,Math.min(6,available.length+1))} disabled={disabled} value={templateId} onChange={e=>choose(e.target.value)}><option value="">اختر قالبًا معتمدًا من الحساب</option>{available.map(t=><option key={t.id} value={t.id}>{t.name} · {t.language}</option>)}</select></label>
     {selected&&<><div className="whatsapp-message" dir="auto">{templateText(selected)}</div><details key={`${selected.id}:${selected.bindingSchema}:${Boolean(saved)}`} open={!saved||undefined}><summary>{isSaved?'ربط المتغيرات مثبت · تعديل الربط':'حدد بيانات متغيرات القالب'}</summary><div className="whatsapp-fields">{positions.map((position,index)=><div key={position.key}>
       <TemplateSourcePicker label={`${position.scope==='header'?'العنوان':position.scope==='button'?'زر الرابط':'نص الرسالة'} · المتغير ${position.position}`}
         source={mappings[index]?.source} disabled={disabled} onChange={source=>change(index,{source})}/>
-      {mappings[index]?.source==='literal'&&<label>النص الثابت<input disabled={disabled} maxLength={1000} value={mappings[index]?.text||''} onChange={e=>change(index,{text:e.target.value})}/></label>}
+      {mappings[index]?.source==='literal'&&<label>النص الثابت<input disabled={disabled} maxLength={1000} value={mappings[index]?.text||''} onChange={e=>change(index,{source:'literal',text:e.target.value})}/></label>}
     </div>)}</div></details></>}
   </>;
 }

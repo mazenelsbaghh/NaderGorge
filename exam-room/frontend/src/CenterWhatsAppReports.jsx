@@ -27,7 +27,14 @@ export default function CenterWhatsAppReports({batchId}){
  return <>
   <header className="page-heading"><div><h1>رسائل واتساب</h1><p>{batch.title} · {messageKinds[reportKind]||messageKinds.followup}</p></div><a className="button secondary" href={whatsappViewHref('whatsapp',batchId)}>إعداد حساب واتساب والقوالب</a></header>
   <section className="panel padded">
-   <div className="section-top"><label>المستلم<select value={recipient} onChange={event=>setRecipient(event.target.value)}><option value="guardian">ولي الأمر</option><option value="student">الطالب</option></select></label><p role="status">{number(ready.length)} رسالة برقم صالح · {number(chosen.length-ready.length)} رقم مفقود أو غير صالح</p></div>
+   <div className="section-top">
+    <fieldset className="whatsapp-recipients">
+     <legend>المستلم</legend>
+     <label><input type="radio" name="report-recipient" checked={recipient==='guardian'} onChange={()=>setRecipient('guardian')}/> ولي الأمر</label>
+     <label><input type="radio" name="report-recipient" checked={recipient==='student'} onChange={()=>setRecipient('student')}/> الطالب</label>
+    </fieldset>
+    <p role="status">{number(ready.length)} رسالة برقم صالح · {number(chosen.length-ready.length)} رقم مفقود أو غير صالح</p>
+   </div>
    <details><summary>مراجعة الطلاب المحددين ({number(chosen.length)})</summary>
     <label><input type="checkbox" checked={all} onChange={event=>setSelected(event.target.checked?new Set(batch.records.map(row=>row.id)):new Set())}/> تحديد الكل</label>
     <div className="table-scroll"><table><thead><tr><th>اختيار</th><th>الطالب والكود</th><th>الرقم</th><th>المجموعة والحصة</th><th>الحضور</th><th>الواجب</th><th>الدرجة</th></tr></thead><tbody>{batch.records.map(row=><tr key={row.id}><td><input aria-label={`اختيار ${row.name}`} type="checkbox" checked={selected.has(row.id)} onChange={event=>setSelected(previous=>{const next=new Set(previous);if(event.target.checked)next.add(row.id);else next.delete(row.id);return next;})}/></td><td>{row.name}<small>{row.code}</small></td><td dir="ltr">{phone(row)||'غير مسجل'}<small>{validPhone(phone(row))?'':'لن يدخل الإرسال'}</small></td><td>{row.group}<small>{row.lesson} · {row.exam}</small></td><td>{row.attendance||'غير مسجل'}</td><td>{row.homework||'غير مسجل'}</td><td>{row.score==null?'لم تُرصد':`${row.score} من ${row.maximum??'غير معروفة'}`}</td></tr>)}</tbody></table></div>

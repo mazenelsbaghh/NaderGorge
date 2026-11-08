@@ -379,6 +379,9 @@ select.whatsapp-template-list:disabled { opacity:.6; }
 .whatsapp-source-options>button[aria-pressed=true] { background:var(--teal-soft); }
 .whatsapp-source-options>button[aria-pressed=true] { font-weight:700; }
 .whatsapp-source-options>button:focus-visible { outline-offset:-2px; }
+.whatsapp-recipients { display:flex; flex-wrap:wrap; gap:4px 18px; padding:0; margin:0; border:0; min-inline-size:0; }
+.whatsapp-recipients label { display:flex; flex-direction:row; align-items:center; gap:8px; margin:0; min-height:40px; cursor:pointer; }
+.whatsapp-recipients input { width:auto; margin:0; accent-color:var(--teal); }
 .center-embedded .room-launcher-drawer { margin-bottom:16px; }
 .center-embedded .room-launcher-drawer>summary { min-height:44px; padding:10px 0; color:var(--teal); font-weight:700; cursor:pointer; }
 .center-embedded .room-launcher-drawer[open]>summary { margin-bottom:12px; }
