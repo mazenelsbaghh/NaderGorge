@@ -39,7 +39,8 @@ public record LessonDetailDto(
     DateOnly? HomeworkComingSoonOn = null,
     bool IsCompleted = false,
     StudentMimGameDto? MimGame = null,
-    bool IsPackageActive = true
+    bool IsPackageActive = true,
+    Guid? OtherLessonWithCourseworkId = null
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -757,7 +758,13 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         );
         var completed = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
             new(_db, request.UserId, new[] { lesson.Id }), videoDtos.Where(v => v.HasAccess).Select(v => v.Id).ToArray(), ct);
-        return ApiResponse<LessonDetailDto>.Ok(detail with { IsCompleted = completed.Contains(lesson.Id) });
+        var otherLessonWithCourseworkId = isPrivilegedUser ? null : await new SharedLessonListings(_db)
+            .GetOtherLessonWithCourseworkAsync(request.UserId, lesson.Id, _access, ct);
+        return ApiResponse<LessonDetailDto>.Ok(detail with
+        {
+            IsCompleted = completed.Contains(lesson.Id),
+            OtherLessonWithCourseworkId = otherLessonWithCourseworkId
+        });
     }
 
     private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)

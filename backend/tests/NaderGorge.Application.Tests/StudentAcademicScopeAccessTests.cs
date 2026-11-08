@@ -636,6 +636,76 @@ public class StudentAcademicScopeAccessTests
         Assert.Empty(result.Data!);
     }
 
+    [Theory]
+    [InlineData("month", false, true, false)]
+    [InlineData("two-months", false, false, true)]
+    [InlineData("term", false, true, false)]
+    [InlineData("term", true, false, true)]
+    public async Task SharedLesson_AppearsOnceAndKeepsCoursework(
+        string subscription, bool hasOldCoursework, bool showsOriginal, bool showsCopy)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, EducationStage.Secondary, GradeLevel.FirstSecondary);
+        var teacher = await SeedTeacherAsync(db);
+        var subject = await SeedSubjectAsync(db, "Shared lessons");
+        var package = SeedPackage(db, teacher, subject, "Shared lessons package");
+        var term = new Term { Title = "Term", Package = package, PackageId = package.Id };
+        var month = new ContentSection { Title = "Month", Term = term, TermId = term.Id };
+        var twoMonths = new ContentSection { Title = "Two months", Term = term, TermId = term.Id, Order = 1 };
+        var exam = new Exam { Title = "Old exam", CreatedByTeacherId = teacher.Id };
+        var original = new Lesson
+        {
+            Id = new("57725d90-c2d1-4f28-aff1-eb3b76231a05"), Title = "Lesson 9", ContentSection = month
+        };
+        var copy = new Lesson
+        {
+            Id = new("72fd8393-466e-4391-8667-8bc92803eb56"), Title = "Lesson 9 copy", ContentSection = twoMonths,
+            ExamId = exam.Id
+        };
+        db.Lessons.AddRange(original, copy);
+        db.Exams.Add(exam);
+        db.StudentFacingAcademicScopes.Add(MatchingScope(StudentFacingScopeOwnerType.Package, package.Id));
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id, IsActive = true,
+            GrantType = subscription == "term" ? CodeType.Term : CodeType.Month,
+            TermId = subscription == "term" ? term.Id : null,
+            ContentSectionId = subscription == "term" ? null : subscription == "month" ? month.Id : twoMonths.Id
+        });
+        var submitted = new StudentExamAttempt
+        {
+            UserId = student.Id, ExamId = exam.Id, StartedAt = DateTime.UtcNow.AddHours(-1),
+            SubmittedAt = DateTime.UtcNow.AddMinutes(-45), Evaluation = "ممتاز", IsPassed = true, ScoreAchieved = 18
+        };
+        var inProgress = new StudentExamAttempt
+        {
+            UserId = student.Id, ExamId = exam.Id, StartedAt = DateTime.UtcNow
+        };
+        if (hasOldCoursework)
+            db.StudentExamAttempts.AddRange(submitted, inProgress);
+        await db.SaveChangesAsync();
+
+        var scope = new AcademicScopeService(db);
+        var access = new AccessCheckService(db, scope);
+        var myLessons = await new GetMyLessonsQueryHandler(db, scope).Handle(new(student.Id), CancellationToken.None);
+        var sectionLessons = new GetLessonsQueryHandler(db, access, scope);
+        var monthLessons = await sectionLessons.Handle(new(month.Id, student.Id), CancellationToken.None);
+        var twoMonthLessons = await sectionLessons.Handle(new(twoMonths.Id, student.Id), CancellationToken.None);
+
+        Assert.Equal(showsOriginal ? original.Id : copy.Id, Assert.Single(myLessons.Data!).Id);
+        Assert.Equal(showsOriginal, monthLessons.Data!.Any(lesson => lesson.Id == original.Id && lesson.HasAccess));
+        Assert.Equal(showsCopy, twoMonthLessons.Data!.Any(lesson => lesson.Id == copy.Id && lesson.HasAccess));
+
+        if (hasOldCoursework)
+        {
+            Assert.True(await access.HasAccessToExamAsync(student.Id, exam.Id));
+            var storedAttempts = await db.StudentExamAttempts.AsNoTracking().Where(attempt => attempt.ExamId == exam.Id)
+                .ToDictionaryAsync(attempt => attempt.Id);
+            Assert.Equal(18, storedAttempts[submitted.Id].ScoreAchieved);
+            Assert.Null(storedAttempts[inProgress.Id].SubmittedAt);
+        }
+    }
+
     private static async Task<User> SeedStudentAsync(
         NaderGorge.Infrastructure.Data.AppDbContext db,
         EducationStage stage,

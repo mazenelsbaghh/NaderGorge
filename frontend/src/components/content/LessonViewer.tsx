@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw, CalendarClock, Gamepad2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
@@ -127,6 +128,12 @@ export function LessonViewer({
     ? mimGameProgressKey({ userId, lessonId: lesson.id, fingerprint: lesson.mimGame.fingerprint, schemaVersion: lesson.mimGame.schemaVersion, mode: 'student' })
     : null;
 
+  const previousCourseworkLink = lesson.otherLessonWithCourseworkId && (
+    <Link href={`/student/lessons/${lesson.otherLessonWithCourseworkId}`} className="inline-flex min-h-11 items-center font-bold text-[var(--admin-primary)] underline">
+      افتح محاولاتك السابقة في الحصة
+    </Link>
+  );
+
   if (lesson.isLocked) {
     return (
       <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-8">
@@ -142,6 +149,7 @@ export function LessonViewer({
         <p className="mt-5 rounded-xl bg-[var(--admin-card-soft)] p-4 text-base font-medium leading-8 text-[var(--admin-muted)]">
           {lesson.lockedReason || "يجب النّجاح في الحصة السابقة واجتياز الامتحانات والواجبات المرتبطة بها لتتمكن من استكمال المنصة."}
         </p>
+        {previousCourseworkLink}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {lesson.blockingExamId && (
             <button 
@@ -181,6 +189,7 @@ export function LessonViewer({
             <h1 className="break-words text-2xl font-black leading-tight tracking-tight text-[var(--admin-text)] sm:text-4xl">
               {lesson.title}
             </h1>
+            {previousCourseworkLink}
             {lesson.summary && (
               <p className="mt-4 text-sm leading-relaxed text-[var(--admin-muted)] sm:text-base max-w-3xl font-medium">
                 {lesson.summary}

@@ -118,7 +118,10 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
             accessibleLessonIds, request.UserId, ct);
         var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
             request.UserId, eligibleLessonIds, ct);
-        lessons = lessons.Where(lesson => visibleLessonIds.Contains(lesson.Id)).ToList();
+        var hiddenLessonIds = SharedLessonListings.RelatedLessonIds(accessibleLessonIds).Count == 0
+            ? []
+            : await new SharedLessonListings(_db).GetHiddenLessonIdsAsync(request.UserId, visibleLessonIds, ct);
+        lessons = lessons.Where(lesson => visibleLessonIds.Contains(lesson.Id) && !hiddenLessonIds.Contains(lesson.Id)).ToList();
         var completionContext = new StudentLessonCompletionContext(
             _db,
             request.UserId,

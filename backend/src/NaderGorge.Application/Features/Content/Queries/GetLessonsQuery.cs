@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Homework;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -123,8 +124,12 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
         var blockingData = await LoadBlockingDataAsync(request.UserId, lessons, accessibleLessonIds, ct);
         var satisfiedExamIds = examGateSatisfiedIds.ToHashSet();
+        var relatedLessonIds = isPrivileged ? [] : SharedLessonListings.RelatedLessonIds(lessonIds);
+        var hiddenLessonIds = relatedLessonIds.Count == 0 ? [] : await new SharedLessonListings(_db)
+            .GetHiddenLessonIdsAsync(request.UserId,
+                await _access.GetAccessibleLessonIdsAsync(request.UserId, relatedLessonIds, ct), ct);
         var dtos = new List<LessonSummaryDto>();
-        foreach (var lesson in lessons)
+        foreach (var lesson in lessons.Where(lesson => !hiddenLessonIds.Contains(lesson.Id)))
         {
             var hasAccess = accessibleLessonIds.Contains(lesson.Id);
             var isCompleted = completedLessonIds.Contains(lesson.Id);

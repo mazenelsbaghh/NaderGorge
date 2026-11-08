@@ -243,6 +243,7 @@ export interface HomeworkDto {
 }
 
 export interface LessonDetailDto {
+  otherLessonWithCourseworkId?: string | null;
   isPackageActive?: boolean;
   isCompleted?: boolean;
   id: string;
