@@ -189,12 +189,21 @@ void main() {
         InternetAddress.loopbackIPv4,
         0,
       );
+      final receivedQuery = Completer<Datagram>();
       final subscription = socket.listen((event) {
         if (event != RawSocketEvent.read) return;
         final query = socket.receive();
-        if (query == null) return;
+        if (query != null && !receivedQuery.isCompleted) {
+          receivedQuery.complete(query);
+        }
+      });
+      Future<void> sendReplies() async {
+        final query = await receivedQuery.future.timeout(
+          const Duration(seconds: 1),
+        );
         final request = jsonDecode(utf8.decode(query.data)) as Map;
         expect(request, {'kind': 'massar-discover', 'protocol': 1});
+        final deadline = Stopwatch()..start();
         for (final response in [
           'not JSON',
           jsonEncode({'kind': 'massar-host', 'protocol': 2}),
@@ -209,14 +218,28 @@ void main() {
               'certificateSha256': 'b' * 64,
             }),
         ]) {
-          socket.send(utf8.encode(response), query.address, query.port);
+          final payload = utf8.encode(response);
+          while (socket.send(payload, query.address, query.port) == 0) {
+            if (deadline.elapsed >= const Duration(seconds: 1)) {
+              fail('The loopback socket did not accept a discovery reply.');
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+          // Give the receiver a turn to drain each datagram on Windows.
+          await Future<void>.delayed(const Duration(milliseconds: 10));
         }
-      });
+      }
+
       try {
-        final endpoints = await LanDiscovery.search(
-          discoveryPort: socket.port,
-          targets: [InternetAddress.loopbackIPv4],
-        );
+        final (endpoints, _) = await (
+          LanDiscovery.search(
+            discoveryPort: socket.port,
+            targets: [InternetAddress.loopbackIPv4],
+            bindSocket: () =>
+                RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0),
+          ),
+          sendReplies(),
+        ).wait;
         expect(endpoints, hasLength(1));
         expect(endpoints.single.hostId, 'real-host');
         expect(endpoints.single.address, '127.0.0.1');
