@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/application/center_store.dart';
+import 'package:massar_center/application/center_whatsapp_reports.dart';
 import 'package:massar_center/domain/lesson_attendance_counts.dart';
 import 'package:massar_center/domain/models.dart';
 
@@ -170,6 +171,52 @@ void main() {
       expect(row(table, home)['تعويض خارج المجموعة'], 2);
       expect(table.summary['إجمالي الحضور المسجل'], '0');
       expect(row(table, home)['ملاحظات'], contains('حصة 2: 1 تعويض'));
+    },
+  );
+
+  test(
+    'absence messages exclude active makeup for the same shared lesson only',
+    () async {
+      final source = await start(home, 1);
+      await store.closeSession(source.id);
+      final nextSource = await start(home, 2);
+      await store.closeSession(nextSource.id);
+
+      Object? messageAttendance(LessonSession session) =>
+          CenterWhatsAppReports.build(
+            store,
+            CenterWhatsAppSelection(groupId: home.id, sessionId: session.id),
+          ).whatsAppRecords.single['attendance'];
+
+      expect(messageAttendance(source), 'غائب');
+      final target = await start(visiting, 1);
+      await store.recordAttendance(
+        EntryRequest(
+          studentId: student.id,
+          sessionId: target.id,
+          mode: EntryMode.makeup,
+          makeupSourceGroupId: home.id,
+        ),
+      );
+
+      expect(messageAttendance(source), 'حاضر • تعويض');
+      expect(messageAttendance(nextSource), 'غائب');
+      final attendanceReport = CenterReports.build(
+        store,
+        CenterReportKind.attendance,
+        CenterReportFilter(sessionId: source.id),
+      );
+      expect(attendanceReport.whatsAppRecords.single['attendance'], 'معوّض');
+      expect(
+        store.academicAttendanceForSession(source.id).single.status,
+        AttendanceStatus.absent,
+      );
+
+      await store.cancelAttendance(
+        attendanceId: store.academicAttendanceForSession(target.id).single.id,
+        reason: 'إلغاء التعويض المسجل بالخطأ',
+      );
+      expect(messageAttendance(source), 'غائب');
     },
   );
 

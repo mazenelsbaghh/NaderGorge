@@ -3,6 +3,7 @@ import '../domain/models.dart';
 import '../shared/formatters.dart';
 import 'center_reports.dart';
 import 'center_store.dart';
+import 'whatsapp_attendance.dart';
 
 /// A single class snapshot, with each named assessment kept independent.
 class CenterWhatsAppSelection {
@@ -52,6 +53,11 @@ abstract final class CenterWhatsAppReports {
       for (final entry in store.academicAttendanceForSession(session.id))
         entry.studentId: entry,
     };
+    final whatsappAttendance = WhatsAppAttendance(store);
+    final messageStatuses = {
+      for (final entry in attendance.values)
+        entry.studentId: whatsappAttendance.statusFor(entry, session),
+    };
     final academics = store.academicRecordsForSession(session.id);
     final historicalIds = {
       ...attendance.keys,
@@ -93,6 +99,7 @@ abstract final class CenterWhatsAppReports {
     final messages = roster.map((student) {
       final examRecord = exams[student.id];
       final presence = attendance[student.id]?.status;
+      final messagePresence = messageStatuses[student.id];
       final localTime = session.startsAt.toLocal();
       return <String, dynamic>{
         'id':
@@ -126,9 +133,9 @@ abstract final class CenterWhatsAppReports {
                 presence == AttendanceStatus.makeup,
           ),
         ),
-        'attendance': presence == null
+        'attendance': messagePresence == null
             ? 'لم يُسجل حضور'
-            : attendanceLabel(presence),
+            : attendanceLabel(messagePresence),
       };
     }).toList();
     return CenterReportData(
@@ -147,7 +154,7 @@ abstract final class CenterWhatsAppReports {
       summary: {
         'الطلاب': '${messages.length}',
         'حاضر ومعوّض':
-            '${attendance.values.where((entry) => entry.status != AttendanceStatus.absent).length}',
+            '${messageStatuses.values.where((status) => status != AttendanceStatus.absent).length}',
         'درجات مرصودة':
             '${messages.where((row) => row['score'] != null).length}',
       },

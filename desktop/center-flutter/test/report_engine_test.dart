@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/application/center_store.dart';
+import 'package:massar_center/application/center_whatsapp_reports.dart';
 import 'package:massar_center/domain/models.dart';
 
 void main() {
@@ -191,6 +192,20 @@ void main() {
     final row = report.rows.firstWhere((row) => row[index] == code);
     return Map.fromIterables(report.columns, row);
   }
+
+  test('an explicit makeup link covers its original absence in messages', () {
+    final message = CenterWhatsAppReports.build(
+      store,
+      CenterWhatsAppSelection(
+        groupId: firstGroup.id,
+        sessionId: firstSession.id,
+      ),
+    ).whatsAppRecords.singleWhere((row) => row['studentId'] == absent.id);
+
+    expect(message['attendance'], 'حاضر • تعويض');
+    expect(message['homework'], 'لم يُراجع');
+    expect(message['score'], isNull);
+  });
 
   test(
     'student detail CSVs preserve contacts and student filters without changing records',

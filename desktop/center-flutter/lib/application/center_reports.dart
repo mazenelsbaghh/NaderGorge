@@ -11,6 +11,7 @@ import '../domain/homework_status.dart';
 import '../domain/models.dart';
 import '../domain/lesson_attendance_counts.dart';
 import 'center_store.dart';
+import 'whatsapp_attendance.dart';
 
 part 'student_card_reports.dart';
 part 'attendance_summary_report.dart';
@@ -1090,6 +1091,7 @@ class _ReportContext {
     final makeup = records
         .where((record) => record.status == AttendanceStatus.makeup)
         .length;
+    final whatsappAttendance = WhatsAppAttendance(store);
     return CenterReportData(
       title: 'الحضور والغياب',
       whatsAppRecords: records
@@ -1097,7 +1099,10 @@ class _ReportContext {
             (record) => _messageRecord(
               students[record.studentId]!,
               sessions[record.sessionId]!,
-              presence: record.status,
+              presence: whatsappAttendance.statusFor(
+                record,
+                sessions[record.sessionId]!,
+              ),
             ),
           )
           .toList(),
