@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { evaluateHomeworkWithAI } from '../services/geminiService.js';
+import { gradeWrittenAnswerWithOpenAI, useOpenAIWrittenGrading } from '../services/openAIWrittenGrading.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { withWrittenGradingSlot } from './writtenGradingConcurrency.js';
 
@@ -59,7 +60,8 @@ async function gradeQuestion(job: Job<HomeworkEvaluationData>, question: Homewor
   const evaluation = question.AnswerText.trim()
     ? await withWrittenGradingSlot(async () => {
         await throwIfCancellationRequested(job);
-        return evaluateHomeworkWithAI(question.AnswerText, question.ExpectedAnswer, question.QuestionText);
+        const grade = useOpenAIWrittenGrading() ? gradeWrittenAnswerWithOpenAI : evaluateHomeworkWithAI;
+        return grade(question.AnswerText, question.ExpectedAnswer, question.QuestionText);
       })
     : { score: 0, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' };
   return { answerId: question.AnswerId, score: evaluation.score, feedback: evaluation.feedback };

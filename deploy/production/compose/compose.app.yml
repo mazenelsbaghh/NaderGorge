@@ -89,6 +89,10 @@ services:
   worker:
     <<: *app-defaults
     image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    env_file:
+      - /etc/massar/app.env
+      - path: /etc/massar/openai-written-grading.env
+        required: false
     group_add:
       - ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
     environment:

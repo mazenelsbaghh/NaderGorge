@@ -61,7 +61,9 @@ if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
 return redis.call('DEL', KEYS[1])
 `;
 
-export async function cachedWrittenGrading<T>(identity: object, generate: () => Promise<T>): Promise<T> {
+export async function cachedWrittenGrading<T>(
+  identity: object, generate: () => Promise<T>, provider: 'gemini' | 'openai' = 'gemini',
+): Promise<T> {
   const redis = connection;
   if (!redis) return generate();
   const digest = createHash('sha256').update(JSON.stringify(identity)).digest('hex');
@@ -77,7 +79,7 @@ export async function cachedWrittenGrading<T>(identity: object, generate: () => 
     }
     const acquired = await cacheCommand(() => redis.set(lockKey, owner, 'PX', GENERATION_LEASE_MS, 'NX'));
     if (acquired === undefined) return generate();
-    if (acquired === 'OK') return generateAndCache(redis, { key, lockKey, owner }, generate);
+    if (acquired === 'OK') return generateAndCache(redis, { key, lockKey, owner, provider }, generate);
     await delay(100);
   }
   throw new Error('Written grading is already in progress; retry after the current generation.');
@@ -85,14 +87,14 @@ export async function cachedWrittenGrading<T>(identity: object, generate: () => 
 
 async function generateAndCache<T>(
   redis: Redis,
-  lease: { key: string; lockKey: string; owner: string },
+  lease: { key: string; lockKey: string; owner: string; provider: 'gemini' | 'openai' },
   generate: () => Promise<T>,
 ): Promise<T> {
   try {
     // The lock may have been released between our cache read and acquisition.
     const saved = await readCached<T>(redis, lease.key);
     if (saved) return saved.result;
-    await checkBillingCircuit(redis);
+    if (lease.provider === 'gemini') await checkBillingCircuit(redis);
     console.log('[written-grading-cache]', { outcome: 'miss' });
     const result = await generate();
     const serialized = JSON.stringify({ result });

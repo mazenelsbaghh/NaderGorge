@@ -1,8 +1,11 @@
 import dotenv from 'dotenv';
 import { performance } from 'node:perf_hooks';
 import { evaluateEssayWithAI, WRITTEN_GRADING_MODEL } from '../services/geminiService.js';
+import { gradeWrittenAnswerWithOpenAI, OPENAI_WRITTEN_GRADING_MODEL, useOpenAIWrittenGrading } from '../services/openAIWrittenGrading.js';
 
 dotenv.config({ quiet: true });
+const openAISelected = useOpenAIWrittenGrading();
+const gradeAnswer = openAISelected ? gradeWrittenAnswerWithOpenAI : evaluateEssayWithAI;
 
 // Synthetic answers only: this opt-in probe never submits student data or persists grades.
 const cases: Array<[string, string, string, string, boolean | number]> = [
@@ -38,7 +41,7 @@ async function evaluate(testCase: typeof cases[number]) {
   const [id, question, key, answer, expected] = testCase;
   const startedAt = performance.now();
   try {
-    const result = await evaluateEssayWithAI(answer, key, question);
+    const result = await gradeAnswer(answer, key, question);
     return { id, passed: typeof expected === 'boolean' ? result.score === (expected ? 1 : 0) : Math.abs(result.score - expected) <= 0.05,
       expected, actual: result.score, feedback: result.feedback,
       elapsedMs: Math.round(performance.now() - startedAt) };
@@ -53,7 +56,8 @@ const results: Array<Awaited<ReturnType<typeof evaluate>>> = [];
 for (let offset = 0; offset < cases.length; offset += 3)
   results.push(...await Promise.all(cases.slice(offset, offset + 3).map(evaluate)));
 const latencies = results.map(result => result.elapsedMs).sort((a, b) => a - b);
-console.log(JSON.stringify({ model: WRITTEN_GRADING_MODEL, usesMocks: false, mutatesStudentData: false,
+console.log(JSON.stringify({ model: openAISelected ? OPENAI_WRITTEN_GRADING_MODEL : WRITTEN_GRADING_MODEL,
+  usesMocks: false, mutatesStudentData: false,
   passed: results.filter(result => result.passed).length, total: cases.length,
   elapsedMs: Math.round(performance.now() - startedAt),
   medianMs: latencies[Math.floor(latencies.length / 2)], p95Ms: latencies[Math.ceil(latencies.length * 0.95) - 1], results }, null, 2));
