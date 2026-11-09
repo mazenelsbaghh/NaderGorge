@@ -89,12 +89,17 @@ services:
   worker:
     <<: *app-defaults
     image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    env_file:
+      - /etc/massar/app.env
+      - path: /etc/massar/openai-written-grading.env
+        required: false
     group_add:
       - ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
     environment:
       MASSAR_NODE_ID: ${MASSAR_NODE_ID}
       MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
       NODE_ENV: production
+      WRITTEN_GRADING_PROVIDER: ${WRITTEN_GRADING_PROVIDER:-openai}
       BACKEND_API_URL: http://backend:5245
       BUNNY_STREAM_API_KEY: ""
       BunnyStream__ApiKey: ""

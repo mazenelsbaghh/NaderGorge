@@ -1,6 +1,7 @@
 import { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { evaluateEssayWithAI } from '../services/geminiService.js';
+import { gradeWrittenAnswerWithOpenAI, useOpenAIWrittenGrading } from '../services/openAIWrittenGrading.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { withWrittenGradingSlot } from './writtenGradingConcurrency.js';
 const API_URL = (() => {
@@ -35,7 +36,8 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     const parsed = job.data.evaluation ?? (answerText.trim()
       ? await withWrittenGradingSlot(async () => {
           await throwIfCancellationRequested(job);
-          return evaluateEssayWithAI(answerText, expectedAnswer, questionText);
+          const grade = useOpenAIWrittenGrading() ? gradeWrittenAnswerWithOpenAI : evaluateEssayWithAI;
+          return grade(answerText, expectedAnswer, questionText);
         })
       : { score: 0, isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' });
     if (!job.data.evaluation) await job.updateData({ ...job.data, evaluation: parsed });
