@@ -83,7 +83,7 @@ internal static class TestAppDbContextFactory
     }
 
     public static async Task<(Exam Exam, ExamQuestion ExamQuestion, FindTheMistakeQuestion Question, QuestionOption CorrectOption, QuestionOption WrongOption)> SeedFindTheMistakeExamAsync(
-        AppDbContext db)
+        AppDbContext db, Guid? examId = null)
     {
         var question = new FindTheMistakeQuestion
         {
@@ -120,7 +120,7 @@ internal static class TestAppDbContextFactory
 
         var exam = new Exam
         {
-            Id = Guid.NewGuid(),
+            Id = examId ?? Guid.NewGuid(),
             Title = "Find The Mistake Exam",
             Description = "Test exam",
             PassingScore = 1,

@@ -103,6 +103,42 @@ public class GetLatestPassedExamResultQueryTests
     }
 
     [Fact]
+    public async Task MonthTransferResults_PreferHighestFinalAttemptOverMoreRecentAttempts()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Transferred student", "510");
+        var (exam, _, _, _, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(
+            db, TransferredCourseExamResults.LectureNineExamId);
+        var oldest = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
+        var best = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        var lower = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        var pending = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        best.SubmittedAt = best.UpdatedAt = oldest;
+        best.ScoreAchieved = 1.75m;
+        best.IsPassed = true;
+        best.Evaluation = "ممتاز";
+        lower.SubmittedAt = lower.UpdatedAt = oldest.AddDays(1);
+        lower.ScoreAchieved = 1;
+        lower.IsPassed = true;
+        lower.Evaluation = "جيد";
+        pending.SubmittedAt = pending.UpdatedAt = oldest.AddDays(2);
+        pending.ScoreAchieved = 2;
+        pending.Evaluation = "قيد التصحيح";
+        await db.SaveChangesAsync();
+
+        var latest = await new GetLatestExamAttemptResultQueryHandler(db, AllowAccess.Instance)
+            .Handle(new(exam.Id, student.Id), default);
+        var passed = await new GetLatestPassedExamResultQueryHandler(db, AllowAccess.Instance)
+            .Handle(new(exam.Id, student.Id), default);
+
+        Assert.True(latest.Success);
+        Assert.Equal(best.Id, latest.Data!.AttemptId);
+        Assert.Equal(1.75m, latest.Data.ScoreAchieved);
+        Assert.True(passed.Success);
+        Assert.Equal(best.Id, passed.Data!.AttemptId);
+    }
+
+    [Fact]
     public async Task DirectAndLatestResultsReturnManualReconciliationForNullSnapshot()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();

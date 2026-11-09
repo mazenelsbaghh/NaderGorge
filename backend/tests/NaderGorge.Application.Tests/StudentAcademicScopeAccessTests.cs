@@ -641,7 +641,8 @@ public class StudentAcademicScopeAccessTests
     [InlineData("two-months", false, false, true)]
     [InlineData("term", false, true, false)]
     [InlineData("term", true, false, true)]
-    public async Task SharedLesson_AppearsOnceAndKeepsCoursework(
+    [InlineData("separated-both", true, true, true)]
+    public async Task SharedLesson_FollowsCourseAndSubscriptionAndKeepsCoursework(
         string subscription, bool hasOldCoursework, bool showsOriginal, bool showsCopy)
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -650,8 +651,13 @@ public class StudentAcademicScopeAccessTests
         var subject = await SeedSubjectAsync(db, "Shared lessons");
         var package = SeedPackage(db, teacher, subject, "Shared lessons package");
         var term = new Term { Title = "Term", Package = package, PackageId = package.Id };
+        var separateCourse = subscription == "separated-both";
+        var twoMonthPackage = separateCourse ? SeedPackage(db, teacher, subject, "Standalone two months") : package;
+        var twoMonthTerm = separateCourse
+            ? new Term { Title = "Standalone term", Package = twoMonthPackage, PackageId = twoMonthPackage.Id }
+            : term;
         var month = new ContentSection { Title = "Month", Term = term, TermId = term.Id };
-        var twoMonths = new ContentSection { Title = "Two months", Term = term, TermId = term.Id, Order = 1 };
+        var twoMonths = new ContentSection { Title = "Two months", Term = twoMonthTerm, TermId = twoMonthTerm.Id, Order = 1 };
         var exam = new Exam { Title = "Old exam", CreatedByTeacherId = teacher.Id };
         var original = new Lesson
         {
@@ -665,13 +671,22 @@ public class StudentAcademicScopeAccessTests
         db.Lessons.AddRange(original, copy);
         db.Exams.Add(exam);
         db.StudentFacingAcademicScopes.Add(MatchingScope(StudentFacingScopeOwnerType.Package, package.Id));
+        var hasTermAccess = subscription == "term" || separateCourse;
         db.StudentAccessGrants.Add(new StudentAccessGrant
         {
             UserId = student.Id, IsActive = true,
-            GrantType = subscription == "term" ? CodeType.Term : CodeType.Month,
-            TermId = subscription == "term" ? term.Id : null,
-            ContentSectionId = subscription == "term" ? null : subscription == "month" ? month.Id : twoMonths.Id
+            GrantType = hasTermAccess ? CodeType.Term : CodeType.Month,
+            TermId = hasTermAccess ? term.Id : null,
+            ContentSectionId = hasTermAccess ? null : subscription == "month" ? month.Id : twoMonths.Id
         });
+        if (separateCourse)
+        {
+            db.StudentFacingAcademicScopes.Add(MatchingScope(StudentFacingScopeOwnerType.Package, twoMonthPackage.Id));
+            db.StudentAccessGrants.Add(new StudentAccessGrant
+            {
+                UserId = student.Id, IsActive = true, GrantType = CodeType.Month, ContentSectionId = twoMonths.Id
+            });
+        }
         var submitted = new StudentExamAttempt
         {
             UserId = student.Id, ExamId = exam.Id, StartedAt = DateTime.UtcNow.AddHours(-1),
@@ -692,7 +707,10 @@ public class StudentAcademicScopeAccessTests
         var monthLessons = await sectionLessons.Handle(new(month.Id, student.Id), CancellationToken.None);
         var twoMonthLessons = await sectionLessons.Handle(new(twoMonths.Id, student.Id), CancellationToken.None);
 
-        Assert.Equal(showsOriginal ? original.Id : copy.Id, Assert.Single(myLessons.Data!).Id);
+        var listedLessons = myLessons.Data!;
+        Assert.Equal((showsOriginal ? 1 : 0) + (showsCopy ? 1 : 0), listedLessons.Count);
+        Assert.Equal(showsOriginal, listedLessons.Any(lesson => lesson.Id == original.Id));
+        Assert.Equal(showsCopy, listedLessons.Any(lesson => lesson.Id == copy.Id));
         Assert.Equal(showsOriginal, monthLessons.Data!.Any(lesson => lesson.Id == original.Id && lesson.HasAccess));
         Assert.Equal(showsCopy, twoMonthLessons.Data!.Any(lesson => lesson.Id == copy.Id && lesson.HasAccess));
 

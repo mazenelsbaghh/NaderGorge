@@ -31,14 +31,17 @@ public class GetLatestExamAttemptResultQueryHandler
             return ApiResponse<ExamResultDto>.Fail("You do not have access to this exam.", ["You do not have access"]);
         }
 
-        var attemptId = await _db.StudentExamAttempts
+        var attempts = _db.StudentExamAttempts
             .AsNoTracking()
             .Where(attempt => attempt.UserId == request.UserId
                 && attempt.ExamId == request.ExamId
                 && (attempt.Evaluation != null
                     || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == attempt.Id)
                     || _db.StudentAnswers.Any(answer => answer.StudentExamAttemptId == attempt.Id
-                        && (answer.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer.SubmittedText)))))
+                        && (answer.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer.SubmittedText)))));
+
+        var bestAttempt = await TransferredCourseExamResults.FindBestFinalAsync(_db, attempts, request.ExamId, ct);
+        var attemptId = bestAttempt?.Id ?? await attempts
             .OrderByDescending(attempt => attempt.UpdatedAt ?? attempt.CreatedAt)
             .Select(attempt => (Guid?)attempt.Id)
             .FirstOrDefaultAsync(ct);

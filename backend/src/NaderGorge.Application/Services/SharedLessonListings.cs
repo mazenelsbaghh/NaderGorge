@@ -27,17 +27,23 @@ internal sealed class SharedLessonListings(IAppDbContext db)
         if (visiblePairs.Length == 0)
             return [];
 
+        var terms = await ReadTermIds(LessonIds, ct);
+        var sameTermPairs = Pairs.Where(pair => SharesTerm(pair, terms)).ToArray();
+        visiblePairs = visiblePairs.Where(pair => SharesTerm(pair, terms)).ToArray();
+        if (visiblePairs.Length == 0)
+            return [];
+
         var eligibleIds = LessonIds.Where(accessibleIds.Contains).ToArray();
         var coursework = await ReadCoursework(studentId, eligibleIds).Distinct().ToListAsync(ct);
 
         // Keep the three lessons on one sequence so prerequisite checks use the same coursework.
-        var highestOriginal = Array.FindLastIndex(Pairs, pair => coursework.Contains(pair.Original));
-        var highestCopy = Array.FindLastIndex(Pairs, pair => coursework.Contains(pair.Copy));
+        var highestOriginal = Array.FindLastIndex(sameTermPairs, pair => coursework.Contains(pair.Original));
+        var highestCopy = Array.FindLastIndex(sameTermPairs, pair => coursework.Contains(pair.Copy));
         var useCopy = highestCopy > highestOriginal;
 
         if (highestCopy == highestOriginal && highestCopy >= 0)
         {
-            var pair = Pairs[highestCopy];
+            var pair = sameTermPairs[highestCopy];
             var unfinished = await ReadCoursework(studentId, [pair.Original, pair.Copy], unfinishedOnly: true)
                 .Distinct().ToListAsync(ct);
             useCopy = unfinished.Contains(pair.Copy) && !unfinished.Contains(pair.Original);
@@ -54,11 +60,24 @@ internal sealed class SharedLessonListings(IAppDbContext db)
             return null;
 
         var otherId = lessonId == pair.Original ? pair.Copy : pair.Original;
+        var terms = await ReadTermIds([lessonId, otherId], ct);
+        if (!SharesTerm(pair, terms))
+            return null;
+
         return await ReadCoursework(studentId, [otherId]).AnyAsync(ct)
             && await access.HasAccessToLessonAsync(studentId, otherId, ct)
             ? otherId
             : null;
     }
+
+    private Task<Dictionary<Guid, Guid>> ReadTermIds(Guid[] lessonIds, CancellationToken ct) =>
+        db.Lessons.Where(lesson => lessonIds.Contains(lesson.Id))
+            .ToDictionaryAsync(lesson => lesson.Id, lesson => lesson.ContentSection.TermId, ct);
+
+    private static bool SharesTerm(LessonPair pair, IReadOnlyDictionary<Guid, Guid> terms) =>
+        terms.TryGetValue(pair.Original, out var originalTerm)
+            && terms.TryGetValue(pair.Copy, out var copyTerm)
+            && originalTerm == copyTerm;
 
     private IQueryable<Guid> ReadCoursework(Guid studentId, Guid[] lessonIds, bool unfinishedOnly = false)
     {

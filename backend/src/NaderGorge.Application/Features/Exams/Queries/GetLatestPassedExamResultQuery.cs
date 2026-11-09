@@ -66,13 +66,16 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
         if (exam == null)
             return ApiResponse<ExamResultDto>.Fail("Exam not found");
 
-        var attempt = await _db.StudentExamAttempts
+        var attempts = _db.StudentExamAttempts
             .AsNoTracking()
             .Where(a => a.UserId == request.UserId
                 && a.ExamId == request.ExamId
                 && a.IsPassed
                 && (_db.StudentAnswers.Any(answer => answer.StudentExamAttemptId == a.Id)
-                    || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == a.Id)))
+                    || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == a.Id)));
+
+        var attempt = await TransferredCourseExamResults.FindBestFinalAsync(_db, attempts, request.ExamId, ct)
+            ?? await attempts
             .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
