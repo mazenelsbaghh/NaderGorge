@@ -68,4 +68,31 @@ void main() {
       );
     },
   );
+
+  test(
+    'honor roll spreadsheet keeps student codes as text and scores numeric',
+    () {
+      final workbook = buildExamWorkbook(
+        {
+          'كشف التكريم': [
+            ['اسم الطالب', 'الكود', 'الدرجة'],
+            ['طالب', '00011', 55.5],
+          ],
+        },
+        columnWidths: const [38, 18, 14],
+      );
+      final archive = ZipDecoder().decodeBytes(workbook);
+      final worksheet = XmlDocument.parse(
+        utf8.decode(archive.findFile('xl/worksheets/sheet1.xml')!.content),
+      );
+      final row = worksheet
+          .findAllElements('row')
+          .last
+          .findElements('c')
+          .toList();
+      expect(row[1].getAttribute('t'), 'inlineStr');
+      expect(row[1].innerText, '00011');
+      expect(row[2].findElements('v').single.innerText, '55.5');
+    },
+  );
 }

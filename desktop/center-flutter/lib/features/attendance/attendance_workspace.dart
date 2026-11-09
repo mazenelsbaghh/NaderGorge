@@ -33,6 +33,7 @@ import 'student_debt_dialog.dart';
 import 'closed_session_dialog.dart';
 import 'attendance_conflict_dialog.dart';
 import 'student_history_panel.dart';
+import 'exam_honor_roll_dialog.dart';
 import 'online_payment_allocation_action.dart';
 import '../management/closings_page.dart';
 import '../management/review_page.dart';
@@ -2668,6 +2669,15 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     _focusCode();
   }
 
+  Future<void> _showExamHonorRoll(LessonSession selected) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) =>
+          ExamHonorRollDialog(store: store, session: selected),
+    );
+    if (mounted) _focusCode();
+  }
+
   Future<void> _showClosing(String sessionId) async {
     if (hasPendingMassarNotice(context) ||
         _attendanceWarning ||
@@ -3212,6 +3222,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           .toList(),
       onChanged: _canUseToolbar ? _changeGroup : null,
     );
+    final selectedSession = session;
     final actions = <Widget>[
       if (session?.status != SessionStatus.closed &&
           session?.status != SessionStatus.canceled)
@@ -3268,6 +3279,17 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           onPressed: _canReviewSession ? () => _showClosing(session!.id) : null,
           icon: const Icon(Icons.assessment_outlined, size: 18),
           label: const Text('تقرير الحصة'),
+        ),
+      if (selectedSession != null &&
+          selectedSession.status != SessionStatus.canceled &&
+          store.canAssess)
+        OutlinedButton.icon(
+          key: const Key('session-exam-honor-roll'),
+          onPressed: _canUseToolbar
+              ? () => _showExamHonorRoll(selectedSession)
+              : null,
+          icon: const Icon(Icons.emoji_events_outlined, size: 18),
+          label: const Text('كشف التكريم'),
         ),
       OutlinedButton.icon(
         key: const Key('session-payment-review'),
