@@ -72,7 +72,8 @@ internal sealed class SharedLessonListings(IAppDbContext db)
 
     private Task<Dictionary<Guid, Guid>> ReadTermIds(Guid[] lessonIds, CancellationToken ct) =>
         db.Lessons.Where(lesson => lessonIds.Contains(lesson.Id))
-            .ToDictionaryAsync(lesson => lesson.Id, lesson => lesson.ContentSection.TermId, ct);
+            .Select(lesson => new { lesson.Id, lesson.ContentSection.TermId })
+            .ToDictionaryAsync(lesson => lesson.Id, lesson => lesson.TermId, ct);
 
     private static bool SharesTerm(LessonPair pair, IReadOnlyDictionary<Guid, Guid> terms) =>
         terms.TryGetValue(pair.Original, out var originalTerm)

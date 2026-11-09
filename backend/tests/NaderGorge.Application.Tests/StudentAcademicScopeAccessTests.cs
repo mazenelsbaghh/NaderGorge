@@ -699,6 +699,8 @@ public class StudentAcademicScopeAccessTests
         if (hasOldCoursework)
             db.StudentExamAttempts.AddRange(submitted, inProgress);
         await db.SaveChangesAsync();
+        // Match a student request with no lesson navigation properties preloaded.
+        db.ChangeTracker.Clear();
 
         var scope = new AcademicScopeService(db);
         var access = new AccessCheckService(db, scope);
