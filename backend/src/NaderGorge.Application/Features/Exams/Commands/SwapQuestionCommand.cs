@@ -92,6 +92,13 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
             .Where(eq => !usedQuestionIds.Contains(eq.Id))
             .ToList();
 
+        if (revision.HasFixedQuestionMix)
+        {
+            var assigned = revision.Questions.Single(question => question.Id == request.QuestionId);
+            availableExtraQuestions.RemoveAll(question =>
+                (int)question.Question.Type != assigned.Type || question.Points != assigned.Points);
+        }
+
         if (availableExtraQuestions.Count == 0)
         {
             return ApiResponse<SwapQuestionResultDto>.Fail("لا يوجد أسئلة إضافية متاحة للتبديل في بنك أسئلة هذا الامتحان.");

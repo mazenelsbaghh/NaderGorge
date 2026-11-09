@@ -28,6 +28,8 @@ public sealed record AssessmentDefinitionSnapshot(
     public Guid? RevisionId { get; init; }
     public bool IsActive { get; init; } = true;
     public bool UsesAssignedQuestionPoints { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HasFixedQuestionMix { get; init; }
     public ExamEssayGradingMode EssayGradingMode { get; init; }
     public bool ShowResultsWhileEssayPending { get; init; }
     public bool SingleAttemptOnly { get; init; }

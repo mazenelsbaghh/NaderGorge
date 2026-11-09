@@ -41,7 +41,7 @@ public sealed class GetAssessmentEntrySummaryQueryHandler(
     private async Task<AssessmentEntrySummary?> GetExamSummary(Guid examId, Guid userId, CancellationToken ct)
     {
         var exam = await db.Exams.Where(exam => exam.Id == examId && exam.IsActive)
-            .Select(exam => new { exam.IsRandomized, exam.DisplayQuestionCount })
+            .Select(exam => new ExamQuestionDraw(exam.IsRandomized, exam.DisplayQuestionCount, exam.TotalScore, exam.EssayGradingMode))
             .SingleOrDefaultAsync(ct);
         if (exam is null || !await access.HasAccessToExamAsync(userId, examId, ct))
             return null;
@@ -64,6 +64,10 @@ public sealed class GetAssessmentEntrySummaryQueryHandler(
             return Summarize(assigned, assigned.Count);
         }
 
+        var configuredCount = await exam.ReadMultipleChoiceCountAsync(db, examId, ct);
+        if (configuredCount is not null)
+            return await SummarizeFixedMix(questions, exam, configuredCount, ct);
+
         var ordered = questions.OrderBy(question => question.Order).ThenBy(question => question.Id)
             .Select(question => (int)question.Question.Type);
         var limit = exam.DisplayQuestionCount.GetValueOrDefault();
@@ -72,6 +76,17 @@ public sealed class GetAssessmentEntrySummaryQueryHandler(
 
         var types = await ordered.ToListAsync(ct);
         return Summarize(types, limit > 0 ? Math.Min(limit, types.Count) : types.Count);
+    }
+
+    private static async Task<AssessmentEntrySummary?> SummarizeFixedMix(
+        IQueryable<ExamQuestion> questions, ExamQuestionDraw draw, string configuredCount, CancellationToken ct)
+    {
+        var pool = await questions.Select(question => new ExamDrawQuestion(question.Question.Type, question.Points)).ToListAsync(ct);
+        if (draw.ResolveMultipleChoiceCount(configuredCount, pool) is not { } choices)
+            return null;
+
+        var essays = pool.Count(question => question.Type == QuestionType.Essay);
+        return new(choices + essays, new(essays, essays), new(choices, choices), new(0, 0));
     }
 
     private async Task<AssessmentEntrySummary?> GetHomeworkSummary(Guid homeworkId, Guid userId, CancellationToken ct)

@@ -66,6 +66,15 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         }, ct);
     }
 
+    private static List<ExamQuestion> DrawDefaultQuestions(Exam exam, Random random)
+    {
+        IEnumerable<ExamQuestion> ordered = exam.IsRandomized
+            ? exam.ExamQuestions.OrderBy(_ => random.Next())
+            : exam.ExamQuestions.OrderBy(question => question.Order).ThenBy(question => question.Id);
+
+        return (exam.DisplayQuestionCount is > 0 ? ordered.Take(exam.DisplayQuestionCount.Value) : ordered).ToList();
+    }
+
     private async Task<ApiResponse<ActiveExamAttemptDto>> StartOnce(StartExamAttemptCommand request, bool singleAttemptOnly, CancellationToken ct)
     {
         var examStatus = await _db.Exams.Where(exam => exam.Id == request.ExamId).Select(exam => (bool?)exam.IsActive).FirstOrDefaultAsync(ct);
@@ -254,24 +263,20 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         {
             await using var transaction = _db is DbContext existingContext && existingContext.Database.CurrentTransaction != null
                 ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-            // Pick subset
-            var allQuestions = exam.ExamQuestions.AsEnumerable();
-            if (exam.IsRandomized)
-            {
-                allQuestions = allQuestions.OrderBy(x => random.Next());
-            }
-            else
-            {
-                allQuestions = allQuestions.OrderBy(q => q.Order);
-            }
+            var draw = new ExamQuestionDraw(exam.IsRandomized, exam.DisplayQuestionCount, exam.TotalScore, exam.EssayGradingMode);
+            var configuredCount = await draw.ReadMultipleChoiceCountAsync(_db, exam.Id, ct);
+            var multipleChoiceCount = configuredCount is null ? null : draw.ResolveMultipleChoiceCount(configuredCount,
+                exam.ExamQuestions.Select(q => new ExamDrawQuestion(q.Question.Type, q.Points)).ToArray());
+            if (configuredCount is not null && multipleChoiceCount is null)
+                return ApiResponse<ActiveExamAttemptDto>.Fail(ExamQuestionDraw.InvalidMixMessage);
 
-            if (exam.DisplayQuestionCount.HasValue && exam.DisplayQuestionCount.Value > 0)
+            selectedQuestions = multipleChoiceCount is { } count
+                ? ExamQuestionDraw.Sample(exam.ExamQuestions, count, random)
+                : DrawDefaultQuestions(exam, random);
+            var snapshot = AssessmentDefinitionSnapshot.FromExam(exam, selectedQuestions) with
             {
-                // Note: we take the full set randomly shuffled, then take N
-                allQuestions = allQuestions.Take(exam.DisplayQuestionCount.Value);
-            }
-
-            selectedQuestions = allQuestions.ToList();
+                HasFixedQuestionMix = multipleChoiceCount.HasValue
+            };
 
             // Create a fresh attempt
             attempt = new StudentExamAttempt
@@ -281,7 +286,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 StartedAt = DateTime.UtcNow,
                 ScoreAchieved = 0,
                 IsTimeExpired = false,
-                DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam, selectedQuestions).ToJson(),
+                DefinitionSnapshotJson = snapshot.ToJson(),
                 Answers = new List<StudentAnswer>()
             };
 
@@ -310,11 +315,18 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         }
 
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
+        var activeRevision = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
 
         // Return the active subset
         var selectedQuestionIds = selectedQuestions.Select(question => question.Id).ToHashSet();
         var baseQuery = exam.ExamQuestions.Where(question => selectedQuestionIds.Contains(question.Id));
-        if (exam.IsRandomized)
+        if (activeRevision?.HasFixedQuestionMix == true)
+        {
+            baseQuery = baseQuery.Where(question => question.Question.Type == QuestionType.MCQ).OrderBy(_ => random.Next())
+                .Concat(baseQuery.Where(question => question.Question.Type != QuestionType.MCQ).OrderBy(question => question.Order).ThenBy(question => question.Id));
+        }
+        else if (exam.IsRandomized)
         {
             baseQuery = baseQuery.OrderBy(x => random.Next());
         }
@@ -353,8 +365,6 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             remainingSeconds = (int)Math.Max(0, (timeAllowed - timeTaken).TotalSeconds);
         }
 
-        var activeRevision = attempt.DefinitionSnapshotJson is null ? null
-            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
         var dto = new ActiveExamAttemptDto(
             attempt.Id,
             exam.Title,

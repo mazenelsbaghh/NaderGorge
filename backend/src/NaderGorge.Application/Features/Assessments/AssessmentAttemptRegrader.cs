@@ -81,7 +81,7 @@ public static class AssessmentAttemptRegrader
         var assignedIds = questions.Select(q => q.Id).ToHashSet();
         return proposed with
         {
-            Questions = questions, Revision = grades,
+            Questions = questions, Revision = grades, HasFixedQuestionMix = previous.HasFixedQuestionMix,
             ReserveQuestions = proposed.Questions.Where(q => !assignedIds.Contains(q.Id)).ToArray()
         };
     }
