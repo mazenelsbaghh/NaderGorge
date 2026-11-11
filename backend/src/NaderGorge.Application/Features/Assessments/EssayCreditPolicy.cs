@@ -4,6 +4,15 @@ namespace NaderGorge.Application.Features.Assessments;
 
 public static class EssayCreditPolicy
 {
+    private const string ExplanationPrefix = "\nإعداد تصحيح المقالي: ";
+
+    private static readonly Dictionary<ExamEssayGradingMode, string> ModeExplanations = new()
+    {
+        [ExamEssayGradingMode.AutomaticFullCredit] = "الدرجة كاملة للإجابة الصحيحة بالكامل، وصفر للإجابة الناقصة أو الخاطئة.",
+        [ExamEssayGradingMode.AutomaticFullOrHalfCredit] = "الدرجة كاملة للإجابة الصحيحة بالكامل، ونصف الدرجة للإجابة الصحيحة جزئيًا، وصفر للإجابة الخاطئة.",
+        [ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent] = "الدرجة كاملة عند صحة ٧٠٪ من الإجابة فأكثر، ونصف الدرجة لما هو صحيح جزئيًا وأقل من ٧٠٪، وصفر للإجابة الخاطئة أو الفارغة."
+    };
+
     public static bool IsAutomatic(ExamEssayGradingMode mode) => mode is
         ExamEssayGradingMode.Automatic or ExamEssayGradingMode.AutomaticFullCredit
         or ExamEssayGradingMode.AutomaticFullOrHalfCredit
@@ -24,14 +33,18 @@ public static class EssayCreditPolicy
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Automatic essay grading is required.")
     };
 
-    public static string Explain(ExamEssayGradingMode mode, string assessmentFeedback) => mode switch
+    public static string Explain(ExamEssayGradingMode mode, string assessmentFeedback) =>
+        ModeExplanations.TryGetValue(mode, out var explanation)
+            ? assessmentFeedback + ExplanationPrefix + explanation
+            : assessmentFeedback;
+
+    public static string? StudentFeedback(string? feedback)
     {
-        ExamEssayGradingMode.AutomaticFullCredit => assessmentFeedback
-            + "\nإعداد تصحيح المقالي: الدرجة كاملة للإجابة الصحيحة بالكامل، وصفر للإجابة الناقصة أو الخاطئة.",
-        ExamEssayGradingMode.AutomaticFullOrHalfCredit => assessmentFeedback
-            + "\nإعداد تصحيح المقالي: الدرجة كاملة للإجابة الصحيحة بالكامل، ونصف الدرجة للإجابة الصحيحة جزئيًا، وصفر للإجابة الخاطئة.",
-        ExamEssayGradingMode.AutomaticFullOrHalfCreditFrom70Percent => assessmentFeedback
-            + "\nإعداد تصحيح المقالي: الدرجة كاملة عند صحة ٧٠٪ من الإجابة فأكثر، ونصف الدرجة لما هو صحيح جزئيًا وأقل من ٧٠٪، وصفر للإجابة الخاطئة أو الفارغة.",
-        _ => assessmentFeedback
-    };
+        if (feedback is null) return null;
+
+        var explanationStart = feedback.LastIndexOf(ExplanationPrefix, StringComparison.Ordinal);
+        return explanationStart >= 0 && ModeExplanations.ContainsValue(feedback[(explanationStart + ExplanationPrefix.Length)..])
+            ? feedback[..explanationStart]
+            : feedback;
+    }
 }

@@ -144,7 +144,7 @@ public record HomeworkAnswerReviewDto(
     string StudentAnswer,
     string? CorrectAnswer,
     string? WrittenCorrection,
-    int? ScoreReceived,
+    decimal? ScoreReceived,
     int Points
 );
 
@@ -571,14 +571,14 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                 h.Submission != null ? (h.Submission.Evaluation ?? h.Submission.OverallScore.ToString("G29")) : null,
                 h.Submission?.SubmittedAt,
                 h.Submission?.Answers
-                    .Where(answer => answer.ScoreReceived == null || answer.ScoreReceived < answer.Question.PointsActive)
+                    .Where(answer => answer.AwardedScore == null || answer.AwardedScore < answer.Question.PointsActive)
                     .OrderBy(answer => answer.Question.Order)
                     .Select(answer => new HomeworkAnswerReviewDto(
                         answer.Question.BodyText,
                         answer.ProvidedAnswer,
                         answer.Question.CorrectAnswerKey,
                         answer.Question.WrittenCorrection,
-                        answer.ScoreReceived,
+                        answer.AwardedScore,
                         answer.Question.PointsActive
                     ))
                     .ToList() ?? new List<HomeworkAnswerReviewDto>()

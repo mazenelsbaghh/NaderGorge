@@ -3,21 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, RefreshCw, Search } from 'lucide-react';
 import { studentFollowUpService, type FollowUpAudience, type FollowUpFilter, type FollowUpOptions, type FollowUpReport } from '@/services/student-follow-up-service';
+import { gradeChoices } from './report-academic-options';
 import { FollowUpResults } from './StudentFollowUpResults';
 
 const input = 'min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] disabled:opacity-60';
 const emptyOptions: FollowUpOptions = { teachers: [], packages: [], lessons: [] };
 const noTeacher = '00000000-0000-0000-0000-000000000000';
-const gradeChoices: Array<[number, number, string]> = [
-  [0, 0, 'الأول الثانوي'], [0, 1, 'الثاني الثانوي'], [0, 31, 'الثالث الثانوي'],
-  [1, 2, 'الأول بكالوريا'], [1, 3, 'الثاني بكالوريا'],
-  ...Array.from({ length: 6 }, (_, i): [number, number, string] => [2, i + 10, `الصف ${i + 1} الابتدائي`]),
-  ...Array.from({ length: 3 }, (_, i): [number, number, string] => [3, i + 20, `الصف ${i + 1} الإعدادي`]),
-  ...Array.from({ length: 6 }, (_, i): [number, number, string] => [4, i + 40, `الصف ${i + 1} الابتدائي الأزهري`]),
-  ...Array.from({ length: 3 }, (_, i): [number, number, string] => [4, i + 50, `الصف ${i + 1} الإعدادي الأزهري`]),
-  ...Array.from({ length: 3 }, (_, i): [number, number, string] => [4, i + 60, `الصف ${i + 1} الثانوي الأزهري`]),
-  ...Array.from({ length: 12 }, (_, i): [number, number, string] => [5, i + 70, `Grade ${i + 1}`]),
-];
 export function StudentFollowUp({ audience }: { audience: FollowUpAudience }) {
   const [teacher, setTeacher] = useState('');
   const [course, setCourse] = useState('');

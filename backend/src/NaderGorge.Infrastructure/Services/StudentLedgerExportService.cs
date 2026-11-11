@@ -71,7 +71,7 @@ public sealed partial class StudentLedgerExportService : IStudentLedgerExportSer
     private async Task<List<Package>> LoadPackagesAsync(Guid teacherId, Guid? packageId, CancellationToken ct) =>
         await _db.Packages.AsNoTracking().Where(package => package.TeacherId == teacherId && (!packageId.HasValue || package.Id == packageId))
             .Include(package => package.Terms).ThenInclude(term => term.Sections).ThenInclude(section => section.Lessons).ThenInclude(lesson => lesson.Videos)
-            .OrderBy(package => package.Name).ToListAsync(ct);
+            .OrderBy(package => package.Name).ThenBy(package => package.Id).ToListAsync(ct);
 
     private async Task<List<GrantRow>> LoadGrantsAsync(Guid teacherId, CancellationToken ct) =>
         await _db.StudentAccessGrants.AsNoTracking().Where(grant =>
@@ -92,7 +92,7 @@ public sealed partial class StudentLedgerExportService : IStudentLedgerExportSer
         await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id)
                 && (!filter.Stage.HasValue || user.StudentProfile!.EducationStage == filter.Stage)
                 && (!filter.StudyTrack.HasValue || user.StudentProfile!.StudyTrack == filter.StudyTrack))
-            .OrderBy(user => user.FullName)
+            .OrderBy(user => user.FullName).ThenBy(user => user.Id)
             .Select(user => new StudentRow(user.Id, user.FullName, user.PhoneNumber,
                 user.StudentProfile != null ? user.StudentProfile.ParentPhone : null,
                 user.StudentProfile != null ? user.StudentProfile.SecondaryParentPhone : null,
@@ -100,7 +100,15 @@ public sealed partial class StudentLedgerExportService : IStudentLedgerExportSer
                 user.StudentProfile != null ? user.StudentProfile.EducationStage : EducationStage.Secondary,
                 user.StudentProfile != null ? user.StudentProfile.GradeLevel : GradeLevel.FirstSecondary,
                 user.StudentProfile != null ? user.StudentProfile.StudyTrack : null,
-                user.StudentProfile != null ? user.StudentProfile.StudentCode : null))
+                user.StudentProfile != null ? user.StudentProfile.StudentCode : null)
+            {
+                Governorate = user.StudentProfile != null ? user.StudentProfile.Governorate : null,
+                District = user.StudentProfile != null ? user.StudentProfile.District : null,
+                Address = user.StudentProfile != null ? user.StudentProfile.Address : null,
+                SchoolName = user.StudentProfile != null ? user.StudentProfile.SchoolName : null,
+                SecondaryPhone = user.StudentProfile != null ? user.StudentProfile.SecondaryPhone : null,
+                Nationality = user.StudentProfile != null ? user.StudentProfile.Nationality : null
+            })
             .ToListAsync(ct);
 
     private async Task<Guid[]> LoadStudentIdsAsync(Guid teacherId, IEnumerable<GrantRow> grants, CancellationToken ct)
@@ -656,7 +664,15 @@ public sealed partial class StudentLedgerExportService : IStudentLedgerExportSer
         EducationStage Stage,
         GradeLevel Grade,
         StudyTrack? StudyTrack,
-        string? StudentCode);
+        string? StudentCode)
+    {
+        public string? Governorate { get; init; }
+        public string? District { get; init; }
+        public string? Address { get; init; }
+        public string? SchoolName { get; init; }
+        public string? SecondaryPhone { get; init; }
+        public string? Nationality { get; init; }
+    }
     private sealed record GrantRow(Guid UserId, CodeType GrantType, Guid? PackageId, Guid? TermId, Guid? SectionId, Guid? LessonId, Guid? VideoId, Guid? VideoTypeId, Guid? ExamId, bool IsActive, DateTime? CancelledAt, DateTime? ExpiresAt);
     private sealed record WatchRow(Guid UserId, Guid VideoId, Guid LessonId, decimal Seconds, int WatchCount, DateTime LastWatchedAt, decimal LastPlaybackRate, string PlaybackRateBreakdownJson);
     private sealed record AttemptRow(Guid UserId, Guid ExamId, decimal Score, bool Passed, DateTime CreatedAt);

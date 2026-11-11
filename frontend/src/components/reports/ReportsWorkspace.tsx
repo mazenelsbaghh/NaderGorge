@@ -7,9 +7,9 @@ import { TeacherCourseSummary } from './TeacherCourseSummary';
 import type { ReportAudience } from '@/services/advanced-report-service';
 
 export function ReportsWorkspace({ audience }: { audience: ReportAudience }) {
-  const [section, setSection] = useState<'learning' | 'advanced' | 'summary'>('learning');
+  const [section, setSection] = useState<'learning' | 'advanced' | 'summary'>(audience === 'teacher' ? 'summary' : 'learning');
   const [advancedOpened, setAdvancedOpened] = useState(false);
-  const [summaryOpened, setSummaryOpened] = useState(false);
+  const [summaryOpened, setSummaryOpened] = useState(audience === 'teacher');
   const tabs = [{ key: 'summary', label: 'ملخص' }, { key: 'learning', label: 'الحصص والطلاب' }, { key: 'advanced', label: 'التقارير المتقدمة' }] as const;
   return <div className="space-y-6" dir="rtl">
     <nav aria-label="أقسام مركز التقارير" className="flex flex-wrap gap-2 border-b border-[var(--admin-border)] pb-3">

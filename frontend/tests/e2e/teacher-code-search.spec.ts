@@ -9,7 +9,7 @@ const first: CodeGroupDto = {
 const second: CodeGroupDto = { ...first, id: '82000000-0000-0000-0000-000000000002', name: 'دفعة سبتمبر', packageId: undefined };
 const reply = (route: Route, data: unknown) => route.fulfill({ json: { success: true, data } });
 
-async function teacherCodes(page: Page, baseURL: string, search: (route: Route, query: string) => Promise<void>) {
+async function teacherCodes(page: Page, baseURL: string, search: (route: Route, query: string) => Promise<void>, packagesUnavailable = false) {
   const user = { id: '82000000-0000-0000-0000-000000000099', fullName: 'مدرس الاختبار', roles: ['Teacher'],
     permissions: [], profileComplete: true, allowedDomains: ['teacher'], allowedNavbarItems: [], authorizationVersion: 1 };
   await page.addInitScript(authUser => {
@@ -20,7 +20,9 @@ async function teacherCodes(page: Page, baseURL: string, search: (route: Route, 
   await page.route('**/api/auth/session', route => reply(route, { user, authorizationVersion: 1 }));
   await page.route('**/api/public/settings', route => route.fulfill({ json: { maintenanceMode: false } }));
   await page.route('**/api/teacher/context', route => reply(route, { isOwner: true, permissionKeys: ['codes', 'content'] }));
-  await page.route('**/api/content/packages*', route => reply(route, [{ id: 'package-1', name: 'باقة التاريخ' }]));
+  await page.route('**/api/content/packages*', route => packagesUnavailable
+    ? route.fulfill({ status: 503, json: { success: false, message: 'Packages unavailable' } })
+    : reply(route, [{ id: 'package-1', name: 'باقة التاريخ' }]));
   const detailRequests: string[] = [];
   const adminRequests: string[] = [];
   page.on('request', request => {
@@ -92,4 +94,32 @@ test('a delayed earlier lookup cannot replace the latest matching group', async 
     await expect(page.getByText(second.name, { exact: true })).toBeVisible();
     await expect(page.getByText(first.name, { exact: true })).toHaveCount(0);
   } finally { releaseOld(); }
+});
+
+// 2026-10-24: a failed package lookup hid successfully loaded teacher codes.
+test('teacher groups and their codes remain visible when packages cannot load', async ({ page, baseURL }) => {
+  await teacherCodes(page, baseURL!, route => reply(route, []), true);
+  await expect(page.getByText('لا توجد مجموعات أكواد للمدرس بعد.')).toHaveCount(0);
+  await page.route(`**/api/teacher/codes/groups/${first.id}/details`, route => reply(route, [{
+    id: '82000000-0000-0000-0000-000000000010', code: 'VISIBLE-CODE-42',
+    serialNumber: 784501, isUsed: false,
+  }]));
+  await page.locator(`a[href="/teacher/codes/${first.id}"]`).click();
+  await expect(page.getByText('VISIBLE-CODE-42', { exact: true })).toBeVisible();
+});
+
+test('failed group loading shows an error and retry restores teacher codes', async ({ page, baseURL }) => {
+  await teacherCodes(page, baseURL!, route => reply(route, []));
+  let unavailable = true;
+  await page.route('**/api/teacher/codes/groups', route => unavailable
+    ? route.fulfill({ status: 503, json: { success: false, message: 'Codes unavailable' } })
+    : reply(route, [first]));
+  await page.reload();
+  const alert = page.getByRole('alert').filter({ hasText: 'تعذر تحميل مجموعات الأكواد' });
+  await expect(alert).toBeVisible();
+  await expect(page.getByText('لا توجد مجموعات أكواد للمدرس بعد.')).toHaveCount(0);
+  unavailable = false;
+  await alert.getByRole('button', { name: 'إعادة المحاولة', exact: true }).click();
+  await expect(page.getByText(first.name, { exact: true })).toBeVisible();
+  await expect(alert).toHaveCount(0);
 });

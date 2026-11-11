@@ -11,6 +11,7 @@ import { PublicExamShortLink } from "@/components/admin/PublicExamShortLink";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { getAcademicScopeLabel, type AcademicScopePayload } from "@/lib/academic-labels";
 import { registerCacheStore } from "@/lib/cache-invalidation";
+import { getSurfaceOrigins } from "@/packages/surface-runtime/config";
 import { teacherService, type SubjectDto } from "@/services/teacher-service";
 import type { PublicExamProductDto } from "@/services/admin-sales-service";
 import { ExamEssayGradingSettings, type ExamEssayGradingMode } from "@/components/admin/ExamEssayGradingSettings";
@@ -175,11 +176,23 @@ export default function TeacherPublicExamsPageClient() {
       key: "actions",
       label: "الإجراء",
       align: "left",
-      render: () => (
-        <Link href="/student/public-exams" className="admin-btn-ghost inline-flex items-center gap-2">
-          <Globe2 className="h-4 w-4" />
-          صفحة الظهور
-        </Link>
+      render: (exam) => (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link href={`/teacher/packages/exams/${exam.examId}`} className="admin-btn-ghost inline-flex items-center gap-2">
+            <FileQuestion className="h-4 w-4" />
+            مراجعة الأسئلة
+          </Link>
+          <Link
+            href={`${getSurfaceOrigins().student}/public-exams/${encodeURIComponent(exam.slug)}`}
+            prefetch={false}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-btn-ghost inline-flex items-center gap-2"
+          >
+            <Globe2 className="h-4 w-4" />
+            صفحة الطالب
+          </Link>
+        </div>
       ),
     },
   ];

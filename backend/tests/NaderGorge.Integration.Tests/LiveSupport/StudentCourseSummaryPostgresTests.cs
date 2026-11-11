@@ -45,12 +45,12 @@ public sealed partial class StudentFollowUpPostgresTests
         Assert.Equal("ملخص", sheet.Name);
         Assert.True(sheet.RightToLeft);
         Assert.Equal(5, sheet.LastRowUsed()!.RowNumber());
-        Assert.Equal(9, sheet.LastColumnUsed()!.ColumnNumber());
+        Assert.Equal(18, sheet.LastColumnUsed()!.ColumnNumber());
         Assert.Equal(own.Student.FullName, sheet.Cell(5, 1).GetString());
         Assert.False(sheet.Cell(5, 1).HasFormula);
-        Assert.Equal("شاهد", sheet.Cell(5, 7).GetString());
-        Assert.Equal("8 / 10", sheet.Cell(5, 8).GetString());
-        Assert.Equal("7 / 10", sheet.Cell(5, 9).GetString());
+        Assert.Equal("شاهد", sheet.Cell(5, 16).GetString());
+        Assert.Equal("8 / 10", sheet.Cell(5, 17).GetString());
+        Assert.Equal("7 / 10", sheet.Cell(5, 18).GetString());
         Assert.DoesNotContain(sheet.CellsUsed(), cell => cell.GetString().Contains(primaryStudent.FullName));
         Assert.DoesNotContain(sheet.CellsUsed(), cell => cell.GetString().Contains(otherCourse.Student.FullName));
         Assert.Equal(1, await fixture.Db.AuditLogs.CountAsync(log => log.Action == "StudentCourseSummaryExported" && log.PerformedByUserId == own.Teacher.UserId));
@@ -84,9 +84,9 @@ public sealed partial class StudentFollowUpPostgresTests
 
         using var workbook = new XLWorkbook(new MemoryStream(export.Content));
         var sheet = workbook.Worksheet(1);
-        Assert.Equal("لم يشاهد", sheet.Cell(5, 7).GetString());
-        Assert.Equal(pending ? "بانتظار التصحيح" : "لم يمتحن", sheet.Cell(5, 8).GetString());
-        Assert.Equal(pending ? "بانتظار التصحيح" : "لم يسلم", sheet.Cell(5, 9).GetString());
+        Assert.Equal("لم يشاهد", sheet.Cell(5, 16).GetString());
+        Assert.Equal(pending ? "بانتظار التصحيح" : "لم يمتحن", sheet.Cell(5, 17).GetString());
+        Assert.Equal(pending ? "بانتظار التصحيح" : "لم يسلم", sheet.Cell(5, 18).GetString());
     }
 
     [Fact]
@@ -109,12 +109,12 @@ public sealed partial class StudentFollowUpPostgresTests
 
         using var workbook = new XLWorkbook(new MemoryStream(export.Content));
         var sheet = workbook.Worksheet(1);
-        Assert.Equal("شاهد", sheet.Cell(5, 7).GetString());
-        Assert.Contains("امتحان الفيديو: لم يمتحن", sheet.Cell(5, 8).GetString());
-        Assert.Contains("امتحان الحصة: لم يمتحن", sheet.Cell(5, 8).GetString());
-        Assert.Equal("لا يوجد واجب", sheet.Cell(5, 9).GetString());
-        Assert.Equal("لا توجد فيديوهات متاحة ضمن اشتراكه", sheet.Cell(5, 10).GetString());
-        Assert.Equal("لا يوجد امتحان", sheet.Cell(5, 11).GetString());
+        Assert.Equal("شاهد", sheet.Cell(5, 16).GetString());
+        Assert.Contains("امتحان الفيديو: لم يمتحن", sheet.Cell(5, 17).GetString());
+        Assert.Contains("امتحان الحصة: لم يمتحن", sheet.Cell(5, 17).GetString());
+        Assert.Equal("لا يوجد واجب", sheet.Cell(5, 18).GetString());
+        Assert.Equal("لا توجد فيديوهات متاحة ضمن اشتراكه", sheet.Cell(5, 19).GetString());
+        Assert.Equal("لا يوجد امتحان", sheet.Cell(5, 20).GetString());
     }
 
     [Fact]
@@ -130,6 +130,7 @@ public sealed partial class StudentFollowUpPostgresTests
         var membership = new TeacherStaffMember { User = staff, TeacherId = own.Teacher.Id, IsActive = true,
             CreatedByTeacherUserId = own.Teacher.UserId, PermissionKeys = "students" };
         fixture.Db.Add(membership); await fixture.Db.SaveChangesAsync();
+        Assert.IsType<ForbidResult>(await Endpoint(staff.Id).ReadSummary(new(), default));
         Assert.IsType<ForbidResult>(await Endpoint(staff.Id).ExportSummary(new(EducationStage.Secondary, own.Package.Id), default));
         membership.PermissionKeys = "reports"; await fixture.Db.SaveChangesAsync();
         Assert.IsType<FileContentResult>(await Endpoint(staff.Id).ExportSummary(new(EducationStage.Secondary, own.Package.Id), default));
@@ -157,10 +158,48 @@ public sealed partial class StudentFollowUpPostgresTests
         Assert.DoesNotContain(workbook.Worksheet(1).CellsUsed(), cell => cell.GetString().Contains(foreign.Student.FullName));
     }
 
+    [Fact]
+    public async Task SummaryCombinesAllGradesAndCoursesWithFullDetailsAndMatchesExportAcrossPages()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var first = await Seed(fixture.Db); var second = await Seed(fixture.Db); var foreign = await Seed(fixture.Db);
+        second.Package.TeacherId = first.Teacher.Id;
+        var profile = await fixture.Db.StudentProfiles.SingleAsync(student => student.UserId == second.Student.Id);
+        profile.EducationStage = EducationStage.Primary; profile.GradeLevel = GradeLevel.PrimaryGrade1;
+        profile.Governorate = "الإسكندرية"; profile.District = "سموحة"; profile.Address = "عنوان الطالب";
+        profile.SchoolName = "مدرسة الطالب"; profile.SecondaryPhone = "01012345678";
+        fixture.Db.Add(new StudentAccessGrant { UserId = first.Student.Id, GrantType = CodeType.Package, PackageId = second.Package.Id });
+        await fixture.Db.SaveChangesAsync();
+        var service = new StudentLedgerExportService(fixture.Db);
+
+        var preview = await service.ReadCourseSummaryAsync(first.Teacher.Id, new(PageSize: 1), default);
+        var next = await service.ReadCourseSummaryAsync(first.Teacher.Id, new(Page: 2, PageSize: 1), default);
+        Assert.Equal(2, preview.TotalStudents);
+        Assert.Single(preview.Rows); Assert.Single(next.Rows);
+        var bothPages = preview.Rows.Concat(next.Rows).ToArray();
+        Assert.Equal(2, bothPages.Select(row => row["id"]).Distinct().Count());
+        Assert.DoesNotContain(bothPages, row => row["id"]!.ToString() == foreign.Student.Id.ToString());
+        var details = Assert.Single(bothPages, row => row["id"]!.ToString() == second.Student.Id.ToString());
+        foreach (var (label, expected) in new[] { ("المحافظة", "الإسكندرية"), ("المنطقة", "سموحة"),
+            ("العنوان", "عنوان الطالب"), ("المدرسة", "مدرسة الطالب"), ("موبايل إضافي", "01012345678") })
+            Assert.Equal(expected, details[preview.Columns.Single(column => column.Label == label).Key]);
+
+        var export = await service.ExportCourseSummaryAsync(first.Teacher.Id, first.Teacher.UserId, new(), default);
+        using var workbook = new XLWorkbook(new MemoryStream(export.Content));
+        var sheet = Assert.Single(workbook.Worksheets);
+        Assert.Equal(6, sheet.LastRowUsed()!.RowNumber());
+        for (var row = 0; row < bothPages.Length; row++)
+            for (var column = 0; column < preview.Columns.Count; column++)
+                Assert.Equal(bothPages[row][preview.Columns[column].Key], sheet.Cell(row + 5, column + 1).GetString());
+        var filtered = await service.ReadCourseSummaryAsync(first.Teacher.Id, new(Grade: GradeLevel.PrimaryGrade1), default);
+        Assert.Equal(1, filtered.TotalStudents);
+        Assert.Equal(second.Student.Id.ToString(), Assert.Single(filtered.Rows)["id"]!.ToString());
+    }
+
     [Theory]
-    [InlineData(null)]
     [InlineData(999)]
-    public async Task CourseSummaryRequiresAnExplicitValidStage(int? stage)
+    public async Task CourseSummaryRejectsAnInvalidStage(int? stage)
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();

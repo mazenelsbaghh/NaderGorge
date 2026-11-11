@@ -21,6 +21,7 @@ import NeumorphButton from "@/components/ui/neumorph-button";
 export default function TeacherCodesPageClient() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [codeSearch, setCodeSearch] = useState<{
     query: string;
@@ -51,6 +52,9 @@ export default function TeacherCodesPageClient() {
 
   useEffect(() => {
     void loadData();
+    void contentService.getPackages().then((response) => {
+      setPackages(response.data?.data ?? []);
+    }).catch((error: unknown) => devConsole.error(error));
   }, []);
 
   async function loadData(options?: { force?: boolean }) {
@@ -61,13 +65,11 @@ export default function TeacherCodesPageClient() {
     const request = (async () => {
       try {
         setLoading(true);
-        const [groupsData, packagesResponse] = await Promise.all([
-          adminService.listCodeGroups(),
-          contentService.getPackages({ force: options?.force }),
-        ]);
-        setGroups(groupsData || []);
-        setPackages((packagesResponse.data?.data || []) as PackageDto[]);
+        setLoadFailed(false);
+        const groupsData = await adminService.listCodeGroups();
+        setGroups(groupsData ?? []);
       } catch (error) {
+        setLoadFailed(true);
         if (!isAxiosError(error) || error.response?.status !== 429) {
           devConsole.error(error);
         }
@@ -225,13 +227,22 @@ export default function TeacherCodesPageClient() {
         </div>
       )}
 
+      {loadFailed && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-sm text-[var(--admin-text)]">
+          <span>تعذر تحميل مجموعات الأكواد. أعد المحاولة.</span>
+          <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => void loadData()}>
+            إعادة المحاولة
+          </NeumorphButton>
+        </div>
+      )}
+
       {/* Code Groups Table */}
       <AdminDataTable
         data={filteredGroups}
         columns={groupColumns}
         loading={loading || (searchPending && filteredGroups.length === 0)}
         rowKey={(g) => g.id}
-        emptyMessage={searchFailed ? "نتائج البحث بالكود أو السيريال غير متاحة الآن."
+        emptyMessage={loadFailed ? "مجموعات الأكواد غير متاحة الآن." : searchFailed ? "نتائج البحث بالكود أو السيريال غير متاحة الآن."
           : searchTerm ? "لا توجد مجموعات تطابق البحث. أدخل الكود أو السيريال بالكامل."
             : "لا توجد مجموعات أكواد للمدرس بعد."}
       />

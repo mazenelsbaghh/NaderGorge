@@ -39,10 +39,7 @@ export default function TeacherCodeGroupDetailsPageClient() {
     async function loadGroupData() {
       try {
         setLoading(true);
-        const [groupsData, packagesResponse] = await Promise.all([
-          adminService.listCodeGroups(),
-          contentService.getPackages(),
-        ]);
+        const groupsData = await adminService.listCodeGroups();
 
         const foundGroup = groupsData?.find((g) => g.id === groupId);
         if (foundGroup) {
@@ -53,7 +50,6 @@ export default function TeacherCodeGroupDetailsPageClient() {
           return;
         }
         
-        setPackages((packagesResponse.data?.data || []) as PackageDto[]);
       } catch (error) {
         devConsole.error(error);
         toast.error("تعذر تحميل بيانات المجموعة");
@@ -75,6 +71,9 @@ export default function TeacherCodeGroupDetailsPageClient() {
 
     if (groupId) {
       void loadGroupData();
+      void contentService.getPackages().then((response) => {
+        setPackages(response.data?.data ?? []);
+      }).catch((error: unknown) => devConsole.error(error));
     }
   }, [groupId, router]);
 

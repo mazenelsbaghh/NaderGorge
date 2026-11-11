@@ -75,7 +75,8 @@ public sealed partial class StudentFollowUpReader
         return new(student.UserId, student.Name, student.Phone, student.ParentPhone, student.Stage.ToString(), student.Grade.ToString(),
             video.LessonId, video.LessonTitle, video.PackageName, state, parts.Count(p => p.Progress.IsCompleted), parts.Length,
             StudentWatchProgressReader.CalculatePercent(parts.Select(p => p.Progress).ToArray()), oldest?.AvailableAt,
-            completed ? 0 : days, oldest?.Source ?? "Unknown", parts.Where(p => p.Started).Max(p => p.LastWatchedAt));
+            completed ? 0 : days, oldest?.Source ?? "Unknown", parts.Where(p => p.Started).Max(p => p.LastWatchedAt))
+        { Details = student.Details };
     }
 
     private static bool GrantsVideo(GrantRow grant, VideoRow video, Guid teacherId) => grant.Type switch

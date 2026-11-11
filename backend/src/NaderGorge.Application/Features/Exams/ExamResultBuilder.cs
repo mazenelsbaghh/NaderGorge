@@ -90,7 +90,7 @@ internal static class ExamResultBuilder
                         : null,
                     snapshot?.StudentAudioUrl,
                     !excluded && (resultIsCompleted || exam.ShowResultsWhileEssayPending)
-                        && snapshot?.IsPendingGrading == false ? snapshot.GradingFeedback : null,
+                        && snapshot?.IsPendingGrading == false ? EssayCreditPolicy.StudentFeedback(snapshot.GradingFeedback) : null,
                     eq.Points,
                     excluded,
                     !resultIsCompleted && !excluded && eq.Question.Type == QuestionType.Essay

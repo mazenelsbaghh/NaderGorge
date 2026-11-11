@@ -13,6 +13,9 @@ export interface FollowUpOptions {
   lessons: Array<{ id: string; title: string; termTitle: string; order: number }>;
 }
 export interface FollowUpRow {
+  details?: { studentCode: string | null; governorate: string | null; district: string | null; address: string | null;
+    schoolName: string | null; secondaryPhone: string | null; secondaryParentPhone: string | null;
+    motherPhone: string | null; nationality: string | null; studyTrack: string | null } | null;
   studentId: string; studentName: string; phone: string; parentPhone: string | null;
   stage: string; grade: string; lessonId: string; lessonTitle: string; packageName: string;
   state: 'NotStarted' | 'Started' | 'Completed'; completedVideos: number; totalVideos: number;

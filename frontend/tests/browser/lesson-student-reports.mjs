@@ -14,7 +14,7 @@ const choices = { teachers: [{ id: teacherId, name: 'نادر جورج' }], pack
 const row = { studentId: students[0].id, studentName: students[0].name, phone: students[0].phone, parentPhone: null,
   grade: 'SecondBaccalaureate', stage: 'Baccalaureate', lessonId: firstLesson, lessonTitle: 'الحصة الأولى', packageName: choices.packages[0].name,
   state: 'Started', totalVideos: 2, completedVideos: 1, progressPercentage: 50, availableSinceUtc: null, daysWaiting: null,
-  availabilitySource: 'Unknown', lastWatchedAtUtc: null, videos: [] };
+  availabilitySource: 'Unknown', lastWatchedAtUtc: null, videos: [], details: { governorate: 'الإسكندرية', schoolName: 'مدرسة الطالب' } };
 const parts = [{ id: 'video-1', title: 'شرح الحصة', state: 'Completed', progressPercentage: 100, lastWatchedAtUtc: null },
   { id: 'video-2', title: 'تطبيقات لم يشاهدها', state: 'NotStarted', progressPercentage: 0, lastWatchedAtUtc: null }];
 
@@ -47,6 +47,7 @@ async function fixture(browser, audience, width) {
     return route.fulfill({ json: { success: true, data: [] } });
   });
   await page.goto(`${origin.replace('admin.lvh.me', `${audience}.lvh.me`)}/${audience}/reports`);
+  await page.getByRole('button', { name: 'الحصص والطلاب', exact: true }).click();
   await page.getByRole('heading', { name: 'تقارير الحصص والطلاب', exact: true }).waitFor();
   return { page, reads, exports };
 }
@@ -59,13 +60,15 @@ for (const audience of ['admin', 'teacher']) for (const width of [390, 1280]) {
       const run = page.getByRole('button', { name: 'عرض التقرير', exact: true });
       const download = page.getByRole('button', { name: 'تنزيل التقرير إكسيل', exact: true });
       assert.equal(await run.isDisabled(), true);
-      if (audience === 'admin') await page.getByLabel('المدرس', { exact: true }).selectOption(teacherId);
-      else assert.equal(await page.getByLabel('المدرس', { exact: true }).count(), 0);
-      await page.getByLabel('الكورس', { exact: true }).selectOption(packageId);
-      await page.getByLabel('الحصة', { exact: true }).selectOption(firstLesson);
-      await page.getByLabel('الحضور', { exact: true }).selectOption('present');
+      if (audience === 'admin') await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('المدرس', { exact: true }).selectOption(teacherId);
+      else assert.equal(await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('المدرس', { exact: true }).count(), 0);
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الكورس', { exact: true }).selectOption(packageId);
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الحصة', { exact: true }).selectOption(firstLesson);
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الحضور', { exact: true }).selectOption('present');
       await run.click();
       await page.getByRole('heading', { name: 'كشف الحضور والغياب', exact: true }).waitFor();
+      await page.getByText('بيانات الطالب كاملة', { exact: true }).click();
+      await page.getByText('الإسكندرية', { exact: true }).waitFor();
       assert.deepEqual(reads.at(-1).lessonIds, [firstLesson]);
       assert.equal(reads.at(-1).attendance, 'present');
       const table = page.getByRole('table', { name: 'حضور وغياب الطلاب في الحصة المحددة' });
@@ -77,16 +80,16 @@ for (const audience of ['admin', 'teacher']) for (const width of [390, 1280]) {
       const firstDownload = page.waitForEvent('download'); await download.click();
       assert.match((await firstDownload).suggestedFilename(), /تقرير-الحصص-والطلاب\.xlsx$/);
       assert.deepEqual(exports.at(-1), reads.at(-1));
-      await page.getByLabel('الحصة', { exact: true }).selectOption(secondLesson);
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الحصة', { exact: true }).selectOption(secondLesson);
       assert.equal(await download.isDisabled(), true);
       assert.equal(await page.getByRole('table').count(), 0);
-      await page.getByLabel('الحضور', { exact: true }).selectOption('absent');
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الحضور', { exact: true }).selectOption('absent');
       await run.click(); await table.waitFor();
       assert.equal(await table.getByRole('cell', { name: 'غائب', exact: true }).count(), 1);
       assert.deepEqual(reads.at(-1).lessonIds, [secondLesson]);
 
       await page.getByRole('button', { name: 'مشاهدة طالب', exact: true }).click();
-      await page.getByLabel('ابحث عن طالب', { exact: true }).fill('أحمد');
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('ابحث عن طالب', { exact: true }).fill('أحمد');
       await page.getByRole('button', { name: /أحمد محمد.*01000000002/ }).click();
       await run.click();
       await page.getByRole('heading', { name: /مشاهدة الطالب/ }).waitFor();
@@ -101,7 +104,7 @@ for (const audience of ['admin', 'teacher']) for (const width of [390, 1280]) {
       const screenshots = process.env.LEARNING_REPORT_SCREENSHOTS ?? '/tmp/codex-lesson-reports-screenshots';
       await mkdir(screenshots, { recursive: true });
       await page.screenshot({ path: `${screenshots}/${audience}-${width}.png`, fullPage: true, animations: 'disabled' });
-      await page.getByLabel('الكورس', { exact: true }).selectOption('');
+      await page.getByRole('region', { name: 'الحصص والطلاب', exact: true }).getByLabel('الكورس', { exact: true }).selectOption('');
       assert.equal(await run.isDisabled(), true);
       assert.equal(await download.isDisabled(), true);
       assert.equal(await page.getByText('شرح الحصة', { exact: true }).count(), 0);

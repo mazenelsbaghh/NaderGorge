@@ -127,12 +127,22 @@ public sealed partial class StudentFollowUpReader(IAppDbContext db, IAcademicSco
         return await query.Select(g => new GrantRow(g.UserId, g.User.FullName, g.User.PhoneNumber,
             g.User.StudentProfile!.ParentPhone, g.User.StudentProfile.EducationStage, g.User.StudentProfile.GradeLevel,
             g.GrantType, g.PackageId, g.TermId, g.ContentSectionId, g.LessonId, g.LessonVideoId, g.VideoTypeId,
-            g.AccessCode == null ? null : g.AccessCode.CodeGroup.TeacherId, g.GrantedAt)).ToListAsync(ct);
+            g.AccessCode == null ? null : g.AccessCode.CodeGroup.TeacherId, g.GrantedAt)
+        {
+            Details = new(g.User.StudentProfile.StudentCode, g.User.StudentProfile.Governorate,
+                g.User.StudentProfile.District, g.User.StudentProfile.Address, g.User.StudentProfile.SchoolName,
+                g.User.StudentProfile.SecondaryPhone, g.User.StudentProfile.SecondaryParentPhone,
+                g.User.StudentProfile.MotherPhone, g.User.StudentProfile.Nationality,
+                g.User.StudentProfile.StudyTrack.HasValue ? g.User.StudentProfile.StudyTrack.Value.ToString() : null)
+        }).ToListAsync(ct);
     }
 
     private sealed record VideoRow(Guid Id, string Title, Guid LessonId, string LessonTitle, Guid PackageId, string PackageName,
         Guid TermId, Guid SectionId, Guid TypeId, DateTime? OpenedAt, DateTime? FirstPlaybackAt, int? Duration);
     private sealed record GrantRow(Guid UserId, string Name, string Phone, string? ParentPhone,
         EducationStage Stage, GradeLevel Grade, CodeType Type, Guid? PackageId, Guid? TermId, Guid? SectionId,
-        Guid? LessonId, Guid? VideoId, Guid? VideoTypeId, Guid? CodeTeacherId, DateTime GrantedAt);
+        Guid? LessonId, Guid? VideoId, Guid? VideoTypeId, Guid? CodeTeacherId, DateTime GrantedAt)
+    {
+        public FollowUpStudentDetails? Details { get; init; }
+    }
 }

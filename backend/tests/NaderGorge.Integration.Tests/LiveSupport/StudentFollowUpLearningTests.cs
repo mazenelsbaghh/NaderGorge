@@ -19,6 +19,8 @@ public sealed partial class StudentFollowUpPostgresTests
         await fixture.ResetAsync();
         var seed = await Seed(fixture.Db);
         seed.Student.FullName = "أحمد محمد";
+        var profile = await fixture.Db.StudentProfiles.SingleAsync(student => student.UserId == seed.Student.Id);
+        profile.Governorate = "الإسكندرية"; profile.SchoolName = "مدرسة الطالب";
         var namesake = User("أحمد محمد");
         var nextLesson = new Lesson { Title = "الحصة التالية", ContentSectionId = seed.Lesson.ContentSectionId, Order = 2 };
         var unwatchedPart = new LessonVideo { Title = "جزء لم يشاهده", LessonId = seed.Lesson.Id,
@@ -39,6 +41,7 @@ public sealed partial class StudentFollowUpPostgresTests
         var report = await reader.ReadAsync(filter, false, default);
 
         Assert.Equal(2, report.TotalRows);
+        Assert.All(report.Rows, row => Assert.Equal("الإسكندرية", row.Details?.Governorate));
         Assert.All(report.Rows, row => Assert.Equal(seed.Student.Id, row.StudentId));
         var parts = report.Rows.Single(row => row.LessonId == seed.Lesson.Id).Videos;
         Assert.Equal("Completed", parts.Single(video => video.Id == seed.Video.Id).State);
@@ -46,6 +49,10 @@ public sealed partial class StudentFollowUpPostgresTests
         Assert.Equal("NotStarted", Assert.Single(report.Rows.Single(row => row.LessonId == nextLesson.Id).Videos).State);
         var bytes = await new StudentFollowUpExportService(fixture.Db).ExportAsync(report, filter, seed.Teacher.UserId, default);
         using var workbook = new XLWorkbook(new MemoryStream(bytes));
+        var sheet = workbook.Worksheet(1);
+        var governorateColumn = sheet.Row(6).CellsUsed().Single(cell => cell.GetString() == "المحافظة").Address.ColumnNumber;
+        Assert.Equal("الإسكندرية", sheet.Cell(7, governorateColumn).GetString());
+
         var detail = workbook.Worksheet("تفاصيل الفيديوهات");
         Assert.Equal(4, detail.LastRowUsed()!.RowNumber());
         Assert.Contains(detail.Column(5).CellsUsed(), cell => cell.GetString() == "جزء لم يشاهده");

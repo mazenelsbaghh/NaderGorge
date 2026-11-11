@@ -1,11 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Reporting;
 
 namespace NaderGorge.API.Controllers;
 
 public sealed partial class TeacherReportsController
 {
+    [HttpPost("summary")]
+    public async Task<IActionResult> ReadSummary([FromBody] StudentCourseSummaryFilter filter, CancellationToken ct)
+    {
+        if (!await CanAccessAsync(ct)) return Forbid();
+        var teacherId = await _reports.GetReportScopeTeacherIdAsync(User.RequireUserId(), true, ct);
+        try { return Ok(ApiResponse<StudentCourseSummaryReport>.Ok(await _studentLedger.ReadCourseSummaryAsync(teacherId!.Value, filter, ct))); }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
+    }
+
     [HttpPost("summary/export")]
     public async Task<IActionResult> ExportSummary([FromBody] StudentCourseSummaryFilter filter, CancellationToken ct)
     {

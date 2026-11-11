@@ -99,7 +99,7 @@ public sealed class TeacherStudentsQueryTests
     }
 
     [Fact]
-    public async Task StudentsExport_RechecksTeacherScopeAndPreservesPhoneNumbersAsText()
+    public async Task StudentsExport_IncludesAllEligibleStudentsAndPreservesRecordedContactDetails()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -113,6 +113,7 @@ public sealed class TeacherStudentsQueryTests
         var package = new Package { Name = "History", Subject = subject, Teacher = teacher };
         var otherPackage = new Package { Name = "Other history", Subject = subject, Teacher = otherTeacher };
         var student = User("=1+1", "01094000003");
+        var secondStudent = User("Second student", "01094000010");
         var otherStudent = User("Other student", "01094000004");
         var assistant = User("Assistant", "01094000005");
         db.AddRange(package, otherPackage, new TeacherStaffMember
@@ -122,11 +123,19 @@ public sealed class TeacherStudentsQueryTests
         {
             User = student, Gender = Gender.Female, StudentCode = "00021",
             EducationStage = EducationStage.Baccalaureate, GradeLevel = GradeLevel.SecondBaccalaureate,
-            StudyTrack = StudyTrack.Business, SecondaryParentPhone = "01094000006",
+            StudyTrack = StudyTrack.Business, ParentPhone = "01094000007",
+            SecondaryParentPhone = "01094000006", MotherPhone = "01094000008",
+            Governorate = "القاهرة", District = "مدينة نصر", Address = "عنوان اختبار",
             DateOfBirth = new DateTime(2010, 4, 3)
+        }, new StudentProfile
+        {
+            User = secondStudent, StudentCode = "00022", ParentPhone = "01094000011",
+            EducationStage = EducationStage.Secondary, GradeLevel = GradeLevel.SecondaryGrade3,
+            Governorate = "الجيزة"
         });
         var grantedAt = new DateTime(2026, 1, 1, 23, 0, 0, DateTimeKind.Utc);
         db.StudentAccessGrants.AddRange(Grant(student, CodeType.Package, package.Id, grantedAt),
+            Grant(secondStudent, CodeType.Package, package.Id, grantedAt),
             Grant(otherStudent, CodeType.Package, otherPackage.Id, grantedAt));
         await db.SaveChangesAsync();
 
@@ -150,14 +159,28 @@ public sealed class TeacherStudentsQueryTests
             using var workbook = new XLWorkbook(stream);
             var sheet = workbook.Worksheet("الطلاب");
             Assert.True(sheet.RightToLeft);
-            Assert.Equal(2, sheet.LastRowUsed()!.RowNumber());
+            Assert.Equal(31, sheet.LastColumnUsed()!.ColumnNumber());
+            Assert.Equal(selection.All ? 3 : 2, sheet.LastRowUsed()!.RowNumber());
+            Assert.Equal(student.Id.ToString(), sheet.Cell("AE2").GetString());
             Assert.False(sheet.Cell("A2").HasFormula);
             Assert.Equal("=1+1", sheet.Cell("A2").GetString());
             Assert.Equal(XLDataType.Text, sheet.Cell("C2").DataType);
             Assert.Equal("01094000003", sheet.Cell("C2").GetString());
+            Assert.Equal("01094000007", sheet.Cell("E2").GetString());
             Assert.Equal("01094000006", sheet.Cell("F2").GetString());
+            Assert.Equal("01094000008", sheet.Cell("G2").GetString());
             Assert.Equal("قطاع الأعمال", sheet.Cell("Q2").GetString());
+            Assert.Equal("القاهرة", sheet.Cell("T2").GetString());
+            Assert.Equal("مدينة نصر", sheet.Cell("U2").GetString());
+            Assert.Equal("عنوان اختبار", sheet.Cell("V2").GetString());
             Assert.Equal(new DateTime(2026, 1, 2), sheet.Cell("AC2").GetDateTime());
+            if (selection.All)
+            {
+                Assert.Equal(secondStudent.Id.ToString(), sheet.Cell("AE3").GetString());
+                Assert.Equal("الجيزة", sheet.Cell("T3").GetString());
+                Assert.Equal("01094000011", sheet.Cell("E3").GetString());
+                Assert.True(sheet.Cell("F3").IsEmpty());
+            }
         }
     }
 

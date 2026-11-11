@@ -12,6 +12,9 @@ public sealed record FollowUpStudentSearch(Guid TeacherId, Guid PackageId, strin
 public sealed record FollowUpStudent(Guid Id, string Name, string Phone);
 public sealed record FollowUpStudentChoices(IReadOnlyList<FollowUpStudent> Students, bool HasMore);
 public sealed record FollowUpVideo(Guid Id, string Title, string State, int? ProgressPercentage, DateTime? LastWatchedAtUtc);
+public sealed record FollowUpStudentDetails(string? StudentCode, string? Governorate, string? District,
+    string? Address, string? SchoolName, string? SecondaryPhone, string? SecondaryParentPhone,
+    string? MotherPhone, string? Nationality, string? StudyTrack);
 
 public sealed record FollowUpTeacher(Guid Id, string Name);
 public sealed record FollowUpGrade(int Stage, int Grade);
@@ -32,6 +35,7 @@ public sealed record StudentFollowUpRow(
     DateTime? LastWatchedAtUtc)
 {
     public IReadOnlyList<FollowUpVideo> Videos { get; init; } = [];
+    public FollowUpStudentDetails? Details { get; init; }
 }
 
 public sealed record StudentFollowUpReport(

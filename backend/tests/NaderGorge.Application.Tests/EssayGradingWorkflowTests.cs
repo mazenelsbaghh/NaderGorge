@@ -305,7 +305,7 @@ public class EssayGradingWorkflowTests
         var review = result.Data!.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
         Assert.Equal(expectedPoints, review.PointsAwarded);
         Assert.Equal(8m, review.MaximumPoints);
-        Assert.Equal(persistedEssay.TeacherFeedback, review.GradingFeedback);
+        Assert.Equal(feedback, review.GradingFeedback);
         Assert.Equal(expectedPoints == 8m, review.IsCorrect);
     }
 

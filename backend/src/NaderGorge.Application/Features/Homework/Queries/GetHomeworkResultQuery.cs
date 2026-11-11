@@ -165,7 +165,7 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
                 AudioUrl: question.AudioUrl,
                 ImageUrl: question.ImageUrl,
                 PossibleAnswers: question.PossibleAnswers,
-                GradingFeedback: scoreReceived.HasValue ? answer?.GradingFeedback : null,
+                GradingFeedback: scoreReceived.HasValue ? EssayCreditPolicy.StudentFeedback(answer?.GradingFeedback) : null,
                 IsExcludedFromScore: excluded
             ));
         }

@@ -18,11 +18,9 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
         sheet.Cell(2, 1).Value = $"وقت الإنشاء (القاهرة): {CairoTime.ToLocal(report.GeneratedAtUtc):yyyy-MM-dd HH:mm}";
         sheet.Cell(3, 1).Value = $"الحالة: {StateLabel(filter.State)}، مدة التأخير: {filter.MinimumDays} يوم أو أكثر، عدد الطلاب: {report.TotalStudents}";
         sheet.Cell(4, 1).Value = "التأخير من الأحدث بين إتاحة الفيديو والحصول على صلاحية المشاهدة. تاريخ الحصة ليس بداية التأخير.";
-        string[] headers = ["اسم الطالب", "موبايل الطالب", "رقم ولي الأمر", "الصف", "الكورس", "الحصة", "المشاهدة", "أجزاء مكتملة", "عدد الأجزاء", "نسبة التقدم", "بداية الإتاحة للطالب (القاهرة)", "أيام الانتظار", "مصدر تاريخ الإتاحة", "آخر مشاهدة (القاهرة)", "الحضور"];
+        string[] headers = ["اسم الطالب", "موبايل الطالب", "رقم ولي الأمر", "الصف", "الكورس", "الحصة", "المشاهدة", "أجزاء مكتملة", "عدد الأجزاء", "نسبة التقدم", "بداية الإتاحة للطالب (القاهرة)", "أيام الانتظار", "مصدر تاريخ الإتاحة", "آخر مشاهدة (القاهرة)", "الحضور", "كود الطالب", "المحافظة", "المنطقة", "العنوان", "المدرسة", "موبايل إضافي", "ولي الأمر الإضافي", "الأم", "الجنسية", "الشعبة"];
         for (var column = 0; column < headers.Length; column++) sheet.Cell(6, column + 1).Value = headers[column];
         for (var index = 0; index < report.Rows.Count; index++) WriteRow(sheet, index + 7, report.Rows[index]);
-        for (var index = 0; index < report.Rows.Count; index++)
-            sheet.Cell(index + 7, 15).Value = report.Rows[index].State == "NotStarted" ? "غائب" : "حاضر";
         sheet.Cell(5, 1).Value = "الحضور يعني بدء مشاهدة فيديو واحد على الأقل في الحصة، حسب النشاط المسجل.";
         if (filter.StudentId.HasValue) WriteVideos(workbook, report);
         sheet.Range(6, 1, Math.Max(6, report.Rows.Count + 6), headers.Length).SetAutoFilter();
@@ -68,7 +66,10 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
         object?[] values = [data.StudentName, data.Phone, data.ParentPhone, GradeLabel(data.Grade), data.PackageName,
             data.LessonTitle, StateLabel(data.State), data.CompletedVideos, data.TotalVideos,
             data.ProgressPercentage is { } percent ? $"{percent}%" : "المدة غير مسجلة",
-            DateLabel(data.AvailableSinceUtc), data.DaysWaiting, SourceLabel(data.AvailabilitySource), DateLabel(data.LastWatchedAtUtc)];
+            DateLabel(data.AvailableSinceUtc), data.DaysWaiting, SourceLabel(data.AvailabilitySource), DateLabel(data.LastWatchedAtUtc),
+            data.State == "NotStarted" ? "غائب" : "حاضر", data.Details?.StudentCode, data.Details?.Governorate,
+            data.Details?.District, data.Details?.Address, data.Details?.SchoolName, data.Details?.SecondaryPhone,
+            data.Details?.SecondaryParentPhone, data.Details?.MotherPhone, data.Details?.Nationality, StudyTrackLabel(data.Details?.StudyTrack)];
         for (var column = 0; column < values.Length; column++) sheet.Cell(row, column + 1).Value = XLCellValue.FromObject(values[column] ?? "غير مسجل");
     }
 

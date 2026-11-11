@@ -402,6 +402,12 @@ public sealed class HomeworkSubmissionTests
         Assert.Equal(manual ? 12 : 20, final.Data.Score);
         Assert.Equal(20, final.Data.TotalScore);
         Assert.True(final.Data.IsPassed);
+        if (!manual)
+        {
+            var persistedAnswer = await db.HomeworkAnswers.AsNoTracking().SingleAsync(a => a.QuestionId == essay.Id);
+            Assert.Contains("إعداد تصحيح المقالي", persistedAnswer.GradingFeedback);
+            Assert.Equal("Reviewed", Assert.Single(final.Data.QuestionReviews, q => q.QuestionId == essay.Id).GradingFeedback);
+        }
     }
 
     [Theory]
