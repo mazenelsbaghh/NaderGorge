@@ -126,7 +126,7 @@ public sealed class TeacherStudentsQueryTests
             StudyTrack = StudyTrack.Business, ParentPhone = "01094000007",
             SecondaryParentPhone = "01094000006", MotherPhone = "01094000008",
             Governorate = "القاهرة", District = "مدينة نصر", Address = "عنوان اختبار",
-            DateOfBirth = new DateTime(2010, 4, 3)
+            DateOfBirth = new DateTime(2010, 4, 3), FatherDateOfBirth = new DateTime(8, 4, 3)
         }, new StudentProfile
         {
             User = secondStudent, StudentCode = "00022", ParentPhone = "01094000011",
@@ -137,6 +137,9 @@ public sealed class TeacherStudentsQueryTests
         db.StudentAccessGrants.AddRange(Grant(student, CodeType.Package, package.Id, grantedAt),
             Grant(secondStudent, CodeType.Package, package.Id, grantedAt),
             Grant(otherStudent, CodeType.Package, otherPackage.Id, grantedAt));
+        const int expectedStudentCount = 2345;
+        db.StudentAccessGrants.AddRange(Enumerable.Range(0, expectedStudentCount - 2).Select(index =>
+            Grant(User($"Synthetic student {index:D4}", $"019{index:D8}"), CodeType.Package, package.Id, grantedAt)));
         await db.SaveChangesAsync();
 
         await using var services = new ServiceCollection().AddSingleton<IAppDbContext>(db)
@@ -160,7 +163,7 @@ public sealed class TeacherStudentsQueryTests
             var sheet = workbook.Worksheet("الطلاب");
             Assert.True(sheet.RightToLeft);
             Assert.Equal(31, sheet.LastColumnUsed()!.ColumnNumber());
-            Assert.Equal(selection.All ? 3 : 2, sheet.LastRowUsed()!.RowNumber());
+            Assert.Equal(selection.All ? expectedStudentCount + 1 : 2, sheet.LastRowUsed()!.RowNumber());
             Assert.Equal(student.Id.ToString(), sheet.Cell("AE2").GetString());
             Assert.False(sheet.Cell("A2").HasFormula);
             Assert.Equal("=1+1", sheet.Cell("A2").GetString());
@@ -169,6 +172,10 @@ public sealed class TeacherStudentsQueryTests
             Assert.Equal("01094000007", sheet.Cell("E2").GetString());
             Assert.Equal("01094000006", sheet.Cell("F2").GetString());
             Assert.Equal("01094000008", sheet.Cell("G2").GetString());
+            Assert.Equal(new DateTime(2010, 4, 3), sheet.Cell("J2").GetDateTime());
+            Assert.Equal(XLDataType.Text, sheet.Cell("K2").DataType);
+            Assert.Equal("0008-04-03", sheet.Cell("K2").GetString());
+            Assert.True(sheet.Cell("L2").IsEmpty());
             Assert.Equal("قطاع الأعمال", sheet.Cell("Q2").GetString());
             Assert.Equal("القاهرة", sheet.Cell("T2").GetString());
             Assert.Equal("مدينة نصر", sheet.Cell("U2").GetString());

@@ -21,7 +21,7 @@ export function TeacherStudentWatchHistory({ tracking }: { tracking: Tracking })
     const videos = lessons.get(activity.lessonId) ?? [];
     videos.push(activity); lessons.set(activity.lessonId, videos);
   }
-  return <section className="space-y-5 text-[var(--admin-text)]"><header><h3 className="text-lg font-bold">تفاصيل المشاهدة والجلسات</h3><p className="mt-2 text-sm text-[var(--admin-muted)]">مشاهدة فعلية مسجلة: {duration(tracking.totalActualWatchedSeconds)}. يظهر هنا سجل النشاط، واستخدم «تقرير المشاهدة» لمراجعة كل الحصص المتاحة للطالب.</p></header>
+  return <section className="space-y-5 text-[var(--admin-text)]"><header><h3 className="text-lg font-bold">سجل المشاهدة حسب الحصة</h3><p className="mt-2 text-sm text-[var(--admin-muted)]">إجمالي المشاهدة الفعلية المسجلة: {duration(tracking.totalActualWatchedSeconds)}</p></header>
     {lessons.size === 0 ? <p className="py-8 text-center text-sm text-[var(--admin-muted)]">لا يوجد نشاط مشاهدة مسجل في محتواك حتى الآن.</p> : Array.from(lessons, ([lessonId, videos]) => <article key={lessonId} className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4"><header className="border-b border-[var(--admin-border)] pb-3"><h4 className="font-bold">{videos[0].lessonTitle}</h4><p className="mt-1 text-xs text-[var(--admin-muted)]">{[videos[0].packageName, videos[0].termTitle].filter(Boolean).join(' · ')}</p></header><ul className="divide-y divide-[var(--admin-border)]">{videos.map(video => <VideoActivity key={video.lessonVideoId} video={video} />)}</ul></article>)}
   </section>;
 }

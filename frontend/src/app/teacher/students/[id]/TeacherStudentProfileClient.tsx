@@ -13,8 +13,8 @@ import { TeacherStudentWatchHistory } from '@/components/teacher/TeacherStudentW
 
 type ProfileTab = 'overview' | 'watching' | 'assessments' | 'subscriptions' | 'financials' | 'overrides' | 'notes' | 'audit' | 'report';
 const tabs: AdminTab<ProfileTab>[] = [
-  { key: 'overview', label: 'نظرة عامة' }, { key: 'subscriptions', label: 'الاشتراكات' },
-  { key: 'watching', label: 'المشاهدة والجلسات' }, { key: 'assessments', label: 'الامتحانات والواجبات' },
+  { key: 'watching', label: 'المشاهدة' }, { key: 'assessments', label: 'الدرجات' },
+  { key: 'overview', label: 'بيانات الطالب' }, { key: 'subscriptions', label: 'الاشتراكات' },
   { key: 'report', label: 'تقرير المشاهدة' }, { key: 'financials', label: 'الماليات' },
   { key: 'overrides', label: 'تجاوزات المشاهدة' }, { key: 'notes', label: 'الملاحظات' }, { key: 'audit', label: 'سجل النشاط' },
 ];
@@ -23,7 +23,7 @@ export default function TeacherStudentProfileClient({ studentId }: { studentId: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
-  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('watching');
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setProfile(null);
@@ -35,7 +35,7 @@ export default function TeacherStudentProfileClient({ studentId }: { studentId: 
   }, [studentId, version]);
   const student = profile?.profile;
   const availableTabs = tabs.filter(tab => (tab.key !== 'financials' || profile?.canViewFinance) && (tab.key !== 'report' || profile?.canViewReports));
-  return <TeacherPage activePath="/teacher/students" sectionLabel="الطلاب" pageTitle="ملف الطالب الشامل" subtitle="بيانات الطالب وتفاصيل دراسته واشتراكاته المرتبطة بك."
+  return <TeacherPage activePath="/teacher/students" sectionLabel="الطلاب" pageTitle="ملف الطالب" subtitle="عرض بيانات الطالب ونشاطه الدراسي ودرجاته في محتواك."
     action={<Link href="/teacher/students" className="inline-flex min-h-11 items-center rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-text)]">العودة إلى الطلاب</Link>}>
     <div dir="rtl" className="space-y-6">
       {loading && <p role="status" className="py-12 text-center text-[var(--admin-muted)]">جاري تحميل ملف الطالب…</p>}
@@ -52,7 +52,7 @@ export default function TeacherStudentProfileClient({ studentId }: { studentId: 
           {activeTab === 'overrides' && <TeacherStudentOverrides student={student} />}
           {activeTab === 'notes' && <TeacherStudentNotes student={student} />}
           {activeTab === 'audit' && <TeacherStudentAudit student={student} />}
-          {activeTab === 'report' && profile.canViewReports && <LessonStudentReports audience="teacher" initialStudent={{ id: student.id, name: student.fullName, phone: student.phone }} />}
+          {activeTab === 'report' && profile.canViewReports && <LessonStudentReports audience="teacher" fixedStudent={{ id: student.id, name: student.fullName, phone: student.phone }} />}
         </div>
       </>}
     </div>

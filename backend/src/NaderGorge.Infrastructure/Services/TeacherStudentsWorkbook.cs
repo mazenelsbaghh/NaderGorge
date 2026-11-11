@@ -1,3 +1,4 @@
+using System.Globalization;
 using ClosedXML.Excel;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Teacher;
@@ -6,6 +7,8 @@ namespace NaderGorge.Infrastructure.Services;
 
 public static class TeacherStudentsWorkbook
 {
+    private static readonly DateTime FirstExcelDate = new(1900, 1, 1);
+
     public static byte[] Build(IReadOnlyList<TeacherStudentDto> students, CancellationToken ct)
     {
         using var workbook = new XLWorkbook();
@@ -64,7 +67,9 @@ public static class TeacherStudentsWorkbook
         for (var column = 0; column < values.Length; column++)
         {
             var cell = sheet.Cell(row, column + 1);
-            cell.Value = XLCellValue.FromObject(values[column]);
+            cell.Value = values[column] is DateTime date && date < FirstExcelDate
+                ? XLCellValue.FromObject(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+                : XLCellValue.FromObject(values[column]);
             if (cell.DataType == XLDataType.DateTime) cell.Style.DateFormat.Format = "yyyy-mm-dd";
         }
     }

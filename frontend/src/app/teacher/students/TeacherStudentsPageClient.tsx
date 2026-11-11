@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { isAxiosError } from "axios";
-import { Download, Filter, GraduationCap, ShieldCheck, Users } from "lucide-react";
+import { ChevronLeft, Download, Filter, GraduationCap, ShieldCheck, Users } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { AdminDataTable, AdminSearchToolbar, AdminStatCard, type AdminColumn } from "@/components/admin";
@@ -156,10 +156,13 @@ export default function TeacherStudentsPageClient() {
               aria-label={`تحديد ${student.fullName}`}
               checked={selected.has(student.id)} onChange={() => toggleStudent(student.id)} />
           </label>
-          <div>
-            <Link href={`/teacher/students/${student.id}`} aria-label={`عرض ملف الطالب ${student.fullName}`}
-              className="font-bold text-[var(--admin-primary)] underline-offset-4 hover:underline">
-              {student.fullName}
+          <div className="min-w-0">
+            <Link href={`/teacher/students/${student.id}`} prefetch={false} aria-label={`عرض ملف الطالب ${student.fullName}`}
+              className="group inline-flex min-h-11 items-center gap-2 rounded-lg font-bold text-[var(--admin-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]">
+              <span className="break-words underline-offset-4 group-hover:underline">{student.fullName}</span>
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card-soft)] group-hover:bg-[var(--admin-card)]">
+                <ChevronLeft className="size-4" aria-hidden="true" />
+              </span>
             </Link>
             <div className="mt-0.5 text-xs text-[var(--admin-muted)]"><bdi>{student.phoneNumber}</bdi></div>
             {student.studentCode && <div className="text-xs text-[var(--admin-muted)]"><bdi>{student.studentCode}</bdi></div>}
