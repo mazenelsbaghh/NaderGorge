@@ -14,14 +14,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Bell, BookOpen, BookOpenText, Calendar, ChevronDown, ClipboardList, Compass,
-  Headphones, Home, LogOut, Menu, MessageSquareText, PanelRightClose,
+  Headphones, Home, LogOut, Menu, MessageSquareText, Palette, PanelRightClose,
   PanelRightOpen, PhoneCall, Search, Shield, Star, X, type LucideIcon,
   WalletCards, Users, BarChart3, MessageSquareMore,
   KeyRound, ClipboardCheck, AlertTriangle,
 } from 'lucide-react';
 
-import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { useAssistantAppearance } from '@/hooks/useAssistantAppearance';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHasPermission } from '@/hooks/useHasPermission';
@@ -32,6 +32,7 @@ import {
 } from '@/components/navigation/NavigationFocusManager';
 import { useShellNavigationState } from '@/hooks/useShellNavigationState';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
+import { ColorSettings } from '@/components/ui/ColorSettings';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export type AssistantShellRoute =
@@ -206,7 +207,9 @@ function AssistantShellFrame({
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const { hasPermission } = useHasPermission();
-  const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const appearance = useAssistantAppearance(user?.id);
+  const { isDark, themeVars, toggleTheme } = appearance;
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -322,12 +325,24 @@ function AssistantShellFrame({
           <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" />
           {!isSidebarCollapsed && <div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div>}
         </div>
-        <div className={`flex items-center px-1 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />{!isSidebarCollapsed && <span className="ms-3 text-sm font-bold text-[var(--admin-muted)]">{isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}</span>}</div>
+        <div className={`flex items-center px-1 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} disabled={appearance.isSavingPreferences} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />{!isSidebarCollapsed && <span className="ms-3 text-sm font-bold text-[var(--admin-muted)]">{isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}</span>}</div>
+        <button type="button" onClick={() => setIsAppearanceOpen(true)} aria-haspopup="dialog" aria-label="ألوان المنصة" title="ألوان المنصة"
+          className={`flex h-11 w-full items-center gap-3 rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center' : 'px-3'}`}>
+          <Palette className="size-5 shrink-0" aria-hidden="true" />{!isSidebarCollapsed && <span className="text-sm font-bold">ألوان المنصة</span>}
+        </button>
         <button type="button" onClick={handleLogout} className={`flex h-11 w-full items-center gap-3 rounded-xl text-[var(--admin-danger)] transition-colors hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'}`}><LogOut className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">تسجيل الخروج</span>}</button>
       </div>
     </aside>
     <main ref={mainScrollRef} id="main-content" tabIndex={-1} className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] transition-[margin] duration-200 focus:outline-none lg:px-7 lg:py-8 lg:pb-10 ${isSidebarCollapsed ? 'lg:ms-20' : 'lg:ms-72'}`}>
-      <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9"><div className="w-full"><div className="mb-4 flex items-center justify-end gap-2 lg:hidden"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" /><button type="button" onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-danger)] hover:bg-[var(--admin-hover)]" aria-label="تسجيل الخروج"><LogOut className="h-4 w-4" /></button></div><div className="flex flex-wrap items-center gap-3"><div><p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">{sectionLabel}</p><h1 className="mb-1 text-3xl font-extrabold tracking-tight lg:text-4xl">{pageTitle}</h1>{subtitle && <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">{subtitle}</p>}</div>{headerAccessory}</div></div>{action}</header>
+      <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9"><div className="w-full">
+        <div className="mb-4 flex items-center justify-end gap-2 lg:hidden">
+          <button type="button" onClick={() => setIsAppearanceOpen(true)} aria-haspopup="dialog" aria-label="ألوان المنصة" title="ألوان المنصة" className="grid size-11 place-items-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]">
+            <Palette className="size-5" aria-hidden="true" />
+          </button>
+          <AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} disabled={appearance.isSavingPreferences} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />
+          <button type="button" onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-danger)] hover:bg-[var(--admin-hover)]" aria-label="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
+        </div>
+        <div className="flex flex-wrap items-center gap-3"><div><p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">{sectionLabel}</p><h1 className="mb-1 text-3xl font-extrabold tracking-tight lg:text-4xl">{pageTitle}</h1>{subtitle && <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">{subtitle}</p>}</div>{headerAccessory}</div></div>{action}</header>
       {children}<footer className="mt-14 flex select-none flex-col items-center opacity-60"><div className="mb-4 h-px w-full bg-[var(--admin-border)]" /><p className="text-xs font-bold text-[var(--admin-muted)]">منصة مسار</p></footer>
     </main>
     <nav
@@ -361,7 +376,21 @@ function AssistantShellFrame({
       <div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold">مساحة الموظفين</span><button type="button" onClick={() => setIsMobileMenuOpen(false)} className="rounded-lg p-2 hover:bg-[var(--admin-hover)]" aria-label="إغلاق القائمة"><X className="h-5 w-5" /></button></div>
       <div className="mb-4 flex items-center gap-3 rounded-xl bg-[var(--admin-hover)] p-3"><UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div></div>
       <nav className="min-h-0 flex-1 overflow-y-auto"><Link href="/assistant/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`mb-2 flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)]'}`}><Home className="h-5 w-5" />الرئيسية</Link>{renderGroups(true)}</nav>
-      <div className="mt-4 flex items-center justify-between border-t border-[var(--admin-border)] pt-4"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} /><button type="button" onClick={handleLogout} className="flex h-10 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[var(--admin-danger)]"><LogOut className="h-5 w-5" />تسجيل الخروج</button></div>
+      <div className="mt-4 flex items-center justify-between border-t border-[var(--admin-border)] pt-4"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} disabled={appearance.isSavingPreferences} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} /><button type="button" onClick={handleLogout} className="flex h-10 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[var(--admin-danger)]"><LogOut className="h-5 w-5" />تسجيل الخروج</button></div>
+    </AccessibleOverlay>
+    <AccessibleOverlay
+      open={isAppearanceOpen}
+      onClose={() => setIsAppearanceOpen(false)}
+      label="تخصيص ألوان المنصة"
+      style={themeVars}
+      className="inset-x-4 top-1/2 mx-auto max-h-[90dvh] max-w-3xl -translate-y-1/2 overflow-y-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 text-[var(--admin-text)] sm:p-6"
+    >
+      <div className="mb-4 flex justify-end">
+        <button type="button" onClick={() => setIsAppearanceOpen(false)} aria-label="إغلاق تخصيص الألوان" className="grid size-11 place-items-center rounded-xl border border-[var(--admin-border)] hover:bg-[var(--admin-hover)]">
+          <X className="size-5" aria-hidden="true" />
+        </button>
+      </div>
+      <ColorSettings {...appearance} />
     </AccessibleOverlay>
   </div></AssistantShellContext.Provider>;
 }

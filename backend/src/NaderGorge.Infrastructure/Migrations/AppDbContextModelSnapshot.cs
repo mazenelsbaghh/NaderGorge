@@ -1707,6 +1707,31 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("hr_asset_custodies", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantAppearancePreference", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CurrentMode")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("DarkPaletteId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("LightPaletteId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("assistant_appearance_preferences", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantTaskQueue", b =>
                 {
                     b.Property<Guid>("Id")
@@ -15854,6 +15879,15 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Asset");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantAppearancePreference", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.Assistant.AssistantAppearancePreference", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantTaskQueue", b =>

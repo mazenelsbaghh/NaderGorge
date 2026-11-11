@@ -33,22 +33,3 @@ export function TeacherStudentSubscriptions({ student, showFinance }: StudentSec
     })}
   </section>;
 }
-
-export function TeacherStudentFinances({ student }: StudentSectionProps) {
-  return <section className="space-y-5 text-[var(--admin-text)]"><h3 className="text-lg font-bold">الماليات المرتبطة بك</h3><p className="text-sm">رصيد الطالب المخصص لك: <strong>{money(student.promotionalBalances.reduce((total, balance) => total + balance.availableAmount, 0))}</strong></p>
-    <h4 className="font-bold">حركات الرصيد المخصص</h4>{student.balanceTransactions.length === 0 ? <p className="text-sm text-[var(--admin-muted)]">لا توجد حركات مسجلة.</p> : <ul className="divide-y divide-[var(--admin-border)]">{student.balanceTransactions.map(transaction => <li key={transaction.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="text-sm font-bold">{transaction.contentName || transaction.description}</p><p className="mt-1 text-xs text-[var(--admin-muted)]">{date(transaction.createdAt)}</p></div><bdi className="text-sm font-bold">{money(transaction.amount)}</bdi></li>)}</ul>}
-    <h4 className="font-bold">طلبات شحن رصيدك</h4>{student.rechargeRequests.length === 0 ? <p className="text-sm text-[var(--admin-muted)]">لا توجد طلبات شحن مرتبطة بك.</p> : <ul className="divide-y divide-[var(--admin-border)]">{student.rechargeRequests.map(request => <li key={request.id} className="flex flex-wrap justify-between gap-3 py-4 text-sm"><span>{date(request.createdAt)}</span><strong>{money(request.amount)}</strong><span>{({ Pending: 'قيد المراجعة', Approved: 'مقبول', Completed: 'مكتمل', Rejected: 'مرفوض', Cancelled: 'ملغي' } as Record<string, string>)[request.status] || request.status}</span></li>)}</ul>}
-  </section>;
-}
-
-export function TeacherStudentNotes({ student }: StudentSectionProps) {
-  return <section className="space-y-4 text-[var(--admin-text)]"><h3 className="text-lg font-bold">ملاحظاتك على الطالب</h3>{student.notes.length === 0 ? <p className="text-sm text-[var(--admin-muted)]">لا توجد ملاحظات مسجلة باسمك.</p> : student.notes.map(note => <article key={note.id} className="rounded-xl border border-[var(--admin-border)] p-4"><p className="whitespace-pre-wrap break-words text-sm">{note.content}</p><p className="mt-3 text-xs text-[var(--admin-muted)]">{note.adminName} · {date(note.createdAt)}{note.isPinned && ' · مثبتة'}</p></article>)}</section>;
-}
-
-export function TeacherStudentOverrides({ student }: StudentSectionProps) {
-  return <section className="space-y-4 text-[var(--admin-text)]"><h3 className="text-lg font-bold">تجاوزات المشاهدة في محتواك</h3>{student.overrides.length === 0 ? <p className="text-sm text-[var(--admin-muted)]">لا توجد تجاوزات مسجلة.</p> : student.overrides.map(override => <article key={override.id} className="rounded-xl border border-[var(--admin-border)] p-4"><h4 className="font-bold">{override.videoTitle}</h4><p className="mt-2 text-sm">الحد السابق: {override.originalLimit} · الحد الجديد: {override.newLimit}</p><p className="mt-2 whitespace-pre-wrap text-sm">{override.reason}</p><p className="mt-3 text-xs text-[var(--admin-muted)]">{override.overrideBy} · {date(override.createdAt)}</p></article>)}</section>;
-}
-
-export function TeacherStudentAudit({ student }: StudentSectionProps) {
-  return <section className="space-y-4 text-[var(--admin-text)]"><h3 className="text-lg font-bold">إجراءاتك المسجلة على الطالب</h3>{student.auditTrail.length === 0 ? <p className="text-sm text-[var(--admin-muted)]">لا توجد إجراءات مسجلة باسمك.</p> : <ul className="divide-y divide-[var(--admin-border)]">{student.auditTrail.map(activity => <li key={activity.id} className="py-4 text-sm"><p className="font-bold">{({ AddStudentNote: 'إضافة ملاحظة للطالب', DeleteStudentNote: 'حذف ملاحظة', OverrideVideoLimit: 'زيادة حد المشاهدة', UpdateStudentProfile: 'تحديث بيانات الطالب' } as Record<string, string>)[activity.action] || 'إجراء مسجل على الطالب'}</p><p className="mt-2 text-xs text-[var(--admin-muted)]">{activity.adminName} · {date(activity.date)}</p></li>)}</ul>}</section>;
-}

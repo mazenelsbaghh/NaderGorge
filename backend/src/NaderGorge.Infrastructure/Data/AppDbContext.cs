@@ -39,6 +39,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<VideoLearningConfiguration> VideoLearningConfigurations => Set<VideoLearningConfiguration>();
     public DbSet<VideoLearningEntry> VideoLearningEntries => Set<VideoLearningEntry>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AssistantAppearancePreference> AssistantAppearancePreferences => Set<AssistantAppearancePreference>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -423,6 +424,16 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(u => u.PasswordHash).IsRequired();
             e.Property(u => u.IsDeleted).HasDefaultValue(false);
             e.Property(u => u.SecurityStampVersion).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<AssistantAppearancePreference>(e =>
+        {
+            e.ToTable("assistant_appearance_preferences");
+            e.HasKey(preference => preference.UserId);
+            e.Property(preference => preference.LightPaletteId).HasMaxLength(64);
+            e.Property(preference => preference.DarkPaletteId).HasMaxLength(64);
+            e.Property(preference => preference.CurrentMode).HasMaxLength(5);
+            e.HasOne<User>().WithOne().HasForeignKey<AssistantAppearancePreference>(preference => preference.UserId);
         });
 
         modelBuilder.Entity<ClusterLease>(e =>

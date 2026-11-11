@@ -26,7 +26,7 @@ for (const [width, finance] of [[390, true], [1280, false]]) {
       const page = await browser.newPage({ viewport: { width, height: 950 } });
       const user = { id: 'teacher-test', fullName: 'المدرس', roles: ['Teacher'], permissions: ['exams.manage', 'content.manage'], allowedDomains: ['teacher'], allowedNavbarItems: [], profileComplete: true, authorizationVersion: 1 };
       await page.addInitScript(user => { localStorage.setItem('accessToken', 'synthetic-teacher-token'); localStorage.setItem('user', JSON.stringify(user)); }, user);
-      const reportReads = [], adminStudentRequests = [], studentChanges = [];
+      const adminStudentRequests = [], studentChanges = [];
       await page.route('**/api/**', async route => {
         const path = new URL(route.request().url()).pathname;
         if (path.startsWith('/api/admin/users/') || path.startsWith('/api/admin/exams/')) adminStudentRequests.push(path);
@@ -35,11 +35,6 @@ for (const [width, finance] of [[390, true], [1280, false]]) {
         if (path.endsWith('/teacher/context')) return route.fulfill({ json: { success: true, data: { isOwner: finance, permissionKeys: ['students', 'reports'] } } });
         if (path.endsWith(`/teacher/students/${studentId}/profile`)) return route.fulfill({ json: { success: true, data: { profile, canViewFinance: finance, canViewReports: true } } });
         if (path.endsWith('/teacher/students')) return route.fulfill({ json: { success: true, data: [{ id: studentId, fullName: profile.fullName, phoneNumber: profile.phone, activatedPackageName: 'كورس التاريخ', activatedAt: profile.createdAt, activePackageCount: 1, activeGrantCount: 1, educationStage: profile.educationStage, gradeLevel: profile.grade }] } });
-        if (path.endsWith('/reports/learning/options')) return route.fulfill({ json: { success: true, data: { teachers: [], packages: [{ id: courseId, name: 'كورس التاريخ' }], lessons: [] } } });
-        if (path.endsWith('/reports/learning')) {
-          reportReads.push(route.request().postDataJSON());
-          return route.fulfill({ json: { success: true, data: { rows: [], totalRows: 0, totalStudents: 0, started: 0, notStarted: 0, completed: 0, page: 1, pageSize: 20 } } });
-        }
         return route.fulfill({ json: { success: true, data: [] } });
       });
       await page.goto(`${origin}/teacher/students`);
@@ -55,10 +50,10 @@ for (const [width, finance] of [[390, true], [1280, false]]) {
       await page.getByText('مدرسة الطالب', { exact: true }).waitFor();
       await page.getByText('القاهرة', { exact: true }).waitFor();
       await page.getByText(profile.parentPhone, { exact: true }).waitFor();
-      assert.equal(await page.getByRole('tab', { name: 'الماليات', exact: true }).count(), finance ? 1 : 0);
-      assert.equal(await page.getByRole('tab', { name: 'الأجهزة والجلسات', exact: true }).count(), 0);
+      assert.deepEqual(await page.getByRole('tab').allTextContents(), ['المشاهدة', 'الدرجات', 'بيانات الطالب', 'الاشتراكات']);
       await page.getByRole('tab', { name: 'الاشتراكات', exact: true }).click();
       await page.getByRole('heading', { name: 'كورس التاريخ', exact: true }).waitFor();
+      assert.equal(await page.getByText('المبلغ المدفوع', { exact: true }).count(), finance ? 1 : 0);
       await page.getByRole('tab', { name: 'المشاهدة', exact: true }).click();
       await page.getByRole('heading', { name: 'شرح الدرس', exact: true }).waitFor();
       const screenshots = '/tmp/codex-lesson-reports-screenshots'; await mkdir(screenshots, { recursive: true });
@@ -69,16 +64,6 @@ for (const [width, finance] of [[390, true], [1280, false]]) {
       await page.getByText('8', { exact: true }).filter({ visible: true }).waitFor();
       await page.getByText('بانتظار التصحيح', { exact: true }).filter({ visible: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: /حذف|تعديل|حفظ/ }).count(), 0);
-      await page.getByRole('tab', { name: 'الملاحظات', exact: true }).click();
-      await page.getByText('يحتاج إلى مراجعة الحصة الثانية', { exact: true }).waitFor();
-      if (finance) { await page.getByRole('tab', { name: 'الماليات', exact: true }).click(); await page.getByRole('heading', { name: 'الماليات المرتبطة بك', exact: true }).waitFor(); }
-      await page.getByRole('tab', { name: 'تقرير المشاهدة', exact: true }).click();
-      assert.equal(await page.getByRole('textbox', { name: 'ابحث عن طالب' }).count(), 0);
-      assert.equal(await page.getByRole('button', { name: 'تنزيل التقرير إكسيل' }).count(), 0);
-      await page.getByLabel('الكورس', { exact: true }).selectOption(courseId);
-      await page.getByRole('button', { name: 'عرض التقرير', exact: true }).click();
-      await page.getByText('لا توجد نتائج مطابقة.', { exact: false }).waitFor();
-      assert.equal(reportReads[0].studentId, studentId);
       assert.deepEqual(adminStudentRequests, []);
       assert.deepEqual(studentChanges, []);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false);
