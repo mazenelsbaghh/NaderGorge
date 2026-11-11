@@ -767,7 +767,7 @@ export async function generateChapterMindmap(
       ? [teacherPhotoPathOrPaths]
       : (teacherPhotoPathOrPaths || []);
     const model = runtime.config.imageModel;
-    const imageSize = model === DEFAULT_IMAGE_MODEL ? '2K' : '4K';
+    const imageSize = model === DEFAULT_IMAGE_MODEL ? '1K' : '4K';
     const request = {
       model,
       contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths, options) }],
