@@ -14,6 +14,7 @@ using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.StudentFollowUp;
+using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.API.Controllers;
 
@@ -168,12 +169,37 @@ public partial class TeacherController : ControllerBase
         };
 
     [HttpGet("students")]
-    public async Task<IActionResult> GetStudents()
+    public async Task<IActionResult> GetStudents(CancellationToken ct)
     {
-        var context = await ResolveTeacherContextAsync();
+        var context = await ResolveTeacherContextAsync(ct);
         if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
-        var result = await _mediator.Send(new GetTeacherStudentsQuery(context.TeacherUserId));
+        var result = await _mediator.Send(new GetTeacherStudentsQuery(context.TeacherUserId), ct);
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    public sealed record StudentExportRequest(bool All, Guid[]? StudentIds);
+
+    [HttpPost("students/export")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> ExportStudents([FromBody] StudentExportRequest request, CancellationToken ct)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Students)) return Forbid();
+        if (request.All ? request.StudentIds != null : request.StudentIds is not { Length: > 0 })
+            return BadRequest(new { message = "حدد الطلاب المطلوب تنزيل بياناتهم." });
+
+        var studentIds = request.StudentIds?.Distinct().ToArray();
+        var result = await _mediator.Send(new GetTeacherStudentsQuery(
+            context.TeacherUserId, studentIds, IncludeExportDetails: true), ct);
+        if (!result.Success || result.Data is null) return BadRequest(result);
+        if (studentIds != null && result.Data.Count != studentIds.Length)
+            return Conflict(new { message = "تغيّرت قائمة الطلاب المتاحين. حدّث الصفحة وحاول مرة أخرى." });
+        if (result.Data.Count == 0)
+            return BadRequest(new { message = "لا يوجد طلاب متاحون للتنزيل." });
+
+        var workbook = TeacherStudentsWorkbook.Build(result.Data, ct);
+        return File(workbook, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"teacher-students-{NaderGorge.Application.Common.CairoTime.GetCurrentDate():yyyy-MM-dd}.xlsx");
     }
 
     [HttpGet("student-follow-up/options")]

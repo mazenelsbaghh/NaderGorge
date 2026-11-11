@@ -112,7 +112,11 @@ export interface TeacherStudentDto {
   activePackageCount: number;
   activeGrantCount: number;
   lastActivationAt?: string | null;
+  gender?: string | null;
+  activePackages?: { id: string; name: string }[];
 }
+
+export type TeacherStudentsExportSelection = { all: true } | { studentIds: string[] };
 
 export interface PendingEssayDto {
   id: string;
@@ -235,8 +239,12 @@ export const teacherService = {
   // Teacher Workspace Surface
   getDashboardStats: () =>
     apiClient.get<ApiResponse<TeacherDashboardStatsDto>>('/teacher/dashboard/stats').then((res) => res.data),
-  getStudents: () =>
-    apiClient.get<ApiResponse<TeacherStudentDto[]>>('/teacher/students').then((res) => res.data),
+  getStudents: (signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<TeacherStudentDto[]>>('/teacher/students', { signal }).then((res) => res.data),
+  exportStudents: (selection: TeacherStudentsExportSelection, signal?: AbortSignal) =>
+    apiClient.post<Blob>('/teacher/students/export', selection, {
+      responseType: 'blob', timeout: 120_000, signal,
+    }).then((res) => res.data),
   getEssays: () =>
     apiClient.get<ApiResponse<PendingEssayDto[]>>('/teacher/essays').then((res) => res.data),
   gradeEssay: (id: string, data: { score: number; feedback: string }) =>

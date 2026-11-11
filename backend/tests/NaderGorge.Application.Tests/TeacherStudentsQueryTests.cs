@@ -1,8 +1,16 @@
+using System.Security.Claims;
+using ClosedXML.Excel;
+using MediatR;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NaderGorge.API.Controllers;
 using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Application.Tests;
@@ -82,11 +90,79 @@ public sealed class TeacherStudentsQueryTests
         Assert.Equal((now.AddDays(-4), now.AddDays(-1)),
             (multiGrantRow.ActivatedAt, multiGrantRow.LastActivationAt));
         Assert.Equal(secondPackage.Name, multiGrantRow.ActivatedPackageName);
+        Assert.Equal(new[] { firstPackage.Id, secondPackage.Id }, multiGrantRow.ActivePackages.Select(package => package.Id));
         Assert.Equal("ST-100", multiGrantRow.StudentCode);
+        Assert.Null(multiGrantRow.ExportDetails);
         var lessonOnlyRow = Assert.Single(response.Data, student => student.Id == lessonOnlyStudent.Id);
         Assert.Equal((1, 1), (lessonOnlyRow.ActiveGrantCount, lessonOnlyRow.ActivePackageCount));
         Assert.DoesNotContain(response.Data, student => student.Id == excludedStudent.Id);
     }
+
+    [Fact]
+    public async Task StudentsExport_RechecksTeacherScopeAndPreservesPhoneNumbersAsText()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+
+        var teacher = new TeacherProfile { User = User("Teacher", "01094000001") };
+        var otherTeacher = new TeacherProfile { User = User("Other teacher", "01094000002") };
+        var subject = new Subject { Name = "History", NormalizedName = "HISTORY" };
+        var package = new Package { Name = "History", Subject = subject, Teacher = teacher };
+        var otherPackage = new Package { Name = "Other history", Subject = subject, Teacher = otherTeacher };
+        var student = User("=1+1", "01094000003");
+        var otherStudent = User("Other student", "01094000004");
+        var assistant = User("Assistant", "01094000005");
+        db.AddRange(package, otherPackage, new TeacherStaffMember
+        {
+            Teacher = teacher, User = assistant, CreatedByTeacherUser = teacher.User, PermissionKeys = "content"
+        }, new StudentProfile
+        {
+            User = student, Gender = Gender.Female, StudentCode = "00021",
+            EducationStage = EducationStage.Baccalaureate, GradeLevel = GradeLevel.SecondBaccalaureate,
+            StudyTrack = StudyTrack.Business, SecondaryParentPhone = "01094000006",
+            DateOfBirth = new DateTime(2010, 4, 3)
+        });
+        var grantedAt = new DateTime(2026, 1, 1, 23, 0, 0, DateTimeKind.Utc);
+        db.StudentAccessGrants.AddRange(Grant(student, CodeType.Package, package.Id, grantedAt),
+            Grant(otherStudent, CodeType.Package, otherPackage.Id, grantedAt));
+        await db.SaveChangesAsync();
+
+        await using var services = new ServiceCollection().AddSingleton<IAppDbContext>(db)
+            .AddMediatR(config => config.RegisterServicesFromAssemblyContaining<GetTeacherStudentsQuery>())
+            .BuildServiceProvider();
+        var controller = new TeacherController(services.GetRequiredService<IMediator>(), db)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+
+        controller.HttpContext.User = TeacherIdentity(assistant.Id);
+        Assert.IsType<ForbidResult>(await controller.ExportStudents(new(true, null), default));
+
+        controller.HttpContext.User = TeacherIdentity(teacher.User.Id);
+        Assert.IsType<ConflictObjectResult>(await controller.ExportStudents(new(false, [student.Id, otherStudent.Id]), default));
+        foreach (var selection in new TeacherController.StudentExportRequest[] { new(true, null), new(false, [student.Id]) })
+        {
+            var file = Assert.IsType<FileContentResult>(await controller.ExportStudents(selection, default));
+            using var stream = new MemoryStream(file.FileContents);
+            using var workbook = new XLWorkbook(stream);
+            var sheet = workbook.Worksheet("الطلاب");
+            Assert.True(sheet.RightToLeft);
+            Assert.Equal(2, sheet.LastRowUsed()!.RowNumber());
+            Assert.False(sheet.Cell("A2").HasFormula);
+            Assert.Equal("=1+1", sheet.Cell("A2").GetString());
+            Assert.Equal(XLDataType.Text, sheet.Cell("C2").DataType);
+            Assert.Equal("01094000003", sheet.Cell("C2").GetString());
+            Assert.Equal("01094000006", sheet.Cell("F2").GetString());
+            Assert.Equal("قطاع الأعمال", sheet.Cell("Q2").GetString());
+            Assert.Equal(new DateTime(2026, 1, 2), sheet.Cell("AC2").GetDateTime());
+        }
+    }
+
+    private static ClaimsPrincipal TeacherIdentity(Guid userId) => new(new ClaimsIdentity(
+        [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, "Teacher")], "test"));
 
     private static User User(string fullName, string phoneNumber) => new()
     {

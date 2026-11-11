@@ -72,6 +72,13 @@ public sealed class StudentFollowUpExportService(IAppDbContext db) : IStudentFol
         for (var column = 0; column < values.Length; column++) sheet.Cell(row, column + 1).Value = XLCellValue.FromObject(values[column] ?? "غير مسجل");
     }
 
+    internal static string StudyTrackLabel(string? track) => track switch
+    {
+        "Arts" => "أدبي", "Science" => "علمي", "MedicineAndLifeSciences" => "الطب وعلوم الحياة",
+        "EngineeringAndComputerScience" => "الهندسة وعلوم الحاسب", "Business" => "قطاع الأعمال",
+        "ArtsAndHumanities" => "الآداب والفنون", _ => "غير مسجل"
+    };
+
     private static string DateLabel(DateTime? date) => date.HasValue ? CairoTime.ToLocal(date.Value).ToString("yyyy-MM-dd HH:mm") : "غير مسجل";
     private static string SourceLabel(string source) => source switch
     { "VideoOpened" => "وقت فتح الفيديو", "RecordedPlayback" => "أقدم مشاهدة طالب موثقة", _ => "غير مسجل" };

@@ -29,7 +29,10 @@ public record TeacherPackageSalesBreakdownDto(
     int GiftStudents
 );
 
-public record GetTeacherStudentsQuery(Guid TeacherUserId) : IRequest<ApiResponse<List<TeacherStudentDto>>>;
+public record GetTeacherStudentsQuery(
+    Guid TeacherUserId,
+    Guid[]? StudentIds = null,
+    bool IncludeExportDetails = false) : IRequest<ApiResponse<List<TeacherStudentDto>>>;
 
 public record TeacherStudentDto(
     Guid Id,
@@ -51,8 +54,24 @@ public record TeacherStudentDto(
     string? SchoolType,
     int ActivePackageCount,
     int ActiveGrantCount,
-    DateTime? LastActivationAt
+    DateTime? LastActivationAt,
+    string? Gender,
+    IReadOnlyList<TeacherStudentPackageDto> ActivePackages,
+    TeacherStudentExportDetails? ExportDetails
 );
+
+public record TeacherStudentPackageDto(Guid Id, string Name);
+
+public record TeacherStudentExportDetails(
+    string? SecondaryParentPhone,
+    string? Nationality,
+    DateTime? DateOfBirth,
+    DateTime? FatherDateOfBirth,
+    DateTime? MotherDateOfBirth,
+    bool? IsFatherAlive,
+    bool? IsMotherAlive,
+    bool IsActive,
+    DateTime CreatedAt);
 
 public record GetPendingTeacherEssaysQuery(Guid TeacherUserId) : IRequest<ApiResponse<List<PendingEssayDto>>>;
 
@@ -181,20 +200,26 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             .Select(package => new { package.Id, package.Name })
             .ToListAsync(ct);
         var packageIds = teacherPackages.Select(package => package.Id).ToArray();
-        var packageNames = teacherPackages.ToDictionary(package => package.Id, package => package.Name);
+        var packagesById = teacherPackages.ToDictionary(package => package.Id,
+            package => new TeacherStudentPackageDto(package.Id, package.Name));
         var grantFacts = await _factSource.LoadAsync(new ContentGrantFactScope(packageIds), ct);
+        var requestedStudents = request.StudentIds?.ToHashSet();
         var studentGrantSummaries = ContentAcquisitionCalculator
             .WhereEffectiveAt(grantFacts, DateTime.UtcNow)
+            .Where(fact => requestedStudents == null || requestedStudents.Contains(fact.UserId))
             .GroupBy(fact => fact.UserId)
             .Select(SummarizeStudentGrants)
             .ToArray();
         var studentIds = studentGrantSummaries.Select(summary => summary.UserId).ToArray();
-        var usersById = await _db.Users.AsNoTracking()
+        var users = await _db.Users.AsNoTracking()
             .Include(user => user.StudentProfile)
             .Where(user => studentIds.Contains(user.Id))
-            .ToDictionaryAsync(user => user.Id, ct);
-        var students = studentGrantSummaries
-            .Select(summary => ToDto(summary, usersById[summary.UserId], packageNames[summary.LatestPackageId]))
+            .OrderBy(user => user.FullName)
+            .ThenBy(user => user.Id)
+            .ToListAsync(ct);
+        var students = users
+            .Join(studentGrantSummaries, user => user.Id, summary => summary.UserId,
+                (user, summary) => ToDto(summary, user, packagesById, request.IncludeExportDetails))
             .ToList();
 
         return ApiResponse<List<TeacherStudentDto>>.Ok(students);
@@ -213,20 +238,23 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             factRows.Min(fact => fact.GrantedAt),
             factRows.Max(fact => fact.GrantedAt),
             factRows.Length,
-            factRows.Select(fact => fact.PackageId).Distinct().Count());
+            factRows.Select(fact => fact.PackageId).Distinct().ToArray());
     }
 
     private static TeacherStudentDto ToDto(
         ActiveStudentGrantSummary summary,
         User user,
-        string latestPackageName)
+        IReadOnlyDictionary<Guid, TeacherStudentPackageDto> packagesById,
+        bool includeExportDetails)
     {
         var profile = user.StudentProfile;
+        var packages = summary.PackageIds.Select(id => packagesById[id])
+            .OrderBy(package => package.Name).ToArray();
         return new TeacherStudentDto(
             user.Id,
             user.FullName,
             user.PhoneNumber,
-            latestPackageName,
+            packagesById[summary.LatestPackageId].Name,
             summary.FirstActivationAt,
             profile?.StudentCode,
             profile?.SecondaryPhone,
@@ -240,9 +268,15 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             profile?.StudyTrack?.ToString(),
             profile?.SchoolName,
             profile?.SchoolType?.ToString(),
-            summary.ActivePackageCount,
+            packages.Length,
             summary.ActiveGrantCount,
-            summary.LastActivationAt);
+            summary.LastActivationAt,
+            profile?.Gender.ToString(),
+            packages,
+            includeExportDetails ? new TeacherStudentExportDetails(
+                profile?.SecondaryParentPhone, profile?.Nationality, profile?.DateOfBirth,
+                profile?.FatherDateOfBirth, profile?.MotherDateOfBirth, profile?.IsFatherAlive,
+                profile?.IsMotherAlive, user.IsActive, user.CreatedAt) : null);
     }
 
     private sealed record ActiveStudentGrantSummary(
@@ -251,7 +285,7 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
         DateTime FirstActivationAt,
         DateTime LastActivationAt,
         int ActiveGrantCount,
-        int ActivePackageCount);
+        Guid[] PackageIds);
 }
 
 public class GetPendingTeacherEssaysQueryHandler : IRequestHandler<GetPendingTeacherEssaysQuery, ApiResponse<List<PendingEssayDto>>>
