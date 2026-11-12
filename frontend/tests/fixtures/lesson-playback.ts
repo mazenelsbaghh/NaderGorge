@@ -43,7 +43,7 @@ export const json = (route: Route, data: unknown, status = 200) =>
 export async function openLesson(
   page: Page,
   beforeNavigate?: () => Promise<void>,
-  options: { trackProgress?: boolean; progressByVideo?: Record<string, { durationSeconds: number; learningWatchedSeconds: number }> } = {},
+  options: { trackProgress?: boolean; provider?: string; progressByVideo?: Record<string, { durationSeconds: number; learningWatchedSeconds: number }> } = {},
 ) {
   const user = {
     id: '96000000-0000-0000-0000-000000000099',
@@ -91,7 +91,7 @@ export async function openLesson(
     return json(route, {
       sessionId: `session-${sessions.length}`,
       expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-      provider: 'bunny',
+      provider: options.provider ?? 'bunny',
       videoTitle: videoId,
       durationSeconds: options.progressByVideo?.[videoId]?.durationSeconds ?? 600,
       thresholdPercentage: 80,

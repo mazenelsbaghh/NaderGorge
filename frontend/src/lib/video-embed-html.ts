@@ -712,6 +712,8 @@ var youtubeFailed = false;
 var initializationTimer = null;
 var initializationStartedAt = Date.now();
 var usePrivacyHost = new URLSearchParams(window.location.search).get('youtubeRecovery') === '1';
+var resumeTime = Number(new URLSearchParams((window.location.hash || '').slice(1)).get('resume'));
+if (!Number.isSafeInteger(resumeTime) || resumeTime < 0) resumeTime = 0;
 
 function clearYouTubeInitializationTimer() {
   if (initializationTimer !== null) clearTimeout(initializationTimer);
@@ -792,7 +794,7 @@ window.onYouTubeIframeAPIReady = function () {
   if (__videoEmbedSuspended || youtubeFailed || player || !window.YT || !YT.Player) return;
   waitForYouTubeInitialization('iframe_timeout');
   var playerVars = {
-      autoplay: _qualityPreview || _requiresTouchStart ? 0 : 1,
+      autoplay: _qualityPreview || _requiresTouchStart || resumeTime > 0 ? 0 : 1,
       controls: _qualityPreview || _requiresTouchStart ? 1 : 0, disablekb: 1, modestbranding: 1, rel: 0, fs: _qualityPreview ? 0 : 1, iv_load_policy: 3,
       ...(_qualityPreview ? { hl: 'ar' } : {}),
       // Touch users can enter YouTube's native fullscreen through its own controls.
@@ -800,7 +802,7 @@ window.onYouTubeIframeAPIReady = function () {
       // Explicit client identity is required by YouTube when an embed is nested in our secure player.
       origin: window.location.origin,
       widget_referrer: window.location.origin,
-      start: (typeof window._lastVideoTime !== 'undefined' && window._lastVideoTime > 0) ? Math.floor(window._lastVideoTime) : 0
+      start: resumeTime || ((typeof window._lastVideoTime !== 'undefined' && window._lastVideoTime > 0) ? Math.floor(window._lastVideoTime) : 0)
     };
   var playerTarget = ytDivId;
   if (usePrivacyHost) {
@@ -838,7 +840,7 @@ window.onYouTubeIframeAPIReady = function () {
         });
         if (_qualityPreview) { e.target.getIframe().style.pointerEvents = 'auto'; }
         else if (_requiresTouchStart) enableDirectYouTubeStart(e.target);
-        else e.target.playVideo();
+        else if (!resumeTime) e.target.playVideo();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
         setTimeout(function() {
@@ -862,7 +864,7 @@ window.onYouTubeIframeAPIReady = function () {
           document.getElementById('click-overlay').style.display = '';
           player.getIframe().style.pointerEvents = _qualityPreview ? 'auto' : 'none';
         }
-        postToParent('stateChange', { state: e.data, isPlaying: isPlayingState });
+        postToParent('stateChange', { state: e.data, isPlaying: isPlayingState, currentTime: e.target.getCurrentTime() });
         if (_qualityPreview) syncNativeQualityPlaybackState(e.data);
       },
       onPlaybackQualityChange: function (e) {

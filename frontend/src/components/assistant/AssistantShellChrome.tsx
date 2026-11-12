@@ -34,6 +34,7 @@ import { useShellNavigationState } from '@/hooks/useShellNavigationState';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 import { ColorSettings } from '@/components/ui/ColorSettings';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useWatchRequestAlerts, WatchRequestAlertLink } from '@/components/layout/WatchRequestAlerts';
 
 export type AssistantShellRoute =
   | '/assistant/dashboard' | '/assistant/tasks' | '/assistant/crm' | '/assistant/chat'
@@ -256,6 +257,9 @@ function AssistantShellFrame({
     if (allowed?.length) items = items.filter((item) => allowed.some((path) => path === item.href || path.startsWith(`${item.href}/`)));
     return items;
   }, [hasPermission, user?.allowedNavbarItems]);
+  const watchRequestsHref = filteredNavItems.some((item) => item.href === '/assistant/watch-requests')
+    ? '/assistant/watch-requests' : null;
+  const pendingWatchRequests = useWatchRequestAlerts(watchRequestsHref, user?.id);
 
   const normalizedQuery = navQuery.trim().toLocaleLowerCase('ar');
   const navGroups = GROUPS.map((group) => ({
@@ -317,6 +321,9 @@ function AssistantShellFrame({
         <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}><IntentLink href="/assistant/dashboard" aria-current={isDashboardActive ? 'page' : undefined} className={`flex h-11 items-center gap-3 rounded-xl transition-colors ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'} ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}><Home className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">الرئيسية</span>}</IntentLink>{renderGroups()}</nav>
       </div>
       <div className={`mt-4 space-y-2 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
+        {watchRequestsHref && (
+          <WatchRequestAlertLink href={watchRequestsHref} count={pendingWatchRequests} compact={isSidebarCollapsed} />
+        )}
         <div
           className={`flex min-h-12 items-center gap-3 rounded-xl bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-2' : 'px-3'}`}
           title={user?.fullName || 'الحساب الحالي'}
@@ -336,6 +343,7 @@ function AssistantShellFrame({
     <main ref={mainScrollRef} id="main-content" tabIndex={-1} className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] transition-[margin] duration-200 focus:outline-none lg:px-7 lg:py-8 lg:pb-10 ${isSidebarCollapsed ? 'lg:ms-20' : 'lg:ms-72'}`}>
       <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9"><div className="w-full">
         <div className="mb-4 flex items-center justify-end gap-2 lg:hidden">
+          {watchRequestsHref && <WatchRequestAlertLink href={watchRequestsHref} count={pendingWatchRequests} compact />}
           <button type="button" onClick={() => setIsAppearanceOpen(true)} aria-haspopup="dialog" aria-label="ألوان المنصة" title="ألوان المنصة" className="grid size-11 place-items-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]">
             <Palette className="size-5" aria-hidden="true" />
           </button>

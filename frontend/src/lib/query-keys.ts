@@ -14,6 +14,7 @@ export const queryKeys = {
   },
   admin: {
     all: ['admin'] as const,
+    pendingWatchRequestCount: (userId: string) => ['admin', 'watch-requests', 'pending-count', userId] as const,
     students: (parameters: {
       page: number;
       pageSize: number;

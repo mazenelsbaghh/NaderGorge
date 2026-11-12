@@ -83,6 +83,7 @@ import { walletService, type WalletDto } from '@/services/wallet-service';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useWatchRequestAlerts, WatchRequestAlertLink } from '@/components/layout/WatchRequestAlerts';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { IntentLink } from '@/components/navigation/IntentLink';
 import {
@@ -1019,6 +1020,9 @@ function AdminShellFrame({
   const user = useAuthStore((state) => state.user);
   const roles = user?.roles || [];
   const { hasPermission } = useHasPermission();
+  const watchRequestsHref = hasPermission('watch_requests.manage') && canAccessAdminRoute('/admin/watch-requests', user)
+    ? '/admin/watch-requests' : null;
+  const pendingWatchRequests = useWatchRequestAlerts(watchRequestsHref, user?.id);
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const isHrSurface = activePath === '/admin/hr' || activePath.startsWith('/admin/hr/');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1378,6 +1382,9 @@ function AdminShellFrame({
 
         <div className={`space-y-2 flex-shrink-0 mt-4 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
           {hasPermission('payments.manage') && <AdminWalletBalanceBadge compact={isSidebarCollapsed} />}
+          {watchRequestsHref && (
+            <WatchRequestAlertLink href={watchRequestsHref} count={pendingWatchRequests} compact={isSidebarCollapsed} />
+          )}
           <div
             className={`flex min-h-12 items-center gap-3 rounded-xl bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-2' : 'px-3'}`}
             title={user?.fullName || 'الحساب الحالي'}
@@ -1436,6 +1443,7 @@ function AdminShellFrame({
         <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
+              {watchRequestsHref && <WatchRequestAlertLink href={watchRequestsHref} count={pendingWatchRequests} compact />}
               {hasPermission('payments.manage') && (
                 <Link
                   href="/admin/wallets"

@@ -1163,8 +1163,16 @@ public class AdminController : ControllerBase
 
     // Tracking endpoints
 
+    [HttpGet("watch-requests/pending-count")]
+    [HasPermission(WatchRequestAccess.ManagePermission)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> GetPendingWatchRequestCount(CancellationToken ct)
+    {
+        return Ok(await _mediator.Send(new GetPendingWatchRequestCountQuery(), ct));
+    }
+
     [HttpGet("watch-requests")]
-    [HasPermission("watch_requests.manage")]
+    [HasPermission(WatchRequestAccess.ManagePermission)]
     public async Task<IActionResult> GetWatchRequests(CancellationToken ct)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetWatchRequestsQuery(), ct);
@@ -1172,7 +1180,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("watch-requests/{id}/approve")]
-    [HasPermission("watch_requests.manage")]
+    [HasPermission(WatchRequestAccess.ManagePermission)]
     public async Task<IActionResult> ApproveWatchRequest(Guid id, [FromBody] ApproveWatchRequestBody? request, CancellationToken ct)
     {
         var reason = request?.Reason;
@@ -1183,7 +1191,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("watch-requests/{id}/reject")]
-    [HasPermission("watch_requests.manage")]
+    [HasPermission(WatchRequestAccess.ManagePermission)]
     public async Task<IActionResult> RejectWatchRequest(Guid id, [FromBody] RejectWatchRequestBody? request, CancellationToken ct)
     {
         if (request == null || string.IsNullOrWhiteSpace(request.Reason))

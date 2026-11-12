@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using NaderGorge.API.Hubs;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using Xunit;
 
@@ -257,6 +258,32 @@ public class PlatformHubTests
         await hub.OnConnectedAsync();
 
         Assert.Contains(groups.AddedGroups, group => group.GroupName == "Role_Staff");
+    }
+
+    [Theory]
+    [InlineData("Admin", "", true)]
+    [InlineData("CustomSupportRole", "watch_requests.manage", true)]
+    [InlineData("Assistant", "support.manage", false)]
+    [InlineData("Student", "", false)]
+    public async Task WatchRequestEvents_ReachOnlyAccountsAllowedToManageRequests(
+        string role, string permission, bool receivesEvents)
+    {
+        var identity = new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.Role, role),
+            new Claim("permission", permission)
+        ], "TestAuth");
+        var groups = new FakeGroupManager();
+        var hub = new PlatformHub(new FakeAccessCheckService())
+        {
+            Groups = groups,
+            Context = new FakeHubCallerContext(new ClaimsPrincipal(identity))
+        };
+
+        await hub.OnConnectedAsync();
+
+        Assert.Equal(receivesEvents, groups.AddedGroups.Any(group => group.GroupName == WatchRequestAccess.ManagerGroup));
     }
 
     [Fact]

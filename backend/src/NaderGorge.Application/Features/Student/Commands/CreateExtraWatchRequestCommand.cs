@@ -66,12 +66,10 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
         var outboxEvent = new OutboxEvent
         {
             Type = "ExtraWatchRequestCreated",
-            TargetGroup = "Role_Staff",
+            TargetGroup = WatchRequestAccess.ManagerGroup,
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
-                requestId = watchRequest.Id,
-                videoId = request.LessonVideoId,
-                studentId = request.UserId
+                requestId = watchRequest.Id
             })
         };
         _context.OutboxEvents.Add(outboxEvent);

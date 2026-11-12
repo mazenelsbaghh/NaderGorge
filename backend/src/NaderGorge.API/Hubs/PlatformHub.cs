@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.API.Hubs;
@@ -59,6 +60,13 @@ public class PlatformHub : Hub
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, "Role_Staff", Context.ConnectionAborted);
                 }
+            }
+
+            if (Context.User is { } user && (user.IsInRole("Admin") ||
+                user.FindAll("permission").Any(claim =>
+                    claim.Value.Equals(WatchRequestAccess.ManagePermission, StringComparison.OrdinalIgnoreCase))))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, WatchRequestAccess.ManagerGroup, Context.ConnectionAborted);
             }
 
             await base.OnConnectedAsync();

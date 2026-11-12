@@ -2403,6 +2403,14 @@ export const adminService = {
     return res.data;
   },
 
+  getPendingWatchRequestCount: async ({ signal }: { signal: AbortSignal }) => {
+    const { data } = await apiClient.get<ApiResponse<number>>('/admin/watch-requests/pending-count', { signal });
+    if (!data.success || typeof data.data !== 'number') {
+      throw new Error('Unable to load the pending watch request count.');
+    }
+    return data.data;
+  },
+
   approveWatchRequest: async (
     id: string,
     reason?: string,

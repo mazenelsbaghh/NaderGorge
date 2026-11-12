@@ -84,7 +84,7 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
         _context.OutboxEvents.Add(new OutboxEvent
         {
             Type = "ExtraWatchRequestUpdated",
-            TargetGroup = "Role_Staff",
+            TargetGroup = WatchRequestAccess.ManagerGroup,
             PayloadJson = outboxEvent.PayloadJson
         });
 

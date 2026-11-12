@@ -68,6 +68,10 @@ export interface ExtraWatchRequestPayload {
   reason?: string;
 }
 
+export interface ExtraWatchRequestCreatedPayload {
+  requestId: string;
+}
+
 export interface AiJobProgressPayload {
   jobId: string;
   progress: number;
@@ -223,7 +227,7 @@ export interface PlatformEventHandlers {
   onCommunityCommentRejected?: (payload: { commentId: string; postId: string; authorUserId: string; status: string; reason: string; }) => void;
   onExamPublished?: (payload: { examId: string; title: string; lessonId: string; }) => void;
   onExamResultReady?: (payload: { examId: string; attemptId: string; score: number; isPassed: boolean; }) => void;
-  onExtraWatchRequestCreated?: (payload: { videoId: string; studentId: string; studentName: string; }) => void;
+  onExtraWatchRequestCreated?: (payload: ExtraWatchRequestCreatedPayload) => void;
   onHomeworkPublished?: (payload: { homeworkId: string; lessonId: string; title: string; }) => void;
   onHomeworkGraded?: (payload: { homeworkId: string; submissionId: string; score: number; studentId: string; }) => void;
   onPackageCreated?: (payload: { packageId: string; name: string; }) => void;
@@ -297,7 +301,7 @@ const listeners = {
   CommunityCommentRejected: new Set<(payload: { commentId: string; postId: string; authorUserId: string; status: string; reason: string; }) => void>(),
   ExamPublished: new Set<(payload: { examId: string; title: string; lessonId: string; }) => void>(),
   ExamResultReady: new Set<(payload: { examId: string; attemptId: string; score: number; isPassed: boolean; }) => void>(),
-  ExtraWatchRequestCreated: new Set<(payload: { videoId: string; studentId: string; studentName: string; }) => void>(),
+  ExtraWatchRequestCreated: new Set<(payload: ExtraWatchRequestCreatedPayload) => void>(),
   HomeworkPublished: new Set<(payload: { homeworkId: string; lessonId: string; title: string; }) => void>(),
   HomeworkGraded: new Set<(payload: { homeworkId: string; submissionId: string; score: number; studentId: string; }) => void>(),
   PackageCreated: new Set<(payload: { packageId: string; name: string; }) => void>(),
@@ -484,7 +488,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     const onExamResultReady = (payload: { examId: string; attemptId: string; score: number; isPassed: boolean; }) => {
       handlersRef.current?.onExamResultReady?.(payload);
     };
-    const onExtraWatchRequestCreated = (payload: { videoId: string; studentId: string; studentName: string; }) => {
+    const onExtraWatchRequestCreated = (payload: ExtraWatchRequestCreatedPayload) => {
       handlersRef.current?.onExtraWatchRequestCreated?.(payload);
     };
     const onHomeworkPublished = (payload: { homeworkId: string; lessonId: string; title: string; }) => {
@@ -945,7 +949,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
 
         sharedConnection.on('ExtraWatchRequestCreated', (payloadJson: string) => {
           try {
-            const payload = JSON.parse(payloadJson) as { videoId: string; studentId: string; studentName: string; };
+            const payload = JSON.parse(payloadJson) as ExtraWatchRequestCreatedPayload;
             listeners.ExtraWatchRequestCreated.forEach(handler => handler(payload));
             invalidateMany(['admin:ai-monitor']);
           } catch (e) {

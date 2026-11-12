@@ -36,6 +36,7 @@ import {
   isCurrentVideoSession,
 } from '@/lib/video-playback-recovery';
 import { VIDEO_PLAYBACK_RATES, usesNativeProviderControls, usesRenewableHlsSource } from '@/lib/video-player-provider';
+import { openVideoResume } from '@/lib/video-resume';
 import {
   exitVideoFullscreen,
   enterNativeVideoFullscreen,
@@ -511,6 +512,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [currentTime, setCurrentTime] = useState(0);
   useEffect(() => { onPlaybackTime?.(currentTime, duration); }, [currentTime, duration, onPlaybackTime]);
   const currentTimeRef = useRef(0);
+  const videoResumeRef = useRef<ReturnType<typeof openVideoResume> | null>(null);
   const lastReportedMediaTimeRef = useRef(0);
   const lastMediaProgressAtRef = useRef(0);
   const consecutiveAdvancingMediaSamplesRef = useRef(0);
@@ -573,6 +575,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (providerRef.current === 'youtube' && youtubeStartupRecoveryRef.current?.isRecoveryAttempt()) {
       iframe.src += '&youtubeRecovery=1';
     }
+    const resumeAt = videoResumeRef.current?.startAt ?? 0;
+    if (providerRef.current === 'youtube' && resumeAt > 0) iframe.src += `#resume=${resumeAt}`;
     if (isLocalHlsPreview) iframe.src = `${localHlsPreviewEndpoint}?player=1`;
     qualityPreviewStartedRef.current = false;
     setQualityPreviewStarted(false);
@@ -651,7 +655,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
 
     bunnyRecoveryAttemptsRef.current += 1;
-    bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
+    bunnyRecoveryResumeTimeRef.current = videoResumeRef.current?.startAt ? 0 : currentTimeRef.current;
     recoveryPlaybackRateRef.current = playbackRateRef.current;
     bunnyReadyAtRef.current = 0;
     embedReadinessWatchdogRef.current?.cancel();
@@ -1021,6 +1025,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
           showPersistentPlayerShadows();
 
+          const resumeAt = videoResumeRef.current?.startAt ?? 0;
+          if (resumeAt > 0 && !inspectionResumeRef.current && !bunnyRecoveryResumeTimeRef.current) {
+            currentTimeRef.current = resumeAt;
+            lastReportedMediaTimeRef.current = resumeAt;
+            setCurrentTime(resumeAt);
+            setProgress(durationRef.current > 0 ? Math.min(100, resumeAt / durationRef.current * 100) : 0);
+            if (embedProvider !== 'youtube') sendCommand('seekTo', { time: resumeAt });
+            setIsBuffering(false);
+            setShowControls(true);
+            break;
+          }
+
           if (embedProvider === 'bunny' || usesRenewableHlsSource(embedProvider)) {
             const resumeTime = bunnyRecoveryResumeTimeRef.current;
             if (resumeTime > 0) {
@@ -1079,6 +1095,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             setQualityPreviewStarted(false);
           }
           if (msg.data.isPlaying) {
+            videoResumeRef.current?.beginPlayback();
             if (youtubeQualityEnabled && !qualityPreviewStartedRef.current) {
               qualityPreviewStartedRef.current = true;
               setQualityPreviewStarted(true);
@@ -1104,12 +1121,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             setIsPlaying(false);
             if ((msg.data.state === 0 || msg.data.state === 'ended') && !hasEndedRef.current) {
               hasEndedRef.current = true;
+              videoResumeRef.current?.finish();
               const endingSessionId = activeSessionIdRef.current;
               void flushTrackedProgressRef.current({ keepalive: true, drain: true }).then(() => {
                 if (endingSessionId && isCurrentVideoSession(endingSessionId, activeSessionIdRef.current)) {
                   notifyEndedRef.current();
                 }
               });
+            } else {
+              if (msg.data.state === 2 && typeof msg.data.currentTime === 'number') {
+                videoResumeRef.current?.recordPosition(msg.data.currentTime);
+              }
+              videoResumeRef.current?.save();
             }
             // Check for actual buffering statuses (like YT state === 3 or VK string states)
             if (msg.data.state === 3 || msg.data.state === 'buffering') {
@@ -1132,6 +1155,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           showPersistentPlayerShadows();
           break;
         case 'timeUpdate':
+          if (videoResumeRef.current?.startAt && !isPlayingRef.current) break;
           // Prevent rubber-banding: ignore stale time updates for 1.2 seconds after seeking
           if (Date.now() - lastSeekCommandAtRef.current < 1200) {
             break;
@@ -1161,6 +1185,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               }
               lastReportedMediaTimeRef.current = nextMediaTime;
               currentTimeRef.current = nextMediaTime;
+              if (isPlayingRef.current) {
+                videoResumeRef.current?.beginPlayback();
+                videoResumeRef.current?.recordPosition(nextMediaTime);
+              }
             }
             const reportedPlaybackRate = Number(msg.data.playbackRate);
             if (isSupportedVideoPlaybackRate(reportedPlaybackRate)) {
@@ -1722,6 +1750,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
+        videoResumeRef.current?.save();
         void flushProgressForPageExit();
       } else {
         const pendingBatch = pageExitProgressPromiseRef.current;
@@ -1734,6 +1763,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     };
 
     const handlePageExit = () => {
+      videoResumeRef.current?.save();
       void flushProgressForPageExit();
     };
 
@@ -1768,6 +1798,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       window.removeEventListener('pagehide', handlePageExit);
       window.removeEventListener('pageshow', handlePageShow);
       window.removeEventListener('beforeunload', handlePageExit);
+      videoResumeRef.current?.save();
       void flushProgressForPageExit();
     };
   }, [flushProgressForPageExit]);
@@ -1826,6 +1857,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
     if (loadingSessionRef.current) return;
     loadingSessionRef.current = true;
+    videoResumeRef.current?.save();
+    videoResumeRef.current = null;
     youtubeStartupRecoveryRef.current?.cancel();
     youtubeStartupRecoveryRef.current = null;
     try {
@@ -1857,6 +1890,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setEmbedRequest({ sessionId: '' });
         return;
       }
+      const student = useAuthStore.getState().user;
       const response = await createVideoSessionWithRetry(lessonVideoId);
       if (securitySuspendedRef.current) return;
       const session = response.data.data;
@@ -1919,6 +1953,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       }
 
       const providerName = session.provider?.toLowerCase() || 'youtube';
+      if (!session.isPreview && student?.roles.includes('Student')
+        && student.id === useAuthStore.getState().user?.id
+        && ['youtube', 'youtube-hls', 'bunny', 'bunny-hls'].includes(providerName)) {
+        videoResumeRef.current = openVideoResume(student.id, lessonVideoId, knownDurationSeconds);
+      }
       providerRef.current = providerName;
       serverCanResolveDurationRef.current = providerName === 'bunny' || providerName === 'bunny-hls';
       setProvider(providerName);
