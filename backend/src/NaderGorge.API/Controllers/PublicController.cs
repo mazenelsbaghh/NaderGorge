@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Features.Public.Queries;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using System.Security.Cryptography;
@@ -117,15 +118,22 @@ public class PublicController : ControllerBase
             && bool.TryParse(enabledValue, out var parsedEnabled)
             && parsedEnabled
             && (!expiresAt.HasValue || expiresAt.Value > DateTimeOffset.UtcNow);
+        var title = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupTitle, string.Empty);
+        var body = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupBody, string.Empty);
+        var actionUrl = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupActionUrl, string.Empty);
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, [title, body, actionUrl], ct);
+        var lessonUrl = links.FindLessonPath(actionUrl);
 
         return Ok(new
         {
             enabled = isEnabled,
-            title = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupTitle, string.Empty),
-            body = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupBody, string.Empty),
+            title = links.Rewrite(title),
+            body = links.Rewrite(body),
             imageUrl = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupImageUrl, string.Empty),
-            actionUrl = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupActionUrl, string.Empty),
-            actionLabel = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupActionLabel, string.Empty),
+            actionUrl = lessonUrl ?? actionUrl,
+            actionLabel = lessonUrl is null
+                ? popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupActionLabel, string.Empty)
+                : "فتح الدرس",
             displayInterval = popupSettingsByKey.GetValueOrDefault(PlatformSettingKeys.PlatformPopupDisplayInterval, "0"),
             expiresAt,
             revision,

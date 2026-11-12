@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { motion } from "framer-motion";
 import { Bell, Check, Clock, RefreshCw, Sparkles } from "lucide-react";
 import { AsyncRegionState } from "@/components/ui/AsyncRegionState";
+import { StudentLessonLinks, studentLessonPath } from "@/components/content/StudentLessonLinks";
 import { studentService, StudentNotificationDto } from "@/services/student-service";
 import { registerCacheStore } from "@/lib/cache-invalidation";
+
+const notificationActionClass = "inline-flex min-h-11 items-center rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)]";
 
 export default function StudentNotificationsPageClient() {
   const [notifications, setNotifications] = useState<StudentNotificationDto[]>([]);
@@ -150,14 +153,17 @@ export default function StudentNotificationsPageClient() {
                       <span className="h-2 w-2 rounded-full bg-[var(--admin-primary)] shrink-0" />
                     )}
                     <h3 className={`font-bold text-[var(--admin-text)] text-sm ${!notif.isRead ? "text-[var(--admin-primary)]" : ""}`}>
-                      {notif.title}
+                      <StudentLessonLinks text={notif.title} />
                     </h3>
                   </div>
                   <p className="text-xs text-[var(--admin-text)]/90 leading-relaxed font-medium">
-                    {notif.body}
+                    <StudentLessonLinks text={notif.body} />
                   </p>
                   {notif.actionUrl && /^\/student\/exams\/[0-9a-f-]{36}(?:\?attemptId=[0-9a-f-]{36})?$/i.test(notif.actionUrl) && (
-                    <Link href={notif.actionUrl} className="inline-flex min-h-11 items-center rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)]">مراجعة الإجابات</Link>
+                    <Link href={notif.actionUrl} className={notificationActionClass}>مراجعة الإجابات</Link>
+                  )}
+                  {notif.actionUrl && studentLessonPath.test(notif.actionUrl) && (
+                    <Link href={notif.actionUrl} className={notificationActionClass}>فتح الدرس</Link>
                   )}
                   <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-1">
                     <Clock className="h-3.5 w-3.5" />

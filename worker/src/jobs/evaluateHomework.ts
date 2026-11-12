@@ -4,6 +4,7 @@ import { evaluateHomeworkWithAI } from '../services/geminiService.js';
 import { gradeWrittenAnswerWithOpenAI, useOpenAIWrittenGrading } from '../services/openAIWrittenGrading.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { withWrittenGradingSlot } from './writtenGradingConcurrency.js';
+import { gradeRequestOnly } from '../services/writtenAnswerGradingBoundary.js';
 
 const HOMEWORK_QUESTION_CONCURRENCY = 3;
 
@@ -36,9 +37,17 @@ export async function evaluateHomework(job: Job<HomeworkEvaluationData>) {
 }
 
 async function gradePendingQuestions(job: Job<HomeworkEvaluationData>, questions: HomeworkQuestion[]) {
-  const grades = [...(job.data.grades ?? [])];
-  const savedAnswerIds = new Set(grades.map(grade => grade.answerId));
-  const pending = questions.filter(question => !savedAnswerIds.has(question.AnswerId));
+  const savedGrades = new Map(job.data.grades?.map(grade => [grade.answerId, grade]));
+  const pending: HomeworkQuestion[] = [];
+  for (const question of questions) {
+    const requestGrade = gradeRequestOnly(question.AnswerText);
+    if (requestGrade) {
+      savedGrades.set(question.AnswerId, { answerId: question.AnswerId, score: requestGrade.score, feedback: requestGrade.feedback });
+    } else if (!savedGrades.has(question.AnswerId)) {
+      pending.push(question);
+    }
+  }
+  const grades = [...savedGrades.values()];
   for (let offset = 0; offset < pending.length; offset += HOMEWORK_QUESTION_CONCURRENCY) {
     const batch = pending.slice(offset, offset + HOMEWORK_QUESTION_CONCURRENCY);
     const outcomes = await Promise.allSettled(batch.map(question => gradeQuestion(job, question)));

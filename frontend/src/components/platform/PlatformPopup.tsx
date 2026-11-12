@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { ExternalLink, X } from 'lucide-react';
 
+import { StudentLessonLinks } from '@/components/content/StudentLessonLinks';
 import apiClient from '@/services/api-client';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
@@ -195,11 +196,11 @@ export function PlatformPopup() {
 
         <div className="px-6 pb-6 pt-7 sm:px-8 sm:pb-8">
           <h2 id={titleId} className="max-w-[17ch] text-2xl font-black leading-tight text-[var(--admin-text)] sm:text-3xl">
-            {popup.title}
+            <StudentLessonLinks text={popup.title} onClick={dismiss} />
           </h2>
           {popup.body.trim() && (
             <p id={descriptionId} className="mt-3 whitespace-pre-line text-base leading-7 text-[var(--admin-muted)]">
-              {popup.body}
+              <StudentLessonLinks text={popup.body} onClick={dismiss} />
             </p>
           )}
 

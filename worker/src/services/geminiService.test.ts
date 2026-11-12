@@ -242,21 +242,21 @@ test('essay requests use Gemini 3.1 Flash-Lite with compatible thinking settings
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
-    return { text: '{"score":1,"feedback":"برافو عليك"}' };
+    return { text: '{"score":1,"feedback":"برافو عليك","evidence":"إجابة الطالب"}' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
   assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { score: 1, isCorrect: true, feedback: 'برافو عليك' });
   assert.equal(sent.model, 'gemini-3.1-flash-lite');
   assert.deepEqual(sent.config.thinkingConfig, { thinkingLevel: 'LOW' });
   assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
-  assert.deepEqual(sent.config.responseSchema.required, ['score', 'feedback']);
+  assert.deepEqual(sent.config.responseSchema.required, ['score', 'feedback', 'evidence']);
 });
 
 test('missing teacher key uses conservative question-only grading', async () => {
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
-    return { text: '{"score":0,"feedback":"الإجابة محتاجة توضيح أكتر."}' };
+    return { text: '{"score":0,"feedback":"الإجابة محتاجة توضيح أكتر.","evidence":""}' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
   assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال'),
@@ -272,7 +272,7 @@ test('missing question text cannot be graded', async () => {
 test('2026-10-03 essay grading preserves partial credit and its deduction reason', async () => {
   const feedback = 'وضحت مصالح ثلاثة أطراف صح؛ ناقص مصلحة الموردين، وهي السداد في الموعد.';
   setAIServiceRuntimeFactoryForTests(() => runtime({ models: {
-    generateContent: async () => ({ text: JSON.stringify({ score: 0.75, feedback }) }),
+    generateContent: async () => ({ text: JSON.stringify({ score: 0.75, feedback, evidence: 'مصالح ثلاثة أطراف' }) }),
   } }));
 
   const grade = await evaluateEssayWithAI('مصالح ثلاثة أطراف', 'مصالح أربعة أطراف', 'وضح مصلحة كل طرف');
@@ -287,6 +287,7 @@ test('malformed AI grades are rejected instead of awarding unsupported marks', a
     { score: 0.333, feedback: 'unsupported precision' },
     { score: 0.75, feedback: ' ' }, { score: 0.75, feedback: 'x'.repeat(4001) },
     { isCorrect: true, feedback: 'missing numeric grade' },
+    { score: 1, feedback: 'unsupported evidence', evidence: 'invented quote' },
   ]) {
     await context.test(JSON.stringify(response).slice(0, 80), async () => {
       setAIServiceRuntimeFactoryForTests(() => runtime({ models: {

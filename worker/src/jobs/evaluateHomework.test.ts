@@ -12,7 +12,7 @@ for (const score of [1, 0.7]) test(`homework grades (${score}) survive callback 
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
   setAIServiceRuntimeFactoryForTests(() => ({
     config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: JSON.stringify({ score, feedback: 'Correct reasoning' }) }) } } as never,
+    developer: { models: { generateContent: async () => ({ text: JSON.stringify({ score, feedback: 'Correct reasoning', evidence: 'Student explanation' }) }) } } as never,
   }));
   const job = {
     id: 'homework-evaluation', data: { SubmissionId: 'submission', Fingerprint: 'A'.repeat(64), Questions: [

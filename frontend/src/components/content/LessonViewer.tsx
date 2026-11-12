@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw, CalendarClock, Gamepad2 } from "lucide-react";
+import { StudentLessonLinks } from "@/components/content/StudentLessonLinks";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
@@ -18,6 +19,7 @@ import { LessonMimGameFrame } from '@/components/mim-game/LessonMimGameFrame';
 import { canShowStudentMimGame, mimGameProgressKey, parseMimGameContent } from '@/lib/mim-game-contract';
 import { useAuthStore } from '@/stores/auth-store';
 
+const resourceActionClass = "flex w-full text-right items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5";
 
 export function LessonViewer({
   lesson,
@@ -192,7 +194,7 @@ export function LessonViewer({
             {previousCourseworkLink}
             {lesson.summary && (
               <p className="mt-4 text-sm leading-relaxed text-[var(--admin-muted)] sm:text-base max-w-3xl font-medium">
-                {lesson.summary}
+                <StudentLessonLinks text={lesson.summary} />
               </p>
             )}
           </div>
@@ -437,20 +439,27 @@ export function LessonViewer({
               <>
                 {resources.map((res) => (
                   <li key={res.id}>
-                    <button
-                      type="button"
-                      disabled={downloadingResourceId === res.id}
-                      onClick={(e) => handleResourceClick(e, res.id)}
-                      className="flex w-full text-right items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5 disabled:opacity-50"
-                    >
-                      <svg className="h-5 w-5 opacity-80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="flex-1">{res.title}</span>
-                      {downloadingResourceId === res.id && (
-                        <span className="text-xs font-normal text-[var(--admin-muted)] animate-pulse">جاري التحضير...</span>
-                      )}
-                    </button>
+                    {res.lessonUrl ? (
+                      <Link href={res.lessonUrl} className={resourceActionClass}>
+                        <FileText className="h-5 w-5 shrink-0 opacity-80" aria-hidden="true" />
+                        <span className="flex-1">{res.title}</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={downloadingResourceId === res.id}
+                        onClick={(e) => handleResourceClick(e, res.id)}
+                        className={`${resourceActionClass} disabled:opacity-50`}
+                      >
+                        <svg className="h-5 w-5 opacity-80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="flex-1">{res.title}</span>
+                        {downloadingResourceId === res.id && (
+                          <span className="text-xs font-normal text-[var(--admin-muted)] animate-pulse">جاري التحضير...</span>
+                        )}
+                      </button>
+                    )}
                   </li>
                 ))}
                 {resources.length === 0 && (

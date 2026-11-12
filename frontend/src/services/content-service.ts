@@ -214,6 +214,7 @@ export interface ResourceDto {
   title: string;
   fileUrl: string;
   type: string;
+  lessonUrl?: string | null;
 }
 
 export interface HomeworkQuestionDto {

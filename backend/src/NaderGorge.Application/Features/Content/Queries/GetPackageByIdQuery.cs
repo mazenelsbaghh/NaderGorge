@@ -116,6 +116,9 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
                 .Select(lesson => new PackageDirectLessonDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, lesson.Price, false, lesson.ArchiveMode, lesson.ArchivedAt))
                 .ToListAsync(ct);
 
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, directLessons.Select(lesson => lesson.Summary), ct);
+        directLessons = directLessons.Select(lesson => lesson with { Summary = links.Rewrite(lesson.Summary, lesson.Id) }).ToList();
+
         var dtos = visibleTerms
             .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl, false, t.ArchiveMode, t.ArchivedAt))
             .ToList();

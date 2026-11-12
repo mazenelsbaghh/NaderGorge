@@ -12,7 +12,7 @@ test('2026-09-09 callback outage preserves AI result for retry without regenerat
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
   setAIServiceRuntimeFactoryForTests(() => ({
     config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: '{"score":0.75,"feedback":"original feedback"}' }) } } as never,
+    developer: { models: { generateContent: async () => ({ text: '{"score":0.75,"feedback":"original feedback","evidence":"answer"}' }) } } as never,
   }));
   const job = {
     id: 'essay-checkpoint', data: { essaySubmissionId: 'essay', questionId: 'question', studentId: 'student',

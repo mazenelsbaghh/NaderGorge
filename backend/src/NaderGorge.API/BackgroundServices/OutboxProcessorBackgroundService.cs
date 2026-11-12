@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.SignalR;
 using NaderGorge.API.Hubs;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Services;
 using NaderGorge.Application.Features.Realtime.Services;
 using NaderGorge.Infrastructure.Background;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Diagnostics;
@@ -254,20 +257,26 @@ public class OutboxProcessorBackgroundService : BackgroundService
         }
         else if (!string.IsNullOrEmpty(@event.TargetUserId))
         {
+            var payload = @event.Type == "NotificationCreated"
+                ? await RewriteStudentNotificationAsync(@event.PayloadJson, services.GetRequiredService<IAppDbContext>(), ct)
+                : @event.PayloadJson;
             await _hubContext.Clients.Group($"User_{@event.TargetUserId}")
-                .SendAsync(@event.Type, @event.PayloadJson, ct);
+                .SendAsync(@event.Type, payload, ct);
         }
         else if (!string.IsNullOrEmpty(@event.TargetGroup))
         {
+            var payload = @event.Type is "ResourceReady" or "ResourceProcessingStarted"
+                ? await RewriteResourceEventAsync(@event.PayloadJson, services.GetRequiredService<IAppDbContext>(), ct)
+                : @event.PayloadJson;
             if (@event.TargetGroup.Equals("Public", StringComparison.OrdinalIgnoreCase) ||
                 @event.TargetGroup.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
-                await _hubContext.Clients.All.SendAsync(@event.Type, @event.PayloadJson, ct);
+                await _hubContext.Clients.All.SendAsync(@event.Type, payload, ct);
             }
             else
             {
                 await _hubContext.Clients.Group(@event.TargetGroup)
-                    .SendAsync(@event.Type, @event.PayloadJson, ct);
+                    .SendAsync(@event.Type, payload, ct);
             }
         }
         else
@@ -276,6 +285,43 @@ public class OutboxProcessorBackgroundService : BackgroundService
                 "Outbox event {Id} has no target specified. Skipping broadcast to prevent unauthorized leak.",
                 @event.Id);
         }
+    }
+
+    private static async Task<string> RewriteResourceEventAsync(string json, IAppDbContext db, CancellationToken ct)
+    {
+        var payload = JsonNode.Parse(json) as JsonObject
+            ?? throw new InvalidOperationException("Invalid resource notification.");
+        payload.Remove("fileUrl");
+        var title = payload["title"]?.GetValue<string>();
+        var lessonId = Guid.TryParse(payload["lessonId"]?.GetValue<string>(), out var id) ? id : (Guid?)null;
+        var links = await LessonYouTubeLinks.ResolveAsync(db, [title], ct);
+        if (title is not null) payload["title"] = links.Rewrite(title, lessonId);
+        return payload.ToJsonString();
+    }
+
+    private static async Task<string> RewriteStudentNotificationAsync(string json, IAppDbContext db, CancellationToken ct)
+    {
+        if (JsonNode.Parse(json) is not JsonObject payload) return json;
+        var title = payload["title"]?.GetValue<string>();
+        var body = payload["message"]?.GetValue<string>();
+        var actionUrl = payload["actionUrl"]?.GetValue<string>();
+        var links = await LessonYouTubeLinks.ResolveAsync(db, [title, body, actionUrl], ct);
+        if (!links.HasDestinations) return json;
+
+        var id = Guid.TryParse(payload["id"]?.GetValue<string>(), out var notificationId) ? notificationId : Guid.Empty;
+        var context = await db.NotificationEvents.AsNoTracking().Where(notification => notification.Id == id)
+            .Select(notification => new
+            {
+                IsStudent = notification.User.UserRoles.Any(userRole => userRole.Role.Name == "Student"),
+                LessonId = notification.AcademicScopeOwnerType == StudentFacingScopeOwnerType.Lesson
+                    ? notification.AcademicScopeOwnerId : null
+            }).SingleOrDefaultAsync(ct);
+        if (context?.IsStudent == false) return json;
+
+        if (title is not null) payload["title"] = links.Rewrite(title, context?.LessonId);
+        if (body is not null) payload["message"] = links.Rewrite(body, context?.LessonId);
+        if (actionUrl is not null) payload["actionUrl"] = links.FindLessonPath(actionUrl, context?.LessonId) ?? actionUrl;
+        return payload.ToJsonString();
     }
 
     private async Task<bool> DispatchWithLeaseRenewalAsync(

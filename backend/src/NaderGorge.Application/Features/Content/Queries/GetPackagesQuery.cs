@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities;
@@ -185,6 +186,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
             })
             .ToListAsync(ct);
 
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, directLessons.Select(lesson => lesson.Summary), ct);
         var dtos = new List<PackageDto>();
         foreach (var pk in packages)
         {
@@ -258,7 +260,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                     (row.Lesson.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && row.HasAccess))
                 .Where(row => hasGlobalAccess || row.Lesson.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
                 .Select(row => new PackageDirectLessonDto(
-                    row.Lesson.Id, row.Lesson.Title, row.Lesson.Summary, row.Lesson.Order, row.Lesson.Price,
+                    row.Lesson.Id, row.Lesson.Title, links.Rewrite(row.Lesson.Summary, row.Lesson.Id), row.Lesson.Order, row.Lesson.Price,
                     row.HasAccess, row.Lesson.ArchiveMode, row.Lesson.ArchivedAt))
                 .ToList();
 

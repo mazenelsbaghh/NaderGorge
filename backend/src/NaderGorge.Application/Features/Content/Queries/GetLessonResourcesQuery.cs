@@ -45,6 +45,16 @@ public class GetLessonResourcesQueryHandler : IRequestHandler<GetLessonResources
                 visibleResources.Add(new ResourceDto(resource.Id, resource.Title, resource.FileUrl, resource.ResourceType));
         }
 
-        return ApiResponse<List<ResourceDto>>.Ok(visibleResources);
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, visibleResources.SelectMany(resource => new[] { resource.FileUrl, resource.Title }), ct);
+        return ApiResponse<List<ResourceDto>>.Ok(visibleResources.Select(resource =>
+        {
+            var lessonUrl = links.FindLessonPath(resource.FileUrl, request.LessonId);
+            return resource with
+            {
+                FileUrl = lessonUrl ?? resource.FileUrl,
+                Title = links.Rewrite(resource.Title, request.LessonId),
+                LessonUrl = lessonUrl
+            };
+        }).ToList());
     }
 }

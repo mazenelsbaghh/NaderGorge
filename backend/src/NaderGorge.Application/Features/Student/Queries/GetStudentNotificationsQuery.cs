@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Enums;
@@ -53,14 +54,13 @@ public class GetStudentNotificationsQueryHandler : IRequestHandler<GetStudentNot
             rows = eligibleRows;
         }
 
-        var notifications = rows.Select(n => new StudentNotificationDto(
-            n.Id,
-            n.Title,
-            n.Body,
-            n.ReadAt != null,
-            n.CreatedAt,
-            n.ActionUrl
-        )).ToList();
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, rows.SelectMany(n => new[] { n.Title, n.Body, n.ActionUrl }), ct);
+        var notifications = rows.Select(n =>
+        {
+            var lessonId = n.AcademicScopeOwnerType == StudentFacingScopeOwnerType.Lesson ? n.AcademicScopeOwnerId : null;
+            return new StudentNotificationDto(n.Id, links.Rewrite(n.Title, lessonId), links.Rewrite(n.Body, lessonId),
+                n.ReadAt != null, n.CreatedAt, links.FindLessonPath(n.ActionUrl, lessonId) ?? n.ActionUrl);
+        }).ToList();
 
         return ApiResponse<List<StudentNotificationDto>>.Ok(notifications);
     }

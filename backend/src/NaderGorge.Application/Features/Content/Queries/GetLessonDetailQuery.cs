@@ -89,7 +89,7 @@ public record VideoDto(
     int? DurationSeconds = null,
     decimal LearningWatchedSeconds = 0
 );
-public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
+public record ResourceDto(Guid Id, string Title, string FileUrl, string Type, string? LessonUrl = null);
 
 public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery, ApiResponse<LessonDetailDto>>
 {
@@ -158,6 +158,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 ["ACADEMIC_SCOPE_DENIED"]);
         }
 
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, [lesson.Summary], ct);
+        var summary = links.Rewrite(lesson.Summary, lesson.Id);
         var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, request.LessonId, ct);
         var sortedLessonVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
         if (_academicScope != null && !isPrivilegedUser)
@@ -264,7 +266,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             var minimalDetail = new LessonDetailDto(
                 lesson.Id,
                 lesson.Title,
-                lesson.Summary,
+                summary,
                 lesson.ContentSection!.Term!.PackageId,
                 null,
                 false,
@@ -730,7 +732,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var detail = new LessonDetailDto(
             lesson.Id,
             lesson.Title,
-            lesson.Summary,
+            summary,
             lesson.ContentSection!.Term!.PackageId,
             lesson.ExamId,
             lessonExamPassed,

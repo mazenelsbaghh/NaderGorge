@@ -128,8 +128,10 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         var hiddenLessonIds = relatedLessonIds.Count == 0 ? [] : await new SharedLessonListings(_db)
             .GetHiddenLessonIdsAsync(request.UserId,
                 await _access.GetAccessibleLessonIdsAsync(request.UserId, relatedLessonIds, ct), ct);
+        var listedLessons = lessons.Where(lesson => !hiddenLessonIds.Contains(lesson.Id)).ToList();
+        var links = await LessonYouTubeLinks.ResolveAsync(_db, listedLessons.Select(lesson => lesson.Summary), ct);
         var dtos = new List<LessonSummaryDto>();
-        foreach (var lesson in lessons.Where(lesson => !hiddenLessonIds.Contains(lesson.Id)))
+        foreach (var lesson in listedLessons)
         {
             var hasAccess = accessibleLessonIds.Contains(lesson.Id);
             var isCompleted = completedLessonIds.Contains(lesson.Id);
@@ -169,7 +171,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             dtos.Add(new LessonSummaryDto(
                 lesson.Id,
                 lesson.Title,
-                lesson.Summary,
+                links.Rewrite(lesson.Summary, lesson.Id),
                 lesson.Order,
                 hasAccess,
                 isCompleted,
