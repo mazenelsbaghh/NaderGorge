@@ -39,6 +39,7 @@ migrate_working_dir/
 
 # Owner-supplied student records are local installation assets, not public source.
 /assets/installation_seed.json
+/assets/aqsa_month_coverage_repair_20261113.json
 /private-import/
 
 # Recoverable, temporary Windows client packaging state.

@@ -1639,6 +1639,15 @@ void main() {
       }
     },
   );
+  Future<void> placeSessionInMonth(WidgetTester tester, int count) {
+    final month = store.studyMonths.firstWhere(
+      (month) => month.lessons.length == count,
+    );
+    return tester.runAsync(
+      () => setAttendanceTestMonth(store, store.sessions.single, month.id),
+    );
+  }
+
   Future<void> chooseQuantity(WidgetTester tester, int count) =>
       selectAttendanceMonth(
         tester,
@@ -1674,13 +1683,14 @@ void main() {
 
   for (final count in [2, 3]) {
     testWidgets(
-      'selected $count session package quotes independent price, buys once and resets for next student',
+      'selected $count session package quotes independent price, buys once and keeps the class month for the next scan',
       (tester) async {
         await tester.runAsync(
           () => store.saveGroup(
             group.copyWith(twoSessionPrice: 18000, threeSessionPrice: 27000),
           ),
         );
+        await placeSessionInMonth(tester, count);
         await openWorkspace(
           tester,
           dark: true,
@@ -1757,7 +1767,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.f6);
         await tester.pumpAndSettle();
         await scan(tester, student.code);
-        // Existing balance still dominates; quantity resets even for a repeated scan.
+        // Renewal starts on the current class month after a fresh scan.
         final renewal = find.byKey(const Key('collect-package'));
         await tester.ensureVisible(renewal);
         await tester.runAsync(() => tester.tap(renewal));
@@ -1766,16 +1776,18 @@ void main() {
           tester
               .widget<DropdownButtonFormField<int>>(renewalMonthSelector())
               .initialValue,
-          0,
+          count == 2 ? 1 : 2,
         );
         expect(
           find.descendant(
             of: renewalMonthSelector(),
-            matching: find.text('الشهر الكامل · 4 حصص'),
+            matching: find.text(
+              count == 2 ? 'شهر حصتين · 2 حصص' : 'شهر ثلاث حصص · 3 حصص',
+            ),
           ),
           findsOneWidget,
         );
-        expect(find.textContaining(money(30000)), findsWidgets);
+        expect(find.textContaining(money(price)), findsWidgets);
         await tester.tap(find.text('إلغاء · Esc'));
         await tester.pumpAndSettle();
         expectCodeFocus(tester);
@@ -1785,7 +1797,7 @@ void main() {
   }
 
   testWidgets(
-    'month selection is explicit, numeric scanner codes stay intact and lookup or note editing cannot buy',
+    'the class month stays fixed while scanning numeric codes, looking up and editing notes',
     (tester) async {
       late Student numeric;
       await tester.runAsync(() async {
@@ -1804,8 +1816,8 @@ void main() {
       expect(store.payments, isEmpty);
       await scan(tester, student.code);
       expect(selectedMonth(4), findsOneWidget);
-      await chooseQuantity(tester, 3);
-      expect(selectedMonth(3), findsOneWidget);
+      await chooseQuantity(tester, 4);
+      expect(selectedMonth(4), findsOneWidget);
       expectCodeFocus(tester);
       expect(store.payments, isEmpty);
       await tester.enterText(
@@ -1825,13 +1837,13 @@ void main() {
       await scan(tester, numeric.code);
       expect(find.text('مينا الرقمي'), findsOneWidget);
       expect(selectedMonth(4), findsOneWidget);
-      await chooseQuantity(tester, 2);
-      expect(selectedMonth(2), findsOneWidget);
+      await chooseQuantity(tester, 4);
+      expect(selectedMonth(4), findsOneWidget);
       await tester.tap(find.text('بحث عن طالب'));
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<DropdownButtonFormField<String>>(selectedMonth(2))
+            .widget<DropdownButtonFormField<String>>(selectedMonth(4))
             .onChanged,
         isNull,
       );
@@ -1845,7 +1857,7 @@ void main() {
       await tester.tap(find.byKey(const Key('edit-student-note')));
       await tester.pumpAndSettle();
       await quantityShortcut(tester, LogicalKeyboardKey.digit3);
-      expect(selectedMonth(2), findsOneWidget);
+      expect(selectedMonth(4), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
       await tester.pumpAndSettle();
       expect(store.payments, isEmpty);
@@ -1868,6 +1880,7 @@ void main() {
     (tester) async {
       expect(group.twoSessionPrice, isNull);
       expect(group.threeSessionPrice, isNull);
+      await placeSessionInMonth(tester, 2);
       await openWorkspace(tester);
       await scan(tester, student.code);
       await chooseQuantity(tester, 2);
@@ -1950,6 +1963,7 @@ void main() {
       await tester.runAsync(
         () => store.saveGroup(group.copyWith(twoSessionPrice: 18000)),
       );
+      await placeSessionInMonth(tester, 2);
       await openWorkspace(tester);
       await scan(tester, student.code);
       await chooseQuantity(tester, 2);

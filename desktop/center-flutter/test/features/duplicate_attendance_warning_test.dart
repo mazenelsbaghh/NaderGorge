@@ -384,12 +384,9 @@ void main() {
 
   for (final key in [LogicalKeyboardKey.keyL, LogicalKeyboardKey.keyN]) {
     testWidgets(
-      '${key.keyLabel} review threads frozen acknowledged IDs through shortcut confirmation and package repricing',
+      '${key.keyLabel} keeps acknowledged attendance IDs through shortcut confirmation',
       (tester) async {
         await open(tester);
-        if (key == LogicalKeyboardKey.keyN) {
-          await selectAttendanceMonth(tester, 'شهر حصتين · 2 حصص');
-        }
         await tester.runAsync(() => requestAttendanceConfirmation(tester, key));
         await settleRoutes(tester);
         expect(crossDialog, findsOneWidget);
@@ -399,13 +396,6 @@ void main() {
           find.byKey(const Key('entry-confirmation-dialog')),
           findsOneWidget,
         );
-        if (key == LogicalKeyboardKey.keyN) {
-          await selectAttendanceMonth(
-            tester,
-            'شهر ثلاث حصص · 3 حصص',
-            confirmation: true,
-          );
-        }
         expect(store.payments, hasLength(1));
         await mutate(
           tester,
@@ -414,12 +404,12 @@ void main() {
         expect(store.payments, hasLength(2));
         expect(
           store.payments.last.netAmount,
-          key == LogicalKeyboardKey.keyN ? 20250 : 7500,
+          key == LogicalKeyboardKey.keyN ? 30000 : 7500,
         );
         expect(store.attendances, hasLength(2));
         if (key == LogicalKeyboardKey.keyN) {
-          expect(store.packages.single.totalSessions, 3);
-          expect(store.packages.single.remaining, 2);
+          expect(store.packages.single.totalSessions, 4);
+          expect(store.packages.single.remaining, 3);
         }
         expect(
           store.audit.where(

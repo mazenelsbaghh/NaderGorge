@@ -254,6 +254,9 @@ void main() {
   testWidgets(
     'three-session context opens its price reference and a two-session amount target preserves full precision without changing purchase quantity',
     (tester) async {
+      await tester.runAsync(
+        () => setAttendanceTestMonth(store, session, months[3]!),
+      );
       await open(tester);
       await scan(tester, student.code);
       final audits = store.audit.length;
@@ -298,20 +301,6 @@ void main() {
       expect(store.students.single.discountPercent, exact);
       expectNoFinance();
       expect(store.audit, hasLength(audits + 1));
-      expect(
-        store
-            .entryConfirmationFor(
-              EntryRequest(
-                studentId: student.id,
-                sessionId: session.id,
-                mode: EntryMode.package,
-                packageSessions: 2,
-                monthPlanId: months[2],
-              ),
-            )
-            .netAmount,
-        12001,
-      );
       await tester.runAsync(
         () => requestAttendanceConfirmation(tester, LogicalKeyboardKey.keyN),
       );

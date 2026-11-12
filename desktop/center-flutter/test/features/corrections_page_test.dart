@@ -742,13 +742,20 @@ void main() {
     'single-entry correction previews and purchases the selected three-session independent price',
     (tester) async {
       await tester.runAsync(() async {
+        final month = await store.saveStudyMonth(
+          StudyMonth(
+            name: 'شهر ثلاث حصص',
+            lessons: [for (var n = 1; n <= 3; n++) PreparedLesson(number: n)],
+          ),
+        );
+        await store.saveSession(session.copyWith(monthNumber: month.number));
         await store.saveGroup(
           group.copyWith(
             threeSessionPrice: 26000,
             monthPlans: [
-              const GroupMonthPlan(
-                id: 'three-session-month',
-                name: 'شهر ثلاث حصص',
+              GroupMonthPlan(
+                id: month.id,
+                name: month.name,
                 sessions: 3,
                 price: 26000,
               ),

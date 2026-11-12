@@ -60,6 +60,8 @@ def private_fixture(directory, *, overlay=False, baseline_sha=None):
                                             "repairSha256": files[trial.SHOBRA_ATTENDANCE_REPAIR_ASSET]}
         review["haramAttendanceRepair"] = {**review["attendanceRepair"],
                                            "repairSha256": files[trial.HARAM_ATTENDANCE_REPAIR_ASSET]}
+        review["aqsaCoverageRepair"] = {**review["attendanceRepair"],
+                                       "repairSha256": files[trial.AQSA_COVERAGE_REPAIR_ASSET]}
         review_bytes = json.dumps(review).encode()
         (directory / "grade-repair-review.json").write_bytes(review_bytes)
         manifest.update({"baselineSha256": baseline_sha, "reviewManifest": "grade-repair-review.json", "reviewManifestSha256": trial.digest(review_bytes)})
@@ -145,10 +147,12 @@ class WindowsTrialTests(unittest.TestCase):
             before = {path.name: path.read_bytes() for path in baseline.iterdir()}
             with patch.object(trial, "ROOT", root):
                 result = trial.private_inputs(baseline, overlay)
-                self.assertEqual(17, len(result["files"]))
+                self.assertEqual(18, len(result["files"]))
                 self.assertEqual(manifest["files"], result["files"])
                 self.assertEqual(historical["sha256"], result["baselineSha256"])
                 self.assertEqual("a" * 64, result["sourceBackupSha256"])
+                self.assertEqual(result["files"][trial.AQSA_COVERAGE_REPAIR_ASSET],
+                                 result["aqsaCoverageRepair"]["repairSha256"])
                 self.assertEqual(historical["files"]["installation_seed.json"], result["files"]["installation_seed.json"])
                 self.assertEqual(12, len(trial.private_inputs(baseline)["files"]))
             self.assertEqual(before, {path.name: path.read_bytes() for path in baseline.iterdir()})

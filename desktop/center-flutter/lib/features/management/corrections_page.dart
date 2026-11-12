@@ -68,8 +68,13 @@ class _CorrectionsPageState extends State<CorrectionsPage> {
             group.id == (_attendance?.makeupSourceGroupId ?? _session?.groupId),
       )
       .firstOrNull;
-  List<GroupMonthPlan> get _monthPlans =>
-      _billingGroup?.effectiveMonthPlans ?? const [];
+  List<GroupMonthPlan> get _monthPlans {
+    final group = _billingGroup, session = _session;
+    return group == null || session == null
+        ? const []
+        : store.attendanceMonthPlansFor(group, session);
+  }
+
   GroupMonthPlan? get _selectedMonthPlan => _monthPlanId == null
       ? _monthPlans.firstOrNull
       : _monthPlans.where((plan) => plan.id == _monthPlanId).firstOrNull;

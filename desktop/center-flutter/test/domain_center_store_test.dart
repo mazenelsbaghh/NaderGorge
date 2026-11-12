@@ -121,6 +121,21 @@ void main() {
         final firstNextLesson = await start(nextMonth, 1);
         final entry = monthlyEntry(nextMonth, firstNextLesson);
         expect(store.eligibleRemainingFor(studentId, firstNextLesson.id), 0);
+        await store.recordAttendanceWithCredit(entry);
+        expect(
+          store.attendanceNeedsPayment(studentId, firstNextLesson.id),
+          isTrue,
+        );
+        final wrongMonthEntry = monthlyEntry(currentMonth, firstNextLesson);
+        expect(
+          () => store.entryConfirmationFor(wrongMonthEntry),
+          throwsA(isA<CenterException>()),
+        );
+        await expectLater(
+          store.collectAndAttend(wrongMonthEntry),
+          throwsA(isA<CenterException>()),
+        );
+        expect(store.payments, hasLength(1));
         expect(store.entryConfirmationFor(entry).netAmount, 15750);
         await store.collectAndAttend(entry);
         expect(store.payments, hasLength(2));
@@ -129,6 +144,86 @@ void main() {
       },
     );
   }
+
+  test(
+    'a renewal collected in class covers only the month on its receipt',
+    () async {
+      final currentLesson = await session(1);
+      final nextMonth = await store.saveStudyMonth(
+        StudyMonth(
+          name: 'الشهر التالي',
+          lessons: [PreparedLesson(number: 1), PreparedLesson(number: 2)],
+        ),
+      );
+      await store.renewPackage(
+        PackageRequest(
+          studentId: studentId,
+          groupId: groupId,
+          sessionId: currentLesson.id,
+          monthPlanId: nextMonth.id,
+        ),
+      );
+      final advanceReceipt = store.payments.single.toJson();
+      expect(
+        store.paymentStatusFor(studentId, currentLesson.id).status,
+        StudentPaymentStatus.notPaid,
+      );
+      await store.closeSession(currentLesson.id);
+      expect(store.attendances.single.packageId, isNull);
+
+      final nextLesson = await store.startPreparedLesson(
+        groupId: groupId,
+        preparedLessonId: nextMonth.lessons.first.id,
+      );
+      await store.recordAttendanceWithCredit(
+        EntryRequest(
+          studentId: studentId,
+          sessionId: nextLesson.id,
+          mode: EntryMode.package,
+          monthPlanId: nextMonth.id,
+        ),
+      );
+      expect(store.attendances.last.packageId, store.packages.single.id);
+      expect(store.payments.single.toJson(), advanceReceipt);
+    },
+  );
+
+  test('a paid absence can be made up only within its own month', () async {
+    final firstMonth = store.studyMonths.single;
+    final original = await store.startPreparedLesson(
+      groupId: groupId,
+      preparedLessonId: firstMonth.lessons.first.id,
+    );
+    await store.renewPackage(
+      PackageRequest(
+        studentId: studentId,
+        groupId: groupId,
+        sessionId: original.id,
+        monthPlanId: firstMonth.id,
+      ),
+    );
+    await store.closeSession(original.id);
+    final absence = store.attendances.single;
+    expect(absence.packageId, store.packages.single.id);
+    final sameMonth = await session(2);
+    expect(
+      store.eligibleMakeups(studentId, sameMonth.id).single.id,
+      absence.id,
+    );
+    final nextMonth = await store.saveStudyMonth(
+      StudyMonth(name: 'شهر جديد', lessons: [PreparedLesson(number: 1)]),
+    );
+    final nextLesson = await store.startPreparedLesson(
+      groupId: groupId,
+      preparedLessonId: nextMonth.lessons.first.id,
+    );
+    expect(store.eligibleMakeups(studentId, nextLesson.id), isEmpty);
+    await expectLater(
+      enter(nextLesson, mode: EntryMode.makeup, original: absence.id),
+      throwsA(isA<CenterException>()),
+    );
+    expect(store.attendances, [absence]);
+  });
 
   test(
     'receipt edit preserves original attendance and archived cash closing',

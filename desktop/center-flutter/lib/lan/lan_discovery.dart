@@ -79,14 +79,7 @@ class LanDiscovery {
                     ? discoveryTime
                     : const Duration(milliseconds: 1),
                 discoveryPort: discoveryPort,
-                targets:
-                    targets ??
-                    [
-                      if (source.isLoopback)
-                        InternetAddress.loopbackIPv4
-                      else
-                        InternetAddress('255.255.255.255'),
-                    ],
+                targets: targets ?? _targetsForAdapter(source),
                 bindSocket: () =>
                     bindSourceSocket?.call(source) ??
                     RawDatagramSocket.bind(source, 0),
@@ -155,6 +148,15 @@ class LanDiscovery {
       ...network.addresses,
     InternetAddress.loopbackIPv4,
   ];
+
+  static List<InternetAddress> _targetsForAdapter(InternetAddress source) {
+    if (source.isLoopback) return [InternetAddress.loopbackIPv4];
+    return [
+      // Windows can drop broadcast discovery on the direct exam cable.
+      if (source.address == '10.77.0.1') InternetAddress('10.77.0.10'),
+      InternetAddress('255.255.255.255'),
+    ];
+  }
 
   static Future<bool> _reachable(
     _DiscoveryCandidate candidate,

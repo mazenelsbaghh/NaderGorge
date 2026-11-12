@@ -80,6 +80,7 @@ extension _BundledCenterDataRepair on CenterStore {
     'assets/jaber_month2_lesson3_attendance_20261031.json',
     'assets/shobra_month2_lesson3_attendance_20261031.json',
     'assets/haram_month2_lesson3_attendance_20261031.json',
+    'assets/aqsa_month_coverage_repair_20261113.json',
   ];
   static const _repairDefaults = <String, Object>{
     'discountNeedsReview': false,
@@ -261,14 +262,18 @@ extension _BundledCenterDataRepair on CenterStore {
       final recordIds = (guard['recordIds'] as List? ?? const [])
           .cast<String>()
           .toSet();
+      final studentIds = (guard['studentIds'] as List? ?? const [])
+          .cast<String>()
+          .toSet();
       if (sessionIds.isEmpty && recordIds.isEmpty) {
         throw const FormatException('Repair history scope');
       }
       final current = {
         for (final row in _repairRows(document, collection))
-          if (recordIds.contains(row['id']) ||
-              sessionIds.contains(row['sessionId']) ||
-              collection == 'sessions' && sessionIds.contains(row['id']))
+          if ((studentIds.isEmpty || studentIds.contains(row['studentId'])) &&
+              (recordIds.contains(row['id']) ||
+                  sessionIds.contains(row['sessionId']) ||
+                  collection == 'sessions' && sessionIds.contains(row['id'])))
             row['id'] as String: row,
       };
       if (!_repairValuesMatch(current, guard['before']) &&

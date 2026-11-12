@@ -309,6 +309,16 @@ void main() {
         });
         final priorPayments = store.payments.length;
         final priorAttendance = store.attendances.length;
+        if (entryCase == 'package2' || entryCase == 'package3') {
+          final count = entryCase == 'package2' ? 2 : 3;
+          final month = store.studyMonths.firstWhere(
+            (month) => month.lessons.length == count,
+          );
+          await tester.runAsync(
+            () =>
+                setAttendanceTestMonth(store, store.sessions.single, month.id),
+          );
+        }
         await openWorkspace(
           tester,
           dark: entryCase == 'package2',

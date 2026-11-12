@@ -24,6 +24,7 @@ final syntheticRepairAssets = <String, Object>{
     'jaber_month2_lesson3_attendance_20261031',
     'shobra_month2_lesson3_attendance_20261031',
     'haram_month2_lesson3_attendance_20261031',
+    'aqsa_month_coverage_repair_20261113',
   ])
     'assets/$name.json': {
       'id': 'synthetic-$name',

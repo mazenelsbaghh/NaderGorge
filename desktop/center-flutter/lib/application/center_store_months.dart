@@ -118,11 +118,43 @@ extension CenterStoreMonths on CenterStore {
         'الشهر المختار لم يعد موجودًا في المجموعة؛ اختر شهرًا آخر.',
       );
 
+  int? _studyMonthNumberForPlan(String planId, String planName) {
+    final months = _state.studyMonths;
+    return months.where((month) => month.id == planId).firstOrNull?.number ??
+        months
+            .where(
+              (month) =>
+                  month.name.trim().toLowerCase() ==
+                  planName.trim().toLowerCase(),
+            )
+            .firstOrNull
+            ?.number ??
+        _legacyStudyMonthNumber(planName);
+  }
+
+  List<GroupMonthPlan> attendanceMonthPlansFor(
+    StudyGroup group,
+    LessonSession session,
+  ) {
+    final plans = group.effectiveMonthPlans;
+    final month = studyMonths
+        .where((month) => month.number == session.monthNumber)
+        .firstOrNull;
+    final sharedPlan = plans.where((plan) => plan.id == month?.id).firstOrNull;
+    if (sharedPlan != null) return [sharedPlan];
+    return plans.where((plan) => _planCoversSession(plan, session)).toList();
+  }
+
+  bool _planCoversSession(GroupMonthPlan plan, LessonSession session) =>
+      plan.id == 'legacy-month4' ||
+      _studyMonthNumberForPlan(plan.id, plan.name) == session.monthNumber;
+
   _MonthPurchase _monthPurchaseFor(
     StudyGroup group,
     int sessions,
-    String? monthPlanId,
-  ) {
+    String? monthPlanId, {
+    LessonSession? attendanceSession,
+  }) {
     if (monthPlanId == null) {
       return _MonthPurchase(
         sessions,
@@ -132,6 +164,12 @@ extension CenterStoreMonths on CenterStore {
       );
     }
     final plan = _monthPlanFor(group, monthPlanId);
+    if (attendanceSession != null &&
+        !_planCoversSession(plan, attendanceSession)) {
+      throw const CenterException(
+        'الباقة تغطي حصص شهرها فقط. اختر شهر الحصة، أو استخدم تجديد الشهر لتسجيل دفعة لشهر آخر.',
+      );
+    }
     return _MonthPurchase(
       plan.sessions,
       plan.price,

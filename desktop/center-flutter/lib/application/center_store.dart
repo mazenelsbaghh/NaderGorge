@@ -1698,8 +1698,9 @@ class CenterStore extends ChangeNotifier {
       final payment =
           _readIndex?.paymentsById[package.paymentId] ??
           _state.payments.firstWhere((row) => row.id == package.paymentId);
-      final month = _packageStudyMonthNumber(package, payment);
-      if (month != null && month != forClosure.monthNumber) return false;
+      if (!_packageCoversMonth(package, payment, forClosure.monthNumber)) {
+        return false;
+      }
       return !package.purchasedAt.isAfter(forClosure.startsAt) ||
           payment.sessionId == forClosure.id ||
           _followsMakeupMonthPurchase(package, payment, forClosure);
@@ -1742,15 +1743,18 @@ class CenterStore extends ChangeNotifier {
     };
   }
 
-  int? _packageStudyMonthNumber(PrepaidPackage package, PaymentRecord payment) {
+  bool _packageCoversMonth(
+    PrepaidPackage package,
+    PaymentRecord payment,
+    int monthNumber,
+  ) {
     final planId = package.monthPlanId;
-    if (planId == null) return null;
-    return _state.studyMonths
-            .where((month) => month.id == planId)
-            .firstOrNull
-            ?.number ??
-        _legacyStudyMonthNumber(package.monthPlanName!) ??
-        sessionById(payment.sessionId)?.monthNumber;
+    if (planId == null || planId == 'legacy-month4') {
+      final purchaseMonth = sessionById(payment.sessionId)?.monthNumber;
+      return purchaseMonth == null || purchaseMonth == monthNumber;
+    }
+    return _studyMonthNumberForPlan(planId, package.monthPlanName!) ==
+        monthNumber;
   }
 
   bool _followsMakeupMonthPurchase(
@@ -1843,6 +1847,7 @@ class CenterStore extends ChangeNotifier {
     String method,
     String notes, {
     String? sessionId,
+    LessonSession? attendanceSession,
     int sessions = 4,
     int? paidAmount,
     int? expectedNetAmount,
@@ -1854,7 +1859,12 @@ class CenterStore extends ChangeNotifier {
         'الطالب معفى من دفع المدرس؛ التحضير يخص رسوم السنتر فقط.',
       );
     }
-    final purchase = _monthPurchaseFor(group, sessions, monthPlanId);
+    final purchase = _monthPurchaseFor(
+      group,
+      sessions,
+      monthPlanId,
+      attendanceSession: attendanceSession,
+    );
     if (expectedMonthPlan != null && expectedMonthPlan != purchase.plan) {
       throw const CenterException(
         'تغيّر اسم الشهر أو عدد حصصه أو سعره؛ راجع الاختيار قبل الدفع.',
@@ -1884,7 +1894,7 @@ class CenterStore extends ChangeNotifier {
         id: paymentId,
         studentId: student.id,
         groupId: group.id,
-        sessionId: sessionId,
+        sessionId: attendanceSession?.id ?? sessionId,
         packageId: packageId,
         description: notes.trim().isEmpty
             ? purchase.description
@@ -2135,6 +2145,7 @@ class CenterStore extends ChangeNotifier {
               source,
               request.packageSessions,
               request.monthPlanId,
+              attendanceSession: session,
             ).baseAmount
           : _configuredSessionAmount(source);
     } else if (reserved ||
@@ -2153,6 +2164,7 @@ class CenterStore extends ChangeNotifier {
               group,
               request.packageSessions,
               request.monthPlanId,
+              attendanceSession: session,
             ).baseAmount;
     }
     final net = _studentDiscounted(student, baseAmount);
@@ -2507,7 +2519,7 @@ class CenterStore extends ChangeNotifier {
                   source,
                   request.method,
                   request.notes,
-                  sessionId: session.id,
+                  attendanceSession: session,
                   sessions: request.packageSessions,
                   paidAmount: request.paidAmount,
                   monthPlanId: request.monthPlanId,
@@ -2577,7 +2589,7 @@ class CenterStore extends ChangeNotifier {
                 group,
                 request.method,
                 request.notes,
-                sessionId: session.id,
+                attendanceSession: session,
                 sessions: request.packageSessions,
                 paidAmount: request.paidAmount,
                 monthPlanId: request.monthPlanId,
@@ -4121,17 +4133,8 @@ class CenterStore extends ChangeNotifier {
           detail: 'الحضور محفوظ؛ لا يوجد دفع فعلي أو خصم من رصيد لهذه الحصة',
         );
       }
-      final linked = _paymentsForStudent(studentId)
-          .where(
-            (e) =>
-                e.studentId == studentId &&
-                e.sessionId == sessionId &&
-                e.packageId != null,
-          )
-          .firstOrNull;
       final packageId =
           attendance?.packageId ??
-          linked?.packageId ??
           _available(
             studentId,
             session.groupId,
@@ -4553,6 +4556,7 @@ class CenterStore extends ChangeNotifier {
       final original = _session(record.sessionId);
       final originalGroup = _group(original.groupId);
       return original.status != SessionStatus.canceled &&
+          original.monthNumber == target.monthNumber &&
           !target.startsAt.isBefore(original.startsAt) &&
           originalGroup.subjectId == targetGroup.subjectId &&
           originalGroup.gradeId == targetGroup.gradeId;

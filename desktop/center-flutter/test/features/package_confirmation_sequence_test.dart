@@ -122,9 +122,17 @@ void main() {
     WidgetTester tester, {
     bool dark = false,
     double width = 1440,
+    int monthSessions = 4,
   }) async {
     await tester.binding.setSurfaceSize(Size(width, 900));
     await tester.runAsync(() async {
+      if (monthSessions != 4) {
+        await setAttendanceTestMonth(
+          store,
+          store.sessions.single,
+          months[monthSessions]!,
+        );
+      }
       final fonts = FontLoader('Tajawal')
         ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))
         ..addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
@@ -286,24 +294,23 @@ void main() {
 
   for (final count in [2, 3, 4]) {
     testWidgets(
-      'Month selection selects $count and Enter persists the quoted package once',
+      'The class month with $count sessions is the only package offered and Enter saves it once',
       (tester) async {
         await openWorkspace(
           tester,
           dark: count == 2,
           width: count == 3 ? 960 : 1280,
+          monthSessions: count,
         );
         await scan(tester, student.code);
         await confirmShortcut(tester, LogicalKeyboardKey.keyN);
-        await selectAttendanceMonth(
-          tester,
-          count == 4
-              ? 'الشهر الكامل · 4 حصص'
-              : count == 2
-              ? 'شهر حصتين · 2 حصص'
-              : 'شهر ثلاث حصص · 3 حصص',
-          confirmation: true,
+        final monthPicker = tester.widget<DropdownButton<String>>(
+          find.descendant(
+            of: find.byKey(ValueKey('confirmation-month-${months[count]}')),
+            matching: find.byType(DropdownButton<String>),
+          ),
         );
+        expect(monthPicker.items!.map((item) => item.value), [months[count]]);
         expect(
           find.byKey(ValueKey('confirmation-month-${months[count]}')),
           findsOneWidget,
@@ -347,7 +354,7 @@ void main() {
   testWidgets('Enter after a month selection commits only its rendered quote', (
     tester,
   ) async {
-    await openWorkspace(tester);
+    await openWorkspace(tester, monthSessions: 3);
     await scan(tester, student.code);
     await confirmShortcut(tester, LogicalKeyboardKey.keyN);
     await selectAttendanceMonth(
@@ -363,19 +370,19 @@ void main() {
   });
 
   testWidgets(
-    'dropdown and Esc leave the workspace package selection unchanged',
+    'Esc closes the quote without changing the class month or collecting',
     (tester) async {
       await openWorkspace(tester);
       await scan(tester, student.code);
       await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await selectAttendanceMonth(
         tester,
-        'شهر حصتين · 2 حصص',
+        'الشهر الكامل · 4 حصص',
         confirmation: true,
       );
       expect(
         tester.widget<Text>(find.byKey(const Key('confirmation-net'))).data,
-        money(13500),
+        money(30000),
       );
       await cancel(tester);
       expectEmptyAccounts();
@@ -395,7 +402,7 @@ void main() {
   testWidgets(
     'held N repeats never change the month and cancellation restores the code',
     (tester) async {
-      await openWorkspace(tester);
+      await openWorkspace(tester, monthSessions: 3);
       await scan(tester, student.code);
       await selectAttendanceMonth(tester, 'شهر ثلاث حصص · 3 حصص');
       await tester.runAsync(
@@ -504,7 +511,7 @@ void main() {
   testWidgets(
     'changed session accounting blocks the frozen quote until a valid context is reviewed',
     (tester) async {
-      await openWorkspace(tester);
+      await openWorkspace(tester, monthSessions: 3);
       await scan(tester, student.code);
       await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await tester.runAsync(
@@ -517,7 +524,7 @@ void main() {
       );
       await selectAttendanceMonth(
         tester,
-        'شهر حصتين · 2 حصص',
+        'شهر ثلاث حصص · 3 حصص',
         confirmation: true,
       );
       expect(find.byKey(const Key('confirmation-price-error')), findsOneWidget);
@@ -561,7 +568,7 @@ void main() {
   testWidgets('newly imported command code blocks confirmation recheck', (
     tester,
   ) async {
-    await openWorkspace(tester);
+    await openWorkspace(tester, monthSessions: 2);
     await scan(tester, student.code);
     await confirmShortcut(tester, LogicalKeyboardKey.keyN);
     await selectAttendanceMonth(
@@ -629,7 +636,7 @@ void main() {
   testWidgets(
     'workspace month price refresh is shown before approving any purchase',
     (tester) async {
-      await openWorkspace(tester);
+      await openWorkspace(tester, monthSessions: 2);
       await scan(tester, student.code);
       await selectAttendanceMonth(tester, 'شهر حصتين · 2 حصص');
       await tester.runAsync(
@@ -657,9 +664,9 @@ void main() {
   );
 
   testWidgets(
-    'changing staff cannot be legitimized by selecting another quantity',
+    'selecting the month again cannot approve a quote after the cashier changes',
     (tester) async {
-      await openWorkspace(tester);
+      await openWorkspace(tester, monthSessions: 2);
       await scan(tester, student.code);
       await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await tester.runAsync(() async {
@@ -695,7 +702,7 @@ void main() {
   testWidgets(
     'price change cannot refresh an approved month quote silently on Enter',
     (tester) async {
-      await openWorkspace(tester);
+      await openWorkspace(tester, monthSessions: 2);
       await scan(tester, student.code);
       await confirmShortcut(tester, LogicalKeyboardKey.keyN);
       await selectAttendanceMonth(

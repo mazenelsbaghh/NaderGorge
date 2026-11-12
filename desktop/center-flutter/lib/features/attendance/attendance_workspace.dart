@@ -97,9 +97,16 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     return plans.where((plan) => monthIds.contains(plan.id)).toList();
   }
 
+  List<GroupMonthPlan> _attendanceMonthPlans(StudyGroup? selectedGroup) {
+    final current = session;
+    if (selectedGroup == null) return const [];
+    return current == null
+        ? _visibleMonthPlans(selectedGroup)
+        : store.attendanceMonthPlansFor(selectedGroup, current);
+  }
+
   GroupMonthPlan? _selectedMonth(StudyGroup? selectedGroup) {
-    if (selectedGroup == null) return null;
-    final plans = _visibleMonthPlans(selectedGroup);
+    final plans = _attendanceMonthPlans(selectedGroup);
     if (plans.isEmpty) return null;
     return plans.firstWhere(
       (plan) => plan.id == (_monthPlanId ?? _studyMonthId),
@@ -193,7 +200,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
   void _chooseMonth(String id, {bool fromMenu = false}) {
     if (!_packageContextAvailable ||
         (!fromMenu && ModalRoute.of(context)?.isCurrent != true) ||
-        !_visibleMonthPlans(
+        !_attendanceMonthPlans(
           _manualMakeupSource ?? group,
         ).any((plan) => plan.id == id)) {
       return;
@@ -1928,7 +1935,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
             scannerBlocked: blocked,
             studentCodes: () => store.students.expand(studentIdentifiers),
             plans: List.unmodifiable(
-              _visibleMonthPlans(_manualMakeupSource ?? group),
+              _attendanceMonthPlans(_manualMakeupSource ?? group),
             ),
             previewForPlan: (plan) {
               final changed = EntryRequest(
@@ -4773,7 +4780,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
   }
 
   Widget _packageQuantity() {
-    final plans = _visibleMonthPlans(_manualMakeupSource ?? group);
+    final plans = _attendanceMonthPlans(_manualMakeupSource ?? group);
     return DropdownButtonFormField<String>(
       key: ValueKey('month-plan-${_monthPlan?.id}'),
       initialValue: _monthPlan?.id,

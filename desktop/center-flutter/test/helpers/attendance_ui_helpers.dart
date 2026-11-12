@@ -28,6 +28,15 @@ Future<Map<int, String>> seedAttendanceMonths(
   return ids;
 }
 
+Future<void> setAttendanceTestMonth(
+  CenterStore store,
+  LessonSession session,
+  String monthId,
+) {
+  final month = store.studyMonths.firstWhere((month) => month.id == monthId);
+  return store.saveSession(session.copyWith(monthNumber: month.number));
+}
+
 /// Resolves the student through the public lookup mode without recording entry.
 Future<void> previewAttendanceStudent(WidgetTester tester, String code) async {
   await tester.ensureVisible(find.text('بحث عن طالب'));

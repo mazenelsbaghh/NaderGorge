@@ -25,7 +25,11 @@ SOURCE_PREFIXES = ("desktop/center-flutter/", "desktop/center-lan/", "exam-room/
 sys.path.insert(0, str(ROOT / "deploy/production/scripts"))
 from source_manifest import sensitive_path_reason, secret_content_reason_bytes
 from release_images import committed_source_entries
-from windows_package_assets import HISTORICAL_PRIVATE_ASSETS, PRIVATE_INSTALLER_ASSETS, GRADE_REPAIR_ASSET, ATTENDANCE_REPAIR_ASSET, JABER_ATTENDANCE_REPAIR_ASSET, SHOBRA_ATTENDANCE_REPAIR_ASSET, HARAM_ATTENDANCE_REPAIR_ASSET
+from windows_package_assets import (
+    AQSA_COVERAGE_REPAIR_ASSET, ATTENDANCE_REPAIR_ASSET, GRADE_REPAIR_ASSET,
+    HARAM_ATTENDANCE_REPAIR_ASSET, HISTORICAL_PRIVATE_ASSETS, JABER_ATTENDANCE_REPAIR_ASSET,
+    PRIVATE_INSTALLER_ASSETS, SHOBRA_ATTENDANCE_REPAIR_ASSET,
+)
 
 GENERATED_PARTS = {"build", "dist", "node_modules", ".dart_tool", "__pycache__", ".pytest_cache", "obj", "bin", "ephemeral"}
 LOCAL_ONLY_SOURCES = {"desktop/center-flutter/scripts/recover-windows-exam-setup.ps1"}
@@ -269,10 +273,12 @@ def private_inputs(baseline, overlay=None):
     jaber = verified_attendance_review(review.get("jaberAttendanceRepair"), JABER_ATTENDANCE_REPAIR_ASSET, inputs)
     shobra = verified_attendance_review(review.get("shobraAttendanceRepair"), SHOBRA_ATTENDANCE_REPAIR_ASSET, inputs)
     haram = verified_attendance_review(review.get("haramAttendanceRepair"), HARAM_ATTENDANCE_REPAIR_ASSET, inputs)
+    aqsa = verified_attendance_review(review.get("aqsaCoverageRepair"), AQSA_COVERAGE_REPAIR_ASSET, inputs)
     inputs.update({"baselineSha256": historical["sha256"], "reviewManifestSha256": manifest["reviewManifestSha256"],
                    "sourceBackupSha256": review["sourceBackupSha256"], "repairSha256": review["repairSha256"],
                    "attendanceRepair": attendance, "jaberAttendanceRepair": jaber,
-                   "shobraAttendanceRepair": shobra, "haramAttendanceRepair": haram})
+                   "shobraAttendanceRepair": shobra, "haramAttendanceRepair": haram,
+                   "aqsaCoverageRepair": aqsa})
     return inputs
 
 
