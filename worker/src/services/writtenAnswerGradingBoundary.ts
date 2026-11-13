@@ -24,8 +24,11 @@ export function gradeRequestOnly(answerText: string) {
 export function hasWrittenAnswerEvidence(answer: string, evidence: string): boolean {
   const normalize = (text: string) => text.normalize('NFC').replace(/\s+/gu, ' ').trim();
   const excerpt = normalize(evidence);
-  const normalizedRequest = normalizeGradingRequest(excerpt);
-  return !!excerpt && normalize(answer).includes(excerpt)
-    && !scoreRequest.test(normalizedRequest) && !englishScoreRequest.test(normalizedRequest)
-    && !unsupportedGradeClaim.test(normalizedRequest);
+  return normalize(answer).includes(excerpt) && isWrittenAnswerEvidence(excerpt);
+}
+
+export function isWrittenAnswerEvidence(text: string): boolean {
+  const normalized = normalizeGradingRequest(text);
+  return /[\p{L}\p{N}]/u.test(normalized) && !scoreRequest.test(normalized)
+    && !englishScoreRequest.test(normalized) && !unsupportedGradeClaim.test(normalized);
 }
