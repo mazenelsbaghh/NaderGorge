@@ -53,11 +53,7 @@ abstract final class CenterWhatsAppReports {
       for (final entry in store.academicAttendanceForSession(session.id))
         entry.studentId: entry,
     };
-    final whatsappAttendance = WhatsAppAttendance(store);
-    final messageStatuses = {
-      for (final entry in attendance.values)
-        entry.studentId: whatsappAttendance.statusFor(entry, session),
-    };
+    final makeups = AttendanceMakeups(store, store.attendances);
     final academics = store.academicRecordsForSession(session.id);
     final historicalIds = {
       ...attendance.keys,
@@ -96,6 +92,14 @@ abstract final class CenterWhatsAppReports {
         ? 'الشهر ${session.monthNumber}'
         : store.studyMonthForLesson(session.preparedLessonId!)?.name ??
               'الشهر ${session.monthNumber}';
+    final messageStatuses = {
+      for (final student in roster)
+        student.id: makeups.statusFor(
+          student.id,
+          session,
+          attendance[student.id],
+        ),
+    };
     final messages = roster.map((student) {
       final examRecord = exams[student.id];
       final presence = attendance[student.id]?.status;
@@ -154,7 +158,7 @@ abstract final class CenterWhatsAppReports {
       summary: {
         'الطلاب': '${messages.length}',
         'حاضر ومعوّض':
-            '${messageStatuses.values.where((status) => status != AttendanceStatus.absent).length}',
+            '${messageStatuses.values.where((status) => status == AttendanceStatus.present || status == AttendanceStatus.makeup).length}',
         'درجات مرصودة':
             '${messages.where((row) => row['score'] != null).length}',
       },

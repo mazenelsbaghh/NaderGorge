@@ -5,12 +5,25 @@ import 'record_cancellation_dialog.dart';
 import '../management/student_profile_page.dart';
 import 'online_payment_allocation_action.dart';
 import 'student_debt_dialog.dart';
+import 'package:massar_center/application/whatsapp_attendance.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/application/center_reports.dart';
 import 'package:massar_center/domain/models.dart';
 import 'package:massar_center/domain/discount_calculation.dart';
 import 'package:massar_center/shared/formatters.dart';
 import 'package:massar_center/shared/theme.dart';
+
+typedef _LessonHistoryRow = ({
+  String sessionId,
+  AttendanceRecord? record,
+  LessonSession? makeup,
+});
+
+extension on _LessonHistoryRow {
+  bool get isAbsent =>
+      makeup == null &&
+      (record == null || record!.status == AttendanceStatus.absent);
+}
 
 /// All recent records remain visible together while the cashier receives a student.
 class StudentHistoryPanel extends StatelessWidget {
@@ -97,20 +110,30 @@ class StudentHistoryPanel extends StatelessWidget {
     return 'شهر ${session?.monthNumber ?? '—'} · حصة ${session?.number ?? '—'}';
   }
 
-  List<({String sessionId, AttendanceRecord? record})> _lessonHistory(
-    StudentHistoryRecords history,
-  ) {
+  List<_LessonHistoryRow> _lessonHistory(StudentHistoryRecords history) {
+    final makeups = AttendanceMakeups(store, history.attendances);
+    _LessonHistoryRow rowFor(String sessionId, AttendanceRecord? record) {
+      final session = _session(sessionId);
+      return (
+        sessionId: sessionId,
+        record: record,
+        makeup: session == null
+            ? null
+            : makeups.coveringSessionFor(student.id, session, record),
+      );
+    }
+
     final selected = store.studentById(student.id) ?? student;
     final recorded = history.allAttendances.map((row) => row.sessionId).toSet();
-    final rows = <({String sessionId, AttendanceRecord? record})>[
+    final rows = <_LessonHistoryRow>[
       for (final record in history.attendances)
-        (sessionId: record.sessionId, record: record),
+        rowFor(record.sessionId, record),
       if (!selected.isSuspended)
         for (final session in store.sessions)
           if (session.status == SessionStatus.closed &&
               !recorded.contains(session.id) &&
               CenterReports.wasEnrolledForSession(store, selected, session))
-            (sessionId: session.id, record: null),
+            rowFor(session.id, null),
     ];
     rows.sort((a, b) {
       final first = _session(a.sessionId), second = _session(b.sessionId);
@@ -142,6 +165,15 @@ class StudentHistoryPanel extends StatelessWidget {
     return record.paymentPending ? '$label — غير مدفوع' : label;
   }
 
+  String _historyAttendanceLabel(
+    AttendanceRecord? record,
+    LessonSession? coveringSession,
+  ) => coveringSession != null
+      ? 'تم التعويض'
+      : record == null
+      ? 'غائب'
+      : _attendanceLabel(record);
+
   String _historicalEntryLabel(AttendanceRecord record) {
     if (record.importSource.isNotEmpty) {
       return '${_attendanceLabel(record)} · مستورد؛ الدفع غير موثق';
@@ -161,9 +193,6 @@ class StudentHistoryPanel extends StatelessWidget {
   String _makeupLabel(AttendanceRecord record, _HistoryLinks links) {
     if (record.makeupSourceGroupId != null) {
       return 'من ${store.groupLabel(record.makeupSourceGroupId!)}';
-    }
-    if (links.madeUpAttendanceIds.contains(record.id)) {
-      return 'تم التعويض';
     }
     if (record.originalAttendanceId != null) {
       final original = links.activeAttendanceById[record.originalAttendanceId];
@@ -779,9 +808,6 @@ class StudentHistoryPanel extends StatelessWidget {
     final reviewed = homeworkRecords
         .where((record) => record.homework != HomeworkStatus.notReviewed)
         .toList();
-    final presence = attendance
-        .where((record) => record.status != AttendanceStatus.absent)
-        .length;
     final lastScores = scored
         .where((record) => record.score != null)
         .take(3)
@@ -789,8 +815,8 @@ class StudentHistoryPanel extends StatelessWidget {
         .reversed
         .map(_scoreLabel)
         .join('، ');
-    final lessons = _lessonHistory(history);
-    final attendanceRows = lessons;
+    final attendanceRows = _lessonHistory(history);
+    final presence = attendanceRows.where((row) => !row.isAbsent).length;
     final attendancePayments = store.canCollect
         ? attendanceRows
               .map(
@@ -834,23 +860,26 @@ class StudentHistoryPanel extends StatelessWidget {
                 : record.recordedAtKnown
                 ? _paymentTime(record.recordedAt)
                 : 'وقت الحضور غير موثق',
-          record == null ? 'غائب' : _attendanceLabel(record),
+          _historyAttendanceLabel(record, row.makeup),
           if (store.canCollect) ...[
             payment?.dueLabel ?? '—',
             payment?.collectedLabel ?? '—',
             payment?.status ?? '—',
             payment?.account ?? '—',
           ],
-          if (expanded) record == null ? '—' : _makeupLabel(record, links),
+          if (expanded)
+            row.makeup != null
+                ? 'في ${_sessionLabel(row.makeup!.id)}'
+                : record == null
+                ? '—'
+                : _makeupLabel(record, links),
         ];
       }).toList(),
       'سجل الحضور يظهر بعد تسجيل أول حصة أو إغلاقها.',
       cell: (row, column) {
         final entry = attendanceRows[row];
         final record = entry.record;
-        final absent =
-            record == null || record.status == AttendanceStatus.absent;
-        if (column == 0 && absent) {
+        if (column == 0 && entry.isAbsent) {
           return Tooltip(
             key: ValueKey('history-absence-lesson-${entry.sessionId}'),
             message: record == null
@@ -880,8 +909,10 @@ class StudentHistoryPanel extends StatelessWidget {
         if (column == attendanceColumn) {
           return _stateCell(
             context,
-            record == null ? 'غائب' : _attendanceLabel(record),
-            good: record?.status == AttendanceStatus.present,
+            _historyAttendanceLabel(record, entry.makeup),
+            good:
+                entry.makeup != null ||
+                record?.status == AttendanceStatus.present,
           );
         }
         return null;
@@ -1003,7 +1034,7 @@ class StudentHistoryPanel extends StatelessWidget {
                   _summaryItem(
                     Icons.people_outline,
                     'الحضور',
-                    '$presence من ${lessons.length}',
+                    '$presence من ${attendanceRows.length}',
                   ),
                   _summaryItem(
                     Icons.description_outlined,
@@ -1441,10 +1472,6 @@ class _HistoryLinks {
       allAttendanceById = {
         for (final record in history.allAttendances) record.id: record,
       },
-      madeUpAttendanceIds = {
-        for (final record in history.attendances)
-          if (record.originalAttendanceId != null) record.originalAttendanceId!,
-      },
       centerFeeSessionIds = {
         for (final fee in history.centerFees) fee.sessionId,
       },
@@ -1470,7 +1497,6 @@ class _HistoryLinks {
   }
 
   final Map<String, AttendanceRecord> activeAttendanceById, allAttendanceById;
-  final Set<String> madeUpAttendanceIds;
   final Set<String> centerFeeSessionIds;
   final Map<String, PaymentRecord> paymentsById, activePaymentsById;
   final CenterStore store;

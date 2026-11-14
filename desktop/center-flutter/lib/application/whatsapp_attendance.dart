@@ -1,41 +1,48 @@
 import '../domain/models.dart';
 import 'center_store.dart';
 
-/// Resolves attendance for messages while leaving the original register intact.
-class WhatsAppAttendance {
-  WhatsAppAttendance(CenterStore store) {
-    for (final record in store.attendances) {
+/// Resolves active makeup attendance without changing the original register.
+class AttendanceMakeups {
+  AttendanceMakeups(CenterStore store, Iterable<AttendanceRecord> attendance) {
+    for (final record in attendance) {
       if (record.status != AttendanceStatus.makeup) continue;
+      final target = store.sessionById(record.sessionId)!;
       final originalId = record.originalAttendanceId;
       if (originalId != null) {
-        _originalIds.add(originalId);
-        continue;
-      }
-      // A paid visit can cover the original group's copy of the same lesson.
-      // A lesson number alone cannot identify that lesson across study months.
-      final sourceGroupId = record.makeupSourceGroupId;
-      final lessonId = store.sessionById(record.sessionId)?.preparedLessonId;
-      if (sourceGroupId != null && lessonId != null) {
-        _sharedLessons.add((record.studentId, sourceGroupId, lessonId));
+        _byOriginalId[originalId] = target;
+      } else if (record.makeupSourceGroupId case final String sourceGroupId) {
+        _bySourceLesson[_lessonKey(record.studentId, sourceGroupId, target)] =
+            target;
       }
     }
   }
 
-  final _originalIds = <String>{};
-  final _sharedLessons = <(String, String, String)>{};
+  final _byOriginalId = <String, LessonSession>{};
+  final _bySourceLesson = <(String, String, int, int), LessonSession>{};
 
-  AttendanceStatus statusFor(AttendanceRecord record, LessonSession session) {
-    if (record.status != AttendanceStatus.absent) return record.status;
-    final lessonId = session.preparedLessonId;
-    if (_originalIds.contains(record.id) ||
-        (lessonId != null &&
-            _sharedLessons.contains((
-              record.studentId,
-              session.groupId,
-              lessonId,
-            )))) {
-      return AttendanceStatus.makeup;
-    }
-    return AttendanceStatus.absent;
+  // A group's month and lesson number identify one session, including
+  // legacy sessions created without a prepared lesson ID.
+  static (String, String, int, int) _lessonKey(
+    String studentId,
+    String groupId,
+    LessonSession session,
+  ) => (studentId, groupId, session.monthNumber, session.number);
+
+  AttendanceStatus? statusFor(
+    String studentId,
+    LessonSession session,
+    AttendanceRecord? record,
+  ) => coveringSessionFor(studentId, session, record) == null
+      ? record?.status
+      : AttendanceStatus.makeup;
+
+  LessonSession? coveringSessionFor(
+    String studentId,
+    LessonSession session,
+    AttendanceRecord? record,
+  ) {
+    if (record != null && record.status != AttendanceStatus.absent) return null;
+    return _byOriginalId[record?.id] ??
+        _bySourceLesson[_lessonKey(studentId, session.groupId, session)];
   }
 }

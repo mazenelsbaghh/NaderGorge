@@ -228,10 +228,7 @@ void main() {
       expect(exams.rows, hasLength(3));
       expect(attendance.rows, hasLength(3));
       expect(studentRow(exams, mina.code)['حالة الامتحان'], 'غائب عن الامتحان');
-      expect(
-        studentRow(attendance, absent.code)['الحالة'],
-        'غائب — تم التعويض',
-      );
+      expect(studentRow(attendance, absent.code)['الحالة'], 'تم التعويض');
       for (final kind in [
         CenterReportKind.students,
         CenterReportKind.packages,
@@ -341,8 +338,9 @@ void main() {
       final roster = report(CenterReportKind.students);
       expect(roster.rows, hasLength(4));
       expect(studentRow(roster, inactive.code)['نسبة الحضور'], '—');
-      expect(studentRow(roster, absent.code)['معوّض'], 1);
-      expect(studentRow(roster, absent.code)['نسبة الحضور'], '50.00٪');
+      expect(studentRow(roster, absent.code)['غياب'], 0);
+      expect(studentRow(roster, absent.code)['معوّض'], 2);
+      expect(studentRow(roster, absent.code)['نسبة الحضور'], '100.00٪');
       final groupReport = report(CenterReportKind.groups);
       expect(groupReport.rows, hasLength(2));
       expect(groupReport.columns, isNot(contains('السعة')));
@@ -358,11 +356,8 @@ void main() {
       );
       expect(report(CenterReportKind.sessions).rows, hasLength(2));
       final attendance = report(CenterReportKind.attendance);
-      expect(attendance.summary, containsPair('معوّض', '1'));
-      expect(
-        attendance.rows.any((row) => row.contains('غائب — تم التعويض')),
-        isTrue,
-      );
+      expect(attendance.summary, containsPair('معوّض', '2'));
+      expect(attendance.rows.any((row) => row.contains('تم التعويض')), isTrue);
       final packages = report(CenterReportKind.packages);
       expect(packages.rows, hasLength(3));
       expect(packages.summary['الرصيد الحالي'], '10 حصة');

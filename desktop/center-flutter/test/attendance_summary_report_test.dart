@@ -175,12 +175,32 @@ void main() {
   );
 
   test(
-    'absence messages exclude active makeup for the same shared lesson only',
+    'a paid makeup after closing a legacy home lesson clears its absence from the CSV and messages',
     () async {
-      final source = await start(home, 1);
+      final at = DateTime.now().subtract(const Duration(hours: 2));
+      await store.saveSession(
+        LessonSession(
+          groupId: home.id,
+          monthNumber: month.number,
+          number: 1,
+          startsAt: at,
+          createdAt: at,
+        ),
+      );
+      final source = store.sessions.single;
       await store.closeSession(source.id);
+      await store.finalizeSession(sessionId: source.id, actualCash: 0);
+      final closingBefore = store.closings.single.toJson();
       final nextSource = await start(home, 2);
       await store.closeSession(nextSource.id);
+      final nextMonth = await store.saveStudyMonth(
+        StudyMonth(name: 'الشهر التالي', lessons: [PreparedLesson(number: 1)]),
+      );
+      final nextMonthSource = await store.startPreparedLesson(
+        groupId: home.id,
+        preparedLessonId: nextMonth.lessons.single.id,
+      );
+      await store.closeSession(nextMonthSource.id);
 
       Object? messageAttendance(LessonSession session) =>
           CenterWhatsAppReports.build(
@@ -190,7 +210,7 @@ void main() {
 
       expect(messageAttendance(source), 'غائب');
       final target = await start(visiting, 1);
-      await store.recordAttendance(
+      await store.collectAndAttend(
         EntryRequest(
           studentId: student.id,
           sessionId: target.id,
@@ -201,12 +221,25 @@ void main() {
 
       expect(messageAttendance(source), 'حاضر • تعويض');
       expect(messageAttendance(nextSource), 'غائب');
+      expect(messageAttendance(nextMonthSource), 'غائب');
+      final filter = CenterReportFilter(sessionId: source.id);
       final attendanceReport = CenterReports.build(
         store,
         CenterReportKind.attendance,
-        CenterReportFilter(sessionId: source.id),
+        filter,
       );
       expect(attendanceReport.whatsAppRecords.single['attendance'], 'معوّض');
+      expect(attendanceReport.summary['غياب'], '0');
+      final csv = await CenterReports.exportCsv(
+        store: store,
+        kind: CenterReportKind.attendance,
+        filter: filter,
+        destination: '${directory.path}/absence.csv',
+      );
+      final exported = await File(csv).readAsString();
+      expect(exported, contains('تم التعويض'));
+      expect(exported, isNot(contains('غائب')));
+      expect(store.closings.single.toJson(), closingBefore);
       expect(
         store.academicAttendanceForSession(source.id).single.status,
         AttendanceStatus.absent,

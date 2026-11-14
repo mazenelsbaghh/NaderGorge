@@ -195,6 +195,43 @@ void main() {
           before,
         );
         expect(tester.takeException(), isNull);
+        await tester.runAsync(() async {
+          final source = store.sessionById('session-1')!;
+          await store.saveSession(
+            LessonSession(
+              groupId: 'other-group',
+              monthNumber: source.monthNumber,
+              number: source.number,
+              startsAt: DateTime.now(),
+              createdAt: DateTime.now(),
+            ),
+          );
+          final target = store.sessions.singleWhere(
+            (session) =>
+                session.groupId == 'other-group' &&
+                session.number == source.number,
+          );
+          await store.collectAndAttend(
+            EntryRequest(
+              studentId: store.students.single.id,
+              sessionId: target.id,
+              mode: EntryMode.makeup,
+              makeupSourceGroupId: source.groupId,
+            ),
+          );
+        });
+        await tester.pumpAndSettle();
+        expect(find.text('تم التعويض'), findsOneWidget);
+        expect(find.text('غائب'), findsNWidgets(2));
+        expect(
+          find.byKey(const ValueKey('history-absence-lesson-session-1')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('cancel-attendance-attendance-0-1')),
+          findsNothing,
+        );
+
         // The panel keeps its original widget input while store membership changes.
         await tester.runAsync(
           () => store.saveStudent(
@@ -206,10 +243,7 @@ void main() {
           find.byKey(const ValueKey('history-absence-lesson-session-0')),
           findsNothing,
         );
-        expect(
-          find.byKey(const ValueKey('history-absence-lesson-session-1')),
-          findsOneWidget,
-        );
+        expect(find.text('تم التعويض'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },

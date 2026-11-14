@@ -509,6 +509,7 @@ class _ReportContext {
   late final Map<String, CatalogEntry> catalogs;
   late final Map<String, StaffUser> staff;
   late final List<AttendanceRecord> attendance;
+  late final _attendanceMakeups = AttendanceMakeups(store, attendance);
   late final List<PaymentRecord> payments;
   late final Set<String> activePaymentIds, activePackageIds, activeClosingIds;
   late final Map<String, SessionClosing> activeClosingsBySession;
@@ -661,10 +662,14 @@ class _ReportContext {
                         )),
         )
         .toList();
-    final records = _filteredAttendance;
-    final historyByStudent = <String, List<AttendanceRecord>>{};
-    for (final record in records) {
-      historyByStudent.putIfAbsent(record.studentId, () => []).add(record);
+    final statusesByStudent = <String, List<AttendanceStatus>>{};
+    for (final record in _filteredAttendance) {
+      final status = _attendanceMakeups.statusFor(
+        record.studentId,
+        sessions[record.sessionId]!,
+        record,
+      )!;
+      statusesByStudent.putIfAbsent(record.studentId, () => []).add(status);
     }
     return CenterReportData(
       title: 'الطلبة',
@@ -685,16 +690,15 @@ class _ReportContext {
         if (store.canManage || store.canCollect) 'سبب التوقف الحالي',
       ],
       rows: roster.map((student) {
-        final history =
-            historyByStudent[student.id] ?? const <AttendanceRecord>[];
+        final history = statusesByStudent[student.id] ?? const [];
         final present = history
-            .where((record) => record.status == AttendanceStatus.present)
+            .where((status) => status == AttendanceStatus.present)
             .length;
         final absent = history
-            .where((record) => record.status == AttendanceStatus.absent)
+            .where((status) => status == AttendanceStatus.absent)
             .length;
         final makeup = history
-            .where((record) => record.status == AttendanceStatus.makeup)
+            .where((status) => status == AttendanceStatus.makeup)
             .length;
         return <Object?>[
           student.code,
@@ -1081,17 +1085,22 @@ class _ReportContext {
           sessions[first.sessionId]!.startsAt,
         ),
       );
-    final madeUp = attendance
-        .where((record) => record.originalAttendanceId != null)
-        .map((record) => record.originalAttendanceId)
-        .toSet();
-    final present = records
-        .where((record) => record.status == AttendanceStatus.present)
-        .length;
-    final makeup = records
-        .where((record) => record.status == AttendanceStatus.makeup)
-        .length;
-    final whatsappAttendance = WhatsAppAttendance(store);
+    final covered = {
+      for (final record in records)
+        record.id: _attendanceMakeups.coveringSessionFor(
+          record.studentId,
+          sessions[record.sessionId]!,
+          record,
+        ),
+    };
+    AttendanceStatus statusFor(AttendanceRecord record) =>
+        covered[record.id] == null ? record.status : AttendanceStatus.makeup;
+    final counts = <AttendanceStatus, int>{};
+    for (final record in records) {
+      counts.update(statusFor(record), (count) => count + 1, ifAbsent: () => 1);
+    }
+    final present = counts[AttendanceStatus.present] ?? 0;
+    final makeup = counts[AttendanceStatus.makeup] ?? 0;
     return CenterReportData(
       title: 'الحضور والغياب',
       whatsAppRecords: records
@@ -1099,10 +1108,7 @@ class _ReportContext {
             (record) => _messageRecord(
               students[record.studentId]!,
               sessions[record.sessionId]!,
-              presence: whatsappAttendance.statusFor(
-                record,
-                sessions[record.sessionId]!,
-              ),
+              presence: statusFor(record),
             ),
           )
           .toList(),
@@ -1122,6 +1128,7 @@ class _ReportContext {
       rows: records.map((record) {
         final session = sessions[record.sessionId]!;
         final original = attendanceById[record.originalAttendanceId];
+        final coveringSession = covered[record.id];
         return <Object?>[
           students[record.studentId]!.code,
           students[record.studentId]!.name,
@@ -1130,20 +1137,13 @@ class _ReportContext {
           _groupLabel(session.groupId),
           session.number,
           _sessionTimeLabel(session),
-          record.packageMember
-              ? '${_attendanceStatus(record.status)} · باكدج'
-              : record.paymentPending
-              ? record.status == AttendanceStatus.makeup
-                    ? 'معوّض — غير مدفوع'
-                    : 'حاضر — غير مدفوع'
-              : switch (record.status) {
-                  AttendanceStatus.present => 'حاضر',
-                  AttendanceStatus.makeup => 'معوّض',
-                  AttendanceStatus.absent =>
-                    madeUp.contains(record.id) ? 'غائب — تم التعويض' : 'غائب',
-                },
+          coveringSession == null
+              ? _attendanceRecordLabel(record)
+              : 'تم التعويض',
           record.packageId == null ? 'لا' : 'نعم',
-          record.makeupSourceGroupId != null
+          coveringSession != null
+              ? 'في ${_sessionLabel(coveringSession.id)}'
+              : record.makeupSourceGroupId != null
               ? 'من ${_groupLabel(record.makeupSourceGroupId!)}'
               : original == null
               ? '—'
@@ -1155,14 +1155,20 @@ class _ReportContext {
       }).toList(),
       summary: {
         'حضور': '$present',
-        'غياب':
-            '${records.where((record) => record.status == AttendanceStatus.absent).length}',
+        'غياب': '${counts[AttendanceStatus.absent] ?? 0}',
         'معوّض': '$makeup',
         'نسبة الحضور': _percentage(present + makeup, records.length),
       },
       caption:
-          'الفترة حسب موعد الحصة. الحصص المستوردة بلا تاريخ تظهر عند إزالة فلتر الفترة. الحضور المستورد لا يثبت دفعًا. نسبة الحضور تشمل التعويض ومقامها عدد سجلات الحضور الفعلية.',
+          'الفترة حسب موعد الحصة. الحصص المستوردة بلا تاريخ تظهر عند إزالة فلتر الفترة. الحضور المستورد لا يثبت دفعًا. الحالة لكل مجموعة وحصة؛ التعويض يُبيّن في الحصة الأصلية وفي مكان الحضور الفعلي.',
     );
+  }
+
+  String _attendanceRecordLabel(AttendanceRecord record) {
+    final label = _attendanceStatus(record.status);
+    if (record.packageMember) return '$label · باكدج';
+    if (record.paymentPending) return '$label — غير مدفوع';
+    return label;
   }
 
   CenterReportData _attendanceCorrectionReport() {
