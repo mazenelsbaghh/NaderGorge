@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LoaderCircle, Mic, Send, Square, Trash2 } from 'lucide-react';
+import { createLiveSupportRecording } from '@/lib/live-support-recording';
 
 interface StaffVoiceRecorderProps {
   disabled?: boolean;
@@ -21,7 +22,7 @@ export function StaffVoiceRecorder({ disabled = false, uploading = false, onSend
   const [error, setError] = useState('');
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const micRequestPendingRef = useRef(false);
   const discardOnStopRef = useRef(false);
 
   useEffect(() => {
@@ -41,7 +42,11 @@ export function StaffVoiceRecorder({ disabled = false, uploading = false, onSend
   }, [recording]);
 
   useEffect(() => () => {
+    discardOnStopRef.current = true;
     stopTracks();
+  }, []);
+
+  useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
@@ -57,7 +62,7 @@ export function StaffVoiceRecorder({ disabled = false, uploading = false, onSend
   }
 
   async function startRecording() {
-    if (disabled || uploading || sending || recording) return;
+    if (disabled || uploading || sending || recorderRef.current || micRequestPendingRef.current) return;
     if (!supported) {
       setError('المتصفح الحالي لا يدعم تسجيل الصوت. استخدم Chrome أو Safari محدثًا.');
       return;
@@ -65,58 +70,70 @@ export function StaffVoiceRecorder({ disabled = false, uploading = false, onSend
 
     setError('');
     clearRecorded();
+    micRequestPendingRef.current = true;
+    discardOnStopRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      if (discardOnStopRef.current) {
+        stopTracks();
+        return;
+      }
       const mimeType = getSupportedMimeType();
       const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      chunksRef.current = [];
-      discardOnStopRef.current = false;
-      streamRef.current = stream;
+      const chunks: Blob[] = [];
       recorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
+        if (event.data.size > 0) chunks.push(event.data);
       };
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         stopTracks();
-        recorderRef.current = null;
-        if (discardOnStopRef.current) {
-          chunksRef.current = [];
-          return;
+        try {
+          if (discardOnStopRef.current) return;
+          if (chunks.length === 0) {
+            setError('لم يتم التقاط صوت. حاول التسجيل مرة أخرى.');
+            return;
+          }
+          const file = await createLiveSupportRecording(chunks);
+          if (discardOnStopRef.current) return;
+          if (!file) {
+            setError('تعذر تجهيز التسجيل الصوتي. حاول التسجيل مرة أخرى.');
+            return;
+          }
+          setRecordedFile(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        } catch {
+          if (!discardOnStopRef.current) setError('تعذر قراءة التسجيل الصوتي. حاول التسجيل مرة أخرى.');
+        } finally {
+          recorderRef.current = null;
+          setRecording(false);
         }
-        const type = recorder.mimeType || mimeType || 'audio/webm';
-        const subtype = type.split('/')[1]?.split(';')[0] || 'webm';
-        const extension = subtype === 'mp4' ? 'mp4' : subtype;
-        const blob = new Blob(chunksRef.current, { type });
-        chunksRef.current = [];
-        if (blob.size === 0) {
-          setError('لم يتم التقاط صوت. حاول التسجيل مرة أخرى.');
-          return;
-        }
-        const file = new File([blob], `live-support-${Date.now()}.${extension}`, { type });
-        setRecordedFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
       };
-      recorder.onerror = () => setError('حدث خطأ أثناء التسجيل. حاول مرة أخرى.');
-      recorder.start(250);
+      recorder.onerror = () => {
+        discardOnStopRef.current = true;
+        setError('حدث خطأ أثناء التسجيل. حاول مرة أخرى.');
+      };
+      recorder.start();
       setRecordingSeconds(0);
       setRecording(true);
     } catch {
+      recorderRef.current = null;
       stopTracks();
-      setError('اسمح للمتصفح باستخدام الميكروفون حتى تسجل رسالة صوتية.');
+      if (!discardOnStopRef.current) setError('تعذر بدء التسجيل. تحقق من إذن الميكروفون وحاول مرة أخرى.');
+    } finally {
+      micRequestPendingRef.current = false;
     }
   }
 
   function stopRecording() {
     if (!recorderRef.current || recorderRef.current.state === 'inactive') return;
     recorderRef.current.stop();
-    setRecording(false);
   }
 
   function cancelRecording() {
     discardOnStopRef.current = true;
     if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
     stopTracks();
-    setRecording(false);
     clearRecorded();
     setError('');
   }
