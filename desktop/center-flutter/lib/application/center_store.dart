@@ -21,6 +21,7 @@ import '../domain/center_exam_integration.dart';
 import '../domain/center_exam_monitor.dart';
 import '../domain/standalone_exam_results.dart';
 import 'session_finance.dart';
+import 'whatsapp_attendance.dart';
 import 'historical_academic_import.dart';
 import 'academic_import_command.dart';
 import '../shared/problem_reporting.dart';
@@ -586,6 +587,7 @@ class CenterStore extends ChangeNotifier {
   bool get canEditDiscount => currentUser != null;
   bool get canCollect => canManage || currentUser?.role == StaffRole.cashier;
   bool get canAssess => currentUser != null;
+  bool get canRecordHistoricalAttendance => currentUser != null;
   CenterCardSettings get cardSettings => _state.cardSettings;
   List<StudentCardPayment> get cardPayments =>
       List.unmodifiable(_state.cardPayments);
@@ -3200,6 +3202,10 @@ class CenterStore extends ChangeNotifier {
 
   void _correctionReason(String reason) {
     _require(canCollect);
+    _requireCorrectionReason(reason);
+  }
+
+  void _requireCorrectionReason(String reason) {
     if (reason.trim().isEmpty) {
       throw const CenterException(
         'اكتب سبب التصحيح أو الاسترداد لحفظه في السجل.',
@@ -3433,10 +3439,7 @@ class CenterStore extends ChangeNotifier {
     final old = _activeAttendance(attendanceId);
     final session = _session(old.sessionId);
     _requireFinancialOpen(session.id);
-    if (old.status != AttendanceStatus.absent ||
-        session.status != SessionStatus.closed) {
-      throw const CenterException('اختر غيابًا مسجلًا في حصة مغلقة.');
-    }
+    _requireClosedAbsence(old, session);
     if (_activeAttendances.any((e) => e.originalAttendanceId == old.id)) {
       throw const CenterException(
         'تم التعويض عن هذا الغياب؛ ألغِ دخول التعويض أولًا قبل تحويل الأصل إلى حضور.',
@@ -3469,11 +3472,75 @@ class CenterStore extends ChangeNotifier {
         ),
       );
     }
-    final replacement = old.copyWith(
+    _saveAbsenceCorrection(
+      old,
+      reason,
+      discountPercent: _student(old.studentId).discountPercent,
+    );
+  }, auditDescription: _correctionAudit);
+
+  Future<void> recordHistoricalAttendance({
+    required String attendanceId,
+    required String reason,
+  }) => _change('absence_present', 'تسجيل حضور في حصة قديمة', () async {
+    _require(canRecordHistoricalAttendance);
+    _requireCorrectionReason(reason);
+    final absence = _activeAttendance(attendanceId);
+    final session = _session(absence.sessionId);
+    _requireClosedAbsence(absence, session);
+    _requireActiveStudent(_student(absence.studentId));
+    final makeups = AttendanceMakeups(
+      sessionById,
+      _attendancesForStudent(absence.studentId),
+    );
+    if (makeups.coveringSessionFor(absence.studentId, session, absence) !=
+        null) {
+      throw const CenterException(
+        'الحصة معوّضة بالفعل. راجع تسجيل التعويض قبل تصحيح الحضور.',
+      );
+    }
+    _saveAbsenceCorrection(
+      absence,
+      reason,
+      paymentPending: _historicalAttendanceNeedsPayment(absence, session),
+    );
+  }, auditDescription: _correctionAudit);
+
+  void _requireClosedAbsence(AttendanceRecord absence, LessonSession session) {
+    if (absence.status != AttendanceStatus.absent ||
+        session.status != SessionStatus.closed) {
+      throw const CenterException('اختر غيابًا مسجلًا في حصة مغلقة.');
+    }
+  }
+
+  bool _historicalAttendanceNeedsPayment(
+    AttendanceRecord absence,
+    LessonSession session,
+  ) {
+    if (absence.centerFeeOnly) {
+      return centerFeeRemainingFor(absence.studentId, session.id) > 0;
+    }
+    return absence.packageId == null &&
+        !absence.packageMember &&
+        session.kind != SessionKind.free &&
+        !isCairoGroup(session.groupId) &&
+        _sessionPayment(absence.studentId, session.id) == null;
+  }
+
+  void _saveAbsenceCorrection(
+    AttendanceRecord absence,
+    String reason, {
+    num? discountPercent,
+    bool paymentPending = false,
+  }) {
+    final correctedAt = DateTime.now();
+    final replacement = absence.copyWith(
       id: _uuid.v4(),
       status: AttendanceStatus.present,
-      recordedAt: DateTime.now(),
-      fixedDiscountPercent: _student(old.studentId).discountPercent,
+      recordedAt: correctedAt,
+      recordedAtKnown: true,
+      fixedDiscountPercent: discountPercent,
+      paymentPending: paymentPending,
       importSource: '',
     );
     _state.attendances.add(replacement);
@@ -3481,17 +3548,18 @@ class CenterStore extends ChangeNotifier {
       CorrectionRecord(
         id: _uuid.v4(),
         action: CorrectionAction.absencePresent,
-        studentId: old.studentId,
-        sessionId: session.id,
-        attendanceId: old.id,
-        packageId: old.packageId,
+        studentId: absence.studentId,
+        sessionId: absence.sessionId,
+        attendanceId: absence.id,
+        packageId: absence.packageId,
         replacementAttendanceId: replacement.id,
         reason: reason.trim(),
         staffId: currentUser!.id,
-        createdAt: DateTime.now(),
+        createdAt: correctedAt,
       ),
     );
-  }, auditDescription: _correctionAudit);
+  }
+
   Future<void> correctPaymentMethod({
     required String paymentId,
     required String method,
@@ -4925,6 +4993,42 @@ bool _isPrepaidCoverageCorrection(
   return mapEquals(expected, replacement.toJson());
 }
 
+bool _keepsAbsenceAccount(
+  CorrectionRecord correction,
+  Map<String, AttendanceRecord> attendance,
+) =>
+    correction.action == CorrectionAction.absencePresent &&
+    correction.paymentId == null &&
+    attendance[correction.attendanceId]!.packageId == correction.packageId;
+
+bool _isAttendanceOnlyAbsenceCorrection(
+  CorrectionRecord correction,
+  Map<String, AttendanceRecord> attendance,
+) {
+  if (correction.action != CorrectionAction.absencePresent ||
+      correction.paymentId != null ||
+      correction.voidsPayment ||
+      correction.voidsPackage) {
+    return false;
+  }
+  final absence = attendance[correction.attendanceId];
+  final present = attendance[correction.replacementAttendanceId];
+  if (absence == null ||
+      present == null ||
+      correction.packageId != absence.packageId) {
+    return false;
+  }
+  final expected = absence.copyWith(
+    id: present.id,
+    status: AttendanceStatus.present,
+    recordedAt: correction.createdAt,
+    recordedAtKnown: true,
+    importSource: '',
+    paymentPending: present.paymentPending,
+  );
+  return mapEquals(expected.toJson(), present.toJson());
+}
+
 /// Validates both foreign keys and financial invariants before every disk commit
 /// and before accepting an imported backup. No partially valid snapshot is used.
 void validateState(CenterState state) {
@@ -5090,7 +5194,10 @@ void validateState(CenterState state) {
       'مبلغ الأونلاين يجب أن يرتبط بتحويل دفعة الشهر فقط.',
     );
     check(
-      e.reason.trim().isNotEmpty && collectors.contains(e.staffId),
+      e.reason.trim().isNotEmpty &&
+          (collectors.contains(e.staffId) ||
+              (staffIds.contains(e.staffId) &&
+                  _isAttendanceOnlyAbsenceCorrection(e, attendance))),
       'سبب التصحيح أو الموظف غير صالح.',
     );
     if (e.studentId != null) {
@@ -6220,6 +6327,10 @@ void validateState(CenterState state) {
     state.attendances,
     (record) => record.sessionId,
   );
+  late final correctionsBySession = _recordsBy(
+    state.corrections,
+    (record) => record.sessionId,
+  );
   final closingSessions = <String>{};
   for (final closing in state.closings) {
     final session = sessions[closing.sessionId];
@@ -6287,20 +6398,25 @@ void validateState(CenterState state) {
       refunds: refundsBySession[closing.sessionId] ?? const [],
     );
     SessionFinancialSummary? historical;
-    final laterSessionCorrections = state.corrections
-        .where(
-          (correction) =>
-              correction.sessionId == closing.sessionId &&
-              correction.createdAt.isAfter(closing.createdAt),
-        )
-        .toList();
-    // Coverage repairs change the live classification, never a saved cash closing.
-    final onlyCoverageChanged =
+    final laterSessionCorrections =
+        (correctionsBySession[closing.sessionId] ?? const <CorrectionRecord>[])
+            .where(
+              (correction) => correction.createdAt.isAfter(closing.createdAt),
+            )
+            .toList();
+    // Attendance and credit-only corrections can leave the saved cash closing in force.
+    final laterPayments = rawPaymentsBySession[closing.sessionId] ?? const [];
+    final laterRefunds = refundsBySession[closing.sessionId] ?? const [];
+    final reconcileAttendance =
         laterSessionCorrections.isNotEmpty &&
         laterSessionCorrections.every(
-          (correction) => _isPrepaidCoverageCorrection(correction, attendance),
-        );
-    if (reopenedClosings.contains(closing.id) || onlyCoverageChanged) {
+          (correction) =>
+              _isPrepaidCoverageCorrection(correction, attendance) ||
+              _keepsAbsenceAccount(correction, attendance),
+        ) &&
+        laterPayments.every((e) => !e.createdAt.isAfter(closing.createdAt)) &&
+        laterRefunds.every((e) => !e.createdAt.isAfter(closing.createdAt));
+    if (reopenedClosings.contains(closing.id) || reconcileAttendance) {
       final priorCorrections = state.corrections
           .where((e) => !e.createdAt.isAfter(closing.createdAt))
           .toList();

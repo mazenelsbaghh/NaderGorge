@@ -1,12 +1,14 @@
 import '../domain/models.dart';
-import 'center_store.dart';
 
 /// Resolves active makeup attendance without changing the original register.
 class AttendanceMakeups {
-  AttendanceMakeups(CenterStore store, Iterable<AttendanceRecord> attendance) {
+  AttendanceMakeups(
+    LessonSession? Function(String) sessionById,
+    Iterable<AttendanceRecord> attendance,
+  ) {
     for (final record in attendance) {
       if (record.status != AttendanceStatus.makeup) continue;
-      final target = store.sessionById(record.sessionId)!;
+      final target = sessionById(record.sessionId)!;
       final originalId = record.originalAttendanceId;
       if (originalId != null) {
         _byOriginalId[originalId] = target;

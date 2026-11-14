@@ -270,6 +270,78 @@ void main() {
   }
 
   testWidgets(
+    'assistant prepares the exact old class by student code from the closed-class warning',
+    (tester) async {
+      final newer = await addSession(tester, 2);
+      await tester.runAsync(() async {
+        await store.finalizeSession(sessionId: closed.id, actualCash: 0);
+        await store.closeSession(newer.id);
+        await store.saveStaff(
+          name: 'مساعد',
+          password: 'assistant-password',
+          role: StaffRole.assistant,
+        );
+        await store.signIn('مساعد', 'assistant-password');
+      });
+      await open(tester);
+      await selectClosed(tester);
+      expect(find.byKey(const Key('closed-session-reopen')), findsNothing);
+      final action = find.byKey(
+        const Key('closed-session-historical-attendance'),
+      );
+      await tester.ensureVisible(action);
+      await tester.runAsync(() => tester.tap(action));
+      await tester.runAsync(() => tester.pumpAndSettle());
+      expect(
+        find.byKey(const Key('historical-attendance-code')),
+        findsOneWidget,
+      );
+      final code = find.byKey(const Key('historical-attendance-code'));
+      expect(tester.widget<TextField>(code).enabled, isTrue);
+      await tester.runAsync(() async {
+        await tester.enterText(code, student.code);
+        await tester.pump();
+        expect(tester.widget<TextField>(code).controller!.text, student.code);
+        expect(tester.widget<TextField>(code).focusNode!.hasFocus, isTrue);
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
+      });
+      expect(find.textContaining(student.name), findsOneWidget);
+      final save = find.text('حفظ الحضور');
+      await tester.tap(save);
+      await pumpModalFrame(tester);
+      expect(find.text('اكتب سبب التصحيح.'), findsOneWidget);
+      expect(
+        store.academicAttendanceForSession(closed.id).single.status,
+        AttendanceStatus.absent,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'سبب التصحيح'),
+        'اتراجع دفتر الحضور',
+      );
+      await mutateThroughUi(tester, () => tester.tap(save));
+
+      expect(
+        find.byKey(const Key('historical-attendance-saved')),
+        findsOneWidget,
+      );
+      expect(tester.widget<TextField>(code).controller!.text, isEmpty);
+      expect(tester.widget<TextField>(code).focusNode!.hasFocus, isTrue);
+      expect(
+        store.academicAttendanceForSession(closed.id).single.status,
+        AttendanceStatus.present,
+      );
+      expect(
+        store.academicAttendanceForSession(newer.id).single.status,
+        AttendanceStatus.absent,
+      );
+      expect(store.corrections.single.staffId, store.currentUser!.id);
+      expect(store.payments, isEmpty);
+      expect(store.closings.single.summary.absentCount, 1);
+    },
+  );
+
+  testWidgets(
     'closed receiving warns once; Enter Esc L N and scanner repeats cannot write',
     (tester) async {
       await addSession(tester, 2);

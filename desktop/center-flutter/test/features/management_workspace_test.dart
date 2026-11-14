@@ -147,6 +147,8 @@ void main() {
           );
           expect(store.groups.last.name, 'مجموعة الموظف');
           expect(store.audit.last.staffId, store.currentUser!.id);
+          await navigateManagementPage(tester, 'تحضير حصة قديمة');
+          expect(find.text('مفيش حصص مغلقة حاليًا.'), findsOneWidget);
           expect(tester.takeException(), isNull);
         });
       },

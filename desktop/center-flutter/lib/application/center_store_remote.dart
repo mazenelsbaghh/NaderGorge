@@ -1055,6 +1055,15 @@ class _RemoteCenterStore extends CenterStore {
     'method': method,
   });
   @override
+  Future<void> recordHistoricalAttendance({
+    required String attendanceId,
+    required String reason,
+  }) => _send('recordHistoricalAttendance', {
+    'attendanceId': attendanceId,
+    'reason': reason,
+  });
+
+  @override
   Future<void> editPayment({
     required PaymentRecord reviewed,
     required int paidAmount,

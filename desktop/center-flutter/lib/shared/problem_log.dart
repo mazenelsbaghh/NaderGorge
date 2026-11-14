@@ -181,6 +181,7 @@ class ProblemLog {
     'lan.cancelAttendance',
     'lan.correctEntry',
     'lan.markAbsentPresent',
+    'lan.recordHistoricalAttendance',
     'lan.correctPaymentMethod',
     'lan.editPayment',
     'lan.refundPackage',

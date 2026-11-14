@@ -509,7 +509,10 @@ class _ReportContext {
   late final Map<String, CatalogEntry> catalogs;
   late final Map<String, StaffUser> staff;
   late final List<AttendanceRecord> attendance;
-  late final _attendanceMakeups = AttendanceMakeups(store, attendance);
+  late final _attendanceMakeups = AttendanceMakeups(
+    store.sessionById,
+    attendance,
+  );
   late final List<PaymentRecord> payments;
   late final Set<String> activePaymentIds, activePackageIds, activeClosingIds;
   late final Map<String, SessionClosing> activeClosingsBySession;

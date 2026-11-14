@@ -1732,6 +1732,25 @@ void main() {
   );
 
   test(
+    'assistant on the secondary corrects an old absence on the host without collecting',
+    () async {
+      await h.remote.closeSession(h.lesson.id);
+      await h.remote.finalizeSession(sessionId: h.lesson.id, actualCash: 0);
+      await h.remote.signIn('assistant', 'test-assistant-123');
+      final absence = h.remote.attendances.single;
+      await h.remote.recordHistoricalAttendance(
+        attendanceId: absence.id,
+        reason: 'حضور مؤكد من دفتر الحصة',
+      );
+      expect(h.remote.attendances.single.status, AttendanceStatus.present);
+      expect(h.host.attendances.single.status, AttendanceStatus.present);
+      expect(h.host.corrections.single.staffId, h.remote.currentUser!.id);
+      expect(h.host.payments, isEmpty);
+      expect(h.host.closings.single.summary.absentCount, 1);
+    },
+  );
+
+  test(
     'loopback bridge refuses missing secret and Go rejects unpaired requests',
     () async {
       final client = HttpClient();

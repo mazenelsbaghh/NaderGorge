@@ -9,6 +9,7 @@ import '../../application/center_reports.dart';
 import '../../shared/workspace_navigation.dart';
 import '../../shared/workspace_draft_guard.dart';
 
+import '../attendance/historical_attendance_page.dart';
 import 'academics_page.dart';
 import 'cairo_workspace.dart';
 import 'backup_page.dart';
@@ -122,10 +123,17 @@ class _ManagementWorkspaceState extends State<ManagementWorkspace> {
       (id: 'staff', label: 'الموظفون', icon: Icons.badge_outlined),
       (id: 'backup', label: 'النسخ والسجل', icon: Icons.backup_outlined),
     ],
+    if (widget.store.canRecordHistoricalAttendance)
+      (
+        id: 'historical-attendance',
+        label: 'تحضير حصة قديمة',
+        icon: Icons.history,
+      ),
   ];
 
   Widget _content() => switch (_page) {
     'cairo' => CairoWorkspace(store: widget.store),
+    'historical-attendance' => HistoricalAttendancePage(store: widget.store),
     'catalogs' => CatalogsPage(store: widget.store),
     'groups' => GroupsPage(store: widget.store),
     'students' => StudentsPage(store: widget.store),

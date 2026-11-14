@@ -532,6 +532,11 @@ extension CenterStoreLanHost on CenterStore {
           reason: a['reason'] as String,
           method: a['method'] as String,
         );
+      case 'recordHistoricalAttendance':
+        await recordHistoricalAttendance(
+          attendanceId: a['attendanceId'] as String,
+          reason: a['reason'] as String,
+        );
       case 'editPayment':
         await editPayment(
           reviewed: PaymentRecord.fromJson(

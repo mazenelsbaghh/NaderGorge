@@ -31,6 +31,7 @@ import 'entry_confirmation_dialog.dart';
 import 'paid_amount_dialog.dart';
 import 'student_debt_dialog.dart';
 import 'closed_session_dialog.dart';
+import 'historical_attendance_page.dart';
 import 'attendance_conflict_dialog.dart';
 import 'student_history_panel.dart';
 import 'exam_honor_roll_dialog.dart';
@@ -1235,20 +1236,29 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
             .toList()
           ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     try {
-      final choice = await showDialog<ClosedSessionChoice>(
+      final warning = DialogRoute<ClosedSessionChoice>(
         context: context,
         builder: (_) => ClosedSessionDialog(
           session: current,
           groupLabel: store.groupLabel(current.groupId),
           openSessions: openSessions,
           canReopen: store.canCollect,
+          canRecordHistoricalAttendance: store.canRecordHistoricalAttendance,
           hasFinancialClosing: store.closings.any(
             (item) => item.sessionId == current.id,
           ),
         ),
       );
+      final choice = await Navigator.of(
+        context,
+        rootNavigator: true,
+      ).push(warning);
       if (!mounted || choice == null) return;
-      if (choice.reopenCurrent) {
+      if (choice.historicalAttendance) {
+        await warning.completed;
+        if (!mounted) return;
+        await _showHistoricalAttendance(initialSessionId: current.id);
+      } else if (choice.reopenCurrent) {
         final reopened = await _run(
           () async {
             await store.reopenSession(current.id);
@@ -1299,6 +1309,21 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         WidgetsBinding.instance.scheduleFrame();
       }
     }
+  }
+
+  Future<void> _showHistoricalAttendance({String? initialSessionId}) async {
+    if (!store.canRecordHistoricalAttendance) return;
+    final route = MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('التحضير والتحصيل')),
+        body: HistoricalAttendancePage(
+          store: store,
+          initialSessionId: initialSessionId,
+        ),
+      ),
+    );
+    await Navigator.of(context).push(route);
+    await route.completed;
   }
 
   String get _enterHint {
@@ -3058,7 +3083,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
       builder: (context, constraints) {
         final compact =
             constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
-            1000;
+            1320;
         const brand = MassarLogo(height: 30);
         const title = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3077,6 +3102,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.people_outline, color: _palette.accent, size: 23),
               const SizedBox(width: 10),
@@ -3099,6 +3125,19 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           ),
         );
         final actions = [
+          if (store.canRecordHistoricalAttendance)
+            TextButton.icon(
+              key: const Key('open-historical-attendance'),
+              onPressed: _canUseToolbar
+                  ? () => _withHistoryModal(
+                      () => _showHistoricalAttendance(
+                        initialSessionId: session?.id,
+                      ),
+                    )
+                  : null,
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('تحضير حصة قديمة'),
+            ),
           if (store.canAssess)
             TextButton.icon(
               key: const Key('attendance-mobile-homework'),
@@ -3157,9 +3196,16 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
             brand,
             const SizedBox(width: 12),
             const Expanded(child: title),
-            counter,
-            const SizedBox(width: 16),
-            ...actions,
+            Flexible(
+              flex: 4,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [counter, ...actions],
+              ),
+            ),
           ],
         );
       },

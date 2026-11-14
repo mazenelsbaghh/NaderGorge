@@ -53,7 +53,7 @@ abstract final class CenterWhatsAppReports {
       for (final entry in store.academicAttendanceForSession(session.id))
         entry.studentId: entry,
     };
-    final makeups = AttendanceMakeups(store, store.attendances);
+    final makeups = AttendanceMakeups(store.sessionById, store.attendances);
     final academics = store.academicRecordsForSession(session.id);
     final historicalIds = {
       ...attendance.keys,

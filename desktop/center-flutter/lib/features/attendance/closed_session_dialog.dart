@@ -11,10 +11,12 @@ class ClosedSessionChoice {
     this.sessionId,
     this.lookupOnly = false,
     this.reopenCurrent = false,
+    this.historicalAttendance = false,
   });
   final String? sessionId;
   final bool lookupOnly;
   final bool reopenCurrent;
+  final bool historicalAttendance;
 }
 
 /// An explicit navigation choice. Dismissing this warning never registers entry.
@@ -25,12 +27,14 @@ class ClosedSessionDialog extends StatefulWidget {
     required this.groupLabel,
     required this.openSessions,
     required this.canReopen,
+    required this.canRecordHistoricalAttendance,
     required this.hasFinancialClosing,
   });
   final LessonSession session;
   final String groupLabel;
   final List<LessonSession> openSessions;
   final bool canReopen;
+  final bool canRecordHistoricalAttendance;
   final bool hasFinancialClosing;
 
   @override
@@ -125,7 +129,7 @@ class _ClosedSessionDialogState extends State<ClosedSessionDialog> {
               Text(
                 _confirmingReopen
                     ? 'الفتح وحده لا يسجل حضورًا أو دفعًا. ستبقى سجلات الحضور والدفع والباقات محفوظة.'
-                    : 'لا يمكن تسجيل حضور جديد أو دفع هذه الحصة بعد إغلاقها. يمكنك عرض السجل فقط، أو اختيار حصة مفتوحة من نفس المجموعة.${widget.canReopen ? ' ويمكنك إعادة فتح هذه الحصة بعد التأكيد.' : ''}',
+                    : 'للتحضير اختار حصة مفتوحة من نفس المجموعة.${widget.canRecordHistoricalAttendance ? ' لو طالب حضر الحصة دي وغيابه اتسجل، افتح «تحضير حصة قديمة».' : ''}${widget.canReopen ? ' ويمكنك إعادة فتح هذه الحصة بعد التأكيد.' : ''}',
               ),
               if (_confirmingReopen && widget.hasFinancialClosing) ...[
                 const SizedBox(height: 12),
@@ -193,6 +197,15 @@ class _ClosedSessionDialogState extends State<ClosedSessionDialog> {
                   : () =>
                         _finish(const ClosedSessionChoice(reopenCurrent: true)),
               child: const Text('تأكيد فتح الحصة'),
+            ),
+          if (!_confirmingReopen && widget.canRecordHistoricalAttendance)
+            FilledButton.icon(
+              key: const Key('closed-session-historical-attendance'),
+              onPressed: () => _finish(
+                const ClosedSessionChoice(historicalAttendance: true),
+              ),
+              icon: const Icon(Icons.person_add_outlined),
+              label: const Text('تحضير حصة قديمة'),
             ),
           if (!_confirmingReopen && widget.canReopen)
             FilledButton.icon(

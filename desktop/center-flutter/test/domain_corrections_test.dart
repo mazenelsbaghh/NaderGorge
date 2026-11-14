@@ -208,6 +208,98 @@ void main() {
     },
   );
   test(
+    'attendance can be corrected after a later class without changing the old closing or balances',
+    () async {
+      final prepaidStudent = await store.registerStudent(
+        Student(
+          name: 'طالب باقة',
+          groupIds: [group.id],
+          createdAt: student.createdAt,
+        ),
+      );
+      await store.renewPackage(
+        PackageRequest(
+          studentId: prepaidStudent.id,
+          groupId: group.id,
+          sessionId: session.id,
+        ),
+      );
+      await store.closeSession(session.id);
+      await store.finalizeSession(sessionId: session.id, actualCash: 40000);
+      final originalClosing = store.closings.single.toJson();
+      final oldAbsences = store.attendances.toList();
+      store.signOut();
+      await expectLater(
+        store.recordHistoricalAttendance(
+          attendanceId: oldAbsences.first.id,
+          reason: 'من غير تسجيل دخول',
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      await store.signIn('مدير', 'test-pass-123');
+      await store.saveSession(
+        LessonSession(
+          groupId: group.id,
+          number: 2,
+          startsAt: session.startsAt.add(const Duration(days: 7)),
+          createdAt: DateTime.now(),
+        ),
+      );
+      final laterSession = store.sessions.last;
+      await store.closeSession(laterSession.id);
+      await expectLater(
+        store.reopenSession(session.id),
+        throwsA(isA<CenterException>()),
+      );
+      final laterEntries = store.academicAttendanceForSession(laterSession.id);
+      final originalPayments = store.payments.toList();
+      final remaining = store.packages.single.remaining;
+
+      for (final absence in oldAbsences) {
+        await store.recordHistoricalAttendance(
+          attendanceId: absence.id,
+          reason: 'تم التأكد من دفتر الحضور',
+        );
+      }
+      final records = store.academicAttendanceForSession(session.id);
+      expect(
+        records.map((record) => record.status),
+        everyElement(AttendanceStatus.present),
+      );
+      expect(
+        records
+            .singleWhere((record) => record.studentId == student.id)
+            .paymentPending,
+        isTrue,
+      );
+      expect(
+        records
+            .singleWhere((record) => record.studentId == prepaidStudent.id)
+            .packageId,
+        store.packages.single.id,
+      );
+      expect(store.sessionById(session.id)!.status, SessionStatus.closed);
+      expect(store.payments, originalPayments);
+      expect(store.packages.single.remaining, remaining);
+      expect(store.academicAttendanceForSession(laterSession.id), laterEntries);
+      expect(store.closings.single.toJson(), originalClosing);
+      expect(
+        store.corrections.map((entry) => entry.reason),
+        everyElement('تم التأكد من دفتر الحضور'),
+      );
+
+      await expectLater(
+        store.recordHistoricalAttendance(
+          attendanceId: oldAbsences.first.id,
+          reason: 'إعادة إرسال',
+        ),
+        throwsA(isA<CenterException>()),
+      );
+      expect(store.corrections, hasLength(2));
+    },
+  );
+
+  test(
     'unpaid closed absence-present correction collects now and reversal records refund',
     () async {
       await store.closeSession(session.id);
@@ -342,6 +434,13 @@ void main() {
         ),
       );
       await enter(EntryMode.makeup, original: absence.id);
+      await expectLater(
+        store.recordHistoricalAttendance(
+          attendanceId: absence.id,
+          reason: 'كان حاضر',
+        ),
+        throwsA(isA<CenterException>()),
+      );
       await expectLater(
         store.markAbsentPresent(attendanceId: absence.id, reason: 'كان حاضر'),
         throwsA(isA<CenterException>()),

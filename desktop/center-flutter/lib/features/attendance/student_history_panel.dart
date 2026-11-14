@@ -111,7 +111,7 @@ class StudentHistoryPanel extends StatelessWidget {
   }
 
   List<_LessonHistoryRow> _lessonHistory(StudentHistoryRecords history) {
-    final makeups = AttendanceMakeups(store, history.attendances);
+    final makeups = AttendanceMakeups(store.sessionById, history.attendances);
     _LessonHistoryRow rowFor(String sessionId, AttendanceRecord? record) {
       final session = _session(sessionId);
       return (
