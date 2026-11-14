@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route, type WebSocketRoute } from '@playwright/test';
 import type { ActiveExamAttemptDto, ExamResultDto, ExamDraftDto } from '../../src/services/exam-service';
-import type { StartHomeworkAttemptDto, HomeworkResultDto } from '../../src/services/homework-service';
+import type { AnswerSubmissionDto, StartHomeworkAttemptDto, HomeworkResultDto } from '../../src/services/homework-service';
 
 const assessmentId = '97000000-0000-0000-0000-000000000001';
 const reply = (route: Route, data: unknown, status = 200) => route.fulfill({ status, json: { success: status === 200, data } });
@@ -367,6 +367,56 @@ for (const status of ['Graded', 'PendingReview'] as const) {
       await expect(page.getByRole('timer')).toContainText('10');
       expect(starts).toBe(initialStarts + 1);
     }
+  });
+}
+
+for (const scenario of [
+  { action: 'leave the question blank', audio: '/uploads/audio/old.webm', remainingSeconds: 600, writtenAnswer: '' },
+  { action: 'replace the recording with text', audio: 'https://assets.massar-academy.net/uploads/audio/old.webm', remainingSeconds: 600, writtenAnswer: 'إجابة مكتوبة' },
+  { action: 'submit when the timer has already expired', audio: 'blob:old-recording', remainingSeconds: 0, writtenAnswer: '' },
+]) {
+  test(`a student can ${scenario.action} with an old homework recording`, async ({ page }) => {
+    await studentSession(page);
+    await page.addInitScript(audio => {
+      localStorage.setItem('homework_answers_old-audio-attempt', JSON.stringify({
+        'written-question': 'إجابة محفوظة',
+        'audio-question': audio,
+      }));
+    }, scenario.audio);
+    const attempt: StartHomeworkAttemptDto = {
+      homeworkId: assessmentId, submissionId: 'old-audio-attempt', title: 'واجب بإجابة قديمة',
+      totalScore: 2, alreadyCompleted: false, startedAt: new Date().toISOString(),
+      durationMinutes: 10, remainingSeconds: scenario.remainingSeconds,
+      questions: [
+        { id: 'written-question', order: 1, questionType: 1, text: 'السؤال الأول', maxPoints: 1 },
+        { id: 'audio-question', order: 2, questionType: 1, text: 'السؤال الثاني', maxPoints: 1 },
+      ],
+    };
+    await page.route(`**/api/homework/${assessmentId}/start`, route => reply(route, attempt));
+    await page.route(`**/api/homework/${assessmentId}/submit*`, route => reply(route, true));
+    await page.route(`**/api/homework/${assessmentId}/result`, route => reply(route, {
+      homeworkId: assessmentId, submissionId: attempt.submissionId, title: attempt.title,
+      score: 1, totalScore: 2, isPassed: true, status: 'Graded',
+      totalQuestions: 2, correctAnswers: 1, wrongAnswers: 1, ungradedAnswers: 0, questionReviews: [],
+    } satisfies HomeworkResultDto));
+    const submission = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname === `/api/homework/${assessmentId}/submit`);
+
+    await page.goto(`/student/homework/${assessmentId}`);
+    await page.getByRole('button', { name: 'نعم، دخول الواجب', exact: true }).click();
+    if (scenario.remainingSeconds > 0) {
+      await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+      await page.getByRole('button', { name: 'التالي', exact: true }).click();
+      const answer = page.getByRole('textbox', { name: 'إجابتك المقالية' });
+      await expect(answer).toHaveValue('');
+      if (scenario.writtenAnswer) await answer.fill(scenario.writtenAnswer);
+      await page.getByRole('button', { name: 'تسليم الواجب', exact: true }).click();
+      if (!scenario.writtenAnswer) await page.getByRole('button', { name: 'نعم، سلّم الآن', exact: true }).click();
+    }
+
+    const expectedAnswers: AnswerSubmissionDto[] = [{ questionId: 'written-question', providedAnswer: 'إجابة محفوظة' }];
+    if (scenario.writtenAnswer) expectedAnswers.push({ questionId: 'audio-question', providedAnswer: scenario.writtenAnswer });
+    expect((await submission).postDataJSON()).toEqual(expectedAnswers);
+    await expect(page.getByRole('button', { name: 'تسليم الواجب', exact: true })).toHaveCount(0);
   });
 }
 

@@ -25,23 +25,35 @@ import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { QuestionImage } from '@/components/assessment/QuestionImage';
 
+function isLegacyAudioAnswer(answer: string) {
+  const reference = answer.trim().replaceAll('\\', '/');
+  if (/^(data:audio\/|blob:|\/uploads\/audio\/)/i.test(reference)) return true;
+  if (!/^[a-z][a-z\d+.-]*:/i.test(reference)) return false;
+  try {
+    return /^\/uploads\/audio\//i.test(decodeURIComponent(new URL(reference).pathname));
+  } catch {
+    return false;
+  }
+}
+
 // ─── Question Card ──────────────────────────────────────────────────────────────
 
 function HomeworkQuestionCard({
   q,
   qIndex,
   totalCount,
-  answers,
+  answer,
   onAnswer,
 }: {
   q: StartHomeworkQuestionDto;
   qIndex: number;
   totalCount: number;
-  answers: Record<string, string>;
+  answer: string;
   onAnswer: (qId: string, value: string) => void;
 }) {
   const essayAnswerId = useId();
-  const hasAnswer = !!answers[q.id];
+  const hasLegacyAudio = isLegacyAudioAnswer(answer);
+  const writtenAnswer = hasLegacyAudio ? '' : answer;
   const qType = q.questionType; // 0=MCQ, 1=Essay, 2=FindTheMistake
 
   return (
@@ -56,7 +68,7 @@ function HomeworkQuestionCard({
             <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">
               {q.maxPoints} {q.maxPoints === 1 ? 'نقطة' : 'نقاط'}
             </span>
-            {hasAnswer && (
+            {writtenAnswer.trim() && (
               <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
                 تمت الإجابة ✓
               </span>
@@ -77,7 +89,7 @@ function HomeworkQuestionCard({
         {qType === 2 && q.baseText ? (
           <FindTheMistakeInteract
             baseText={q.baseText}
-            selectedText={answers[q.id] || null}
+            selectedText={writtenAnswer || null}
             onSelect={(selectedText) => {
               onAnswer(q.id, selectedText || '');
             }}
@@ -88,37 +100,28 @@ function HomeworkQuestionCard({
             <label htmlFor={essayAnswerId} className="mb-2 block text-sm font-black text-foreground">
               إجابتك المقالية
             </label>
-            {answers[q.id]?.startsWith('/uploads/audio/') ? (
-              <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-primary">التسجيل المحفوظ للاستماع فقط؛ استبدله بإجابة مكتوبة</span>
-                  <button
-                    type="button"
-                    onClick={() => onAnswer(q.id, '')}
-                    className="rounded-xl bg-destructive/10 px-3 py-2 text-xs font-black text-destructive hover:bg-destructive/20 transition-colors"
-                  >
-                    اكتب إجابة بدلاً منه
-                  </button>
-                </div>
-                <audio src={resolveMediaUrl(answers[q.id])} controls className="h-9 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <textarea
-                  id={essayAnswerId}
-                  className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
-                  placeholder="اكتب إجابتك هنا..."
-                  value={answers[q.id] || ''}
-                  onChange={(e) => onAnswer(q.id, e.target.value)}
-                />
+            {hasLegacyAudio && (
+              <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <p id={`${essayAnswerId}-legacy-audio`} className="text-sm text-foreground">
+                  التسجيل القديم للاستماع فقط. اكتب إجابة بديلة أو اترك السؤال فارغًا وسلّم باقي الإجابات.
+                </p>
+                <audio src={resolveMediaUrl(answer)} controls preload="none" className="h-9 w-full" />
               </div>
             )}
+            <textarea
+              id={essayAnswerId}
+              aria-describedby={hasLegacyAudio ? `${essayAnswerId}-legacy-audio` : undefined}
+              className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
+              placeholder="اكتب إجابتك هنا..."
+              value={writtenAnswer}
+              onChange={(e) => onAnswer(q.id, e.target.value)}
+            />
           </div>
         ) : (
           /* MCQ - qType === 0 */
           <div className="space-y-3">
             {q.possibleAnswers?.map((opt, optIdx) => {
-              const isSelected = answers[q.id] === opt;
+              const isSelected = writtenAnswer === opt;
               return (
                 <label
                   key={optIdx}
@@ -186,6 +189,7 @@ export function HomeworkViewer({
     return () => setFocusMode(false);
   }, [setFocusMode]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [restoredDraftKey, setRestoredDraftKey] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<HomeworkResultDto | null>(null);
   const [error, setError] = useState('');
@@ -194,12 +198,20 @@ export function HomeworkViewer({
 
   // Confirm submit dialog
   const [showConfirm, setShowConfirm] = useState(false);
-  const [pendingMissing, setPendingMissing] = useState(0);
 
   const questions = attempt.questions;
   const answerStorageKey = `homework_answers_${attempt.submissionId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
   const totalQ = questions.length;
-  const answeredCount = Object.keys(answers).length;
+  const draftReady = restoredDraftKey === answerStorageKey;
+  const submissions: AnswerSubmissionDto[] = questions.flatMap(({ id }) => {
+    const answer = answers[id];
+    return typeof answer === 'string' && answer.trim() && !isLegacyAudioAnswer(answer)
+      ? [{ questionId: id, providedAnswer: answer }]
+      : [];
+  });
+  const answeredQuestionIds = new Set(submissions.map(({ questionId }) => questionId));
+  const answeredCount = submissions.length;
+  const pendingMissing = totalQ - answeredCount;
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
   const currentQ = questions[currentIdx];
 
@@ -209,13 +221,16 @@ export function HomeworkViewer({
     setAnswers({});
     setCurrentIdx(0);
     setResult(null);
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        setAnswers(JSON.parse(saved));
-      } catch {
-        // ignore
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const draft: unknown = JSON.parse(saved);
+        if (draft && typeof draft === 'object' && !Array.isArray(draft)) setAnswers(draft as Record<string, string>);
       }
+    } catch {
+      // A corrupt or inaccessible draft cannot be restored.
+    } finally {
+      setRestoredDraftKey(key);
     }
   }, [answerStorageKey]);
 
@@ -239,28 +254,14 @@ export function HomeworkViewer({
   };
 
   const handleSubmit = async (force = false) => {
-    const audioQuestionIndex = questions.findIndex((q) => answers[q.id]?.startsWith('/uploads/audio/'));
-    if (audioQuestionIndex >= 0) {
-      setError('تم إيقاف الإجابات الصوتية. استبدل التسجيل بإجابة مكتوبة قبل إرسال الواجب.');
-      setCurrentIdx(audioQuestionIndex);
-      setShowConfirm(false);
+    if (!draftReady || loading) return;
+    if (!force && pendingMissing > 0) {
+      setShowConfirm(true);
       return;
-    }
-    if (!force) {
-      const missing = totalQ - Object.keys(answers).length;
-      if (missing > 0) {
-        setPendingMissing(missing);
-        setShowConfirm(true);
-        return;
-      }
     }
     setLoading(true);
     setError('');
     setShowConfirm(false);
-
-    const submissions: AnswerSubmissionDto[] = Object.entries(answers).map(
-      ([questionId, providedAnswer]) => ({ questionId, providedAnswer })
-    );
 
     try {
       await homeworkService.submitHomework(homeworkId, submissions, attempt.revisionId);
@@ -301,7 +302,7 @@ export function HomeworkViewer({
     <div className="relative mx-auto max-w-3xl pb-16" role="form" aria-label={`واجب: ${attempt.title}`} dir="rtl">
 
       {/* ─── Countdown ─── */}
-      {attempt.durationMinutes && (
+      {attempt.durationMinutes && draftReady && (
         <div className="mb-4 flex justify-start">
           <CountdownTimer
             startedAt={attempt.startedAt}
@@ -374,7 +375,7 @@ export function HomeworkViewer({
           <div className="flex flex-wrap gap-2">
             {questions.map((q, idx) => {
               const isCurrent = idx === currentIdx;
-              const hasAns = !!answers[q.id];
+              const hasAns = answeredQuestionIds.has(q.id);
               const stateLabel = isCurrent
                 ? 'السؤال الحالي'
                 : hasAns
@@ -424,7 +425,7 @@ export function HomeworkViewer({
                 q={currentQ}
                 qIndex={currentIdx}
                 totalCount={totalQ}
-                answers={answers}
+                answer={typeof answers[currentQ.id] === 'string' ? answers[currentQ.id] : ''}
                 onAnswer={handleAnswer}
               />
             </motion.div>
@@ -458,7 +459,7 @@ export function HomeworkViewer({
           <button
             type="button"
             onClick={() => handleSubmit(false)}
-            disabled={loading}
+            disabled={loading || !draftReady}
             className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
           >
             {loading ? (
