@@ -305,6 +305,19 @@ public sealed class HomeworkSubmissionTests
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == firstQuestion.Id && answer.ProvidedAnswer == "A");
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == secondQuestion.Id && answer.ProvidedAnswer == "B");
 
+        var submittedAt = submission.SubmittedAt;
+        var savedAnswerIds = persistedAnswers.Select(answer => answer.Id).ToArray();
+        var eventCount = await db.OutboxEvents.CountAsync();
+        db.ChangeTracker.Clear();
+
+        var replay = await handler.Handle(new SubmitHomeworkCommand(homework.Id, student.Id,
+            [new(secondQuestion.Id, "B"), new(firstQuestion.Id, "A")]), CancellationToken.None);
+
+        Assert.True(replay.Success, replay.Message);
+        Assert.Equal(submittedAt, await db.HomeworkSubmissions.Select(s => s.SubmittedAt).SingleAsync());
+        Assert.Equal(savedAnswerIds, await db.HomeworkAnswers.OrderBy(a => a.QuestionId).Select(a => a.Id).ToArrayAsync());
+        Assert.Equal(eventCount, await db.OutboxEvents.CountAsync());
+
         var resultHandler = new GetHomeworkResultQueryHandler(
             db,
             new HomeworkAllowAccessService(),

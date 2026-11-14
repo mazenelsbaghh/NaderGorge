@@ -138,6 +138,12 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
         if (submission != null && submission.Status != SubmissionStatus.InProgress)
         {
+            if (request.RevisionId is null && submission.SubmittedAt.HasValue &&
+                submission.Status is SubmissionStatus.Graded or SubmissionStatus.PendingReview &&
+                await MatchesSavedAnswersAsync(submission.Id, request.Answers, cancellationToken))
+            {
+                return ApiResponse<bool>.Ok(true, "Homework already submitted.");
+            }
             return ApiResponse<bool>.Fail("Homework already submitted.");
         }
 
@@ -310,5 +316,19 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         await _publisher.Publish(new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(request.StudentId, NaderGorge.Domain.Entities.Gamification.GamificationEventType.HomeworkSubmittedOnTime, 20), cancellationToken);
 
         return ApiResponse<bool>.Ok(true, "Homework submitted successfully.");
+    }
+
+    private async Task<bool> MatchesSavedAnswersAsync(
+        Guid submissionId, List<StudentAnswerInput> answers, CancellationToken ct)
+    {
+        var savedAnswers = await _dbContext.HomeworkAnswers.AsNoTracking()
+            .Where(answer => answer.HomeworkSubmissionId == submissionId)
+            .Select(answer => new { answer.QuestionId, answer.ProvidedAnswer })
+            .ToListAsync(ct);
+        var requestedAnswers = answers.ToDictionary(answer => answer.QuestionId);
+        return savedAnswers.Count == requestedAnswers.Count &&
+            savedAnswers.Select(answer => answer.QuestionId).Distinct().Count() == requestedAnswers.Count &&
+            savedAnswers.All(saved => requestedAnswers.TryGetValue(saved.QuestionId, out var requested) &&
+                string.Equals(saved.ProvidedAnswer, requested.ProvidedAnswer ?? string.Empty, StringComparison.Ordinal));
     }
 }
