@@ -1,21 +1,23 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { CheckCircle2, CircleAlert, FileImage, FileText, ListChecks, Loader2, ScanSearch, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService, type AssessmentOcrQuestionDto } from '@/services/admin-service';
 import { QuestionEditor, type InlineExamQuestionDto } from './QuestionEditor';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-type OcrDraft = InlineExamQuestionDto & { confidence: number };
+export type OcrQuestionDraft = Omit<InlineExamQuestionDto, 'audioFile'> & { confidence: number };
 type ReviewFilter = 'all' | 'needs-review' | 'mcq' | 'essay';
 
 interface OcrQuestionImportProps {
   nextOrder: number;
-  onImport: (questions: InlineExamQuestionDto[]) => Promise<void> | void;
+  drafts: OcrQuestionDraft[];
+  setDrafts: Dispatch<SetStateAction<OcrQuestionDraft[]>>;
+  onImport: (questions: InlineExamQuestionDto[]) => void;
 }
 
-function toDraft(question: AssessmentOcrQuestionDto, order: number): OcrDraft {
+function toDraft(question: AssessmentOcrQuestionDto, order: number): OcrQuestionDraft {
   return {
     text: question.text,
     type: question.type,
@@ -26,7 +28,7 @@ function toDraft(question: AssessmentOcrQuestionDto, order: number): OcrDraft {
   };
 }
 
-function canImport(drafts: OcrDraft[]) {
+function canImport(drafts: OcrQuestionDraft[]) {
   return drafts.length > 0
     && drafts.every((question) => question.text.replace(/<[^>]+>/g, '').trim().length > 0
       && (question.type === 'MCQ'
@@ -36,7 +38,7 @@ function canImport(drafts: OcrDraft[]) {
           : true));
 }
 
-function draftNeedsReview(draft: OcrDraft) {
+function draftNeedsReview(draft: OcrQuestionDraft) {
   return !draft.text.replace(/<[^>]+>/g, '').trim()
     || (draft.type === 'MCQ' && (draft.options.length < 2 || !draft.options.some((option) => option.isCorrect)))
     || (draft.type === 'Essay' && !draft.writtenCorrection?.trim());
@@ -60,7 +62,7 @@ function getValidOcrFiles(files?: FileList | null): File[] | null {
   return selectedFiles;
 }
 
-function toInlineQuestion(draft: OcrDraft): InlineExamQuestionDto {
+function toInlineQuestion(draft: InlineExamQuestionDto): Omit<InlineExamQuestionDto, 'audioFile'> {
   return {
     text: draft.text,
     type: draft.type,
@@ -77,11 +79,9 @@ function toInlineQuestion(draft: OcrDraft): InlineExamQuestionDto {
   };
 }
 
-export function OcrQuestionImport({ nextOrder, onImport }: OcrQuestionImportProps) {
+export function OcrQuestionImport({ nextOrder, drafts, setDrafts, onImport }: OcrQuestionImportProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [drafts, setDrafts] = useState<OcrDraft[]>([]);
   const [scanning, setScanning] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
 
   async function handleFiles(files?: FileList | null) {
@@ -105,19 +105,13 @@ export function OcrQuestionImport({ nextOrder, onImport }: OcrQuestionImportProp
     }
   }
 
-  async function acceptDrafts() {
+  function acceptDrafts() {
     if (!canImport(drafts)) {
       toast.error('راجع نص السؤال، وأضف إجابة صحيحة للاختيارات ونموذج إجابة لكل سؤال مقالي قبل الإضافة.');
       return;
     }
 
-    try {
-      setImporting(true);
-      await onImport(drafts.map(toInlineQuestion));
-      setDrafts([]);
-    } finally {
-      setImporting(false);
-    }
+    onImport(drafts.map(toInlineQuestion));
   }
 
   const needsReviewCount = drafts.filter(draftNeedsReview).length;
@@ -149,7 +143,7 @@ export function OcrQuestionImport({ nextOrder, onImport }: OcrQuestionImportProp
             accept="image/jpeg,image/png,image/webp,application/pdf"
             multiple
             className="sr-only"
-            disabled={scanning || importing}
+            disabled={scanning}
             onChange={(event) => void handleFiles(event.target.files)}
           />
         </label>
@@ -187,7 +181,7 @@ export function OcrQuestionImport({ nextOrder, onImport }: OcrQuestionImportProp
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-bold text-[var(--admin-muted)]">المعروض الآن: {visibleDrafts.length} من {drafts.length}</p>
-            <NeumorphButton type="button" size="sm" intent="primary" loading={importing} onClick={() => void acceptDrafts()}>
+            <NeumorphButton type="button" size="sm" intent="primary" onClick={acceptDrafts}>
               إضافة الأسئلة للمحتوى
             </NeumorphButton>
           </div>
@@ -203,7 +197,7 @@ export function OcrQuestionImport({ nextOrder, onImport }: OcrQuestionImportProp
               <QuestionEditor
                 question={question}
                 index={index}
-                onChange={(_, updated) => setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...updated, confidence: question.confidence } : item))}
+                onChange={(_, updated) => setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...toInlineQuestion(updated), confidence: question.confidence } : item))}
                 onRemove={() => setDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index).map((item, itemIndex) => ({ ...item, order: nextOrder + itemIndex })))}
               />
               <p className="px-2 pb-2 text-xs font-bold text-[var(--admin-muted)]">

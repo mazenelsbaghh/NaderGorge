@@ -3,7 +3,7 @@
 import { ExamSingleAttemptSwitch } from '@/components/admin/ExamSingleAttemptSwitch';
 
 import { AssessmentVisibilitySettings } from './AssessmentVisibilitySettings';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { AdminPage } from './AdminShellChrome';
@@ -21,18 +21,40 @@ import { questionTextToPlainText } from '@/lib/question-text';
 import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
 import { ExamEssayGradingSettings } from './ExamEssayGradingSettings';
 import { disabledParentNotification } from '@/services/assessment-revision-service';
+import { useAuthStore } from '@/stores/auth-store';
+import { readAssessmentDraft, writeAssessmentDraft, type AssessmentAuthoringDraft } from './assessment-authoring-draft';
 
 const button = 'min-h-11 rounded-xl border border-[var(--admin-border)] px-4 py-2 text-sm font-bold hover:bg-[var(--admin-card-soft)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]';
 const primary = `${button} bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:brightness-110`;
 
-export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initialQuestionId }: {
-  id: string; kind: AssessmentKind; surface?: 'admin' | 'teacher'; initialQuestionId?: string;
-}) {
+interface AssessmentDefinitionEditorProps {
+  id: string;
+  kind: AssessmentKind;
+  surface?: 'admin' | 'teacher';
+  initialQuestionId?: string;
+}
+
+interface AuthoringWorkspace {
+  baseDefinition: string;
+  draft: AssessmentAuthoringDraft;
+  conflictingDraft: AssessmentAuthoringDraft | null;
+  dirty: boolean;
+}
+
+export function AssessmentDefinitionEditor(props: AssessmentDefinitionEditorProps) {
+  const userId = useAuthStore(state => state.user?.id);
+  if (!userId) return null;
+  const draftKey = `massar:assessment-authoring:v1:${userId}:${props.kind}:${props.id}`;
+  return <AssessmentEditor key={draftKey} draftKey={draftKey} {...props} />;
+}
+
+function AssessmentEditor({ id, kind, surface = 'admin', initialQuestionId, draftKey }: AssessmentDefinitionEditorProps & { draftKey: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [definition, setDefinition] = useState<AssessmentDefinition | null>(null);
+  const [workspace, setWorkspace] = useState<AuthoringWorkspace | null>(null);
+  const [storageAvailable, setStorageAvailable] = useState(true);
+  const [restored, setRestored] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
-  const [policy, setPolicy] = useState<RevisionPolicy>(defaultRevisionPolicy);
   const [selectedId, setSelectedId] = useState<string | null>(initialQuestionId ?? null);
   const [preview, setPreview] = useState<RevisionPreview | null>(null);
   const [operationId, setOperationId] = useState<string | null>(null);
@@ -40,7 +62,10 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
-  const [subjectId, setSubjectId] = useState('');
+  const definition = workspace?.draft.definition;
+  const policy = workspace?.draft.policy ?? defaultRevisionPolicy;
+  const subjectId = workspace?.draft.subjectId ?? '';
+  const conflictingDraft = workspace?.conflictingDraft;
   const label = kind === 'exam' ? 'الامتحان' : 'الواجب';
   const profilePath = `${assessmentContentPath(pathname, surface)}/${kind === 'exam' ? 'exams' : 'homework'}/${id}`;
 
@@ -48,7 +73,16 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
     let cancelled = false;
     assessmentRevisionService.load(kind, id).then(editor => {
       if (cancelled) return;
-      setDefinition(editor.definition);
+      const baseDefinition = JSON.stringify(editor.definition);
+      const stored = readAssessmentDraft(draftKey);
+      const canRestore = stored?.baseDefinition === baseDefinition;
+      setWorkspace({
+        baseDefinition,
+        draft: canRestore ? stored.draft : { definition: editor.definition, policy: defaultRevisionPolicy, subjectId: '', ocrQuestions: [] },
+        conflictingDraft: !canRestore && stored ? stored.draft : null,
+        dirty: canRestore,
+      });
+      setRestored(canRestore);
       setAttemptCount(editor.attemptCount);
       if (kind === 'exam' && editor.definition.questions.length === 0) {
         void teacherService.getSubjects().then(response => { if (!cancelled) setSubjects(response.data); })
@@ -56,14 +90,39 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
       }
     }).catch(cause => { if (!cancelled) setError(getApiErrorSummary(cause, 'تعذر تحميل التقييم.')); });
     return () => { cancelled = true; };
-  }, [id, kind]);
+  }, [draftKey, id, kind]);
+
+  useLayoutEffect(() => {
+    if (!workspace?.dirty) return;
+    const { baseDefinition, draft } = workspace;
+    setStorageAvailable(writeAssessmentDraft(draftKey, { baseDefinition, draft }));
+  }, [draftKey, workspace]);
 
   function invalidatePreview() { setPreview(null); setOperationId(null); setConfirmed(false); setError(''); }
-  function updateDefinition(changes: Partial<AssessmentDefinition>) {
-    setDefinition(current => current ? { ...current, ...changes } : null);
+  function updateDraft(update: (draft: AssessmentAuthoringDraft) => AssessmentAuthoringDraft) {
+    setWorkspace(current => current ? { ...current, draft: update(current.draft), dirty: true } : current);
     invalidatePreview();
   }
-  function updatePolicy(changes: Partial<RevisionPolicy>) { setPolicy(current => ({ ...current, ...changes })); invalidatePreview(); }
+  function updateDefinition(changes: Partial<AssessmentDefinition>) {
+    updateDraft(draft => ({ ...draft, definition: { ...draft.definition, ...changes } }));
+  }
+  function updatePolicy(changes: Partial<RevisionPolicy>) {
+    updateDraft(draft => ({ ...draft, policy: { ...draft.policy, ...changes } }));
+  }
+  function restoreConflictingDraft() {
+    if (!workspace || !conflictingDraft) return;
+    setWorkspace({ ...workspace, draft: conflictingDraft, conflictingDraft: null, dirty: true });
+    setRestored(true);
+  }
+  function discardConflictingDraft() {
+    if (!workspace) return;
+    if (!writeAssessmentDraft(draftKey, null)) {
+      setError('تعذّر حذف المسودة من هذا التبويب.');
+      return;
+    }
+    setWorkspace({ ...workspace, conflictingDraft: null });
+    setError('');
+  }
   function moveQuestion(index: number, offset: number) {
     if (!definition) return;
     const questions = [...definition.questions];
@@ -80,11 +139,16 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
     finally { setBusy(false); }
   }
   async function saveChanges() {
-    if (!definition || !preview || !operationId) return;
+    if (!workspace || !definition || !preview || !operationId) return;
     setBusy(true); setError('');
     try {
-      await assessmentRevisionService.save({ definition, policy, revisionToken: preview.revisionToken,
+      const published = await assessmentRevisionService.save({ definition, policy, revisionToken: preview.revisionToken,
         operationId, confirmPreviousAttempts: confirmed, subjectId: subjectId || undefined });
+      const { ocrQuestions } = workspace.draft;
+      writeAssessmentDraft(draftKey, ocrQuestions.length ? {
+        baseDefinition: JSON.stringify(published.definition),
+        draft: { definition: published.definition, policy: defaultRevisionPolicy, subjectId: '', ocrQuestions },
+      } : null);
       router.push(profilePath); router.refresh();
     } catch (cause) { setError(getApiErrorSummary(cause, 'تعذر الحفظ. التعديلات ما زالت موجودة هنا.')); }
     finally { setBusy(false); }
@@ -94,7 +158,18 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
   const content = (
     <div className="mx-auto w-full max-w-5xl space-y-6 text-[var(--admin-text)]" dir="rtl">
       {error && <p role="alert" className="rounded-xl border border-[var(--admin-danger)] p-4 text-sm leading-7 text-[var(--admin-danger)]">{error}</p>}
-      {!definition ? <p role="status">{error ? 'ارجع لبروفايل التقييم وحاول فتح المحرر مرة أخرى.' : 'جاري تحميل إعدادات التقييم والأسئلة…'}</p> : <>
+      {conflictingDraft ? (
+        <section className="space-y-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
+          <p role="status">فيه نسخة أحدث محفوظة على المنصة. مسودتك فيها {conflictingDraft.definition.questions.length} سؤال. استرجاعها يفتحها للمراجعة في المحرر.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={primary} onClick={restoreConflictingDraft}>استرجاع المسودة</button>
+            <button type="button" className={button} onClick={discardConflictingDraft}>حذف المسودة وفتح النسخة الحالية</button>
+          </div>
+        </section>
+      ) : !definition ? <p role="status">{error ? 'ارجع لبروفايل التقييم وحاول فتح المحرر مرة أخرى.' : 'جاري تحميل إعدادات التقييم والأسئلة…'}</p> : <>
+        {workspace.dirty && <p role="status" className="text-sm text-[var(--admin-muted)]">
+          {storageAvailable ? (restored ? 'تم استرجاع مسودتك في هذا التبويب.' : 'تم حفظ المسودة في هذا التبويب.') : 'تعذّر حفظ المسودة في المتصفح. احفظ التعديلات قبل تحديث الصفحة.'}
+        </p>}
         <p className="text-sm leading-7 text-[var(--admin-muted)]">تقدر تعدّل التقييم بالكامل. فيه {attemptCount} محاولة مسجلة. اختَر تأثير التعديل على المحاولات السابقة قبل الحفظ.</p>
         <fieldset disabled={busy} className="space-y-5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
           <legend className="px-2 text-lg font-bold">إعدادات {label}</legend>
@@ -126,15 +201,30 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
         </fieldset>
         <AssessmentParentNotificationEditor kind={kind} settings={definition.parentNotification ?? disabledParentNotification} onChange={parentNotification => updateDefinition({ parentNotification })} disabled={busy} />
         <section aria-label="تعديل الأسئلة" className="space-y-4">
-          {subjects.length > 0 && <label className="block space-y-2"><span>مادة أسئلة الامتحان</span><select className="admin-input w-full" disabled={busy} value={subjectId} onChange={event => { setSubjectId(event.target.value); invalidatePreview(); }}><option value="">اختر المادة</option>{subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>}
+          {subjects.length > 0 && <label className="block space-y-2"><span>مادة أسئلة الامتحان</span><select className="admin-input w-full" disabled={busy} value={subjectId} onChange={event => {
+              const nextSubjectId = event.target.value;
+              updateDraft(draft => ({ ...draft, subjectId: nextSubjectId }));
+            }}><option value="">اختر المادة</option>{subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>}
           <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">الأسئلة ({definition.questions.length})</h2>
             <button type="button" className={button} disabled={busy} onClick={() => { const question = newRevisionQuestion(definition.questions.length + 1); updateDefinition({ questions: [...definition.questions, question] }); setSelectedId(question.id); }}>إضافة سؤال</button>
           </div>
-          <fieldset disabled={busy}><OcrQuestionImport nextOrder={definition.questions.length + 1} onImport={imported => {
-            const added = imported.map((question, index) => fromQuestionEditor(newRevisionQuestion(definition.questions.length + index + 1), question));
-            updateDefinition({ questions: [...definition.questions, ...added] });
-            setSelectedId(added[0]?.id ?? null);
-          }} /></fieldset>
+          <fieldset disabled={busy}>
+            <OcrQuestionImport nextOrder={definition.questions.length + 1} drafts={workspace.draft.ocrQuestions}
+              setDrafts={update => updateDraft(draft => ({
+                ...draft, ocrQuestions: typeof update === 'function' ? update(draft.ocrQuestions) : update,
+              }))}
+              onImport={imported => {
+                const added = imported.map((question, index) => {
+                  const order = definition.questions.length + index + 1;
+                  return fromQuestionEditor(newRevisionQuestion(order), { ...question, order });
+                });
+                updateDraft(draft => ({
+                  ...draft, ocrQuestions: [],
+                  definition: { ...draft.definition, questions: [...draft.definition.questions, ...added] },
+                }));
+                setSelectedId(added[0]?.id ?? null);
+              }} />
+          </fieldset>
           <ol className="divide-y divide-[var(--admin-border)]">
             {definition.questions.map((question, index) => <li key={question.id} className="flex flex-wrap items-center gap-2 py-3">
               <button type="button" disabled={busy} className={`${button} min-w-0 flex-1 text-start`} onClick={() => setSelectedId(question.id)} aria-expanded={selectedId === question.id}>
