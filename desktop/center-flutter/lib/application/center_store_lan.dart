@@ -373,6 +373,13 @@ extension CenterStoreLanHost on CenterStore {
         return (await saveAcademicActivity(
           AcademicActivity.fromJson(a),
         )).toJson();
+      case 'recordIncompleteHomework':
+        await recordIncompleteHomework(
+          sessionId: a['sessionId'] as String,
+          activityId: a['activityId'] as String,
+          studentId: a['studentId'] as String,
+        );
+        return null;
       case 'recordHomeworkExceptions':
         await recordHomeworkExceptions(
           sessionId: a['sessionId'] as String,

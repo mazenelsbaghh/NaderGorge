@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:massar_center/application/center_store.dart';
@@ -11,7 +12,7 @@ import 'package:massar_center/shared/theme.dart';
 void main() {
   for (final cairo in [false, true]) {
     testWidgets(
-      '${cairo ? 'Cairo' : 'Alexandria'} homework code and Enter records missing and completes other attendees with code focus restored',
+      '${cairo ? 'Cairo' : 'Alexandria'} homework code accepts Enter for missing and a standalone Shift for incomplete',
       (tester) async {
         late Directory directory;
         late CenterStore store;
@@ -196,6 +197,40 @@ void main() {
           homeworkRows().firstWhere((r) => r.studentId == second.id).homework,
           HomeworkStatus.complete,
         );
+        await tester.enterText(search, '10002');
+        final shift = cairo
+            ? LogicalKeyboardKey.shiftRight
+            : LogicalKeyboardKey.shiftLeft;
+        await tester.sendKeyDownEvent(shift);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.sendKeyUpEvent(shift);
+        await tester.pump();
+        expect(tester.widget<TextField>(search).controller!.text, '10002');
+        expect(
+          homeworkRows().firstWhere((r) => r.studentId == second.id).homework,
+          HomeworkStatus.complete,
+        );
+        await tester.runAsync(() async {
+          await tester.sendKeyEvent(shift);
+          for (
+            var i = 0;
+            i < 100 &&
+                tester.widget<TextField>(search).controller!.text.isNotEmpty;
+            i++
+          ) {
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+          }
+        });
+        await tester.pumpAndSettle();
+        expect(
+          homeworkRows().firstWhere((r) => r.studentId == second.id).homework,
+          HomeworkStatus.incomplete,
+        );
+        expect(
+          homeworkRows().firstWhere((r) => r.studentId == first.id).homework,
+          HomeworkStatus.missing,
+        );
+        expect(find.text('طالب 10002 · 10002: ناقص'), findsOneWidget);
         expect(homeworkRows(), hasLength(2));
         expect(
           homeworkRows().every((r) => r.score == null && !r.examAbsent),

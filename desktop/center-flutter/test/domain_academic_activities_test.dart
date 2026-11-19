@@ -217,6 +217,19 @@ void main() {
         deviceId: 'test-client',
         staffId: store.currentUser!.id,
         request: {
+          'requestId': 'dd787e35-1531-4af3-b741-732d5938155c',
+          'operation': 'recordIncompleteHomework',
+          'arguments': {
+            'sessionId': session.id,
+            'activityId': homework.id,
+            'studentId': second.id,
+          },
+        },
+      );
+      await store.commandLan(
+        deviceId: 'test-client',
+        staffId: store.currentUser!.id,
+        request: {
           'requestId': 'a4f7d2e1-1182-4e11-9211-872690073ed1',
           'operation': 'recordHomeworkExceptions',
           'arguments': {'sessionId': session.id, 'activityId': homework.id},
@@ -229,6 +242,14 @@ void main() {
             )
             .homework,
         HomeworkStatus.missing,
+      );
+      expect(
+        store.academics
+            .firstWhere(
+              (r) => r.activityId == homework.id && r.studentId == second.id,
+            )
+            .homework,
+        HomeworkStatus.incomplete,
       );
       await expectLater(
         store.recordHomeworkExceptions(

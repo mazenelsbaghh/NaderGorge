@@ -725,6 +725,17 @@ class _RemoteCenterStore extends CenterStore {
   });
 
   @override
+  Future<void> recordIncompleteHomework({
+    required String sessionId,
+    required String activityId,
+    required String studentId,
+  }) => _send('recordIncompleteHomework', {
+    'sessionId': sessionId,
+    'activityId': activityId,
+    'studentId': studentId,
+  });
+
+  @override
   Future<void> saveAcademic(AcademicRecord value) =>
       _send('saveAcademic', value.toJson());
   @override

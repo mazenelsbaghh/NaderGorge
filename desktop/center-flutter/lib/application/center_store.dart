@@ -2941,12 +2941,35 @@ class CenterStore extends ChangeNotifier {
   }
 
   /// Marks only unreviewed actual attendees complete, preserving saved exceptions.
-  /// An entered code is committed as missing in the same host transaction.
+  /// An entered code is committed in the same host transaction.
   Future<void> recordHomeworkExceptions({
     required String sessionId,
     required String activityId,
     String? missingStudentId,
-  }) => _change(
+  }) => _recordHomeworkExceptions(
+    sessionId,
+    activityId,
+    missingStudentId,
+    HomeworkStatus.missing,
+  );
+
+  Future<void> recordIncompleteHomework({
+    required String sessionId,
+    required String activityId,
+    required String studentId,
+  }) => _recordHomeworkExceptions(
+    sessionId,
+    activityId,
+    studentId,
+    HomeworkStatus.incomplete,
+  );
+
+  Future<void> _recordHomeworkExceptions(
+    String sessionId,
+    String activityId,
+    String? exceptionStudentId,
+    HomeworkStatus status,
+  ) => _change(
     'homework_exceptions',
     'رصد الواجب للحاضرين والاستثناءات',
     () async {
@@ -2970,7 +2993,7 @@ class CenterStore extends ChangeNotifier {
           )
           .map((a) => a.studentId)
           .toSet();
-      if (missingStudentId != null && !present.contains(missingStudentId)) {
+      if (exceptionStudentId != null && !present.contains(exceptionStudentId)) {
         throw const CenterException('الطالب غير حاضر في هذه الحصة.');
       }
       final existing = {
@@ -2981,7 +3004,7 @@ class CenterStore extends ChangeNotifier {
       final now = DateTime.now();
       for (final studentId in present) {
         final old = existing[studentId];
-        if (studentId != missingStudentId &&
+        if (studentId != exceptionStudentId &&
             old != null &&
             old.homework != HomeworkStatus.notReviewed) {
           continue;
@@ -2992,8 +3015,8 @@ class CenterStore extends ChangeNotifier {
           sessionId: sessionId,
           activityId: activityId,
           maxScore: activity.maxScore,
-          homework: studentId == missingStudentId
-              ? HomeworkStatus.missing
+          homework: studentId == exceptionStudentId
+              ? status
               : HomeworkStatus.complete,
           notes: old?.notes ?? '',
           updatedAt: now,

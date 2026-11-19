@@ -48,6 +48,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
   String? _groupId, _sessionId, _activityId, _monthId, _preparedLessonId;
   final _search = TextEditingController();
   final _codeFocus = FocusNode();
+  PhysicalKeyboardKey? _soloShift;
   bool _editing = false;
   String? _quickStudentId, _lastSaved;
   bool _homeworkDefaultsQueued = false;
@@ -58,6 +59,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
   void initState() {
     super.initState();
     _codeFocus.onKeyEvent = _codeKey;
+    _codeFocus.addListener(_codeFocusChanged);
     widget.store.addListener(_storeChanged);
     _monthId = widget.store.studyMonths.firstOrNull?.id;
     _preparedLessonId = _month?.lessons.firstOrNull?.id;
@@ -96,12 +98,40 @@ class _AcademicsPageState extends State<AcademicsPage> {
         : null;
   }
 
+  void _codeFocusChanged() {
+    if (!_codeFocus.hasPrimaryFocus) _soloShift = null;
+  }
+
   KeyEventResult _codeKey(FocusNode node, KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    final isShift =
+        event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+        event.logicalKey == LogicalKeyboardKey.shiftRight;
+    if (event is KeyDownEvent) {
+      _soloShift =
+          isShift &&
+              !event.synthesized &&
+              keyboard.physicalKeysPressed.length == 1 &&
+              _activity?.kind == AcademicActivityKind.homework &&
+              _search.text.trim().isNotEmpty
+          ? event.physicalKey
+          : null;
+    }
+    if (isShift && event is KeyUpEvent) {
+      final tapped = _soloShift == event.physicalKey && !event.synthesized;
+      _soloShift = null;
+      final session = _selectedSession;
+      if (tapped &&
+          session != null &&
+          _activity?.kind == AcademicActivityKind.homework) {
+        _submit(session, homework: HomeworkStatus.incomplete);
+        return KeyEventResult.handled;
+      }
+    }
     if (event.logicalKey != LogicalKeyboardKey.enter &&
         event.logicalKey != LogicalKeyboardKey.numpadEnter) {
       return KeyEventResult.ignored;
     }
-    final keyboard = HardwareKeyboard.instance;
     if (event is KeyDownEvent &&
         !keyboard.isControlPressed &&
         !keyboard.isAltPressed &&
@@ -154,7 +184,10 @@ class _AcademicsPageState extends State<AcademicsPage> {
     );
   });
 
-  Future<void> _submit(LessonSession session) async {
+  Future<void> _submit(
+    LessonSession session, {
+    HomeworkStatus homework = HomeworkStatus.missing,
+  }) async {
     if (_editing ||
         hasPendingMassarNotice(context) ||
         ModalRoute.of(context)?.isCurrent != true ||
@@ -167,7 +200,9 @@ class _AcademicsPageState extends State<AcademicsPage> {
     final query = _search.text.trim();
     if (query.isEmpty) return;
     final matches = studentLookupCandidates(roster, query);
-    if (matches.length == 1) return _recordCode(matches.single, session);
+    if (matches.length == 1) {
+      return _recordCode(matches.single, session, homework);
+    }
     if (matches.length > 1) {
       final activityId = _activityId;
       setState(() => _editing = true);
@@ -179,7 +214,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
           activityId == _activityId &&
           _canRecordFor(session.id) &&
           widget.store.canAssess) {
-        return _recordCode(selected, session);
+        return _recordCode(selected, session, homework);
       }
       _focusCode();
       return;
@@ -232,9 +267,13 @@ class _AcademicsPageState extends State<AcademicsPage> {
     });
   }
 
-  Future<void> _recordCode(Student student, LessonSession session) async {
+  Future<void> _recordCode(
+    Student student,
+    LessonSession session,
+    HomeworkStatus homework,
+  ) async {
     if (_activity?.kind == AcademicActivityKind.homework) {
-      await _recordHomework(session, missingStudent: student);
+      await _recordHomework(session, student: student, homework: homework);
     } else {
       await _edit(student, session);
     }
@@ -300,7 +339,8 @@ class _AcademicsPageState extends State<AcademicsPage> {
 
   Future<void> _recordHomework(
     LessonSession session, {
-    Student? missingStudent,
+    Student? student,
+    HomeworkStatus homework = HomeworkStatus.missing,
     bool automatic = false,
   }) async {
     final activity = _activity;
@@ -312,18 +352,26 @@ class _AcademicsPageState extends State<AcademicsPage> {
     }
     setState(() => _editing = true);
     try {
-      await widget.store.recordHomeworkExceptions(
-        sessionId: session.id,
-        activityId: activity!.id,
-        missingStudentId: missingStudent?.id,
-      );
+      if (student != null && homework == HomeworkStatus.incomplete) {
+        await widget.store.recordIncompleteHomework(
+          sessionId: session.id,
+          activityId: activity!.id,
+          studentId: student.id,
+        );
+      } else {
+        await widget.store.recordHomeworkExceptions(
+          sessionId: session.id,
+          activityId: activity!.id,
+          missingStudentId: student?.id,
+        );
+      }
       if (!mounted) return;
       setState(() {
         if (!automatic) _search.clear();
         _failedHomeworkScope = null;
-        _lastSaved = missingStudent == null
-            ? 'تم رصد الحاضرين: اتعمل. أدخل كود اللي ماعملش؛ الاستثناءات السابقة محفوظة.'
-            : '${missingStudent.name} · ${missingStudent.code}: ما اتعملش';
+        _lastSaved = student == null
+            ? 'تم رصد الحاضرين وحفظ الاستثناءات السابقة.'
+            : '${student.name} · ${student.code}: ${_quickHomeworkLabel(homework)}';
       });
     } catch (error) {
       if (automatic) _failedHomeworkScope = (session.id, activity!.id);
@@ -740,6 +788,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
     }
     setState(() {
       _failedHomeworkScope = null;
+      _soloShift = null;
       change();
     });
     if (focusCode) _focusCode();
@@ -1103,9 +1152,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
                       (attendanceOnly || _canRecordFor(selected.id)),
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
-                    labelText: activity?.kind == AcademicActivityKind.homework
-                        ? 'كود اللي ماعملش الواجب ثم Enter'
-                        : 'كود الطالب أو الباركود أو الاسم',
+                    labelText: 'كود الطالب أو الباركود أو الاسم',
                     prefixIcon: const Icon(Icons.person_search_outlined),
                     suffixIcon: _search.text.isEmpty
                         ? null
@@ -1146,7 +1193,7 @@ class _AcademicsPageState extends State<AcademicsPage> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Text(
-                  'الحاضرين: اتعمل تلقائيًا. اكتب فقط كود اللي ماعملش ثم Enter. لتصحيح حالة طالب استخدم رصد.',
+                  'الحاضرين بيتسجّل لهم «اتعمل» تلقائيًا. بعد كود الطالب، اضغط Enter لـ«ما اتعملش» أو Shift لوحده لـ«ناقص».',
                 ),
               ],
             ),
