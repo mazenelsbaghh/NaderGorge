@@ -7,9 +7,11 @@ import { publicExamManagementPath } from '@/lib/public-exam-navigation';
 import { ArrowRight, CheckCircle2, RefreshCcw, XCircle } from 'lucide-react';
 import { adminSalesService, type PublicExamResultsDto } from '@/services/admin-sales-service';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
+import { AssessmentExportButtons } from '@/components/admin/AssessmentExportButtons';
 
 export default function AdminPublicExamResultsPageClient({ productId }: { productId: string }) {
-  const examsPath = publicExamManagementPath(usePathname());
+  const pathname = usePathname();
+  const examsPath = publicExamManagementPath(pathname);
   const [report, setReport] = useState<PublicExamResultsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -56,6 +58,7 @@ export default function AdminPublicExamResultsPageClient({ productId }: { produc
           </div>
         ) : report ? (
           <>
+            <AssessmentExportButtons kind="exam" id={report.examId} audience={pathname.startsWith('/teacher/') ? 'teacher' : 'admin'} />
             <div className="grid gap-3 md:grid-cols-4">
               <Metric label="المحاولات" value={report.attemptCount} />
               <Metric label="الناجحين" value={report.passedCount} />

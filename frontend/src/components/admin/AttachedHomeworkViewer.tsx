@@ -13,9 +13,9 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 import { getApiErrorSummary } from '@/lib/api-errors';
 import { AssessmentAttemptReview } from './AssessmentAttemptReview';
-import { MissingHomeworkExport } from './MissingHomeworkExport';
 import { HomeworkPreview } from './HomeworkPreview';
 import { AdminSearchToolbar } from './AdminSearchToolbar';
+import { AssessmentExportButtons } from './AssessmentExportButtons';
 
 function phoneSearchDigits(phone: string): string {
   return phone
@@ -245,7 +245,7 @@ export function AttachedHomeworkViewer({
             <Users className="h-6 w-6 text-[var(--admin-primary)]" />
             تسليمات الطلاب
           </h3>
-          <MissingHomeworkExport homeworkId={homeworkId} />
+          <AssessmentExportButtons kind="homework" id={homeworkId} audience={surface} />
           <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
             {hasPhoneSearch ? `${filteredSubmissions.length} من ${submissions.length}` : submissions.length} تسليم
           </span>

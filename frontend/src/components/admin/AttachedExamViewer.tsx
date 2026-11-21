@@ -19,6 +19,7 @@ import {
 import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
+import { AssessmentExportButtons } from './AssessmentExportButtons';
 
 export function AttachedExamViewer({
   examId,
@@ -91,6 +92,7 @@ export function AttachedExamViewer({
 
   return (
     <div className="space-y-6">
+      <AssessmentExportButtons kind="exam" id={examId} audience={surface} />
       {/* Exam Overview Summary */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
