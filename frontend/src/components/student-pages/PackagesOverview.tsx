@@ -1,4 +1,4 @@
-import { LayoutGrid, PackageOpen, Filter } from "lucide-react";
+import { LayoutGrid, PackageOpen } from "lucide-react";
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -77,15 +77,13 @@ export function PackagesGrid({
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  // Extract unique teachers and subjects for filter pills
   const teachers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; imageUrl?: string }>();
+    const map = new Map<string, { id: string; name: string }>();
     packages.forEach((pkg) => {
       if (pkg.teacherId && pkg.teacherName) {
         map.set(pkg.teacherId, {
           id: pkg.teacherId,
           name: pkg.teacherName,
-          imageUrl: pkg.teacherProfileImageUrl,
         });
       }
     });
@@ -102,7 +100,6 @@ export function PackagesGrid({
     return Array.from(map.values());
   }, [packages]);
 
-  // Filter packages
   const filteredPackages = useMemo(() => {
     return packages.filter((pkg) => {
       if (selectedTeacher && pkg.teacherId !== selectedTeacher) return false;
@@ -120,91 +117,35 @@ export function PackagesGrid({
         <p className="mt-1 text-sm font-medium text-[var(--admin-muted)]">{description}</p>
       </div>
 
-      {/* Filter Bar */}
       {hasFilters && packages.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--admin-muted)]">
-            <Filter className="h-3.5 w-3.5" />
-            <span>تصفية:</span>
-          </div>
-
-          {/* Teacher filter pills */}
+        <fieldset className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" aria-label="تصفية الباقات">
           {teachers.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {teachers.map((t) => {
-                const isActive = selectedTeacher === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setSelectedTeacher(isActive ? null : t.id)}
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-[0.97] ${
-                      isActive
-                        ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md shadow-[var(--admin-primary-20)]"
-                        : "border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:border-[var(--admin-primary-30)] hover:bg-[var(--admin-primary-10)]"
-                    }`}
-                  >
-                    {t.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={resolveMediaUrl(t.imageUrl)}
-                        alt={t.name}
-                        className="h-5 w-5 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-xs font-black text-[var(--admin-primary)]">
-                        {t.name.charAt(0)}
-                      </span>
-                    )}
-                    {t.name}
-                  </button>
-                );
-              })}
-            </div>
+            <label className="min-w-0 text-sm font-bold text-[var(--admin-text)]">
+              المدرس
+              <select value={selectedTeacher ?? ''} onChange={event => setSelectedTeacher(event.target.value || null)}
+                className="mt-2 block min-h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]">
+                <option value="">كل المدرسين</option>
+                {teachers.map(teacher => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+              </select>
+            </label>
           )}
-
-          {/* Subject filter pills */}
           {subjects.length > 1 && (
-            <>
-              {teachers.length > 1 && (
-                <div className="h-5 w-px bg-[var(--admin-border)]" />
-              )}
-              <div className="flex flex-wrap items-center gap-2">
-                {subjects.map((s) => {
-                  const isActive = selectedSubject === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSelectedSubject(isActive ? null : s.id)}
-                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-[0.97] ${
-                        isActive
-                          ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md shadow-[var(--admin-primary-20)]"
-                          : "border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:border-[var(--admin-primary-30)] hover:bg-[var(--admin-primary-10)]"
-                      }`}
-                    >
-                      {s.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
+            <label className="min-w-0 text-sm font-bold text-[var(--admin-text)]">
+              المادة
+              <select value={selectedSubject ?? ''} onChange={event => setSelectedSubject(event.target.value || null)}
+                className="mt-2 block min-h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]">
+                <option value="">كل المواد</option>
+                {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+              </select>
+            </label>
           )}
-
-          {/* Clear filter */}
           {(selectedTeacher || selectedSubject) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTeacher(null);
-                setSelectedSubject(null);
-              }}
-              className="text-xs font-bold text-[var(--admin-danger)] hover:underline"
-            >
-              مسح الفلتر
+            <button type="button" onClick={() => { setSelectedTeacher(null); setSelectedSubject(null); }}
+              className="min-h-11 self-end rounded-xl px-4 text-sm font-bold text-[var(--admin-primary)] underline focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]">
+              مسح التصفية
             </button>
           )}
-        </div>
+        </fieldset>
       )}
 
       {filteredPackages.length === 0 ? (

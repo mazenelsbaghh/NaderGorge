@@ -51,6 +51,13 @@ public sealed class LiveSupportAdminController(ILiveSupportService service) : Co
     public async Task<IActionResult> Ratings(DateTime? from, DateTime? to, CancellationToken ct) =>
         Ok(ApiResponse<IReadOnlyList<LiveSupportRatingDto>>.Ok(await service.GetAdminRatingsAsync(from, to, ct)));
 
+    [HttpGet("conversations")]
+    public async Task<IActionResult> Conversations([FromQuery] LiveSupportConversationSearchDto request, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportConversationPageDto>.Ok(await service.SearchAdminConversationsAsync(request, ct))); }
+        catch (LiveSupportException ex) { return BadRequest(ApiResponse<object>.Fail(ex.Message, [ex.Code])); }
+    }
+
     [HttpGet("conversations/{conversationId:guid}/timeline")]
     public async Task<IActionResult> Timeline(Guid conversationId, CancellationToken ct)
     {

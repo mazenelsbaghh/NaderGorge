@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -102,7 +103,8 @@ public record TeacherProfileDto(
     string? FacebookUrl,
     string? YouTubeUrl,
     string? TelegramUrl,
-    string? IntroVideoUrl
+    string? IntroVideoUrl,
+    string? WhatsAppUrl
 );
 
 public record UpdateTeacherProfileCommand(
@@ -114,7 +116,8 @@ public record UpdateTeacherProfileCommand(
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
-    string? TelegramUrl
+    string? TelegramUrl,
+    string? WhatsAppUrl = null
 ) : IRequest<ApiResponse<bool>>;
 
 public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDashboardStatsQuery, ApiResponse<TeacherDashboardStatsDto>>
@@ -364,7 +367,8 @@ public class GetTeacherProfileQueryHandler : IRequestHandler<GetTeacherProfileQu
             teacherProfile.FacebookUrl,
             teacherProfile.YouTubeUrl,
             teacherProfile.TelegramUrl,
-            teacherProfile.IntroVideoUrl
+            teacherProfile.IntroVideoUrl,
+            teacherProfile.WhatsAppUrl
         );
 
         return ApiResponse<TeacherProfileDto>.Ok(dto);
@@ -390,6 +394,12 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
             return ApiResponse<bool>.Fail("حساب المعلم غير موجود");
         }
 
+        var whatsAppUrl = request.WhatsAppUrl?.Trim();
+        if (!string.IsNullOrEmpty(whatsAppUrl) && !IsWhatsAppInviteUrl(whatsAppUrl))
+        {
+            return ApiResponse<bool>.Fail("أدخل رابط قناة واتساب أو رابط دعوة لجروب واتساب.");
+        }
+
         teacherProfile.Bio = request.Bio;
         teacherProfile.Specialization = request.Specialization;
         teacherProfile.ContactInfo = request.ContactInfo;
@@ -398,9 +408,33 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
         teacherProfile.FacebookUrl = request.FacebookUrl;
         teacherProfile.YouTubeUrl = request.YouTubeUrl;
         teacherProfile.TelegramUrl = request.TelegramUrl;
+        if (whatsAppUrl is not null)
+        {
+            teacherProfile.WhatsAppUrl = whatsAppUrl.Length == 0 ? null : whatsAppUrl;
+        }
 
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<bool>.Ok(true);
+    }
+
+    private static bool IsWhatsAppInviteUrl(string candidate)
+    {
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var url)
+            || !url.IsWellFormedOriginalString() || url.Scheme != Uri.UriSchemeHttps
+            || !url.IsDefaultPort || url.UserInfo.Length > 0)
+        {
+            return false;
+        }
+
+        var invitePath = url.Host switch
+        {
+            "chat.whatsapp.com" => url.AbsolutePath[1..],
+            "whatsapp.com" or "www.whatsapp.com" when url.AbsolutePath.StartsWith("/channel/", StringComparison.Ordinal)
+                => url.AbsolutePath["/channel/".Length..],
+            _ => string.Empty
+        };
+
+        return Regex.IsMatch(invitePath, @"\A[A-Za-z0-9_-]+/?\z");
     }
 }

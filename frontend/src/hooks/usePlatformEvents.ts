@@ -57,7 +57,6 @@ export interface ResourceReadyPayload {
   lessonId: string;
   resourceId: string;
   title: string;
-  fileUrl: string;
 }
 
 export interface ExtraWatchRequestPayload {

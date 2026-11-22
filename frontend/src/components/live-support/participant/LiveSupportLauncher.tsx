@@ -515,6 +515,7 @@ function ClosedActions({ conversation, onNew }: { conversation: LiveSupportConve
   return <div className="space-y-3 border-t border-slate-100 pt-3">
     {!rated && (
       <ConversationRating
+        key={conversation.id}
         conversationId={conversation.id}
         onRated={(stars) => {
           setRated(true);

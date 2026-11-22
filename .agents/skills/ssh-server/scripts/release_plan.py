@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from dataclasses import dataclass, replace
@@ -290,6 +291,7 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--json", action="store_true")
     value.add_argument(
         "--candidate",
+        default=os.environ.get("MASSAR_RELEASE_SOURCE_COMMIT"),
         help="Verify one source-only commit on an explicit full --base SHA, preserving the working tree",
     )
     value.add_argument(

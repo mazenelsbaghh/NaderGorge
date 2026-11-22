@@ -37,7 +37,7 @@ function formatPrice(price?: number) {
   return typeof price === 'number' ? `${price.toLocaleString('ar-EG-u-nu-latn')} ج` : 'متاح';
 }
 
-function safeExternalUrl(url?: string) {
+function safeExternalUrl(url?: string | null) {
   if (!url) return null;
   try {
     const parsed = new URL(url);
@@ -94,6 +94,7 @@ export default function TeacherPublicProfilePageClient({ teacherId, visitor = fa
     { label: 'فيسبوك', url: safeExternalUrl(teacher.facebookUrl) },
     { label: 'يوتيوب', url: safeExternalUrl(teacher.youtubeUrl) },
     { label: 'تليجرام', url: safeExternalUrl(teacher.telegramUrl) },
+    { label: 'واتساب', url: safeExternalUrl(teacher.whatsAppUrl) },
   ].filter((link): link is { label: string; url: string } => Boolean(link.url));
   const hasContactDetails = Boolean(teacher.contactInfo || teacher.assistantPhoneNumbers || socialLinks.length);
 

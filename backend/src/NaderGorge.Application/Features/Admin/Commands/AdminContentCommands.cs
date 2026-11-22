@@ -1822,8 +1822,7 @@ public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonRe
             {
                 lessonId = request.LessonId,
                 resourceId = resource.Id,
-                title = resource.Title,
-                fileUrl = resource.FileUrl
+                title = resource.Title
             })
         };
         _db.OutboxEvents.Add(outboxEvent);

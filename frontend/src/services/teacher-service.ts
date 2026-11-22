@@ -143,6 +143,7 @@ export interface TeacherProfileDto {
   facebookUrl?: string;
   youtubeUrl?: string;
   telegramUrl?: string;
+  whatsAppUrl?: string | null;
 }
 
 export interface TeacherStaffMemberDto {
@@ -263,6 +264,7 @@ export const teacherService = {
     facebookUrl?: string;
     youtubeUrl?: string;
     telegramUrl?: string;
+    whatsAppUrl?: string;
   }) =>
     apiClient.put<ApiResponse<void>>('/teacher/profile', data).then((res) => {
       if (res.data.success) invalidateMany(['teacher:profile', 'teachers']);

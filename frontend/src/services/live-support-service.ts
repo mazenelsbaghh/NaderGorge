@@ -457,6 +457,8 @@ export interface LiveSupportStudentActionContext {
 export interface LiveSupportAdminConversation {
   id: string;
   participantName: string;
+  ratingStars?: number | null;
+  ratingComment?: string | null;
   participantType: LiveSupportParticipantType;
   status: LiveSupportConversationStatus;
   ownerName?: string;
@@ -499,6 +501,11 @@ export interface LiveSupportAdminDashboard {
   whatsApp?: LiveSupportWhatsAppAdminSummary | null;
 }
 export interface LiveSupportRating { id: string; conversationId: string; stars: number; comment?: string | null; submittedAt: string; submittedByName: string; isStudent: boolean; }
+export interface LiveSupportConversationPage { items: LiveSupportAdminConversation[]; page: number; pageSize: number; totalCount: number; }
+export interface LiveSupportConversationSearch {
+  search?: string; from?: string; to?: string; channel?: string; status?: string;
+  pageId?: string; window?: string; activity?: string; withComment?: boolean; page: number; pageSize?: number;
+}
 export interface LiveSupportConversationTimeline { conversation: LiveSupportAdminConversation; items: Array<{ at: string; type: string; actorName?: string; summary: string; safeDetails?: string }>; ratingStars?: number; ratingComment?: string; }
 
 export interface LiveSupportAIVerificationSession {
@@ -897,8 +904,11 @@ export const liveSupportService = {
   getAdminDashboard: () =>
     apiClient.get<ApiResponse<LiveSupportAdminDashboard>>('/live-support/admin/dashboard').then((response) => response.data.data),
 
-  getAdminRatings: (params: { from?: string; to?: string }) =>
-    apiClient.get<ApiResponse<LiveSupportRating[]>>('/live-support/admin/ratings', { params }).then((response) => response.data.data),
+  getAdminRatings: (params: { from?: string; to?: string }, signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportRating[]>>('/live-support/admin/ratings', { params, signal }).then((response) => response.data.data),
+
+  searchAdminConversations: (params: LiveSupportConversationSearch, signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportConversationPage>>('/live-support/admin/conversations', { params, signal }).then(response => response.data.data),
 
   getAdminTimeline: (conversationId: string) =>
     apiClient.get<ApiResponse<LiveSupportConversationTimeline>>(`/live-support/admin/conversations/${conversationId}/timeline`).then((response) => response.data.data),

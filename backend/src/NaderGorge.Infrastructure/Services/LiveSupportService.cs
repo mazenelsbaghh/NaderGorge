@@ -450,6 +450,8 @@ public sealed class LiveSupportService(
 
     public async Task SubmitRatingAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int stars, string? comment, CancellationToken ct)
     {
+        if (comment?.Trim().Length > 1000)
+            throw new LiveSupportException("VALIDATION_ERROR", "الملاحظة يجب ألا تتجاوز 1000 حرف.");
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         if (!IsTerminal(conversation.Status) || stars is < 1 or > 5 || await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == conversationId, ct))
             throw new LiveSupportException(LiveSupportErrorCodes.RatingConflict, "التقييم متاح مرة واحدة بعد إغلاق المحادثة.");
@@ -1202,6 +1204,17 @@ public sealed class LiveSupportService(
             whatsAppTemplateOperations?.LastSyncedAt);
         return new LiveSupportAdminDashboardDto(conversations.Count(x => x.Status == LiveSupportConversationStatus.Waiting), conversations.Count(x => x.Status is LiveSupportConversationStatus.Assigned or LiveSupportConversationStatus.Active),
             conversationOperations?.ClosedToday ?? 0, rows, performance, whatsAppSummary);
+    }
+
+    public async Task<LiveSupportConversationPageDto> SearchAdminConversationsAsync(LiveSupportConversationSearchDto request, CancellationToken ct)
+    {
+        if (request.Page < 1 || request.PageSize is < 1 or > 100 || request.Page > int.MaxValue / request.PageSize)
+            throw new LiveSupportException("VALIDATION_ERROR", "اختر صفحة وحجم نتائج صالحين.");
+        var query = LiveSupportConversationSearch.Apply(_db, request);
+        var total = await query.CountAsync(ct);
+        var conversations = await query.OrderByDescending(conversation => conversation.CreatedAt).ThenByDescending(conversation => conversation.Id)
+            .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(ct);
+        return new(await MapAdminConversationsAsync(conversations, ct), request.Page, request.PageSize, total);
     }
 
     public async Task<IReadOnlyList<LiveSupportRatingDto>> GetAdminRatingsAsync(DateTime? from, DateTime? to, CancellationToken ct)
@@ -2429,6 +2442,9 @@ public sealed class LiveSupportService(
         var latestExternalStatuses = latestExternalStatusRows.ToDictionary(
             item => (item.ConversationId, item.Channel),
             item => item.Status);
+        var ratings = await _db.LiveSupportRatings.AsNoTracking()
+            .Where(rating => conversationIds.Contains(rating.ConversationId))
+            .ToDictionaryAsync(rating => rating.ConversationId, ct);
 
         return conversations.Select(c =>
         {
@@ -2466,7 +2482,8 @@ public sealed class LiveSupportService(
                     ? null
                     : latestExternalStatuses.GetValueOrDefault((c.Id, externalBinding.Channel)),
                 externalBinding?.ExternalPageId,
-                externalBinding?.ExternalPageName, externalBinding?.AccountId, externalBinding?.AccountName);
+                externalBinding?.ExternalPageName, externalBinding?.AccountId, externalBinding?.AccountName,
+                ratings.GetValueOrDefault(c.Id)?.Stars, ratings.GetValueOrDefault(c.Id)?.Comment);
         }).ToList();
     }
 

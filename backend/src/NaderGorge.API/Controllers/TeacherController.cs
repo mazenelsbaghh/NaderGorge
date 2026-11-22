@@ -292,7 +292,8 @@ public partial class TeacherController : ControllerBase
             dto.AssistantPhoneNumbers,
             dto.FacebookUrl,
             dto.YouTubeUrl,
-            dto.TelegramUrl
+            dto.TelegramUrl,
+            dto.WhatsAppUrl
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -744,6 +745,7 @@ public class TeacherUpdateProfileRequestDto
     public string? FacebookUrl { get; set; }
     public string? YouTubeUrl { get; set; }
     public string? TelegramUrl { get; set; }
+    public string? WhatsAppUrl { get; set; }
 }
 
 public class UploadImageRequestDto

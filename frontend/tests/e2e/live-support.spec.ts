@@ -66,6 +66,25 @@ async function installAdminAuth(page: import('@playwright/test').Page) {
   }));
 }
 
+async function installRatingStudent(page: import('@playwright/test').Page) {
+  const user = { id: '14200000-0000-0000-0000-000000000001', fullName: 'طالب التقييم', roles: ['Student'], permissions: [],
+    profileComplete: true, allowedDomains: ['student'], allowedNavbarItems: [], authorizationVersion: 1 };
+  await page.addInitScript(authUser => {
+    localStorage.setItem('accessToken', 'synthetic-rating-student');
+    localStorage.setItem('user', JSON.stringify(authUser));
+  }, user);
+  await page.route('**/api/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/public/settings')) return route.fallback();
+    const data = path.endsWith('/student/shell-bootstrap')
+      ? { unreadNotificationsCount: 0, currentBalance: 0, gamification: { totalPoints: 0, levelName: 'طالب' }, hasSeenTrackingCodePopup: true }
+      : [];
+    return route.fulfill({ json: { success: true, data } });
+  });
+  await page.route('**/api/public/settings', route => route.fulfill({ json: { liveSupportEnabled: true, showSupportOutsideAccount: true } }));
+  await page.route('**/api/auth/session', route => route.fulfill({ json: { success: true, data: { user, authorizationVersion: 1 } } }));
+}
+
 async function openSyntheticAdminInvestigation(
   page: import('@playwright/test').Page,
   conversation: Record<string, unknown> & { id: string; participantName: string }
@@ -90,6 +109,34 @@ async function openSyntheticAdminInvestigation(
   await expect(ratingRow).toBeVisible();
   await ratingRow.getByRole('button', { name: 'فتح المحادثة' }).click();
 }
+
+test('admin archive searches older chats with student notes and a Cairo date range', async ({ page }) => {
+  await installAdminAuth(page);
+  const oldChat = { id: '14200000-0000-0000-0000-000000000090', participantName: 'طالب محادثة قديمة', participantType: 'Student',
+    status: 'Closed', channel: 'Web', createdAt: '2026-11-01T12:00:00Z', waitSeconds: 0, ratingStars: 1, ratingComment: 'أرجو مراجعة أسلوب التعامل' };
+  await page.route('**/api/**', route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    let data: unknown = [];
+    if (path.endsWith('/auth/session')) return route.fallback();
+    if (path.endsWith('/admin/config')) data = { featureEnabled: true, staff: [], cannedReplies: [] };
+    if (path.endsWith('/admin/dashboard')) data = { waitingCount: 0, activeCount: 0, closedToday: 0, conversations: [], staffPerformance: [] };
+    if (path.endsWith('/admin/conversations')) data = { items: url.searchParams.get('search') === 'أسلوب' && url.searchParams.get('withComment') === 'true' ? [oldChat] : [], page: 1, pageSize: 50, totalCount: url.searchParams.get('search') === 'أسلوب' && url.searchParams.get('withComment') === 'true' ? 1 : 0 };
+    return route.fulfill({ json: { success: true, data } });
+  });
+  await page.goto(`${adminUrl}/admin/live-support`);
+  await page.getByRole('textbox', { name: 'بحث المحادثات' }).fill('أسلوب');
+  await page.getByLabel('من (القاهرة)', { exact: true }).fill('2026-11-01T00:00');
+  await page.getByLabel('إلى (القاهرة)', { exact: true }).fill('2026-11-02T23:59');
+  const queryPromise = page.waitForRequest(request => request.url().includes('/admin/conversations?') && new URL(request.url()).searchParams.get('withComment') === 'true');
+  await page.getByRole('checkbox', { name: 'عليها ملاحظات الطلاب' }).check();
+  const row = page.getByRole('row').filter({ hasText: oldChat.participantName });
+  await expect(row).toContainText(oldChat.ratingComment);
+  await expect(row).toContainText('تقييم الطالب 1 من 5');
+  await expect(row.getByRole('button', { name: 'فتح المحادثة' })).toBeVisible();
+  const query = await queryPromise;
+  expect(new URL(query.url()).searchParams.get('from')).toBe('2026-10-31T22:00:00.000Z');
+});
 
 test.describe('live support participant', () => {
   test.beforeEach(async ({ page }) => {
@@ -182,22 +229,34 @@ test.describe('live support participant', () => {
     await expect(page.getByRole('log').getByText('رسالة 50')).toHaveCount(1);
   });
 
-  test('rating closed conversation is read-only and requires a new conversation', async ({ page }) => {
+  test('rating closed conversation is read-only and requires a new conversation', async ({ page }, testInfo) => {
+    await installRatingStudent(page);
     let ratingCount = 0;
+    let ratingPayload: unknown;
     const closed = { id: '14200000-0000-0000-0000-000000000011', status: 'Closed', participantType: 'Student', subject: 'مغلقة', createdAt: new Date().toISOString(), closedAt: new Date().toISOString(), version: 2, canSend: false, canRate: true };
     await page.route('**/api/live-support/availability', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isAvailable: true, availableStaffCount: 1, code: 'AVAILABLE', message: 'متاح' } }) }));
     await page.route('**/api/live-support/participant/conversations', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [closed] }) }));
     await page.route(`**/api/live-support/participant/conversations/${closed.id}/messages**`, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [], lastEventSequence: 1, missedEvents: [] } }) }));
-    await page.route(`**/api/live-support/participant/conversations/${closed.id}/rating`, route => { ratingCount++; return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: {} }) }); });
-    await page.goto(appUrl); await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click({ force: true });
+    await page.route(`**/api/live-support/participant/conversations/${closed.id}/rating`, route => { ratingCount++; ratingPayload = route.request().postDataJSON(); return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: {} }) }); });
+    await page.goto(`${appUrl}/student/packages`); await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click();
     await expect(page.getByPlaceholder('اكتب رسالتك')).toHaveCount(0);
-    await page.getByRole('button', { name: '5 نجوم' }).click();
+    const fiveStars = page.getByRole('radio', { name: '5 من 5، ممتازة' });
+    const oneStar = page.getByRole('radio', { name: '1 من 5، سيئة جدًا' });
+    expect((await fiveStars.locator('..').boundingBox())!.x).toBeGreaterThan((await oneStar.locator('..').boundingBox())!.x);
+    await fiveStars.locator('..').click();
+    await expect(page.getByText('5 من 5، ممتازة', { exact: true })).toBeVisible();
+    expect(ratingCount).toBe(0);
+    await page.getByLabel('ملاحظتك للإدارة', { exact: false }).fill('أحتاج مراجعة أسلوب التعامل');
+    await page.screenshot({ path: testInfo.outputPath('student-five-star-note.png') });
+    await page.getByRole('button', { name: 'إرسال التقييم', exact: true }).click();
     await expect.poll(() => ratingCount).toBe(1);
+    expect(ratingPayload).toEqual({ stars: 5, comment: 'أحتاج مراجعة أسلوب التعامل' });
     await expect(page.getByRole('status')).toContainText('شكرًا لتقييمك 5 من 5 نجوم.');
     await expect(page.getByRole('button', { name: 'محادثة جديدة' })).toBeVisible();
   });
 
   test('rating failure exposes a retry without losing the closed conversation', async ({ page }) => {
+    await installRatingStudent(page);
     const closed = { id: '14200000-0000-0000-0000-000000000013', status: 'Closed', participantType: 'Student', subject: 'تقييم قابل لإعادة المحاولة', createdAt: new Date().toISOString(), closedAt: new Date().toISOString(), version: 2, canSend: false, canRate: true };
     let ratingAttempts = 0;
     await page.route('**/api/live-support/availability', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isAvailable: true, availableStaffCount: 1, code: 'AVAILABLE', message: 'متاح' } }) }));
@@ -210,11 +269,14 @@ test.describe('live support participant', () => {
         : route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: {} }) });
     });
 
-    await page.goto(appUrl);
-    await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click({ force: true });
-    await page.getByRole('button', { name: '4 نجوم' }).click();
+    await page.goto(`${appUrl}/student/packages`);
+    await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click();
+    await page.getByRole('radio', { name: '4 من 5، جيدة' }).locator('..').click();
+    await page.getByLabel('ملاحظتك للإدارة', { exact: false }).fill('ملاحظة محفوظة أثناء إعادة المحاولة');
+    await page.getByRole('button', { name: 'إرسال التقييم', exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('alert').filter({ hasText: 'تعذر حفظ التقييم' })).toBeVisible();
-    await page.getByRole('button', { name: 'إعادة المحاولة' }).click();
+    await expect(page.getByLabel('ملاحظتك للإدارة', { exact: false })).toHaveValue('ملاحظة محفوظة أثناء إعادة المحاولة');
+    await page.getByRole('button', { name: 'إعادة إرسال التقييم' }).click();
     await expect.poll(() => ratingAttempts).toBe(2);
     await expect(page.getByRole('button', { name: 'محادثة جديدة' })).toBeVisible();
   });

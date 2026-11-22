@@ -1,3 +1,4 @@
+import { gradingRuntime } from '../test-support/writtenGrading.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Job } from 'bullmq';
@@ -10,10 +11,8 @@ for (const score of [1, 0.7]) test(`homework grades (${score}) survive callback 
   const originalGet = Redis.prototype.get;
   Redis.prototype.get = async () => null;
   context.after(() => { globalThis.fetch = originalFetch; Redis.prototype.get = originalGet; setAIServiceRuntimeFactoryForTests(); });
-  setAIServiceRuntimeFactoryForTests(() => ({
-    config: { primaryProvider: 'developer', developerApiKey: 'test', textModel: 'test', imageModel: 'test' },
-    developer: { models: { generateContent: async () => ({ text: JSON.stringify({ score, feedback: 'Correct reasoning', evidence: 'Student explanation' }) }) } } as never,
-  }));
+  const provider = gradingRuntime(context, { met: score === 1 ? 10 : 7, total: 10, answer: 'Student explanation', feedback: 'Correct reasoning' });
+  setAIServiceRuntimeFactoryForTests(() => provider);
   const job = {
     id: 'homework-evaluation', data: { SubmissionId: 'submission', Fingerprint: 'A'.repeat(64), Questions: [
       { AnswerId: 'written', QuestionText: 'Explain', AnswerText: 'Student explanation', ExpectedAnswer: '' },

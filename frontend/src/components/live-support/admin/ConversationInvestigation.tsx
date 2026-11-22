@@ -843,6 +843,10 @@ export function ConversationInvestigation({
           </div>
 
           <aside className="max-h-52 min-h-0 overflow-y-auto border-t border-[var(--admin-border)] p-4 lg:max-h-none lg:border-t-0">
+            {timeline.ratingStars && <section className="mb-4 space-y-2 rounded-xl bg-[var(--admin-card-soft)] p-3">
+              <h3 className="text-sm font-bold text-[var(--admin-text)]">تقييم الطالب {timeline.ratingStars} من 5</h3>
+              {timeline.ratingComment && <p className="whitespace-pre-wrap break-words text-sm text-[var(--admin-text)]">{timeline.ratingComment}</p>}
+            </section>}
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="font-bold text-[var(--admin-text)]">
                 السجل التشغيلي

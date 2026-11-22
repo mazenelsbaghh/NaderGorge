@@ -24,6 +24,7 @@ import {
   AdminTab,
   AdminTabBar,
 } from "@/components/admin";
+import { getApiErrorSummary } from "@/lib/api-errors";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { teacherService, type TeacherStaffMemberDto } from "@/services/teacher-service";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -76,6 +77,7 @@ export default function TeacherProfilePageClient() {
   const [facebookUrl, setFacebookUrl] = useState("");
   const [youtubeUrl, setYouTubeUrl] = useState("");
   const [telegramUrl, setTelegramUrl] = useState("");
+  const [whatsAppUrl, setWhatsAppUrl] = useState("");
 
   const [staff, setStaff] = useState<TeacherStaffMemberDto[]>([]);
   const [isOwner, setIsOwner] = useState(false);
@@ -113,6 +115,7 @@ export default function TeacherProfilePageClient() {
           setFacebookUrl(res.data.facebookUrl || "");
           setYouTubeUrl(res.data.youtubeUrl || "");
           setTelegramUrl(res.data.telegramUrl || "");
+          setWhatsAppUrl(res.data.whatsAppUrl ?? "");
           setProfileImagePreview(res.data.profileImageUrl || null);
         }
       })
@@ -223,12 +226,14 @@ export default function TeacherProfilePageClient() {
         facebookUrl: facebookUrl || undefined,
         youtubeUrl: youtubeUrl || undefined,
         telegramUrl: telegramUrl || undefined,
+        whatsAppUrl: whatsAppUrl.trim(),
       });
       if (res.success) toast.success("تم تحديث الملف الشخصي بنجاح");
       else toast.error(res.message || "حدث خطأ أثناء تحديث الملف الشخصي");
     } catch (err) {
       console.error(err);
-      toast.error("فشل في تحديث الملف الشخصي");
+      const message = getApiErrorSummary(err);
+      toast.error(message, { id: message });
     } finally {
       setSaving(false);
     }
@@ -431,10 +436,17 @@ export default function TeacherProfilePageClient() {
                   <TelegramIcon className="h-4 w-4 text-[var(--admin-primary)]" />
                   روابط وسائل التواصل الاجتماعي
                 </h4>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <SocialInput id="facebookUrl" label="رابط الفيسبوك" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/..." />
                   <SocialInput id="youtubeUrl" label="رابط اليوتيوب" value={youtubeUrl} onChange={setYouTubeUrl} placeholder="https://youtube.com/..." />
                   <SocialInput id="telegramUrl" label="رابط التيليجرام" value={telegramUrl} onChange={setTelegramUrl} placeholder="https://t.me/..." />
+                  <SocialInput
+                    id="whatsAppUrl"
+                    label="رابط قناة أو جروب واتساب"
+                    value={whatsAppUrl}
+                    onChange={setWhatsAppUrl}
+                    placeholder="https://whatsapp.com/channel/..."
+                  />
                 </div>
               </div>
 

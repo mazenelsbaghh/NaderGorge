@@ -218,6 +218,7 @@ export interface PublicTeacherContentDto {
 }
 
 export interface PublicTeacherDetailDto extends PublicTeacherDto {
+  whatsAppUrl?: string | null;
   subjects: Array<{ id?: string; subjectId?: string; name: string }>;
   packages: PublicTeacherContentDto[];
   sharedPackages: PublicTeacherContentDto[];

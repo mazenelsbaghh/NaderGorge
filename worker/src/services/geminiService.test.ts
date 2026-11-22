@@ -1,3 +1,4 @@
+import { gradingRuntime } from '../test-support/writtenGrading.js';
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
@@ -238,30 +239,50 @@ test('English lesson mindmap accepts verified English visible text (2026-08-10 r
   assert.match(imageUrl, /\/mindmaps\/english-language-regression_run_/);
 });
 
-test('essay requests use Gemini 3.1 Flash-Lite with compatible thinking settings', async () => {
-  let sent: any;
-  const client = { models: { generateContent: async (request: any) => {
-    sent = request;
-    return { text: '{"score":1,"feedback":"برافو عليك","evidence":"إجابة الطالب"}' };
-  } } };
-  setAIServiceRuntimeFactoryForTests(() => runtime(client));
-  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { score: 1, isCorrect: true, feedback: 'برافو عليك' });
-  assert.equal(sent.model, 'gemini-3.1-flash-lite');
-  assert.deepEqual(sent.config.thinkingConfig, { thinkingLevel: 'LOW' });
-  assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
-  assert.deepEqual(sent.config.responseSchema.required, ['score', 'feedback', 'evidence']);
+test('essay requests keep the rubric student-free and use Gemini 3.1 Flash-Lite for grading', async context => {
+  const provider = gradingRuntime(context, { met: 1, total: 1, answer: 'إجابة الطالب', feedback: 'برافو عليك' });
+  const generate = (provider.developer as any).models.generateContent;
+  const requests: any[] = [];
+  (provider.developer as any).models.generateContent = async (request: any) => { requests.push(request); return generate(request); };
+  setAIServiceRuntimeFactoryForTests(() => provider);
+  const grade = await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال');
+  assert.equal(grade.score, 1);
+  assert.equal(grade.isCorrect, true);
+  assert.ok(grade.feedback.endsWith('برافو عليك'));
+  const rubricRequest = requests.find(request => request.config.responseSchema.properties.criteria);
+  assert.deepEqual(JSON.parse(rubricRequest.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح' });
+  const judgmentRequest = requests.find(request => request.config.responseSchema.properties.judgments);
+  const sent = JSON.parse(judgmentRequest.contents);
+  for (const request of [rubricRequest, judgmentRequest]) {
+    assert.equal(request.model, 'gemini-3.1-flash-lite');
+    assert.deepEqual(request.config.thinkingConfig, { thinkingLevel: 'LOW' });
+  }
+  assert.equal(sent.studentAnswer, 'إجابة الطالب');
+  assert.equal(sent.rubric.fingerprint, grade.rubricFingerprint);
 });
 
-test('missing teacher key uses conservative question-only grading', async () => {
-  let sent: any;
-  const client = { models: { generateContent: async (request: any) => {
-    sent = request;
-    return { text: '{"score":0,"feedback":"الإجابة محتاجة توضيح أكتر.","evidence":""}' };
-  } } };
-  setAIServiceRuntimeFactoryForTests(() => runtime(client));
-  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال'),
-    { score: 0, isCorrect: false, feedback: 'الإجابة محتاجة توضيح أكتر.' });
-  assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: '', studentAnswer: 'إجابة الطالب' });
+test('missing teacher key uses a question-only rubric without awarding unsupported credit', async context => {
+  const provider = gradingRuntime(context, { met: 0, total: 1, answer: 'إجابة الطالب', feedback: 'الإجابة محتاجة توضيح أكتر.' });
+  setAIServiceRuntimeFactoryForTests(() => provider);
+  const grade = await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال');
+  assert.equal(grade.score, 0);
+  assert.equal(grade.isCorrect, false);
+  assert.ok(grade.feedback.endsWith('الإجابة محتاجة توضيح أكتر.'));
+});
+
+test('open-ended grading keeps the reference examples out of the provider requests', async context => {
+  const answer = 'يتباطأ سفر الناس بين المدن.';
+  const reference = 'تتراجع التجارة.';
+  const provider = gradingRuntime(context, { open: true, met: 1, total: 1, answer, feedback: 'نتيجة مقبولة.' });
+  const generate = (provider.developer as any).models.generateContent;
+  (provider.developer as any).models.generateContent = (request: any) => {
+    assert.equal(Object.hasOwn(JSON.parse(request.contents), 'expectedAnswer'), false);
+    return generate(request);
+  };
+  setAIServiceRuntimeFactoryForTests(() => provider);
+
+  const grade = await evaluateEssayWithAI(answer, reference, 'ماذا لو لم تُبنَ السكك الحديدية بين المدن؟');
+  assert.equal(grade.score, 1);
 });
 
 test('missing question text cannot be graded', async () => {
@@ -269,30 +290,27 @@ test('missing question text cannot be graded', async () => {
   await assert.rejects(evaluateEssayWithAI('إجابة', 'نموذج', ' '), /requires the question text/);
 });
 
-test('2026-10-03 essay grading preserves partial credit and its deduction reason', async () => {
+test('2026-10-03 essay grading preserves partial credit and its deduction reason', async context => {
   const feedback = 'وضحت مصالح ثلاثة أطراف صح؛ ناقص مصلحة الموردين، وهي السداد في الموعد.';
-  setAIServiceRuntimeFactoryForTests(() => runtime({ models: {
-    generateContent: async () => ({ text: JSON.stringify({ score: 0.75, feedback, evidence: 'مصالح ثلاثة أطراف' }) }),
-  } }));
-
+  const provider = gradingRuntime(context, { met: 3, total: 4, answer: 'مصالح ثلاثة أطراف', feedback });
+  setAIServiceRuntimeFactoryForTests(() => provider);
   const grade = await evaluateEssayWithAI('مصالح ثلاثة أطراف', 'مصالح أربعة أطراف', 'وضح مصلحة كل طرف');
-
-  assert.deepEqual(grade, { score: 0.75, isCorrect: false, feedback });
+  assert.equal(grade.score, 0.75);
+  assert.equal(grade.isCorrect, false);
+  assert.ok(grade.feedback.endsWith(feedback));
 });
 
-test('malformed AI grades are rejected instead of awarding unsupported marks', async context => {
-  for (const response of [
-    { score: -0.1, feedback: 'reason' }, { score: 1.1, feedback: 'reason' },
-    { score: '0.75', feedback: 'reason' }, { score: null, feedback: 'reason' },
-    { score: 0.333, feedback: 'unsupported precision' },
-    { score: 0.75, feedback: ' ' }, { score: 0.75, feedback: 'x'.repeat(4001) },
-    { isCorrect: true, feedback: 'missing numeric grade' },
-    { score: 1, feedback: 'unsupported evidence', evidence: 'invented quote' },
-  ]) {
-    await context.test(JSON.stringify(response).slice(0, 80), async () => {
-      setAIServiceRuntimeFactoryForTests(() => runtime({ models: {
-        generateContent: async () => ({ text: JSON.stringify(response) }),
-      } }));
+test('malformed AI judgments are rejected instead of awarding unsupported marks', async context => {
+  for (const response of [{ score: 0.75, feedback: 'legacy unsupported result' },
+    { judgments: [], feedback: 'no matching criteria' },
+    { judgments: [{ criterionId: 'c1', met: true, evidence: 'answer' }], feedback: ' ' },
+    { judgments: [{ criterionId: 'c1', met: true, evidence: 'answer' }], feedback: 'x'.repeat(4001) }]) {
+    await context.test(JSON.stringify(response).slice(0, 80), async child => {
+      const provider = gradingRuntime(child, { met: 1, total: 1, answer: 'answer', feedback: 'reason' });
+      const generate = (provider.developer as any).models.generateContent;
+      (provider.developer as any).models.generateContent = async (request: any) => request.config.responseSchema.properties.judgments
+        ? { text: JSON.stringify(response) } : generate(request);
+      setAIServiceRuntimeFactoryForTests(() => provider);
       await assert.rejects(evaluateEssayWithAI('answer', 'reference', 'question'), /invalid result/);
     });
   }

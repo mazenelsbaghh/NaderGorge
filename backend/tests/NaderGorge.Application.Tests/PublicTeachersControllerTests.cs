@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Controllers;
+using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -77,6 +78,42 @@ public sealed class PublicTeachersControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var data = GetPropertyValue<object>(ok.Value!, "data");
         Assert.Equal("Out Of Scope Teacher", GetPropertyValue<string>(data, "fullName"));
+    }
+
+    private const string SavedGroupInvite = "https://chat.whatsapp.com/TestGroupCode";
+
+    [Theory]
+    [InlineData("  https://www.whatsapp.com/channel/TestChannelId  ", "https://www.whatsapp.com/channel/TestChannelId", true)]
+    [InlineData("https://chat.whatsapp.com/NewGroupCode?mode=ac_t", "https://chat.whatsapp.com/NewGroupCode?mode=ac_t", true)]
+    [InlineData(null, SavedGroupInvite, true)]
+    [InlineData("", null, true)]
+    [InlineData("https://chat.whatsapp.com.example.org/NewGroupCode", SavedGroupInvite, false)]
+    [InlineData("https://whatsapp.com/channel/", SavedGroupInvite, false)]
+    [InlineData("http://chat.whatsapp.com/NewGroupCode", SavedGroupInvite, false)]
+    public async Task WhatsAppLink_UpdatesOnlyForSupportedInvitesOrExplicitRemoval(
+        string? submittedLink, string? expectedLink, bool accepted)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var subject = await SeedSubjectAsync(db, "WhatsApp contact subject");
+        var teacher = await SeedTeacherAsync(db, "WhatsApp contact teacher", subject);
+        teacher.WhatsAppUrl = SavedGroupInvite;
+        await db.SaveChangesAsync();
+
+        var update = new UpdateTeacherProfileCommand(
+            teacher.UserId, teacher.Bio, teacher.Specialization, teacher.ContactInfo,
+            null, null, null, null, null, submittedLink);
+
+        var response = await new UpdateTeacherProfileCommandHandler(db).Handle(update, CancellationToken.None);
+
+        Assert.Equal(accepted, response.Success);
+        db.ChangeTracker.Clear();
+        var profile = await new GetTeacherProfileQueryHandler(db)
+            .Handle(new GetTeacherProfileQuery(teacher.UserId), CancellationToken.None);
+        Assert.Equal(expectedLink, profile.Data!.WhatsAppUrl);
+        var detail = Assert.IsType<OkObjectResult>(await CreateController(db, Guid.NewGuid())
+            .Detail(teacher.Id.ToString(), CancellationToken.None));
+        var teacherDetail = GetPropertyValue<object>(detail.Value!, "data");
+        Assert.Equal(expectedLink, (string?)GetPropertyValue<object>(teacherDetail, "WhatsAppUrl"));
     }
 
     [Theory]

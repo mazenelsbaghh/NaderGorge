@@ -206,6 +206,7 @@ public class PublicTeachersController : ControllerBase
                 teacher.FacebookUrl,
                 teacher.YouTubeUrl,
                 teacher.TelegramUrl,
+                teacher.WhatsAppUrl,
                 teacher.RatingAverage,
                 teacher.RatingCount,
                 subjectNames = teacher.TeacherSubjects.Select(ts => ts.Subject.Name),

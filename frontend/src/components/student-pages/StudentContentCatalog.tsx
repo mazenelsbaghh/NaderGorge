@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -75,7 +75,8 @@ type TeacherLessonGroup = {
   subjectNames: string[];
   entries: LessonCatalogEntry[];
 };
-type LessonCatalogFiltersProps = {
+type CatalogFiltersProps = {
+  itemLabel?: string;
   subjectOptions: CatalogFilterOption[];
   teacherOptions: CatalogFilterOption[];
   subjectFilter: string;
@@ -523,9 +524,9 @@ export function StudentContentCatalog({
 
         <nav
           aria-label="مستويات المحتوى"
-          className="relative mt-7 overflow-x-auto border-t border-[var(--admin-border)] pt-4"
+          className="relative mt-7 border-t border-[var(--admin-border)] pt-4"
         >
-          <div className="flex min-w-max items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {LEVELS.map((item, index) => {
               const Icon = item.icon;
               const isAvailable = availableLevels.has(item.key);
@@ -643,8 +644,10 @@ export function StudentContentCatalog({
           {packages.length === 0 ? (
             <CatalogEmpty message="لا يوجد محتوى متاح لبياناتك الدراسية حاليًا." />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {packages.map((pkg) => {
+            <TeacherCatalogGroups
+              items={packages}
+              getPackage={(pkg) => pkg}
+              renderItem={(pkg) => {
                 const rootReference = getContentRootPurchaseReference(pkg);
                 const rootPurchaseTarget: PurchaseTarget | null = rootReference
                   ? {
@@ -665,8 +668,8 @@ export function StudentContentCatalog({
                     }
                   />
                 );
-              })}
-            </div>
+              }}
+            />
           )}
         </div>
       ) : null}
@@ -679,8 +682,10 @@ export function StudentContentCatalog({
           emptyMessage="لا توجد أترام متاحة داخل هذه الباقة حاليًا."
           isEmpty={terms.length === 0}
         >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {terms.map((term, index) => {
+          <TeacherCatalogGroups
+            items={terms}
+            getPackage={(term) => selectedPackage ?? termParents.get(term.id)}
+            renderItem={(term, index) => {
               const parentPackage = selectedPackage ?? termParents.get(term.id);
               return (
                 <TermCatalogCard
@@ -702,8 +707,8 @@ export function StudentContentCatalog({
                   }
                 />
               );
-            })}
-          </div>
+            }}
+          />
         </CatalogLevelPanel>
       ) : null}
 
@@ -721,8 +726,12 @@ export function StudentContentCatalog({
           emptyMessage="لا توجد شهور أو أقسام متاحة داخل هذا المسار حاليًا."
           isEmpty={sections.length === 0}
         >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {sections.map((section, index) => {
+          <TeacherCatalogGroups
+            items={sections}
+            getPackage={(section) =>
+              selectedPackage ?? sectionParents.get(section.id)?.pkg
+            }
+            renderItem={(section, index) => {
               const parent = selectedPackage
                 ? { pkg: selectedPackage, term: selectedTerm ?? undefined }
                 : sectionParents.get(section.id);
@@ -747,8 +756,8 @@ export function StudentContentCatalog({
                   }
                 />
               );
-            })}
-          </div>
+            }}
+          />
         </CatalogLevelPanel>
       ) : null}
 
@@ -769,7 +778,7 @@ export function StudentContentCatalog({
           isEmpty={lessons.length === 0}
         >
           <div className="space-y-10">
-            <LessonCatalogFilters
+            <CatalogFilters
               subjectOptions={lessonSubjectOptions}
               teacherOptions={lessonTeacherOptions}
               subjectFilter={lessonSubjectFilter}
@@ -924,7 +933,8 @@ function PackageCatalogCard({
               role="status"
               className="mt-3 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-3 py-2 text-xs font-bold leading-5 text-[var(--admin-warning)]"
             >
-              شراء الباقة كاملة متوقف حالياً، ويمكنك شراء الترم أو القسم أو الحصة بشكل منفصل.
+              شراء الباقة كاملة متوقف حالياً، ويمكنك شراء الترم أو القسم أو
+              الحصة بشكل منفصل.
             </p>
           ) : null}
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-border)] pt-4">
@@ -1067,7 +1077,94 @@ function SectionCatalogCard({
   );
 }
 
-function LessonCatalogFilters({
+function TeacherCatalogGroups<T>({
+  items,
+  getPackage,
+  renderItem,
+}: {
+  items: T[];
+  getPackage: (item: T) => PackageDto | undefined;
+  renderItem: (item: T, index: number) => ReactNode;
+}) {
+  const [teacherFilter, setTeacherFilter] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const entries = items.map((item, index) => {
+    const pkg = getPackage(item);
+    return {
+      item,
+      index,
+      teacherKey: pkg?.teacherId || pkg?.teacherName || 'unknown',
+      teacherName: pkg?.teacherName || 'مدرس المحتوى',
+      subjectKey: pkg?.subjectId || pkg?.subjectName || 'general',
+      subjectName: pkg?.subjectName || 'عام',
+    };
+  });
+  const teacherOptions = uniqueCatalogOptions(
+    entries
+      .filter((entry) => !subjectFilter || entry.subjectKey === subjectFilter)
+      .map((entry) => ({ key: entry.teacherKey, label: entry.teacherName }))
+  );
+  const subjectOptions = uniqueCatalogOptions(
+    entries.map((entry) => ({
+      key: entry.subjectKey,
+      label: entry.subjectName,
+    }))
+  );
+  const visible = entries.filter(
+    (entry) =>
+      (!teacherFilter || entry.teacherKey === teacherFilter) &&
+      (!subjectFilter || entry.subjectKey === subjectFilter)
+  );
+  const groups = new Map<string, typeof visible>();
+  for (const entry of visible) {
+    const group = groups.get(entry.teacherKey) ?? [];
+    group.push(entry);
+    groups.set(entry.teacherKey, group);
+  }
+
+  return (
+    <div className="space-y-8">
+      <CatalogFilters
+        itemLabel="عنصر"
+        subjectOptions={subjectOptions}
+        teacherOptions={teacherOptions}
+        subjectFilter={subjectFilter}
+        teacherFilter={teacherFilter}
+        visibleCount={visible.length}
+        onSubjectChange={(value) => {
+          setSubjectFilter(value);
+          setTeacherFilter('');
+        }}
+        onTeacherChange={setTeacherFilter}
+        onReset={() => {
+          setTeacherFilter('');
+          setSubjectFilter('');
+        }}
+      />
+      {groups.size === 0 ? (
+        <CatalogEmpty message="لا يوجد محتوى مطابق للتصفية المختارة." />
+      ) : (
+        [...groups].map(([key, group]) => (
+          <section
+            key={key}
+            aria-label={`محتوى ${group[0].teacherName}`}
+            className="space-y-4"
+          >
+            <h3 className="border-b border-[var(--admin-border)] pb-3 text-xl font-black text-[var(--admin-text)]">
+              {group[0].teacherName}
+            </h3>
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {group.map((entry) => renderItem(entry.item, entry.index))}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
+function CatalogFilters({
+  itemLabel = 'حصة',
   subjectOptions,
   teacherOptions,
   subjectFilter,
@@ -1076,12 +1173,12 @@ function LessonCatalogFilters({
   onSubjectChange,
   onTeacherChange,
   onReset,
-}: LessonCatalogFiltersProps) {
+}: CatalogFiltersProps) {
   const hasActiveFilter = Boolean(subjectFilter || teacherFilter);
 
   return (
     <section
-      aria-label="تصفية الحصص"
+      aria-label={itemLabel === 'حصة' ? 'تصفية الحصص' : 'تصفية المحتوى'}
       className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 sm:p-5"
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1094,17 +1191,18 @@ function LessonCatalogFilters({
             اختر المادة والمدرس
           </div>
           <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
-            المعروض الآن: {visibleCount.toLocaleString('ar-EG-u-nu-latn')} حصة
+            المعروض الآن: {visibleCount.toLocaleString('ar-EG-u-nu-latn')}{' '}
+            {itemLabel}
           </p>
         </div>
 
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[32rem]">
-          <label className="grid gap-1.5 text-xs font-black text-[var(--admin-muted)]">
+        <div className="grid w-full min-w-0 gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[32rem]">
+          <label className="grid min-w-0 gap-1.5 text-xs font-black text-[var(--admin-muted)]">
             المادة
             <select
               value={subjectFilter}
               onChange={(event) => onSubjectChange(event.target.value)}
-              className="min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-base font-black text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] sm:text-sm"
+              className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-base font-black text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] sm:text-sm"
             >
               <option value="">كل المواد</option>
               {subjectOptions.map((subject) => (
@@ -1115,12 +1213,12 @@ function LessonCatalogFilters({
             </select>
           </label>
 
-          <label className="grid gap-1.5 text-xs font-black text-[var(--admin-muted)]">
+          <label className="grid min-w-0 gap-1.5 text-xs font-black text-[var(--admin-muted)]">
             المدرس
             <select
               value={teacherFilter}
               onChange={(event) => onTeacherChange(event.target.value)}
-              className="min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-base font-black text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] sm:text-sm"
+              className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-base font-black text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] sm:text-sm"
             >
               <option value="">كل المدرسين</option>
               {teacherOptions.map((teacher) => (
@@ -1139,7 +1237,7 @@ function LessonCatalogFilters({
           onClick={onReset}
           className="mt-3 inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-black text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary-10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
         >
-          مسح الفلاتر وعرض كل الحصص
+          مسح التصفية
         </button>
       ) : null}
     </section>

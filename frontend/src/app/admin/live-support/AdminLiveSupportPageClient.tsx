@@ -12,6 +12,7 @@ import {
   type LiveSupportAdminDashboard,
   type LiveSupportConversationStatus,
   type LiveSupportConversationTimeline,
+  type LiveSupportConversationPage,
   type LiveSupportScheduleWindow,
   type LiveSupportStaffConfig,
   type LiveSupportWhatsAppTemplate,
@@ -27,7 +28,7 @@ import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSu
 import { devConsole } from '@/utils/dev-console';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
-import { formatCairoTimestamp } from '@/lib/cairo-time';
+import { cairoDateTimeLocalToUtcISOString, formatCairoTimestamp } from '@/lib/cairo-time';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import {
   isExternalChannel,
@@ -57,6 +58,14 @@ export default function AdminLiveSupportPageClient() {
   const [statusFilter, setStatusFilter] = useState<'all' | LiveSupportConversationStatus>('all');
   const [windowFilter, setWindowFilter] = useState<'all' | 'open' | 'expired'>('all');
   const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationFrom, setConversationFrom] = useState('');
+  const [conversationTo, setConversationTo] = useState('');
+  const [withComment, setWithComment] = useState(false);
+  const [conversationPage, setConversationPage] = useState<LiveSupportConversationPage>();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [conversationLoading, setConversationLoading] = useState(true);
+  const [conversationError, setConversationError] = useState('');
+  const [conversationRetry, setConversationRetry] = useState(0);
   const [syncingTemplates, setSyncingTemplates] = useState(false);
   const [templateSyncFeedback, setTemplateSyncFeedback] = useState('');
   const [featureConfirmationOpen, setFeatureConfirmationOpen] = useState(false);
@@ -70,13 +79,9 @@ export default function AdminLiveSupportPageClient() {
   const [savingStaffId, setSavingStaffId] = useState<string>();
   const hasDirtyChanges = Boolean(config && (serializeCannedReplies(config.cannedReplies) !== cannedRepliesBaseline || config.staff.some((staff) => serializeStaff(staff) !== staffBaselines[staff.userId])));
   const messengerPageOptions = useMemo(
-    () => getMessengerPageOptions(dashboard?.conversations ?? []),
-    [dashboard?.conversations]
+    () => getMessengerPageOptions([...(dashboard?.conversations ?? []), ...(conversationPage?.items ?? [])]),
+    [dashboard?.conversations, conversationPage?.items]
   );
-  const effectivePageFilter =
-    pageFilter === 'all' || messengerPageOptions.some((page) => page.key === pageFilter)
-      ? pageFilter
-      : 'all';
 
   async function load() {
     try {
@@ -107,6 +112,55 @@ export default function AdminLiveSupportPageClient() {
       cleanupStaff();
     };
   }, []);
+
+  const archiveFilters = JSON.stringify({ search: conversationSearch.trim(), from: conversationFrom, to: conversationTo,
+    channel: channelFilter, pageId: pageFilter, status: statusFilter, window: windowFilter, activity: conversationFilter, withComment });
+  const [appliedArchiveFilters, setAppliedArchiveFilters] = useState(archiveFilters);
+  if (appliedArchiveFilters !== archiveFilters) {
+    setAppliedArchiveFilters(archiveFilters);
+    setPageNumber(1);
+  }
+  useEffect(() => {
+    const controller = new AbortController();
+    let inFlight = false;
+    const filters = JSON.parse(archiveFilters) as { search: string; from: string; to: string; channel: string; pageId: string; status: string; window: string; activity: string; withComment: boolean };
+    setConversationLoading(true);
+    setConversationError('');
+    const fetchPage = async () => {
+      if (inFlight) return;
+      if (filters.from && filters.to && filters.from > filters.to) {
+        setConversationError('بداية الفترة يجب أن تسبق نهايتها.');
+        setConversationLoading(false);
+        return;
+      }
+      inFlight = true;
+      try {
+        const allOrUndefined = (value: string) => value === 'all' ? undefined : value;
+        const result = await liveSupportService.searchAdminConversations({
+          search: filters.search || undefined,
+          from: filters.from ? cairoDateTimeLocalToUtcISOString(filters.from) : undefined,
+          to: filters.to ? cairoDateTimeLocalToUtcISOString(filters.to) : undefined,
+          channel: allOrUndefined(filters.channel), pageId: allOrUndefined(filters.pageId),
+          status: allOrUndefined(filters.status), window: allOrUndefined(filters.window),
+          activity: allOrUndefined(filters.activity), withComment: filters.withComment, page: pageNumber, pageSize: 50,
+        }, controller.signal);
+        if (!controller.signal.aborted) {
+          setConversationPage(result);
+          setConversationError('');
+          const lastPage = Math.max(1, Math.ceil(result.totalCount / 50));
+          if (pageNumber > lastPage) setPageNumber(lastPage);
+        }
+      } catch {
+        if (!controller.signal.aborted) setConversationError('تعذر تحميل المحادثات. أعد المحاولة.');
+      } finally {
+        inFlight = false;
+        if (!controller.signal.aborted) setConversationLoading(false);
+      }
+    };
+    const timeout = window.setTimeout(() => void fetchPage(), 300);
+    const refresh = window.setInterval(() => void fetchPage(), 10_000);
+    return () => { controller.abort(); window.clearTimeout(timeout); window.clearInterval(refresh); };
+  }, [archiveFilters, pageNumber, conversationRetry]);
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => { if (hasDirtyChanges) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', guard);
@@ -168,16 +222,7 @@ export default function AdminLiveSupportPageClient() {
     }
   }
 
-  const filteredConversations = dashboard
-    ? filterConversations(dashboard.conversations, {
-        activity: conversationFilter,
-        channel: channelFilter,
-        page: effectivePageFilter,
-        status: statusFilter,
-        window: windowFilter,
-        search: conversationSearch,
-      })
-    : [];
+  const filteredConversations = conversationPage?.items ?? [];
 
   return <AdminPage activePath="/admin/live-support" sectionLabel="خدمة العملاء" pageTitle="الدعم المباشر والقنوات الخارجية" subtitle="متابعة محادثات الموقع وواتساب وصفحات فيسبوك، توزيعها على الفريق، ومراجعة نوافذ الرد وحالة التسليم.">
     {error && <div role="alert" className="mb-4 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-[var(--admin-danger)]">{error}</div>}
@@ -198,22 +243,29 @@ export default function AdminLiveSupportPageClient() {
               <h2 className="font-bold text-[var(--admin-text)]">كل المحادثات والنشاط</h2>
               <p className="mt-1 text-sm text-[var(--admin-muted)]">تتحدث القائمة تلقائيًا كل 10 ثوانٍ، وتشمل الموقع وواتساب وماسنجر وحالات AI.</p>
             </div>
-            <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">{filteredConversations.length} نتيجة</span>
+            <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">{conversationPage?.totalCount ?? 0} نتيجة</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <label className="sm:col-span-2 lg:col-span-1">
               <span className="mb-1 block text-xs font-bold text-[var(--admin-muted)]">بحث المحادثات</span>
               <span className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 focus-within:border-[var(--admin-accent)] focus-within:ring-2 focus-within:ring-[var(--admin-accent-soft)]">
                 <Search aria-hidden="true" size={16} className="shrink-0 text-[var(--admin-muted)]" />
-                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="الاسم، الهاتف، الصفحة، الموضوع أو الموظف" className="min-w-0 flex-1 bg-transparent text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)]" dir="auto" />
+                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="الاسم، الهاتف، نص الرسالة أو الملاحظة" className="min-w-0 flex-1 bg-transparent text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)]" dir="auto" />
               </span>
             </label>
             <FilterSelect label="القناة" value={channelFilter} onChange={(value) => setChannelFilter(value as typeof channelFilter)} options={[['all', 'كل القنوات'], ['Web', 'الموقع'], ['WhatsApp', 'واتساب'], ['Messenger', 'ماسنجر']]} />
-            <FilterSelect label="صفحة فيسبوك" value={effectivePageFilter} onChange={setPageFilter} options={[['all', 'كل الصفحات'], ...messengerPageOptions.map((page) => [page.key, page.label] as const)]} />
+            <FilterSelect label="صفحة فيسبوك" value={pageFilter} onChange={setPageFilter} options={[['all', 'كل الصفحات'], ...messengerPageOptions.map((page) => [page.key, page.label] as const), ...(pageFilter !== 'all' && !messengerPageOptions.some(page => page.key === pageFilter) ? [[pageFilter, 'الصفحة المختارة'] as const] : [])]} />
             <FilterSelect label="الحالة" value={statusFilter} onChange={(value) => setStatusFilter(value as typeof statusFilter)} options={[['all', 'كل الحالات'], ...Object.entries(statusLabels)]} />
             <FilterSelect label="نافذة الرد" value={windowFilter} onChange={(value) => setWindowFilter(value as typeof windowFilter)} options={[['all', 'كل النوافذ'], ['open', 'مفتوحة'], ['expired', 'منتهية']]} />
             <FilterSelect label="نشاط AI" value={conversationFilter} onChange={(value) => setConversationFilter(value as typeof conversationFilter)} options={[['all', 'كل النشاط'], ['ai', 'نشاط AI'], ['failed', 'فشل AI / Worker']]} />
           </div>
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="text-sm font-semibold text-[var(--admin-text)]">من (القاهرة)<input type="datetime-local" value={conversationFrom} onChange={event => setConversationFrom(event.target.value)} className="mt-1 block min-h-11 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" /></label>
+            <label className="text-sm font-semibold text-[var(--admin-text)]">إلى (القاهرة)<input type="datetime-local" value={conversationTo} onChange={event => setConversationTo(event.target.value)} className="mt-1 block min-h-11 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" /></label>
+            <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--admin-text)]"><input type="checkbox" checked={withComment} onChange={event => setWithComment(event.target.checked)} />عليها ملاحظات الطلاب</label>
+            <p className="text-xs text-[var(--admin-muted)]">الفترة حسب تاريخ بدء المحادثة.</p>
+          </div>
+          {conversationError && <div role="alert" className="mt-3 text-sm text-[var(--admin-danger)]">{conversationError} <button type="button" onClick={() => setConversationRetry(value => value + 1)} className="min-h-11 px-2 underline">إعادة المحاولة</button></div>}
         </div>
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="جدول محادثات الدعم المباشر">
           <table className="w-full min-w-[980px] text-right text-sm">
@@ -232,12 +284,12 @@ export default function AdminLiveSupportPageClient() {
               </tr>
             </thead>
             <tbody>
-              {filteredConversations.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">لا توجد محادثات مطابقة للبحث والتصفية الحالية.</td></tr> : filteredConversations.map((item) => {
+              {conversationLoading ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">جارٍ تحميل المحادثات…</td></tr> : conversationError ? null : filteredConversations.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">لا توجد محادثات مطابقة للبحث والتصفية الحالية.</td></tr> : filteredConversations.map((item) => {
                 const isWhatsApp = item.channel === 'WhatsApp';
                 const isMessenger = item.channel === 'Messenger';
                 const isExternal = isExternalChannel(item.channel);
                 return <tr key={item.id} className="border-t border-[var(--admin-border)] transition-colors hover:bg-[var(--admin-hover)]">
-                  <td className="p-3 font-semibold text-[var(--admin-text)]">{item.participantName}<span className="mr-2 text-xs font-normal text-[var(--admin-muted)]">{item.participantType === 'Guest' ? 'زائر' : 'طالب'}</span>{item.subject ? <span className="mt-1 block max-w-56 truncate text-xs font-normal text-[var(--admin-muted)]" title={item.subject}>{item.subject}</span> : null}</td>
+                  <td className="p-3 font-semibold text-[var(--admin-text)]">{item.participantName}<span className="mr-2 text-xs font-normal text-[var(--admin-muted)]">{item.participantType === 'Guest' ? 'زائر' : 'طالب'}</span>{item.subject ? <span className="mt-1 block max-w-56 truncate text-xs font-normal text-[var(--admin-muted)]" title={item.subject}>{item.subject}</span> : null}{item.ratingStars ? <span className="mt-1 block text-xs text-[var(--admin-warning)]">تقييم الطالب {item.ratingStars} من 5</span> : null}{item.ratingComment ? <p className="mt-1 max-w-sm whitespace-pre-wrap break-words text-xs font-normal text-[var(--admin-text)]">{item.ratingComment}</p> : null}</td>
                   <td className="p-3"><LiveSupportChannelBadge channel={item.channel} externalPageName={item.externalPageName}/>{isWhatsApp && item.externalPhoneNumber ? <bdi dir="ltr" className="mt-1 block text-xs text-[var(--admin-muted)]">{item.externalPhoneNumber}</bdi> : null}{isMessenger ? <span className="mt-1 block text-xs font-semibold text-[var(--admin-muted)]">موظفون فقط</span> : null}{isExternal && item.lastExternalDeliveryStatus ? <span className="mt-1 block text-xs font-semibold text-[var(--admin-muted)]">آخر حالة: {externalStatusLabel(item.lastExternalDeliveryStatus)}</span> : null}</td>
                   <td className="p-3 font-semibold text-[var(--admin-text)]">{statusLabels[item.status]}</td>
                   <td className="p-3 text-xs font-medium text-[var(--admin-text)]">{formatExternalWindow(item)}</td>
@@ -250,6 +302,11 @@ export default function AdminLiveSupportPageClient() {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--admin-border)] px-4 py-3 text-sm text-[var(--admin-text)]">
+          <button type="button" disabled={conversationLoading || pageNumber <= 1} onClick={() => setPageNumber(value => value - 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">السابق</button>
+          <span>صفحة {pageNumber} من {Math.max(1, Math.ceil((conversationPage?.totalCount ?? 0) / 50))}</span>
+          <button type="button" disabled={conversationLoading || pageNumber * 50 >= (conversationPage?.totalCount ?? 0)} onClick={() => setPageNumber(value => value + 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">التالي</button>
         </div>
       </section>
       <StaffPerformancePanel staff={dashboard.staffPerformance}/>
@@ -293,46 +350,6 @@ function FilterSelect({ label, value, options, onChange }: { label: string; valu
       {options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}
     </select>
   </label>;
-}
-
-function filterConversations(
-  conversations: LiveSupportAdminConversation[],
-  filters: {
-    activity: 'all' | 'ai' | 'failed';
-    channel: 'all' | LiveSupportChannel;
-    page: string;
-    status: 'all' | LiveSupportConversationStatus;
-    window: 'all' | 'open' | 'expired';
-    search: string;
-  },
-) {
-  const search = filters.search.trim().toLocaleLowerCase('ar-EG');
-  const compactSearch = search.replace(/[\s()+-]/g, '');
-  const now = Date.now();
-
-  return conversations.filter((conversation) => {
-    const channel = conversation.channel ?? 'Web';
-    if (filters.activity === 'ai' && !conversation.aiTurnStatus) return false;
-    if (filters.activity === 'failed' && conversation.aiTurnStatus !== 'Failed') return false;
-    if (filters.channel !== 'all' && channel !== filters.channel) return false;
-    if (
-      filters.page !== 'all' &&
-      (channel !== 'Messenger' || getMessengerPageKey(conversation) !== filters.page)
-    ) return false;
-    if (filters.status !== 'all' && conversation.status !== filters.status) return false;
-    if (filters.window !== 'all') {
-      if (!isExternalChannel(channel)) return false;
-      const expiration = conversation.customerServiceWindowExpiresAt ? new Date(conversation.customerServiceWindowExpiresAt).getTime() : Number.NaN;
-      const windowOpen = Number.isFinite(expiration) && expiration > now;
-      if ((filters.window === 'open') !== windowOpen) return false;
-    }
-    if (!search) return true;
-    const text = [conversation.participantName, conversation.externalPhoneNumber, conversation.externalPageName, conversation.subject, conversation.ownerName]
-      .filter(Boolean)
-      .join(' ')
-      .toLocaleLowerCase('ar-EG');
-    return text.includes(search) || (compactSearch.length > 0 && text.replace(/[\s()+-]/g, '').includes(compactSearch));
-  });
 }
 
 function formatExternalWindow(conversation: LiveSupportAdminConversation) {

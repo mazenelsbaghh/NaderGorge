@@ -41,7 +41,7 @@ class BrowserElement {
   }
 }
 
-function runEmbed(recovery = false) {
+function runEmbed(recovery = false, { resumeAt = 0, maxTouchPoints = 1 } = {}) {
   let now = 0;
   let timerId = 0;
   const timers = new Map<number, { due: number; callback: () => void }>();
@@ -61,7 +61,8 @@ function runEmbed(recovery = false) {
     querySelectorAll: () => [], querySelector: () => null, getElementsByTagName: () => [], addEventListener() {},
   };
   const window = {
-    location: { origin: 'https://platform.test', search: recovery ? '?s=owned-session&youtubeRecovery=1' : '?s=owned-session', replace() {} },
+    location: { origin: 'https://platform.test', search: recovery ? '?s=owned-session&youtubeRecovery=1' : '?s=owned-session',
+      hash: resumeAt ? `#resume=${resumeAt}` : '', replace() {} },
     parent: { postMessage(message: typeof messages[number]) { messages.push(message); } },
     addEventListener(type: string, callback: (event?: unknown) => void) {
       listeners.set(type, [...(listeners.get(type) ?? []), callback]);
@@ -71,7 +72,7 @@ function runEmbed(recovery = false) {
     YT: undefined as unknown,
   };
   const context = vm.createContext({
-    window, document, navigator: { maxTouchPoints: 1, onLine: true }, URLSearchParams,
+    window, document, navigator: { maxTouchPoints, onLine: true }, URLSearchParams,
     setTimeout: schedule, clearTimeout: (id: number) => timers.delete(id),
     setInterval: () => 0, clearInterval() {},
     Date: class extends Date { static now() { return now; } },
@@ -83,9 +84,12 @@ function runEmbed(recovery = false) {
   class FakePlayer {
     events: PlayerEvents;
     frame: BrowserElement;
+    playerVars: Record<string, unknown>;
+    playCount = 0;
     destroyed = false;
-    constructor(target: string | BrowserElement, options: { events: PlayerEvents }) {
+    constructor(target: string | BrowserElement, options: { events: PlayerEvents; playerVars: Record<string, unknown> }) {
       this.events = options.events;
+      this.playerVars = options.playerVars;
       if (typeof target === 'string') {
         const placeholder = document.getElementById(target);
         assert.ok(placeholder);
@@ -100,6 +104,7 @@ function runEmbed(recovery = false) {
     isMuted() { return false; }
     getAvailableQualityLevels() { return []; }
     getPlaybackQuality() { return 'auto'; }
+    playVideo() { this.playCount++; }
     pauseVideo() {}
     destroy() { this.destroyed = true; }
   }
@@ -126,6 +131,18 @@ function runEmbed(recovery = false) {
     },
   };
 }
+
+test('YouTube queues the saved timestamp and waits for a play command', () => {
+  const embed = runEmbed(false, { resumeAt: 94, maxTouchPoints: 0 });
+  embed.loadSdk();
+  embed.ready();
+  const [player] = embed.players;
+  assert.equal(player.playerVars.start, 94);
+  assert.equal(player.playerVars.autoplay, 0);
+  assert.equal(player.playCount, 0);
+  embed.dispatch('message', { origin: 'https://platform.test', data: { type: 'play' } });
+  assert.equal(player.playCount, 1);
+});
 
 for (const failure of ['sdk_load', 'sdk_timeout', 'iframe_timeout', 'provider_error'] as const) {
   test(`2026-10-16 Chrome startup failure reports ${failure} once without a false ready`, () => {

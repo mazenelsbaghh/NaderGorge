@@ -14251,6 +14251,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("WhatsAppUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("YouTubeUrl")
                         .HasColumnType("text");
 

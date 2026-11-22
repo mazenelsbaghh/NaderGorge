@@ -17,6 +17,7 @@ public class TeacherProfile : BaseEntity
     public string? FacebookUrl { get; set; }
     public string? YouTubeUrl { get; set; }
     public string? TelegramUrl { get; set; }
+    public string? WhatsAppUrl { get; set; }
     public string? PublicSlug { get; set; }
     public string? PublicBio { get; set; }
     public string? IntroVideoUrl { get; set; }
