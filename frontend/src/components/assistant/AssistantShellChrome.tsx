@@ -42,7 +42,7 @@ export type AssistantShellRoute =
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
   | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/recharge-conflicts' | '/assistant/students' | '/assistant/reports'
-  | '/assistant/codes' | '/assistant/refunds' | '/assistant/public-exams';
+  | '/assistant/codes' | '/assistant/refunds' | '/assistant/public-exams' | '/assistant/center-students';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -82,6 +82,7 @@ const navItems: AssistantNavItem[] = [
   { href: '/assistant/watch-requests', label: 'طلبات إعادة المشاهدة', icon: Star, group: 'learning', permission: 'watch_requests.manage' },
   { href: '/assistant/crm', label: 'الكول سنتر', icon: PhoneCall, group: 'communication', permission: 'crm.manage' },
   { href: '/assistant/live-support', label: 'الدعم المباشر', icon: Headphones, group: 'communication' },
+  { href: '/assistant/center-students', label: 'طلاب السنتر', icon: Users, group: 'communication', permission: 'center_students.view' },
   { href: '/assistant/recharge-verification', label: 'مطابقة الشحن', icon: WalletCards, group: 'operations', permission: 'payments.manage' },
   { href: '/assistant/wallet-messages', label: 'رسائل المحافظ', icon: MessageSquareMore, group: 'operations', permission: 'payments.manage' },
   { href: '/assistant/recharge-shift-review', label: 'مراجعة شحن الشيفت', icon: ClipboardCheck, group: 'operations', permission: 'payments.manage' },

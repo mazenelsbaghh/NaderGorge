@@ -18,12 +18,14 @@ public sealed class CenterDesktopStudentCache : IDisposable
 
 public sealed partial class CenterDesktopSupportClient
 {
+    private string StudentCachePartition => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_options.BaseUrl + "\n" + _options.AdminToken)));
+
     public async Task<object> StudentsAsync(string id, DesktopStudentQuery query, CancellationToken token)
     {
         ValidateId(id);
         if (new[] { query.Search, query.StudentId, query.GroupId, query.CenterId, query.GradeId }.Any(v => (v?.Length ?? 0) > 100)) throw BadRequest();
         // Upload IDs are immutable. Partition the private, bounded cache by connection credentials.
-        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_options.BaseUrl + "\n" + _options.AdminToken))) + ":" + id.ToLowerInvariant();
+        var key = StudentCachePartition + ":" + id.ToLowerInvariant();
         await _students.Read.WaitAsync(token);
         JsonElement snapshot;
         try

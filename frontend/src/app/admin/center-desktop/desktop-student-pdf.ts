@@ -1,12 +1,12 @@
 import type { jsPDF } from 'jspdf';
-import type { DesktopReceipt, DesktopStudent, DesktopStudentLesson, DesktopStudentSearch } from '@/services/center-desktop-service';
+import type { DesktopStudentSource, DesktopStudent, DesktopStudentLesson, DesktopStudentSearch } from '@/services/center-desktop-service';
 import { desktopClock, desktopTimestamp } from './desktop-datetime';
 import { attendanceLabel, homeworkLabel, paymentLines, examScore } from './student-report-format';
 
 interface StudentReportInput {
   student: DesktopStudent;
   profile: NonNullable<DesktopStudentSearch['profile']>;
-  receipt: DesktopReceipt;
+  receipt: DesktopStudentSource;
 }
 
 const widths = [44, 33, 43, 60, 52, 37];

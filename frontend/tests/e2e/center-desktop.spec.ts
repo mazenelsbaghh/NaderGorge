@@ -96,7 +96,7 @@ async function installApi(page: Page, handle: SupportHandler, user: User = admin
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/auth/session')) {
       await reply(route, { user, authorizationVersion: user.authorizationVersion });
-    } else if (url.pathname.startsWith(endpoint)) {
+    } else if (url.pathname.startsWith(endpoint) || url.pathname.startsWith('/api/center-students')) {
       await handle(route, url);
     } else {
       await reply(route, []);
@@ -240,6 +240,44 @@ test('student search uses the newest captured host snapshot across pages and sho
     await page.screenshot({ path: '/tmp/massar-student-search-mobile.png', fullPage: true });
   }
 });
+
+for (const role of ['Staff', 'حضور والانصراف']) {
+  test(`${role} student reader searches and downloads a student PDF without program administration`, async ({ page, baseURL }) => {
+    const user: User = { ...administrator, roles: [role, 'متابعة طلاب السنتر'], permissions: ['center_students.view'], allowedDomains: ['assistant'], allowedNavbarItems: ['/assistant/dashboard', '/assistant/center-students'] };
+    const student = { id: 'reader-student', name: 'طالب خدمة السنتر', code: '00901', barcode: '', phone: '01000000901', guardianPhone: '01100000901', notes: '', suspended: false, discountPercent: 0, groups: ['مجموعة الجمعة'], centers: ['سنتر التجربة'] };
+    const requests: string[] = [];
+    await installApi(page, async (route, url) => {
+      requests.push(url.pathname);
+      if (url.pathname === '/api/center-students/sources') {
+        const { uploadId, centerId, createdAt, receivedAt } = firstReceipt;
+        await reply(route, [{ uploadId, centerId, createdAt, receivedAt }]);
+      } else if (url.pathname.endsWith('/students')) {
+        await reply(route, { students: [student], total: 1, groups: [], profile: url.searchParams.has('studentId') ? {
+          present: 1, absent: 0, attendanceTotal: 1, examTotal: 1, attendances: [], exams: [],
+          lessons: [{ id: 'reader-lesson', groupId: 'g1', group: 'مجموعة الجمعة', center: 'سنتر التجربة', number: 1, month: 1, monthName: 'الشهر الأول', name: '', date: '', attendance: { status: 'present', recordedAt: '2026-11-01T10:13:00Z', makeupSourceGroup: '', paymentPending: false }, payment: { coverage: 'unknown', packageName: '', centerFeePaid: 0, receipts: [] }, exams: [{ id: 'reader-exam', name: 'امتحان التجربة', score: 9, maxScore: 12, absent: false }], homework: 'complete' }],
+        } : null });
+      } else await reply(route, null, 403);
+    }, user);
+    const staffURL = baseURL!.replace('admin.lvh.me', 'staff.lvh.me');
+    await installAuthAndGoto(page, 'synthetic-student-reader-token', user, `${staffURL}/assistant/center-students`);
+    await expect(page.locator('a[href="/assistant/center-students"]').first()).toBeVisible();
+    await expect(page.getByRole('searchbox')).toBeVisible();
+    await page.getByRole('searchbox').fill('00901');
+    await page.getByRole('button', { name: 'عرض سجل طالب خدمة السنتر', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'سجل الحصص', exact: true })).toContainText('9 من 12');
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'تنزيل PDF للطالب', exact: true }).click();
+    const download = await downloading;
+    const pdf = test.info().outputPath('staff-student-report.pdf');
+    await download.saveAs(pdf);
+    expect((await readFile(pdf)).subarray(0, 5).toString()).toBe('%PDF-');
+    await expect(page.getByText('تفاصيل النسخة', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'النسخ المرفوعة', exact: true })).toHaveCount(0);
+    await expect(page.locator('a[href="/admin/center-desktop"]')).toHaveCount(0);
+    expect(requests.some(path => path.startsWith(endpoint))).toBe(false);
+    await page.screenshot({ path: test.info().outputPath('staff-student-view.png'), fullPage: true });
+  });
+}
 
 test('student PDF retries a failed font download and paginates long history', async ({ page, baseURL }) => {
   const student = { id: 'pdf-student', name: 'طالبة تقرير طويل', code: '00802', barcode: '', phone: '01000000802', guardianPhone: '01100000802', notes: 'ملاحظات الطالب '.repeat(150), suspended: false, discountPercent: 0, groups: ['مجموعة التقرير'], centers: ['سنتر التقرير'] };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowRight, Clock3, RefreshCw, Search } from 'lucide-react';
-import { searchDesktopStudents, type DesktopGroup, type DesktopReceipt, type DesktopStudentSearch } from '@/services/center-desktop-service';
+import { searchDesktopStudents, type DesktopGroup, type DesktopReceipt, type DesktopStudentSource, type DesktopStudentSearch } from '@/services/center-desktop-service';
 import { timestamp } from './display';
 import DesktopLessonHistory from './DesktopLessonHistory';
 import DesktopStudentPdfButton from './DesktopStudentPdfButton';
@@ -16,8 +16,9 @@ function ageLabel(value: string, now: number) {
   return `منذ ${Math.floor(minutes / 1440)} يوم`;
 }
 
-export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = false }: {
-  receipt: DesktopReceipt; onRefresh?: () => void; refreshing?: boolean;
+export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = false, search = searchDesktopStudents, showSourceDetails = true }: {
+  receipt: DesktopStudentSource; onRefresh?: () => void; refreshing?: boolean;
+  search?: typeof searchDesktopStudents; showSourceDetails?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -40,7 +41,7 @@ export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setLoading(true); setError('');
-      void searchDesktopStudents(receipt.uploadId, { q: query, studentId, centerId, gradeId, groupId }, controller.signal)
+      void search(receipt.uploadId, { q: query, studentId, centerId, gradeId, groupId }, controller.signal)
         .then(data => {
           if (!controller.signal.aborted) {
             setResponse({ key: requestKey, data }); setGroups(data.groups ?? []);
@@ -50,7 +51,7 @@ export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = 
         .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [receipt.uploadId, query, studentId, centerId, gradeId, groupId, requestKey]);
+  }, [receipt.uploadId, query, studentId, centerId, gradeId, groupId, requestKey, search]);
 
   const student = studentId ? result?.students[0] : null;
   const profile = result?.profile;
@@ -68,7 +69,7 @@ export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = 
       <div className="flex min-w-0 flex-wrap items-start gap-3 text-sm" aria-label="آخر تحديث لبيانات الطلاب">
         <Clock3 aria-hidden className="mt-1 h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
         <div><p className="font-medium">آخر تحديث للبيانات</p><time dateTime={receipt.createdAt}>{timestamp(receipt.createdAt)}</time><p className="mt-1 text-xs text-[var(--admin-muted)]">{ageLabel(receipt.createdAt, now)}</p>
-          <details className="mt-1 text-xs text-[var(--admin-muted)]"><summary className="cursor-pointer">تفاصيل النسخة</summary><div className="mt-2 space-y-1"><p>وصلت للمنصة: {timestamp(receipt.receivedAt)}</p><p>إصدار البرنامج: <bdi>{receipt.app.version}</bdi></p><p className="max-w-64 break-all">رقم النسخة: <bdi>{receipt.uploadId}</bdi></p></div></details>
+          {showSourceDetails && 'app' in receipt && <details className="mt-1 text-xs text-[var(--admin-muted)]"><summary className="cursor-pointer">تفاصيل النسخة</summary><div className="mt-2 space-y-1"><p>وصلت للمنصة: {timestamp(receipt.receivedAt)}</p><p>إصدار البرنامج: <bdi>{(receipt as DesktopReceipt).app.version}</bdi></p><p className="max-w-64 break-all">رقم النسخة: <bdi>{receipt.uploadId}</bdi></p></div></details>}
         </div>
         {onRefresh && <button type="button" className="admin-btn-ghost" aria-label="تحديث أحدث نسخة للطلاب" disabled={refreshing} onClick={onRefresh}><RefreshCw aria-hidden className={`h-4 w-4 ${refreshing ? 'motion-safe:animate-spin' : ''}`} /></button>}
       </div>

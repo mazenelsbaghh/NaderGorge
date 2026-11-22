@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
-import type { DesktopReceipt, DesktopStudent, DesktopStudentSearch } from '@/services/center-desktop-service';
+import type { DesktopStudentSource, DesktopStudent, DesktopStudentSearch } from '@/services/center-desktop-service';
 import { saveBlob } from './display';
 
 export default function DesktopStudentPdfButton({ student, profile, receipt }: {
-  student: DesktopStudent; profile: NonNullable<DesktopStudentSearch['profile']>; receipt: DesktopReceipt;
+  student: DesktopStudent; profile: NonNullable<DesktopStudentSearch['profile']>; receipt: DesktopStudentSource;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

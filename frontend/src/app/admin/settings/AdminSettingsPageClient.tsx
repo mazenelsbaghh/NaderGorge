@@ -49,6 +49,7 @@ interface RoleDto {
 }
 
 const PERMISSION_DEFINITIONS = [
+  { key: 'center_students.view', label: 'عرض طلاب السنتر', desc: 'البحث في طلاب السنتر وسجل الحضور والدرجات وتنزيل تقرير الطالب فقط' },
   { key: 'emthntak.content', label: 'محتوى امتحاناتك', desc: 'المدرسون والكتب والفصول والأسئلة' },
   { key: 'emthntak.review', label: 'مراجعة امتحاناتك', desc: 'مراجعة المحتوى وتصحيح الإجابات' },
   { key: 'emthntak.publish', label: 'نشر امتحاناتك', desc: 'نشر وإيقاف المحتوى' },
@@ -88,6 +89,7 @@ interface NavOption {
 }
 
 const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
+  'center_students.view': ['/assistant/center-students'],
   'emthntak.content': ['/admin/emthntak'],
   'emthntak.review': ['/admin/emthntak'],
   'emthntak.publish': ['/admin/emthntak'],
@@ -333,6 +335,11 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     subItems: [
       { key: '/assistant/students', label: 'البحث عن الطلاب وإدارة حساباتهم وبياناتهم' }
     ]
+  },
+  {
+    key: '/assistant/center-students',
+    label: 'طلاب السنتر',
+    subItems: [{ key: '/assistant/center-students', label: 'البحث وسجل الحضور والدرجات وتقرير PDF للطالب' }]
   },
   {
     key: '/assistant/community',

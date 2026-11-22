@@ -6,6 +6,7 @@ export interface DesktopReceipt {
   sha256: string; bundleSha256: string; receivedAt: string; createdAt: string;
   size: number; app: DesktopApp;
 }
+export type DesktopStudentSource = Pick<DesktopReceipt, 'uploadId' | 'centerId' | 'createdAt' | 'receivedAt'>;
 export interface DesktopStatus { configured: boolean; available: boolean; message: string }
 export interface DesktopUploads { uploads: DesktopReceipt[]; nextCursor: string }
 export interface DesktopEvent {
@@ -77,6 +78,17 @@ export interface DesktopStudentSearch {
 export async function searchDesktopStudents(id: string, query: DesktopStudentFilters & { q: string; studentId: string | null }, signal: AbortSignal) {
   const { q, studentId, ...filters } = query;
   return (await apiClient.get<{ data: DesktopStudentSearch }>(`/admin/center-desktop/uploads/${encodeURIComponent(id)}/students`, {
+    ...options(signal), params: { q, ...(studentId ? { studentId } : {}), ...filters }, timeout: 180_000,
+  })).data.data;
+}
+
+export async function getCenterStudentSources(signal: AbortSignal) {
+  return (await apiClient.get<{ data: DesktopStudentSource[] }>('/center-students/sources', options(signal))).data.data;
+}
+
+export async function searchCenterStudents(id: string, query: DesktopStudentFilters & { q: string; studentId: string | null }, signal: AbortSignal) {
+  const { q, studentId, ...filters } = query;
+  return (await apiClient.get<{ data: DesktopStudentSearch }>(`/center-students/${encodeURIComponent(id)}/students`, {
     ...options(signal), params: { q, ...(studentId ? { studentId } : {}), ...filters }, timeout: 180_000,
   })).data.data;
 }

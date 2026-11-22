@@ -13,9 +13,12 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.API.CenterDesktop;
 using NaderGorge.API.Controllers;
+using NaderGorge.Domain.Interfaces;
+using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Integration.Tests.CenterDesktop;
 
@@ -24,6 +27,84 @@ public sealed class CenterDesktopSupportTests
     private const string UploadId = "ecda8818-7c72-4f9a-9468-7b64845473c9";
     private const string PrivateValue = "synthetic-private-payload-must-not-leak";
     private static readonly string[] Routes = ["status", "uploads", $"uploads/{UploadId}/diagnostics", $"uploads/{UploadId}/download", "releases"];
+
+    [Theory]
+    [InlineData(null, 401)]
+    [InlineData("Student", 403)]
+    [InlineData("Staff", 403)]
+    [InlineData("Assistant", 403)]
+    [InlineData("Supervisor", 403)]
+    public async Task StudentReaderRoutesRequireTheDedicatedPermissionBeforePrivateSupport(string? role, int status)
+    {
+        using var fixture = new Fixture((_, _) => throw new Xunit.Sdk.XunitException("Denied reader reached private support."));
+        using var client = fixture.Client(role);
+        foreach (var route in new[] { "sources", $"{UploadId}/students?q=00123" })
+        {
+            using var response = await client.GetAsync($"/api/center-students/{route}");
+            Assert.Equal(status, (int)response.StatusCode);
+        }
+        Assert.Equal(0, fixture.Handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("Staff")]
+    [InlineData("متابعة طلاب السنتر")]
+    public async Task GrantedReaderCanSearchButCannotDownloadBundlesOrInspectProgramAdministration(string role)
+    {
+        using var fixture = new Fixture((request, _) => Task.FromResult(Json(request.RequestUri!.AbsolutePath == "/v1/uploads"
+            ? new { uploads = new[] { Receipt() }, nextCursor = "" } as object
+            : new { kind = "database", data = new { data = new { credentials = PrivateValue,
+                students = new[] { new { id = "s1", name = "طالب تجريبي", code = "00123", phone = "01000000001", guardianPhone = "01000000002" } } } } })));
+        using var client = fixture.Client(role, "center_students.view");
+        using var sources = await client.GetAsync("/api/center-students/sources");
+        Assert.Equal(HttpStatusCode.OK, sources.StatusCode);
+        var metadata = await sources.Content.ReadAsStringAsync();
+        foreach (var field in new[] { "sha256", "bundleSha256", "app", "size", "receiptId" })
+            Assert.DoesNotContain($"\"{field}\"", metadata);
+        Assert.Contains("createdAt", metadata);
+        using var students = await client.GetAsync($"/api/center-students/{UploadId}/students?q=00123");
+        Assert.Equal(HttpStatusCode.OK, students.StatusCode);
+        var body = await students.Content.ReadAsStringAsync();
+        Assert.Contains("00123", body);
+        Assert.Contains("01000000002", body);
+        Assert.DoesNotContain(PrivateValue, body);
+        foreach (var route in Routes.Append($"uploads/{UploadId}/students?q=test"))
+        {
+            using var response = await client.GetAsync($"/api/admin/center-desktop/{route}");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        Assert.Equal(2, fixture.Handler.Requests);
+    }
+
+    [Fact]
+    public async Task StudentSourcesFindNewestCapturedHostAcrossPagesAndRejectOldOrSecondarySources()
+    {
+        var latestId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+        var secondaryId = Guid.Parse("22222222-2222-4222-8222-222222222222");
+        var first = JsonSerializer.Deserialize<DesktopUploadReceipt>(JsonSerializer.Serialize(Receipt()), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        var latest = first with { UploadId = latestId, CreatedAt = first.CreatedAt.AddDays(1), ReceivedAt = first.ReceivedAt.AddDays(-1) };
+        var secondary = first with { UploadId = secondaryId, CreatedAt = first.CreatedAt.AddDays(2), App = first.App with { Role = "client" } };
+        using var fixture = new Fixture((request, _) =>
+        {
+            Assert.Equal("/v1/uploads", request.RequestUri!.AbsolutePath);
+            return Task.FromResult(Json(request.RequestUri.Query.Contains("after=")
+                ? new DesktopUploadsPage([latest], "")
+                : new DesktopUploadsPage([first, secondary], secondaryId.ToString())));
+        });
+        using var client = fixture.Client("Staff", "center_students.view");
+        using var sources = await client.GetAsync("/api/center-students/sources");
+        Assert.Equal(HttpStatusCode.OK, sources.StatusCode);
+        var body = await sources.Content.ReadAsStringAsync();
+        Assert.Contains(latestId.ToString(), body);
+        Assert.DoesNotContain(UploadId, body);
+        Assert.DoesNotContain(secondaryId.ToString(), body);
+        foreach (var rejectedId in new[] { UploadId, secondaryId.ToString() })
+        {
+            using var response = await client.GetAsync($"/api/center-students/{rejectedId}/students?q=test");
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+        Assert.Equal(2, fixture.Handler.Requests);
+    }
 
     [Theory]
     [InlineData(null, 401)]
@@ -297,6 +378,8 @@ public sealed class CenterDesktopSupportTests
                     { ValidateIssuer = false, ValidateAudience = false, ValidateLifetime = true, ValidateIssuerSigningKey = true,
                       IssuerSigningKey = Key, RoleClaimType = ClaimTypes.Role });
                 services.AddAuthorization();
+                services.AddScoped<IAppDbContext>(_ => new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                    .UseInMemoryDatabase("desktop-permission-" + Guid.NewGuid()).Options));
                 services.AddControllers().AddApplicationPart(typeof(AdminCenterDesktopController).Assembly)
                     .ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new OnlyDesktopController()));
                 services.Configure<CenterDesktopSupportOptions>(options =>
@@ -307,12 +390,14 @@ public sealed class CenterDesktopSupportTests
             }).Configure(app =>
             { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => endpoints.MapControllers()); }));
         }
-        public HttpClient Client(string? role)
+        public HttpClient Client(string? role, string? permission = null)
         {
             var client = _server.CreateClient();
             if (role is not null)
             {
-                var token = new JwtSecurityToken(claims: [new Claim(ClaimTypes.Role, role)], expires: DateTime.UtcNow.AddMinutes(5),
+                var claims = new List<Claim> { new(ClaimTypes.Role, role) };
+                if (permission is not null) claims.Add(new Claim("permission", permission));
+                var token = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddMinutes(5),
                     signingCredentials: new SigningCredentials(Key, SecurityAlgorithms.HmacSha256));
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(token));
             }
@@ -325,7 +410,7 @@ public sealed class CenterDesktopSupportTests
     {
         public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
         {
-            foreach (var controller in feature.Controllers.Where(type => type.AsType() != typeof(AdminCenterDesktopController)).ToArray())
+            foreach (var controller in feature.Controllers.Where(type => type.AsType() != typeof(AdminCenterDesktopController) && type.AsType() != typeof(CenterStudentsController)).ToArray())
                 feature.Controllers.Remove(controller);
         }
     }
