@@ -794,15 +794,21 @@ protected_rows_hash() {{
   }} | sha256sum | awk '{{print $1}}'
 }}
 
-# Preserve every existing teacher field. The reviewed preset migration adds one
-# field whose expected values are validated separately after migration.
+# Compare existing teacher values; reviewed new fields have separate value checks.
 pre_finance_preset_exists="$(psql_restore -c \
   "select count(*) from information_schema.columns where table_schema='public'
    and table_name='teacher_profiles' and column_name='FinancePreset';")"
-teacher_profile_projection="to_jsonb(t)::text"
+pre_teacher_whatsapp_exists="$(psql_restore -c \
+  "select count(*) from information_schema.columns where table_schema='public'
+   and table_name='teacher_profiles' and column_name='WhatsAppUrl';")"
+teacher_profile_projection="to_jsonb(t)"
 if test "$pre_finance_preset_exists" = 0; then
-  teacher_profile_projection="(to_jsonb(t) - 'FinancePreset')::text"
+  teacher_profile_projection="$teacher_profile_projection - 'FinancePreset'"
 fi
+if test "$pre_teacher_whatsapp_exists" = 0; then
+  teacher_profile_projection="$teacher_profile_projection - 'WhatsAppUrl'"
+fi
+teacher_profile_projection="($teacher_profile_projection)::text"
 
 finance_activation_count() {{
   psql_restore -c 'select count(*) from "__EFMigrationsHistory" where "MigrationId" = '\''20260914135411_ActivateTeacherPlatformFeeDefaults'\'';'
@@ -909,6 +915,12 @@ psql_restore <<'SQL'
 SQL
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
+if test "$pre_teacher_whatsapp_exists" = 0 && test "$(psql_restore -c \
+  "select count(*) from \"__EFMigrationsHistory\" where \"MigrationId\" =
+   '20261117155316_AddTeacherWhatsAppUrl';")" = 1; then
+  test "$(psql_restore -c \
+    'select count(*) from teacher_profiles where "WhatsAppUrl" is not null;')" = 0
+fi
 psql_restore -c 'DROP SCHEMA massar_gate_refund_roles CASCADE;'
 # Agreement row growth is allowed only for the exact reviewed activation,
 # while historical monetary events must remain byte-for-byte unchanged.
