@@ -22,6 +22,7 @@ public static class CenterDesktopSupportRegistration
     public static IServiceCollection AddCenterDesktopSupport(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<CenterDesktopSupportOptions>(configuration.GetSection("CenterDesktopSupport"));
+        services.AddSingleton<CenterDesktopStudentCache>();
         services.AddHttpClient<CenterDesktopSupportClient>(client => client.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {

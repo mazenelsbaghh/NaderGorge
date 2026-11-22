@@ -26,8 +26,9 @@ public sealed class AdminCenterDesktopController(CenterDesktopSupportClient supp
 
     [HttpGet("uploads/{id}/students")]
     public Task<IActionResult> Students(string id, [FromQuery] string? q = null,
-        [FromQuery] string? studentId = null, CancellationToken cancellationToken = default) =>
-        Json(() => support.StudentsAsync(id, q, studentId, cancellationToken));
+        [FromQuery] string? studentId = null, [FromQuery] string? groupId = null,
+        [FromQuery] string? centerId = null, [FromQuery] string? gradeId = null, CancellationToken cancellationToken = default) =>
+        Json(() => support.StudentsAsync(id, new DesktopStudentQuery(q, studentId, groupId, centerId, gradeId), cancellationToken));
 
     [HttpGet("releases")]
     public Task<IActionResult> Releases(CancellationToken cancellationToken) => Json(() => support.ReleasesAsync(cancellationToken));

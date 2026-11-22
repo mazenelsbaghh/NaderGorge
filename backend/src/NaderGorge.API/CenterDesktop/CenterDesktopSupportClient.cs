@@ -6,7 +6,8 @@ using Microsoft.Extensions.Options;
 
 namespace NaderGorge.API.CenterDesktop;
 
-public sealed partial class CenterDesktopSupportClient(HttpClient http, IOptions<CenterDesktopSupportOptions> options)
+public sealed partial class CenterDesktopSupportClient(HttpClient http, IOptions<CenterDesktopSupportOptions> options,
+    CenterDesktopStudentCache? students = null)
 {
     private const long MaximumBundleBytes = 128L * 1024 * 1024;
     private const int MaximumMetadataBytes = 8 * 1024 * 1024;
@@ -14,6 +15,7 @@ public sealed partial class CenterDesktopSupportClient(HttpClient http, IOptions
     private static readonly Regex UploadIdPattern = new("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Hash = new("^[a-f0-9]{64}$", RegexOptions.CultureInvariant);
     private readonly CenterDesktopSupportOptions _options = options.Value;
+    private readonly CenterDesktopStudentCache _students = students ?? new();
     public bool Configured => _options.TryGetOrigin(out _);
 
     public async Task<DesktopSupportStatus> StatusAsync(CancellationToken cancellationToken)

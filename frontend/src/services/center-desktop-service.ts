@@ -29,9 +29,9 @@ const options = (signal: AbortSignal) => ({ signal, suppressErrorToast: true });
 export async function getDesktopStatus(signal: AbortSignal) {
   return (await apiClient.get<{ data: DesktopStatus }>(`/admin/center-desktop/status`, options(signal))).data.data;
 }
-export async function getDesktopUploads(signal: AbortSignal, after = '') {
+export async function getDesktopUploads(signal: AbortSignal, after = '', limit = 50) {
   return (await apiClient.get<{ data: DesktopUploads }>(`/admin/center-desktop/uploads`, {
-    ...options(signal), params: { limit: 50, ...(after ? { after } : {}) },
+    ...options(signal), params: { limit, ...(after ? { after } : {}) },
   })).data.data;
 }
 export async function getDesktopDiagnostics(id: string, signal: AbortSignal) {
@@ -49,19 +49,34 @@ export async function downloadDesktopUpload(id: string, signal: AbortSignal) {
 export interface DesktopStudent {
   id: string; name: string; code: string; barcode: string; phone: string;
   guardianPhone: string; notes: string; discountPercent: number | null;
-  suspended: boolean; groups: string[];
+  suspended: boolean; groups: string[]; centers: string[];
 }
 interface DesktopLesson { group: string; number: number | null; month: number | null; date: string }
+export interface DesktopGroup { id: string; name: string; centerId: string; center: string; gradeId: string; grade: string }
+export interface DesktopStudentFilters { groupId?: string; centerId?: string; gradeId?: string }
+export interface DesktopStudentLesson {
+  id: string; groupId: string; group: string; center: string; number: number | null;
+  month: number; monthName: string; name: string; date: string;
+  attendance: null | { status: string; recordedAt: string; makeupSourceGroup: string; paymentPending: boolean };
+  payment: {
+    coverage: 'package' | 'recorded' | 'pending' | 'unknown'; packageName: string; centerFeePaid: number;
+    receipts: { id: string; description: string; amount: number | null; expected: number | null; settled: number; refunded: number; online: number }[];
+  };
+  exams: { id: string; name: string; score: number | null; maxScore: number | null; absent: boolean }[];
+  homework: string;
+}
 export interface DesktopStudentSearch {
-  students: DesktopStudent[]; total: number;
+  students: DesktopStudent[]; total: number; groups: DesktopGroup[];
   profile: null | {
     present: number; absent: number; attendanceTotal: number; examTotal: number;
     attendances: { id: string; status: string; lesson: DesktopLesson }[];
     exams: { id: string; score: number | null; maxScore: number | null; absent: boolean; homework: string; lesson: DesktopLesson }[];
+    lessons: DesktopStudentLesson[];
   };
 }
-export async function searchDesktopStudents(id: string, q: string, studentId: string | null, signal: AbortSignal) {
+export async function searchDesktopStudents(id: string, query: DesktopStudentFilters & { q: string; studentId: string | null }, signal: AbortSignal) {
+  const { q, studentId, ...filters } = query;
   return (await apiClient.get<{ data: DesktopStudentSearch }>(`/admin/center-desktop/uploads/${encodeURIComponent(id)}/students`, {
-    ...options(signal), params: { q, ...(studentId ? { studentId } : {}) }, timeout: 180_000,
+    ...options(signal), params: { q, ...(studentId ? { studentId } : {}), ...filters }, timeout: 180_000,
   })).data.data;
 }

@@ -7,12 +7,13 @@ import type { DesktopReceipt } from '@/services/center-desktop-service';
 import DesktopDiagnosticsPanel from './DesktopDiagnosticsPanel';
 import DesktopReleaseList from './DesktopReleaseList';
 import DesktopStudentsPanel from './DesktopStudentsPanel';
+import DesktopStudentsWorkspace from './DesktopStudentsWorkspace';
 import { useDesktopOverview } from './useDesktopOverview';
 import { osLabel, roleLabel, sizeLabel, timestamp } from './display';
 
 export default function CenterDesktopPageClient() {
   const state = useDesktopOverview();
-  const [tab, setTab] = useState<'uploads' | 'releases'>('uploads');
+  const [tab, setTab] = useState<'students' | 'uploads' | 'releases'>('uploads');
   const [releaseRefresh, setReleaseRefresh] = useState(0);
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
@@ -48,10 +49,11 @@ export default function CenterDesktopPageClient() {
       </section>}
       {(available || state.uploads.length > 0) && <>
         <div className="flex flex-wrap gap-2" aria-label="أقسام برنامج السنتر">
+          <button className={tab === 'students' ? 'admin-btn-primary' : 'admin-btn-ghost'} aria-pressed={tab === 'students'} onClick={() => setTab('students')}>طلاب السنتر</button>
           <button className={tab === 'uploads' ? 'admin-btn-primary' : 'admin-btn-ghost'} aria-pressed={tab === 'uploads'} onClick={() => setTab('uploads')}>النسخ والمشاكل</button>
           <button className={tab === 'releases' ? 'admin-btn-primary' : 'admin-btn-ghost'} aria-pressed={tab === 'releases'} onClick={() => { setSelected(null); setTab('releases'); }}>إصدارات البرنامج</button>
         </div>
-        {tab === 'releases' ? <DesktopReleaseList refreshKey={releaseRefresh} /> : <>
+        {tab === 'students' ? <DesktopStudentsWorkspace /> : tab === 'releases' ? <DesktopReleaseList refreshKey={releaseRefresh} /> : <>
           <div className="admin-panel grid items-end gap-3 p-4 md:grid-cols-[minmax(12rem,1fr)_10rem_10rem]">
             <label className="space-y-2 text-sm"><span>بحث في النسخ المحمّلة</span><div className="relative"><Search className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-[var(--admin-muted)]" /><input type="search" className="admin-input w-full ps-10" value={query} placeholder="معرّف السنتر، الإصدار أو رقم الرفع" onChange={event => setQuery(event.target.value)} /></div></label>
             <label className="space-y-2 text-sm"><span>نوع الجهاز</span><select className="admin-input w-full" value={role} onChange={event => setRole(event.target.value)}><option value="">الكل</option><option value="host">الرئيسي</option><option value="client">الفرعي</option></select></label>

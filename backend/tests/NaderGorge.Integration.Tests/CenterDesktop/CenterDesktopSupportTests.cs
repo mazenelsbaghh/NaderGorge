@@ -61,6 +61,25 @@ public sealed class CenterDesktopSupportTests
     }
 
     [Fact]
+    public async Task RepeatedStudentSearchesReuseTheImmutableSnapshotWithoutReturningStaffSecrets()
+    {
+        using var fixture = new Fixture((_, _) => Task.FromResult(Json(new {
+            kind = "database", data = new { data = new {
+                credentials = PrivateValue,
+                students = new[] { new { id = "s1", name = "طالب", code = "00123" } }
+            } }
+        })));
+        using var client = fixture.Client("Admin");
+        foreach (var query in new[] { "q=00123", "studentId=s1" })
+        {
+            using var response = await client.GetAsync($"/api/admin/center-desktop/uploads/{UploadId}/students?{query}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.DoesNotContain(PrivateValue, await response.Content.ReadAsStringAsync());
+        }
+        Assert.Equal(1, fixture.Handler.Requests);
+    }
+
+    [Fact]
     public async Task AdminMetadataUsesFixedOriginAndWhitelistedDtosWhileDownloadStreamsSeparateBundle()
     {
         using var fixture = new Fixture((request, _) =>
@@ -282,8 +301,9 @@ public sealed class CenterDesktopSupportTests
                     .ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new OnlyDesktopController()));
                 services.Configure<CenterDesktopSupportOptions>(options =>
                 { options.BaseUrl = configured ? "https://desktop-support.invalid" : ""; options.AdminToken = configured ? AdminToken : ""; });
+                services.AddSingleton<CenterDesktopStudentCache>();
                 services.AddTransient(provider => new CenterDesktopSupportClient(new HttpClient(Handler, disposeHandler: false),
-                    provider.GetRequiredService<IOptions<CenterDesktopSupportOptions>>()));
+                    provider.GetRequiredService<IOptions<CenterDesktopSupportOptions>>(), provider.GetRequiredService<CenterDesktopStudentCache>()));
             }).Configure(app =>
             { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => endpoints.MapControllers()); }));
         }

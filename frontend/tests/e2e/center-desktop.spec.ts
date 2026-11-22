@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 import { installAuthAndGoto } from './e2e-contract-helpers';
 
@@ -187,6 +188,90 @@ test('admin can page through uploads, inspect sanitized diagnostics and see the 
   await expect(page.getByText('3.4.0+9', { exact: true })).toBeVisible();
 });
 
+test('student search uses the newest captured host snapshot across pages and shows joined lessons with Cairo check-in time', async ({ page, baseURL }) => {
+  const latest = { ...receipt(uploadC, firstReceipt.centerId), createdAt: '2026-11-22T10:00:00Z', receivedAt: '2026-11-22T10:01:00Z' };
+  const student = { id: 'synthetic-student', name: 'طالب التجربة', code: '00701', barcode: '', phone: '01000000701', guardianPhone: '01100000701', notes: '', suspended: false, discountPercent: 0, groups: ['مجموعة الجمعة'], centers: ['سنتر التجربة'] };
+  const payment = { coverage: 'unknown', packageName: '', centerFeePaid: 0, receipts: [] };
+  const lessons = [
+    { id: 'lesson-one', groupId: 'g1', group: 'مجموعة الجمعة', center: 'سنتر التجربة', month: 1, monthName: 'الشهر الأول', number: 1, name: '', date: '2026-11-01T09:00:00Z', attendance: { status: 'present', recordedAt: '2026-11-01T10:13:00Z', makeupSourceGroup: '', paymentPending: false }, payment: { ...payment, coverage: 'package', packageName: 'الشهر', receipts: [{ id: 'p1', description: '', amount: 21000, expected: 21000, settled: 0, refunded: 0, online: 0 }] }, exams: [{ id: 'e1', name: 'ورقي', score: 0, maxScore: 10, absent: false }, { id: 'e2', name: 'إلكتروني', score: 9, maxScore: 12, absent: false }], homework: 'complete' },
+    { id: 'lesson-two', groupId: 'g1', group: 'مجموعة الجمعة', center: 'سنتر التجربة', month: 1, monthName: 'الشهر الأول', number: 2, name: '', date: '', attendance: null, payment, exams: [], homework: 'notReviewed' },
+    { id: 'lesson-three', groupId: 'g1', group: 'مجموعة الجمعة', center: 'سنتر التجربة', month: 2, monthName: 'الشهر الثاني', number: 1, name: '', date: '', attendance: { status: 'absent', recordedAt: '', makeupSourceGroup: '', paymentPending: false }, payment, exams: [{ id: 'e3', name: 'الامتحان الثالث', score: null, maxScore: 10, absent: true }], homework: 'missing' },
+  ];
+  await installApi(page, async (route, url) => {
+    if (url.pathname === `${endpoint}/uploads` && url.searchParams.get('limit') === '500') {
+      await reply(route, url.searchParams.has('after') ? { uploads: [latest], nextCursor: '' } : { uploads: [firstReceipt, secondReceipt], nextCursor: uploadB });
+    } else if (url.pathname.endsWith('/students')) {
+      expect(url.pathname).toBe(`${endpoint}/uploads/${uploadC}/students`);
+      const selected = url.searchParams.get('studentId');
+      await reply(route, { students: [student], total: 1, groups: [{ id: 'g1', name: 'مجموعة الجمعة', centerId: 'c1', center: 'سنتر التجربة', gradeId: 'r1', grade: 'الصف الأول' }], profile: selected ? { present: 1, absent: 1, attendanceTotal: 2, examTotal: 3, attendances: [], exams: [], lessons } : null });
+    } else await availableApi(route, url);
+  });
+  await openPage(page, baseURL!);
+  await page.getByRole('button', { name: 'طلاب السنتر', exact: true }).click();
+  const search = page.getByRole('region', { name: 'بحث طلاب السنتر' });
+  await expect(search.getByLabel('آخر تحديث لبيانات الطلاب').locator('time')).toHaveAttribute('datetime', latest.createdAt);
+  await page.getByRole('searchbox', { name: 'البحث عن طالب', exact: true }).fill('٠١١٠٠٠٠٠٧٠١');
+  await expect(search.getByRole('cell', { name: 'سنتر التجربة', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'عرض سجل طالب التجربة', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'شهر الحصص' })).toHaveValue('all');
+  await expect(page.getByText('غائب عن الامتحان', { exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'شهر الحصص' }).selectOption('1');
+  const first = page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: /الحصة 1/ }) });
+  await expect(first).toContainText('0 من 10');
+  await expect(first).toContainText('9 من 12');
+  await expect(first.locator('time[datetime="2026-11-01T10:13:00Z"]')).toContainText('12:13');
+  await expect(first).toContainText('مشمولة في باقة الشهر');
+  await expect(page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: /الحصة 2/ }) })).toContainText('لم يُسجل');
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'تنزيل PDF للطالب', exact: true }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe('student-report-00701.pdf');
+  const pdfPath = test.info().outputPath('student-report.pdf');
+  await download.saveAs(pdfPath);
+  expect((await readFile(pdfPath)).subarray(0, 5).toString()).toBe('%PDF-');
+  if (process.env.CAPTURE_UI === '1') {
+    await page.getByRole('region', { name: 'سجل الحصص', exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '/tmp/massar-student-search-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('main')).toHaveCSS('margin-inline-start', '0px');
+    await expect.poll(async () => (await page.getByRole('main').boundingBox())?.width ?? 0).toBeGreaterThan(350);
+    await page.getByRole('region', { name: 'سجل الحصص', exact: true }).scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: '/tmp/massar-student-search-mobile.png', fullPage: true });
+  }
+});
+
+test('student PDF retries a failed font download and paginates long history', async ({ page, baseURL }) => {
+  const student = { id: 'pdf-student', name: 'طالبة تقرير طويل', code: '00802', barcode: '', phone: '01000000802', guardianPhone: '01100000802', notes: 'ملاحظات الطالب '.repeat(150), suspended: false, discountPercent: 0, groups: ['مجموعة التقرير'], centers: ['سنتر التقرير'] };
+  const lessons = Array.from({ length: 45 }, (_, i) => ({
+    id: `pdf-lesson-${i}`, groupId: 'g1', group: 'مجموعة التقرير', center: 'سنتر التقرير', month: Math.floor(i / 4) + 1, monthName: '', number: i % 4 + 1, name: '', date: '', attendance: null,
+    payment: { coverage: 'unknown', packageName: '', centerFeePaid: 0, receipts: [] },
+    exams: [{ id: `exam-${i}`, name: 'امتحان طويل الاسم مع درجات مختلفة', score: i % 12, maxScore: 12, absent: false }], homework: 'notReviewed',
+  }));
+  let failFont = true;
+  await page.route('**/fonts/MassarReportArabic.ttf', route => failFont ? route.fulfill({ status: 503, body: 'unavailable' }) : route.continue());
+  await installApi(page, async (route, url) => {
+    if (url.pathname.endsWith('/students')) await reply(route, { students: [student], total: 1, groups: [], profile: url.searchParams.has('studentId') ? { present: 0, absent: 0, attendanceTotal: 0, examTotal: 45, attendances: [], exams: [], lessons } : null });
+    else await availableApi(route, url);
+  });
+  await openPage(page, baseURL!);
+  await page.getByRole('button', { name: 'بحث الطلاب', exact: true }).click();
+  await page.getByRole('button', { name: 'عرض سجل طالبة تقرير طويل', exact: true }).click();
+  const button = page.getByRole('button', { name: 'تنزيل PDF للطالب', exact: true });
+  await button.click();
+  await expect(page.getByRole('alert').filter({ hasText: 'تعذر تجهيز التقرير' })).toBeVisible();
+  failFont = false;
+  const downloading = page.waitForEvent('download');
+  await button.click();
+  const download = await downloading;
+  const pdfPath = test.info().outputPath('long-student-report.pdf');
+  await download.saveAs(pdfPath);
+  const bytes = await readFile(pdfPath);
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect((bytes.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1);
+  await expect(page.getByRole('alert').filter({ hasText: 'تعذر تجهيز التقرير' })).toHaveCount(0);
+});
+
 for (const role of ['Assistant', 'Supervisor']) {
   test(`${role} cannot open desktop support even with settings permission and an explicit navbar grant`, async ({ page, baseURL }) => {
     const scopedUser: User = {
@@ -283,22 +368,27 @@ test('switching the selected upload discards a delayed diagnostic response from 
 test('admin searches snapshot students and opens attendance profile without leaving support', async ({ page, baseURL }) => {
   await installApi(page, async (route, url) => {
     if (!url.pathname.endsWith('/students')) return availableApi(route, url);
-    const student = { id: 'student-one', name: 'أحمد اختبار', code: '00123', barcode: '100123', phone: '01000000123', guardianPhone: '', notes: 'ملاحظة اختبار', discountPercent: 25, suspended: false, groups: ['الجمعة'] };
-    await reply(route, { students: [student], total: 1, profile: url.searchParams.has('studentId') ? {
+    const student = { id: 'student-one', name: 'أحمد اختبار', code: '00123', barcode: '100123', phone: '01000000123', guardianPhone: '', notes: 'ملاحظة اختبار', discountPercent: 25, suspended: false, groups: ['الجمعة'], centers: ['سنتر التجربة'] };
+    const payment = { coverage: 'unknown', packageName: '', centerFeePaid: 0, receipts: [] };
+    await reply(route, { students: [student], total: 1, groups: [], profile: url.searchParams.has('studentId') ? {
       present: 1, absent: 1, attendanceTotal: 2, examTotal: 1,
       attendances: [{ id: 'a1', status: 'present', lesson: { group: 'الجمعة', number: 1, month: 2, date: '' } }, { id: 'a2', status: 'absent', lesson: { group: 'الجمعة', number: 2, month: 2, date: '' } }],
       exams: [{ id: 'e1', score: 0, maxScore: 10, absent: false, homework: 'complete', lesson: { group: 'الجمعة', number: 1, month: 2, date: '' } }],
+      lessons: [
+        { id: 'l1', groupId: 'g1', group: 'الجمعة', center: 'سنتر التجربة', month: 2, monthName: '', number: 1, name: '', date: '', attendance: { status: 'present', recordedAt: '', makeupSourceGroup: '', paymentPending: false }, payment, exams: [{ id: 'e1', name: 'امتحان', score: 0, maxScore: 10, absent: false }], homework: 'complete' },
+        { id: 'l2', groupId: 'g1', group: 'الجمعة', center: 'سنتر التجربة', month: 2, monthName: '', number: 2, name: '', date: '', attendance: { status: 'absent', recordedAt: '', makeupSourceGroup: '', paymentPending: false }, payment, exams: [], homework: 'notReviewed' },
+      ],
     } : null });
   });
   await openPage(page, baseURL!);
   await page.getByRole('button', { name: 'بحث الطلاب', exact: true }).click();
-  await page.getByRole('searchbox', { name: 'الاسم أو الكود أو الباركود أو رقم الهاتف' }).fill('00123');
-  await page.getByRole('button', { name: 'عرض البروفايل' }).click();
+  await page.getByRole('searchbox', { name: 'البحث عن طالب', exact: true }).fill('00123');
+  await page.getByRole('button', { name: 'عرض سجل أحمد اختبار', exact: true }).click();
   await expect(page.getByRole('heading', { name: /أحمد اختبار/ })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'غائب', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: '0 / 10', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell').filter({ hasText: /^غائبوقت التسجيل غير متوفر$/ })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'امتحان 0 من 10', exact: true })).toBeVisible();
   await expect(page.getByText('ملاحظة اختبار', { exact: true })).toBeVisible();
-  await page.screenshot({ path: '../artifacts/private/windows-release-1.2.0/student-support-preview.png', fullPage: true });
+  if (process.env.CAPTURE_UI === '1') await page.screenshot({ path: '/tmp/massar-student-snapshot-preview.png', fullPage: true });
 });
 
 

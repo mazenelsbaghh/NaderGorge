@@ -1,53 +1,102 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { searchDesktopStudents, type DesktopReceipt, type DesktopStudentSearch } from '@/services/center-desktop-service';
+import { ArrowRight, Clock3, RefreshCw, Search } from 'lucide-react';
+import { searchDesktopStudents, type DesktopGroup, type DesktopReceipt, type DesktopStudentSearch } from '@/services/center-desktop-service';
 import { timestamp } from './display';
+import DesktopLessonHistory from './DesktopLessonHistory';
+import DesktopStudentPdfButton from './DesktopStudentPdfButton';
 
-const attendanceLabel = (value: string) => ({ present: 'حاضر', absent: 'غائب', makeup: 'معوّض' }[value] ?? value);
-const homeworkLabel = (value: string) => ({ complete: 'كامل', incomplete: 'ناقص', missing: 'لم يعمل', notReviewed: 'لم يُراجع' }[value] ?? value);
+function ageLabel(value: string, now: number) {
+  const minutes = Math.floor((now - Date.parse(value)) / 60_000);
+  if (!Number.isFinite(minutes)) return '';
+  if (minutes < 1) return 'منذ أقل من دقيقة';
+  if (minutes < 60) return `منذ ${minutes} دقيقة`;
+  if (minutes < 1440) return `منذ ${Math.floor(minutes / 60)} ساعة`;
+  return `منذ ${Math.floor(minutes / 1440)} يوم`;
+}
 
-export default function DesktopStudentsPanel({ receipt }: { receipt: DesktopReceipt }) {
+export default function DesktopStudentsPanel({ receipt, onRefresh, refreshing = false }: {
+  receipt: DesktopReceipt; onRefresh?: () => void; refreshing?: boolean;
+}) {
   const [query, setQuery] = useState('');
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [result, setResult] = useState<DesktopStudentSearch | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [centerId, setCenterId] = useState('');
+  const [gradeId, setGradeId] = useState('');
+  const [groupId, setGroupId] = useState('');
+  const [groups, setGroups] = useState<DesktopGroup[]>([]);
+  const [response, setResponse] = useState<{ key: string; data: DesktopStudentSearch } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const requestKey = JSON.stringify([receipt.uploadId, query, studentId, centerId, gradeId, groupId, retry]);
+  const result = response?.key === requestKey ? response.data : null;
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      setLoading(true); setError(''); setResult(null);
-      void searchDesktopStudents(receipt.uploadId, query, studentId, controller.signal)
-        .then(value => { if (!controller.signal.aborted) setResult(value); })
-        .catch(() => { if (!controller.signal.aborted) setError('تعذر قراءة الطلاب من النسخة. جرّب مرة أخرى أو اختَر نسخة أحدث.'); })
+      setLoading(true); setError('');
+      void searchDesktopStudents(receipt.uploadId, { q: query, studentId, centerId, gradeId, groupId }, controller.signal)
+        .then(data => {
+          if (!controller.signal.aborted) {
+            setResponse({ key: requestKey, data }); setGroups(data.groups ?? []);
+          }
+        })
+        .catch(() => { if (!controller.signal.aborted) setError('تعذر قراءة الطلاب من هذه النسخة. حاول مرة أخرى أو حدّث بيانات الطلاب.'); })
         .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    }, 350);
+    }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [receipt.uploadId, query, studentId]);
+  }, [receipt.uploadId, query, studentId, centerId, gradeId, groupId, requestKey]);
+
   const student = studentId ? result?.students[0] : null;
   const profile = result?.profile;
-  return <section className="admin-panel space-y-5 p-5" aria-label="طلاب النسخة المرفوعة">
-    <h2 className="text-xl font-bold">بحث الطلاب وسجل الحضور</h2>
-    <p className="text-sm text-[var(--admin-muted)]">عرض فقط من نسخة {receipt.centerId} المرفوعة {timestamp(receipt.receivedAt)} · الإصدار <bdi>{receipt.app.version}</bdi>. التسجيلات الأحدث على الجهاز تظهر بعد رفعها.</p>
-    <label className="block space-y-2"><span>الاسم أو الكود أو الباركود أو رقم الهاتف</span>
-      <input className="admin-input w-full" type="search" value={query} onChange={e => { setStudentId(null); setResult(null); setQuery(e.target.value); }} placeholder="ابحث داخل بيانات هذه النسخة" />
-    </label>
-    {studentId && <button className="admin-btn-ghost" onClick={() => { setStudentId(null); setResult(null); }}>رجوع لنتائج البحث</button>}
-    {loading && <p role="status">جاري قراءة النسخة…</p>}
-    {error && <p role="alert" className="text-[var(--admin-danger)]">{error}</p>}
+  const centers = [...new Map(groups.filter(g => g.centerId).map(g => [g.centerId, g.center || g.centerId])).entries()];
+  const grades = [...new Map(groups.filter(g => g.gradeId && (!centerId || g.centerId === centerId)).map(g => [g.gradeId, g.grade || g.gradeId])).entries()];
+  const availableGroups = groups.filter(g => (!centerId || g.centerId === centerId) && (!gradeId || g.gradeId === gradeId));
+  const resetSelection = () => { setStudentId(null); setResponse(null); setLoading(true); setError(''); };
+  const busy = loading || (!result && !error);
+
+  return <section className="admin-panel space-y-6 p-4 sm:p-6" aria-label="بحث طلاب السنتر">
+    <div className="flex flex-wrap items-end gap-4">
+      <label className="min-w-0 flex-1 basis-72 space-y-2"><span className="block font-semibold">البحث عن طالب</span>
+        <div className="relative"><Search aria-hidden className="pointer-events-none absolute start-3 top-3.5 h-4 w-4 text-[var(--admin-muted)]" /><input className="admin-input w-full ps-10" type="search" maxLength={100} value={query} onChange={e => { resetSelection(); setQuery(e.target.value); }} placeholder="اسم الطالب، الكود، الباركود، موبايل الطالب أو ولي الأمر" /></div>
+      </label>
+      <div className="flex min-w-0 flex-wrap items-start gap-3 text-sm" aria-label="آخر تحديث لبيانات الطلاب">
+        <Clock3 aria-hidden className="mt-1 h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+        <div><p className="font-medium">آخر تحديث للبيانات</p><time dateTime={receipt.createdAt}>{timestamp(receipt.createdAt)}</time><p className="mt-1 text-xs text-[var(--admin-muted)]">{ageLabel(receipt.createdAt, now)}</p>
+          <details className="mt-1 text-xs text-[var(--admin-muted)]"><summary className="cursor-pointer">تفاصيل النسخة</summary><div className="mt-2 space-y-1"><p>وصلت للمنصة: {timestamp(receipt.receivedAt)}</p><p>إصدار البرنامج: <bdi>{receipt.app.version}</bdi></p><p className="max-w-64 break-all">رقم النسخة: <bdi>{receipt.uploadId}</bdi></p></div></details>
+        </div>
+        {onRefresh && <button type="button" className="admin-btn-ghost" aria-label="تحديث أحدث نسخة للطلاب" disabled={refreshing} onClick={onRefresh}><RefreshCw aria-hidden className={`h-4 w-4 ${refreshing ? 'motion-safe:animate-spin' : ''}`} /></button>}
+      </div>
+    </div>
+    {!studentId && <div className="flex flex-wrap gap-3">
+      <label className="min-w-40 flex-1 space-y-1 text-sm"><span className="block">السنتر</span><select className="admin-input w-full" value={centerId} onChange={e => { resetSelection(); setCenterId(e.target.value); setGradeId(''); setGroupId(''); }}><option value="">كل السناتر</option>{centers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+      <label className="min-w-40 flex-1 space-y-1 text-sm"><span className="block">الصف الدراسي</span><select className="admin-input w-full" value={gradeId} onChange={e => { resetSelection(); setGradeId(e.target.value); setGroupId(''); }}><option value="">كل الصفوف</option>{grades.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+      <label className="min-w-40 flex-1 space-y-1 text-sm"><span className="block">المجموعة</span><select className="admin-input w-full" value={groupId} onChange={e => { resetSelection(); setGroupId(e.target.value); }}><option value="">كل المجموعات</option>{availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+    </div>}
+    {studentId && <button type="button" className="admin-btn-ghost inline-flex items-center gap-2" onClick={resetSelection}><ArrowRight aria-hidden className="h-4 w-4" />رجوع لنتائج البحث</button>}
+    {error && <div role="alert" className="flex flex-wrap items-center gap-3 text-[var(--admin-danger)]"><p>{error}</p><button type="button" className="admin-btn-ghost" onClick={() => { setError(''); setLoading(true); setRetry(v => v + 1); }}>إعادة المحاولة</button></div>}
+    {busy && <div role="status" className="space-y-3 py-4"><p className="text-sm text-[var(--admin-muted)]">جاري تحميل بيانات الطالب…</p><div aria-hidden className="h-12 rounded-lg bg-[var(--admin-card-soft)] motion-safe:animate-pulse" /><div aria-hidden className="h-12 rounded-lg bg-[var(--admin-card-soft)] motion-safe:animate-pulse" /></div>}
     {!studentId && result && <>
-      <p>{result.total} طالب مطابق · المعروض أول ٥٠ نتيجة</p>
-      <div className="overflow-x-auto"><table className="w-full text-start text-sm"><thead className="bg-[var(--admin-card-soft)]"><tr>{['الكود', 'الاسم', 'المجموعات', 'الهاتف', 'السجل'].map(v => <th className="p-3 text-start" key={v}>{v}</th>)}</tr></thead><tbody>
-        {result.students.map(s => <tr className="border-b border-[var(--admin-border)]" key={s.id}><td className="p-3"><bdi>{s.code}</bdi></td><td>{s.name}</td><td>{s.groups.join('، ')}</td><td><bdi>{s.phone}</bdi></td><td><button className="admin-btn-ghost" onClick={() => { setResult(null); setStudentId(s.id); }}>عرض البروفايل</button></td></tr>)}
-      </tbody></table></div>
+      <p className="text-sm text-[var(--admin-muted)]">{result.total} طالب مطابق{result.total > result.students.length ? ` · المعروض أول ${result.students.length}، ضيّق البحث لعرض الطالب المطلوب` : ''}</p>
+      {!result.students.length ? <p className="py-8 text-center">لا يوجد طالب مطابق. جرّب الكود أو رقم الطالب أو ولي الأمر.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[740px] text-start text-sm"><thead className="bg-[var(--admin-card-soft)]"><tr>{['الكود', 'الطالب والمجموعة', 'السنتر', 'موبايل الطالب', 'ولي الأمر', 'السجل'].map(v => <th scope="col" className="px-3 py-3 text-start" key={v}>{v}</th>)}</tr></thead><tbody className="divide-y divide-[var(--admin-border)]">
+        {result.students.map(s => <tr className="hover:bg-[var(--admin-card-soft)]" key={s.id}><td className="p-3"><bdi>{s.code}</bdi></td><th scope="row" className="px-3 py-4 text-start"><p className="font-semibold">{s.name}</p><p className="mt-1 font-normal text-[var(--admin-muted)]">{s.groups.join('، ')}</p></th><td className="p-3">{s.centers?.join('، ') || 'غير متوفر'}</td><td className="p-3"><bdi>{s.phone || 'غير مسجل'}</bdi></td><td className="p-3"><bdi>{s.guardianPhone || 'غير مسجل'}</bdi></td><td className="p-3"><button type="button" className="admin-btn-ghost whitespace-nowrap" aria-label={`عرض سجل ${s.name}`} onClick={() => { setResponse(null); setLoading(true); setStudentId(s.id); }}>عرض السجل</button></td></tr>)}
+      </tbody></table></div>}
     </>}
-    {student && profile && <>
-      <h3 className="text-lg font-bold">{student.name} · <bdi>{student.code}</bdi>{student.suspended ? ' · موقوف' : ''}</h3>
-      <p>الطالب: <bdi>{student.phone || '—'}</bdi> · ولي الأمر: <bdi>{student.guardianPhone || '—'}</bdi> · الخصم الثابت: {student.discountPercent ?? 0}٪</p>
-      <p>{student.groups.join('، ')}</p><p className="whitespace-pre-wrap">{student.notes || 'لا توجد ملاحظات'}</p>
-      <p>حضور ومعوّض: {profile.present} · غياب مسجل: {profile.absent}</p>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><caption className="mb-2 text-start font-bold">الحضور والغياب · {profile.attendanceTotal} سجل (آخر ٥٠٠)</caption><thead className="bg-[var(--admin-card-soft)]"><tr>{['المجموعة', 'الشهر / الحصة', 'التاريخ', 'الحالة'].map(v => <th key={v} className="p-3 text-start">{v}</th>)}</tr></thead><tbody>{profile.attendances.map(a => <tr key={a.id} className="border-b border-[var(--admin-border)]"><td className="p-3">{a.lesson.group}</td><td>{a.lesson.month ?? '—'} / {a.lesson.number ?? '—'}</td><td>{a.lesson.date ? timestamp(a.lesson.date) : 'غير متوفر'}</td><td className={a.status === 'absent' ? 'text-[var(--admin-danger)]' : 'text-[var(--admin-success)]'}>{attendanceLabel(a.status)}</td></tr>)}</tbody></table></div>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><caption className="mb-2 text-start font-bold">الدرجات والواجبات · {profile.examTotal} سجل (آخر ٥٠٠)</caption><thead className="bg-[var(--admin-card-soft)]"><tr>{['المجموعة', 'الشهر / الحصة', 'الدرجة', 'الواجب'].map(v => <th key={v} className="p-3 text-start">{v}</th>)}</tr></thead><tbody>{profile.exams.map(a => <tr key={a.id} className="border-b border-[var(--admin-border)]"><td className="p-3">{a.lesson.group}</td><td>{a.lesson.month ?? '—'} / {a.lesson.number ?? '—'}</td><td>{a.absent ? 'غائب' : a.score == null ? 'لم يُرصد' : `${a.score} / ${a.maxScore ?? 'غير محدد'}`}</td><td>{homeworkLabel(a.homework)}</td></tr>)}</tbody></table></div>
-    </>}
+    {studentId && result && !student && <p role="status">الطالب غير موجود في هذه النسخة. ارجع للبحث أو حدّث النسخة.</p>}
+    {student && profile && <div className="space-y-6">
+      <div className="space-y-2 border-b border-[var(--admin-border)] pb-5"><div className="flex flex-wrap items-center justify-between gap-3"><div className="space-y-1"><h3 className="text-xl font-bold">{student.name}</h3><p className="font-semibold">الكود <bdi>{student.code}</bdi>{student.suspended ? ' · موقوف' : ''}</p></div><DesktopStudentPdfButton student={student} profile={profile} receipt={receipt} /></div>
+        <p className="text-sm">موبايل الطالب: <bdi>{student.phone || 'غير مسجل'}</bdi> · ولي الأمر: <bdi>{student.guardianPhone || 'غير مسجل'}</bdi></p>
+        <p className="text-sm">السنتر: {student.centers?.join('، ') || 'غير متوفر'}</p><p className="text-sm text-[var(--admin-muted)]">{student.groups.join('، ')}</p>
+        {student.notes && <p className="whitespace-pre-wrap text-sm">{student.notes}</p>}
+        <p className="text-sm">حضور وتعويض: <strong>{profile.present}</strong> · غياب مسجل: <strong>{profile.absent}</strong> · الخصم الثابت: {student.discountPercent ?? 0}٪</p>
+      </div>
+      <DesktopLessonHistory key={student.id} lessons={profile.lessons ?? []} />
+    </div>}
+    <p className="text-xs text-[var(--admin-muted)]">عرض من النسخة المرفوعة. الحضور والدفع يتسجلوا على الهوست، ويظهروا هنا بعد نجاح المزامنة.</p>
   </section>;
 }
