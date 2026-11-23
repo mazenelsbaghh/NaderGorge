@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Clock3, Headphones, Plus, Save, Search, Trash2 } from 'lucide-react';
 import { AdminPage } from '@/components/admin/AdminShellChrome';
@@ -61,6 +61,7 @@ export default function AdminLiveSupportPageClient() {
   const [conversationFrom, setConversationFrom] = useState('');
   const [conversationTo, setConversationTo] = useState('');
   const [withComment, setWithComment] = useState(false);
+  const archiveSectionRef = useRef<HTMLElement>(null);
   const [conversationPage, setConversationPage] = useState<LiveSupportConversationPage>();
   const [pageNumber, setPageNumber] = useState(1);
   const [conversationLoading, setConversationLoading] = useState(true);
@@ -173,6 +174,11 @@ export default function AdminLiveSupportPageClient() {
     return () => window.clearInterval(refreshTimer);
   }, []);
 
+  function changeConversationPage(nextPage: number) {
+    setPageNumber(nextPage);
+    archiveSectionRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+
   async function toggleFeature() {
     if (!config) return;
     setIsTogglingFeature(true);
@@ -236,14 +242,14 @@ export default function AdminLiveSupportPageClient() {
         canManage={canManageWhatsAppCampaigns}
         onSyncTemplates={() => void syncTemplates()}
       />
-      <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]">
+      <section ref={archiveSectionRef} className="scroll-mt-24 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]">
         <div className="border-b border-[var(--admin-border)] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-bold text-[var(--admin-text)]">كل المحادثات والنشاط</h2>
               <p className="mt-1 text-sm text-[var(--admin-muted)]">تتحدث القائمة تلقائيًا كل 10 ثوانٍ، وتشمل الموقع وواتساب وماسنجر وحالات AI.</p>
             </div>
-            <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">{conversationPage?.totalCount ?? 0} نتيجة</span>
+            <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">{conversationLoading ? 'جارٍ تحميل المحادثات…' : `${conversationPage?.totalCount ?? 0} نتيجة`}</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <label className="sm:col-span-2 lg:col-span-1">
@@ -267,7 +273,7 @@ export default function AdminLiveSupportPageClient() {
           </div>
           {conversationError && <div role="alert" className="mt-3 text-sm text-[var(--admin-danger)]">{conversationError} <button type="button" onClick={() => setConversationRetry(value => value + 1)} className="min-h-11 px-2 underline">إعادة المحاولة</button></div>}
         </div>
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="جدول محادثات الدعم المباشر">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="جدول محادثات الدعم المباشر" aria-busy={conversationLoading}>
           <table className="w-full min-w-[980px] text-right text-sm">
             <caption className="sr-only">جدول محادثات الدعم، اسحب أفقيًا لرؤية التفاصيل الإضافية.</caption>
             <thead className="bg-[var(--admin-card-soft)] text-xs text-[var(--admin-muted)]">
@@ -284,7 +290,7 @@ export default function AdminLiveSupportPageClient() {
               </tr>
             </thead>
             <tbody>
-              {conversationLoading ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">جارٍ تحميل المحادثات…</td></tr> : conversationError ? null : filteredConversations.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">لا توجد محادثات مطابقة للبحث والتصفية الحالية.</td></tr> : filteredConversations.map((item) => {
+              {conversationLoading && !conversationPage ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">جارٍ تحميل المحادثات…</td></tr> : conversationError ? null : filteredConversations.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">لا توجد محادثات مطابقة للبحث والتصفية الحالية.</td></tr> : filteredConversations.map((item) => {
                 const isWhatsApp = item.channel === 'WhatsApp';
                 const isMessenger = item.channel === 'Messenger';
                 const isExternal = isExternalChannel(item.channel);
@@ -297,16 +303,16 @@ export default function AdminLiveSupportPageClient() {
                   <td className="p-3 text-[var(--admin-text)]">{item.ownerName || (item.status === 'Closed' || item.status === 'Abandoned' ? 'لم تُسند لموظف' : 'الطابور')}</td>
                   <td className="hidden p-3 text-[var(--admin-text)] xl:table-cell"><time dateTime={item.createdAt}>{formatCairoTimestamp(item.createdAt)}</time></td>
                   <td className="hidden p-3 text-[var(--admin-text)] md:table-cell">{formatDuration(item.waitSeconds)}</td>
-                  <td className="sticky left-0 z-10 border-r border-[var(--admin-border)] bg-[var(--admin-card)] p-3"><button type="button" onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="min-h-10 rounded-lg bg-[var(--admin-primary)] px-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)]">فتح المحادثة</button></td>
+                  <td className="sticky left-0 z-10 border-r border-[var(--admin-border)] bg-[var(--admin-card)] p-3"><button type="button" disabled={conversationLoading} onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="min-h-10 rounded-lg bg-[var(--admin-primary)] px-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)]">فتح المحادثة</button></td>
                 </tr>;
               })}
             </tbody>
           </table>
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-[var(--admin-border)] px-4 py-3 text-sm text-[var(--admin-text)]">
-          <button type="button" disabled={conversationLoading || pageNumber <= 1} onClick={() => setPageNumber(value => value - 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">السابق</button>
+          <button type="button" disabled={conversationLoading || pageNumber <= 1} onClick={() => changeConversationPage(pageNumber - 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">السابق</button>
           <span>صفحة {pageNumber} من {Math.max(1, Math.ceil((conversationPage?.totalCount ?? 0) / 50))}</span>
-          <button type="button" disabled={conversationLoading || pageNumber * 50 >= (conversationPage?.totalCount ?? 0)} onClick={() => setPageNumber(value => value + 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">التالي</button>
+          <button type="button" disabled={conversationLoading || pageNumber * 50 >= (conversationPage?.totalCount ?? 0)} onClick={() => changeConversationPage(pageNumber + 1)} className="min-h-11 rounded-lg px-4 font-semibold disabled:opacity-50">التالي</button>
         </div>
       </section>
       <StaffPerformancePanel staff={dashboard.staffPerformance}/>

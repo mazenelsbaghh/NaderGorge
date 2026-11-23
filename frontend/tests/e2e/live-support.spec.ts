@@ -110,6 +110,63 @@ async function openSyntheticAdminInvestigation(
   await ratingRow.getByRole('button', { name: 'فتح المحادثة' }).click();
 }
 
+test('admin archive pagination starts at the chat list without jumping into ratings', async ({ page }) => {
+  // Regression: replacing 50 rows with one loading row moved the viewport into the ratings below.
+  await installAdminAuth(page);
+  const conversations = Array.from({ length: 121 }, (_, index) => ({
+    id: `14200000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+    participantName: `مراجعة الشات ${index + 1}`, participantType: 'Student', status: 'Closed',
+    channel: 'Web', createdAt: '2026-11-01T12:00:00Z', waitSeconds: 0,
+  }));
+  let releaseNextPage!: () => void;
+  const nextPageReady = new Promise<void>(resolve => { releaseNextPage = resolve; });
+  let pageTwoRequests = 0;
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path.endsWith('/auth/session')) return route.fallback();
+    let data: unknown = [];
+    if (path.endsWith('/admin/config')) data = { featureEnabled: true, staff: [], cannedReplies: [] };
+    if (path.endsWith('/admin/dashboard')) data = { waitingCount: 0, activeCount: 0, closedToday: 0, conversations: [], staffPerformance: [] };
+    if (path.endsWith('/admin/conversations')) {
+      const selectedPage = Number(url.searchParams.get('page') ?? 1);
+      if (selectedPage === 2) {
+        pageTwoRequests++;
+        await nextPageReady;
+      }
+      data = { items: conversations.slice((selectedPage - 1) * 50, selectedPage * 50), page: selectedPage, pageSize: 50, totalCount: conversations.length };
+    }
+    return route.fulfill({ json: { success: true, data } });
+  });
+  await page.clock.install();
+  await page.goto(`${adminUrl}/admin/live-support`);
+  const archive = page.getByRole('region', { name: 'جدول محادثات الدعم المباشر' }).locator('..');
+  const heading = archive.getByRole('heading', { name: 'كل المحادثات والنشاط' });
+  const next = archive.getByRole('button', { name: 'التالي', exact: true });
+  await expect(archive.getByRole('row')).toHaveCount(51);
+  await next.click();
+  await expect.poll(() => pageTwoRequests).toBe(1);
+  await expect(heading).toBeInViewport();
+  await expect(archive.getByRole('row')).toHaveCount(51);
+  await expect(archive.getByRole('button', { name: 'فتح المحادثة' }).first()).toBeDisabled();
+  releaseNextPage();
+  await expect(archive.getByRole('row').filter({ hasText: 'مراجعة الشات 51' })).toBeVisible();
+  await expect(heading).toBeInViewport();
+
+  await next.scrollIntoViewIfNeeded();
+  const footerTop = (await next.boundingBox())!.y;
+  await page.clock.fastForward(11_000);
+  await expect.poll(() => pageTwoRequests).toBeGreaterThan(1);
+  await expect.poll(async () => (await next.boundingBox())!.y).toBeCloseTo(footerTop, 0);
+  await next.click();
+  await expect(archive.getByRole('row')).toHaveCount(22);
+  await expect(heading).toBeInViewport();
+  await archive.getByRole('button', { name: 'السابق', exact: true }).click();
+  await expect(archive.getByText('صفحة 2 من 3', { exact: true })).toBeVisible();
+  await expect(archive.getByRole('row')).toHaveCount(51);
+  await expect(heading).toBeInViewport();
+});
+
 test('admin archive searches older chats with student notes and a Cairo date range', async ({ page }) => {
   await installAdminAuth(page);
   const oldChat = { id: '14200000-0000-0000-0000-000000000090', participantName: 'طالب محادثة قديمة', participantType: 'Student',
