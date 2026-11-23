@@ -153,7 +153,7 @@ public sealed class LiveSupportService(
             var clientMessageId = $"init-{Guid.NewGuid():N}";
             await SendMessageAsync(new PersistMessageRequest(conversation, senderType, participant.StudentUserId, participant.GuestSessionId, clientMessageId, subject, LiveSupportMessageType.Text), ct);
             if (!availability.IsAvailable && availability.IsOutsideBusinessHours)
-                await SendAfterHoursReplyAsync(conversation, availability.BusinessHours ?? [], ct);
+                await SendAfterHoursReplyAsync(conversation, ct);
         }
         _logger?.LogInformation("LiveSupport conversation {ConversationId} routed status {Status} owner {OwnerUserId}", conversation.Id, conversation.Status, conversation.CurrentOwnerUserId);
         LiveSupportTelemetry.ConversationsCreated.Add(1, new KeyValuePair<string, object?>("status", conversation.Status.ToString()));
@@ -1338,16 +1338,13 @@ public sealed class LiveSupportService(
             .ToArray();
     }
 
-    private async Task SendAfterHoursReplyAsync(LiveSupportConversation conversation, IReadOnlyList<LiveSupportScheduleWindowDto> businessHours, CancellationToken ct)
+    private async Task SendAfterHoursReplyAsync(LiveSupportConversation conversation, CancellationToken ct)
     {
-        var hours = businessHours.Count == 0
-            ? "لم تُحدد مواعيد العمل لهذا اليوم بعد"
-            : string.Join("، ", businessHours.Select(window => $"من {window.StartLocalTime:HH\\:mm} إلى {window.EndLocalTime:HH\\:mm}"));
         var settings = await _settings.GetAsync(ct);
         var contact = string.IsNullOrWhiteSpace(settings.GuestSupportWhatsAppNumber)
             ? settings.SupportPhoneNumber
             : settings.GuestSupportWhatsAppNumber;
-        var content = $"نحن الآن خارج مواعيد العمل الرسمية. مواعيد العمل اليوم: {hours}. للتواصل العاجل راسلنا على {contact}، وسنرد عليك صباحًا.";
+        var content = $"نحن الآن خارج مواعيد العمل الرسمية. مواعيد العمل اليوم: من ١٠ صباحًا إلى ٢ صباحًا بعد منتصف الليل. للتواصل العاجل راسلنا على {contact}، وسنرد عليك صباحًا.";
         await SendMessageAsync(new PersistMessageRequest(conversation, LiveSupportSenderType.System, null, null, $"after-hours-{conversation.Id:N}", content, LiveSupportMessageType.System), ct);
     }
 

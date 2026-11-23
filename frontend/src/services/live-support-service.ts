@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { PurchaseFundingPreviewDto } from './balance-service';
 import { invalidateMany } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
 import type { LiveSupportChannel } from '@/lib/live-support-channel';
@@ -368,6 +369,27 @@ export interface LiveSupportWhatsAppThreadPage {
   nextCursor?: string | null;
 }
 export interface LiveSupportAttachment { id: string; fileName: string; contentType: string; sizeBytes: number; downloadUrl: string; }
+
+export interface LiveSupportPurchaseCourse {
+  packageId: string;
+  name: string;
+  teacherName: string;
+  subjectName: string;
+  price: number;
+}
+
+export interface LiveSupportPurchasePreview {
+  course: LiveSupportPurchaseCourse;
+  funding: PurchaseFundingPreviewDto;
+  quoteVersion: string;
+  confirmationVersion: string;
+}
+
+export interface LiveSupportGiftCourse {
+  id: string;
+  name: string;
+  context?: string | null;
+}
 
 export interface LiveSupportActionDefinition {
   key: string;
@@ -973,6 +995,15 @@ export const liveSupportService = {
 
   getActionDraft: (conversationId: string, actionKey: string) =>
     apiClient.get<ApiResponse<Record<string, string | number | boolean | null>>>(`/live-support/staff/conversations/${conversationId}/actions/${actionKey}/draft`).then((response) => response.data.data),
+
+  getPurchaseCourses: (conversationId: string, signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportPurchaseCourse[]>>(`/live-support/staff/conversations/${conversationId}/actions/course-purchase/courses`, { signal }).then((response) => response.data.data),
+
+  previewCoursePurchase: (conversationId: string, packageId: string) =>
+    apiClient.get<ApiResponse<LiveSupportPurchasePreview>>(`/live-support/staff/conversations/${conversationId}/actions/course-purchase/preview`, { params: { packageId } }).then((response) => response.data.data),
+
+  getGiftCourses: (conversationId: string, signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportGiftCourse[]>>(`/live-support/staff/conversations/${conversationId}/actions/course-gift/courses`, { signal }).then((response) => response.data.data),
 
   executeStudentAction: async <TPayload extends Record<string, unknown>, TResult>(conversationId: string, actionKey: string, idempotencyKey: string, confirmationVersion: string, payload: TPayload) => {
     const response = await apiClient.post<ApiResponse<TResult>>(`/live-support/staff/conversations/${conversationId}/actions/${actionKey}`, { confirmationVersion, payload }, { headers: { 'Idempotency-Key': idempotencyKey } });

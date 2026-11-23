@@ -16,6 +16,7 @@ using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using NaderGorge.Application.Features.LiveSupport.Services;
+using NaderGorge.Application.Features.Admin.Gifts.Models;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -26,6 +27,8 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
     private readonly ILiveSupportService _support = support;
     private readonly ILiveSupportPresenceStore _presence = presence;
     private readonly ILogger<LiveSupportActionService>? _logger = logger;
+    private readonly LiveSupportCoursePurchaseService _coursePurchase = new(db, mediator);
+    private readonly LiveSupportCourseGiftService _courseGift = new(db, mediator);
 
     private static readonly ActionMetadata[] Catalog =
     [
@@ -37,6 +40,8 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         new("student.device.disconnect", "Devices", "فصل جهاز", "high", true, ["devices", "audit"]),
         new("student.devices.disconnect-all", "Devices", "فصل كل الأجهزة", "high", true, ["devices", "audit"]),
         new("student.package.cancel", "Packages", "إلغاء باقة", "financial", true, ["packages", "balance", "audit"]),
+        new("student.course.purchase", "Packages", "شراء كورس من رصيد الطالب", "financial", true, ["packages", "balance", "audit"]),
+        new("student.course.gift", "Packages", "إضافة هدية للطالب", "high", true, ["packages", "audit"]),
         new("student.balance.adjust", "Balance", "تعديل الرصيد", "financial", true, ["balance", "audit"]),
         new("student.gamification.adjust", "Gamification", "تعديل النقاط", "medium", true, ["gamification", "audit"]),
         new("student.video.override.add", "Watch", "إضافة مشاهدات", "high", true, ["watch", "overrides", "audit"]),
@@ -66,6 +71,25 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         return JsonSerializer.SerializeToElement(conversation.LinkedStudentUserId.HasValue
             ? await BuildActionDraftAsync(conversation.LinkedStudentUserId.Value, actionKey, ct)
             : new Dictionary<string, object?>());
+    }
+
+    public async Task<IReadOnlyList<LiveSupportPurchaseCourseDto>> GetPurchaseCoursesAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireConversationAsync(actorUserId, isAdmin, conversationId, false, ct);
+        return await _coursePurchase.CoursesAsync(conversation.LinkedStudentUserId!.Value, ct);
+    }
+
+    public async Task<LiveSupportPurchasePreviewDto> PreviewCoursePurchaseAsync(Guid actorUserId, bool isAdmin, Guid conversationId, Guid packageId, CancellationToken ct)
+    {
+        var conversation = await RequireConversationAsync(actorUserId, isAdmin, conversationId, false, ct);
+        var preview = await _coursePurchase.PreviewAsync(conversation.LinkedStudentUserId!.Value, packageId, ct);
+        return preview with { ConfirmationVersion = await ConfirmationAsync("student.course.purchase", conversation, ct) };
+    }
+
+    public async Task<IReadOnlyList<GiftLookupDto>> GetGiftCoursesAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireConversationAsync(actorUserId, isAdmin, conversationId, false, ct);
+        return await _courseGift.CoursesAsync(conversation.LinkedStudentUserId!.Value, ct);
     }
 
     public async Task<JsonElement> GetStudentActionContextAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
@@ -215,7 +239,10 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         var previous = await _db.LiveSupportActionExecutions.FirstOrDefaultAsync(x => x.StaffUserId == request.ActorUserId && x.IdempotencyKey == request.IdempotencyKey, ct);
         if (previous is not null)
         {
-            if (previous.PayloadHash != hash || previous.ActionKey != request.ActionKey) throw new LiveSupportException("IDEMPOTENCY_CONFLICT", "مفتاح التنفيذ مستخدم لطلب مختلف.");
+            if (previous.PayloadHash != hash || previous.ActionKey != request.ActionKey || previous.ConversationId != conversation.Id
+                || previous.StudentUserId != conversation.LinkedStudentUserId) throw new LiveSupportException("IDEMPOTENCY_CONFLICT", "مفتاح التنفيذ مستخدم لطلب مختلف.");
+            if (request.ActionKey is "student.course.purchase" or "student.course.gift" && previous.Status != LiveSupportActionStatus.Succeeded)
+                throw new LiveSupportException("ACTION_EXECUTION_UNRESOLVED", "المحاولة السابقة لم تنتهِ بنجاح. راجع اشتراكات الطالب ورصيده قبل بدء محاولة جديدة.");
             return new LiveSupportActionResultDto(previous.Id, request.ActionKey, true, metadata.Refresh, previous.Status == LiveSupportActionStatus.Succeeded ? "تم تنفيذ الإجراء سابقًا." : previous.FailureCode ?? "فشل التنفيذ السابق.");
         }
         if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(await ConfirmationAsync(request.ActionKey, conversation, ct)), Encoding.UTF8.GetBytes(request.ConfirmationVersion)))
@@ -226,7 +253,7 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         await _db.SaveChangesAsync(ct);
         try
         {
-            var message = await DispatchAsync(conversation, request.ActorUserId, request.IsAdmin, request.ActionKey, request.Payload, ct);
+            var message = await DispatchAsync(conversation, request, ct);
             execution.Status = LiveSupportActionStatus.Succeeded; execution.SafeResultJson = JsonSerializer.Serialize(new { message }); execution.CompletedAt = DateTime.UtcNow;
             _db.LiveSupportEvents.Add(new LiveSupportEvent { ConversationId = request.ConversationId, Type = LiveSupportEventType.ActionSucceeded, ActorUserId = request.ActorUserId, RelatedEntityType = "LiveSupportActionExecution", RelatedEntityId = execution.Id, OccurredAt = DateTime.UtcNow, Sequence = DateTime.UtcNow.Ticks, SafeMetadataJson = JsonSerializer.Serialize(new { request.ActionKey }) });
             AddOutbox(request.ConversationId, execution.Id, request.ActionKey, "Succeeded");
@@ -237,6 +264,13 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         }
         catch (Exception ex)
         {
+            if (request.ActionKey is "student.course.purchase" or "student.course.gift")
+            {
+                // The business command owns its transaction. Discard its rolled-back
+                // tracked mutations before persisting the support failure receipt.
+                _db.ClearTrackedChanges();
+                _db.Entry(execution).State = EntityState.Unchanged;
+            }
             execution.Status = LiveSupportActionStatus.Failed; execution.FailureCode = ex is LiveSupportException supportError ? supportError.Code : "ACTION_FAILED"; execution.CompletedAt = DateTime.UtcNow;
             _db.LiveSupportEvents.Add(new LiveSupportEvent { ConversationId = request.ConversationId, Type = LiveSupportEventType.ActionFailed, ActorUserId = request.ActorUserId, RelatedEntityId = execution.Id, OccurredAt = DateTime.UtcNow, Sequence = DateTime.UtcNow.Ticks, SafeMetadataJson = JsonSerializer.Serialize(new { request.ActionKey, code = execution.FailureCode }) });
             AddOutbox(request.ConversationId, execution.Id, request.ActionKey, execution.FailureCode ?? "Failed");
@@ -247,8 +281,9 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         }
     }
 
-    private async Task<string> DispatchAsync(LiveSupportConversation conversation, Guid actor, bool isAdmin, string key, JsonElement p, CancellationToken ct)
+    private async Task<string> DispatchAsync(LiveSupportConversation conversation, LiveSupportActionRequest request, CancellationToken ct)
     {
+        var (actor, isAdmin, key, p) = (request.ActorUserId, request.IsAdmin, request.ActionKey, request.Payload);
         var studentId = conversation.LinkedStudentUserId;
         if (key == "student.create-and-link")
         {
@@ -259,6 +294,13 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
             return "تم إنشاء الطالب وربطه بالمحادثة.";
         }
         var target = studentId ?? throw new LiveSupportException("STUDENT_NOT_LINKED", "اربط المحادثة بطالب أولًا.");
+        if (key == "student.course.purchase")
+        {
+            _ = CourseReason(p);
+            return await _coursePurchase.PurchaseAsync(target, actor, p, ct);
+        }
+        if (key == "student.course.gift")
+            return await _courseGift.IssueAsync(new(target, actor, conversation.Id, request.IdempotencyKey, GuidValue(p, "packageId"), CourseReason(p)), ct);
         ApiResponse result = key switch
         {
             "student.profile.update" => await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UpdateStudentProfileCommand(target, OptionalText(p,"fullName"), OptionalText(p,"phone"), OptionalText(p,"parentPhone"), OptionalText(p,"secondaryPhone"), OptionalText(p,"motherPhone"), OptionalText(p,"secondaryParentPhone"), OptionalText(p,"nationality"), OptionalText(p,"governorate"), OptionalText(p,"district"), OptionalText(p,"address"), OptionalText(p,"schoolName"), OptionalText(p,"dateOfBirth"), OptionalText(p,"fatherDateOfBirth"), OptionalText(p,"motherDateOfBirth"), OptionalText(p,"gender"), OptionalText(p,"educationStage"), OptionalText(p,"gradeLevel"), OptionalText(p,"studyTrack"), OptionalText(p,"schoolType"), OptionalText(p,"studentCode"), OptionalBool(p,"isFatherAlive"), OptionalBool(p,"isMotherAlive"), actor), ct),
@@ -317,7 +359,7 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         }
         var state = key switch
         {
-            "student.balance.adjust" or "student.package.cancel" => await _db.StudentBalances.Where(x => x.UserId == student).Select(x => x.CurrentBalance.ToString()).FirstOrDefaultAsync(ct) ?? "0",
+            "student.balance.adjust" or "student.package.cancel" or "student.course.purchase" => await _db.StudentBalances.Where(x => x.UserId == student).Select(x => x.CurrentBalance.ToString()).FirstOrDefaultAsync(ct) ?? "0",
             "student.gamification.adjust" => await _db.StudentGamifications.Where(x => x.StudentId == student).Select(x => x.TotalPoints.ToString()).FirstOrDefaultAsync(ct) ?? "0",
             "student.account.status.set" or "student.password.reset" => await _db.Users.Where(x => x.Id == student).Select(x => $"{x.IsActive}:{x.PasswordResetVersion}:{x.UpdatedAt}").FirstAsync(ct),
             "student.device.disconnect" or "student.devices.disconnect-all" => $"{await _db.Devices.CountAsync(x => x.UserId == student && x.IsActive, ct)}:{await _db.Devices.Where(x => x.UserId == student).MaxAsync(x => (DateTime?)x.LastUsedAt, ct)}",
@@ -326,6 +368,12 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
             _ => conversation.Version.ToString()
         };
         return Hash($"{key}|{conversation.Id:N}|{student:N}|{conversation.Version}|{state}");
+    }
+    private static string CourseReason(JsonElement payload)
+    {
+        var reason = Text(payload, "reason");
+        if (reason.Length > 500) throw new LiveSupportException("VALIDATION_ERROR", "سبب الإجراء يجب ألا يتجاوز ٥٠٠ حرف.");
+        return reason;
     }
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static string Redact(string raw) => raw.Length > 4000 ? raw[..4000] : raw;

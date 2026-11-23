@@ -9,6 +9,8 @@ import {
 } from '@/services/live-support-service';
 import { studentActionFields } from './student-action-definitions';
 import { createClientId } from '@/lib/client-id';
+import { StudentCoursePurchaseForm } from './StudentCoursePurchaseForm';
+import { StudentCourseGiftForm } from './StudentCourseGiftForm';
 
 type FieldValue = string | number | boolean;
 type VideoOption = { id: string; lessonId: string; teacher: string; subject: string; packageName: string; term: string; course: string; lesson: string; title: string; watchCount: number; maxWatchCount: number };
@@ -46,6 +48,7 @@ export function StudentActionsPanel({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState('');
+  const [completionMessage, setCompletionMessage] = useState('');
   const [draftLoading, setDraftLoading] = useState(false);
   const [studentContext, setStudentContext] = useState<StudentActionContext>();
   const [studentContextError, setStudentContextError] = useState('');
@@ -138,6 +141,14 @@ export function StudentActionsPanel({
     } finally {
       setDraftLoading(false);
     }
+  }
+
+  function completeCourseAction(message: string) {
+    setSelected(undefined);
+    setCompletionMessage(message);
+    void loadStudentContext();
+    void loadCatalog();
+    onCompleted();
   }
 
   function validateForm(): boolean {
@@ -258,6 +269,7 @@ export function StudentActionsPanel({
         </p>
       )}
       {hasStudent && studentContext && <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-sm"><p className="text-slate-600">الرصيد <strong className="mr-1 text-slate-900">{studentContext.balance} ج.م</strong></p><p className="text-slate-600">النقاط <strong className="mr-1 text-slate-900">{studentContext.points}</strong></p></div>}
+      {completionMessage && <p role="status" className="mt-3 rounded-xl bg-teal-50 p-3 text-sm font-semibold text-teal-900">{completionMessage}</p>}
       {catalogError ? (
         <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
           <p>{catalogError}</p>
@@ -309,6 +321,12 @@ export function StudentActionsPanel({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
             {draftLoading ? (
               <div className="mt-8 grid place-items-center gap-3 py-8 text-sm text-slate-600"><LoaderCircle className="animate-spin" /> جارٍ تحميل البيانات الحالية…</div>
+            ) : selected.key === 'student.course.purchase' ? (
+              <StudentCoursePurchaseForm key={conversationId} conversationId={conversationId} onBusyChange={setBusy}
+                onCompleted={completeCourseAction} />
+            ) : selected.key === 'student.course.gift' ? (
+              <StudentCourseGiftForm key={conversationId} conversationId={conversationId} onBusyChange={setBusy}
+                onCompleted={completeCourseAction} />
             ) : !confirming ? (
               <form
                 onSubmit={(event) => {

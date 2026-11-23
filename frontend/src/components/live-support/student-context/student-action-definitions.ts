@@ -47,6 +47,8 @@ export const studentActionFields: Record<string, ActionField[]> = {
   'student.device.disconnect': [{ key: 'deviceId', label: 'الجهاز', type: 'text', required: true }, { key: 'reason', label: 'السبب', type: 'text', required: true }],
   'student.devices.disconnect-all': [{ key: 'reason', label: 'السبب', type: 'text', required: true }],
   'student.package.cancel': [{ key: 'accessGrantId', label: 'الباقة أو الاشتراك', type: 'text', required: true }, { key: 'refundBalance', label: 'رد القيمة للرصيد', type: 'checkbox' }, { key: 'reason', label: 'السبب', type: 'text', required: true }],
+  'student.course.purchase': [],
+  'student.course.gift': [],
   'student.balance.adjust': [{ key: 'amount', label: 'المبلغ (+ أو -)', type: 'number', required: true }, { key: 'reason', label: 'السبب', type: 'text', required: true }],
   'student.gamification.adjust': [{ key: 'points', label: 'النقاط (+ أو -)', type: 'number', required: true }, { key: 'reason', label: 'السبب', type: 'text', required: true }],
   'student.video.override.add': [{ key: 'videoId', label: 'الفيديو المشترك فيه', type: 'text', required: true }, { key: 'addedViews', label: 'مشاهدات إضافية', type: 'number', required: true }, { key: 'reason', label: 'السبب', type: 'text', required: true }],

@@ -10,7 +10,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
 
-public record PurchaseContentCommand(Guid StudentId, CodeType ContentType, Guid ContentId, IReadOnlyList<string>? CouponCodes = null, IReadOnlyList<string>? PrintableCodes = null) : IRequest<ApiResponse<bool>>;
+public record PurchaseContentCommand(Guid StudentId, CodeType ContentType, Guid ContentId, IReadOnlyList<string>? CouponCodes = null, IReadOnlyList<string>? PrintableCodes = null, decimal? ExpectedPrice = null, Guid? PerformedByUserId = null) : IRequest<ApiResponse<bool>>;
 
 public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentCommand, ApiResponse<bool>>
 {
@@ -342,6 +342,9 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 return ApiResponse<bool>.Fail(discount.Error ?? "تعذر تطبيق الخصم.");
             price = Math.Max(0, price - discount.TotalDiscountAmount);
 
+            if (request.ExpectedPrice.HasValue && request.ExpectedPrice.Value != price)
+                return ApiResponse<bool>.Fail("تغير سعر الكورس. راجع التكلفة قبل تأكيد الشراء.", ["PURCHASE_PRICE_CHANGED"]);
+
             var teacherId = await _promotionalBalance.ResolveTeacherIdAsync(request.ContentType, request.ContentId, ct);
             var funding = await _promotionalBalance.ConsumeAsync(
                 request.StudentId,
@@ -355,12 +358,10 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             {
                 try
                 {
-                    await _balanceService.DeductBalance(
-                        request.StudentId,
-                        funding.PaidAmount,
-                        $"شراء {contentName} ({request.ContentType})",
-                        request.ContentId,
-                        ct);
+                    await _balanceService.DebitAsync(new BalanceDebitRequest(
+                        request.StudentId, funding.PaidAmount,
+                        $"شراء {contentName} ({request.ContentType})", request.ContentId,
+                        "ContentPurchase", request.PerformedByUserId), ct);
                 }
                 catch (InvalidOperationException)
                 {
@@ -548,7 +549,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 AddSignedCreditLine(lines, "2000", teacherShareImpact, request.StudentId, target.TeacherId, "مستحق المدرس من عملية الشراء");
                 await _financialPosting.PostAsync(new FinancialPostingRequest(
                     "Purchase", purchaseOperationId, "PurchaseRecognized", $"purchase:{purchaseOperationId:N}",
-                    $"شراء {contentName}", DateTime.UtcNow, request.StudentId, lines), ct);
+                    $"شراء {contentName}", DateTime.UtcNow, request.PerformedByUserId ?? request.StudentId, lines), ct);
             }
 
             if (request.ContentType == CodeType.Package)

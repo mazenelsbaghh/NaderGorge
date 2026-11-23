@@ -321,6 +321,7 @@ export function StudentContextPanel({ conversation, onConversationChange, onActi
       </div>
 
       <StudentActionsPanel
+        key={`${conversation.id}:${conversation.linkedStudentUserId}`}
         conversationId={conversation.id}
         hasStudent
         onCompleted={() => { refreshExpandedSections(); onActionCompleted(); }}

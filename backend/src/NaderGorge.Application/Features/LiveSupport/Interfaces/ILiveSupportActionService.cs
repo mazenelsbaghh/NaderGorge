@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
+using NaderGorge.Application.Features.Admin.Gifts.Models;
 
 namespace NaderGorge.Application.Features.LiveSupport.Interfaces;
 
@@ -11,4 +12,7 @@ public interface ILiveSupportActionService : ILiveSupportActionExecutor
 {
     Task<JsonElement> GetDraftAsync(Guid actorUserId, bool isAdmin, Guid conversationId, string actionKey, CancellationToken ct);
     Task<JsonElement> GetStudentActionContextAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
+    Task<IReadOnlyList<LiveSupportPurchaseCourseDto>> GetPurchaseCoursesAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
+    Task<LiveSupportPurchasePreviewDto> PreviewCoursePurchaseAsync(Guid actorUserId, bool isAdmin, Guid conversationId, Guid packageId, CancellationToken ct);
+    Task<IReadOnlyList<GiftLookupDto>> GetGiftCoursesAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
 }

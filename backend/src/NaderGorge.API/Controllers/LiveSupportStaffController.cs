@@ -208,6 +208,27 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("conversations/{conversationId:guid}/actions/course-purchase/courses")]
+    public async Task<IActionResult> PurchaseCourses(Guid conversationId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<IReadOnlyList<LiveSupportPurchaseCourseDto>>.Ok(await _actions.GetPurchaseCoursesAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/actions/course-purchase/preview")]
+    public async Task<IActionResult> PreviewCoursePurchase(Guid conversationId, [FromQuery] Guid packageId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportPurchasePreviewDto>.Ok(await _actions.PreviewCoursePurchaseAsync(UserId(), User.IsInRole("Admin"), conversationId, packageId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/actions/course-gift/courses")]
+    public async Task<IActionResult> GiftCourses(Guid conversationId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<IReadOnlyList<NaderGorge.Application.Features.Admin.Gifts.Models.GiftLookupDto>>.Ok(await _actions.GetGiftCoursesAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpPost("conversations/{conversationId:guid}/actions/{actionKey}")]
     [EnableRateLimiting("live-support-action")]
     public async Task<IActionResult> ExecuteAction(Guid conversationId, string actionKey, ExecuteLiveSupportActionRequest request, [FromHeader(Name = "Idempotency-Key")] string idempotencyKey, CancellationToken ct)

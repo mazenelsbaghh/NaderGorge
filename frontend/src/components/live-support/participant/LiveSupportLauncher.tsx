@@ -21,17 +21,6 @@ function formatNext(value?: string | null) {
   return formatCairoDateTime(value, { dateStyle: 'full', timeStyle: 'short' });
 }
 
-function formatSupportTime(value: string) {
-  const [hour = '0', minute = '0'] = value.split(':');
-  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
-    .format(new Date(Date.UTC(2000, 0, 1, Number(hour), Number(minute))));
-}
-
-function formatBusinessHours(windows?: LiveSupportAvailability['businessHours']) {
-  if (!windows?.length) return 'لم تُحدد مواعيد العمل لهذا اليوم بعد';
-  return windows.map((window) => `من ${formatSupportTime(window.startLocalTime)} إلى ${formatSupportTime(window.endLocalTime)}`).join('، ');
-}
-
 const SUPPORT_SETTINGS_CACHE_KEY = 'massar:support-settings';
 
 type LiveSupportLauncherProps = {
@@ -375,7 +364,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
         {loading && !availability ? <div className="grid flex-1 place-items-center"><LoaderCircle className="animate-spin text-cyan-700"/></div> : null}
         {availability && !availability.isAvailable && !conversation && !afterHours ? <div className="grid flex-1 place-items-center text-center"><div><span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-slate-100 text-slate-500"><Headphones size={28}/></span><h3 className="text-lg font-bold text-slate-900">الدعم غير متاح الآن</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">لا يمكن بدء محادثة جديدة حاليًا.</p>{formatNext(availability.nextAvailableAt) && <div className="mt-4 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">موعد توفر الدعم القادم<br/>{formatNext(availability.nextAvailableAt)}</div>}</div></div> : null}
         {availability && !availability.isAvailable && conversation ? <div role="status" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">الدعم غير متاح لبدء محادثة جديدة، لكن يمكنك متابعة محادثتك وسجلها الحالي.</div> : null}
-        {(availability?.isAvailable || afterHours) && !conversation ? <form action={start} className="my-auto space-y-4">{afterHours ? <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"><h3 className="font-black">نحن الآن خارج مواعيد العمل الرسمية</h3><p className="mt-1">مواعيد العمل اليوم: {formatBusinessHours(availability?.businessHours)}.</p>{contactNumber && <p className="mt-1">للتواصل العاجل: {whatsappNumber ? <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" dir="ltr" className="font-black underline">{contactNumber}</a> : <a href={`tel:${contactNumber.replace(/\s/g, '')}`} dir="ltr" className="font-black underline">{contactNumber}</a>} — وسنرد عليك صباحًا.</p>}</div> : <h3 className="text-lg font-bold text-slate-900">كيف نساعدك؟</h3>}<label className="block text-sm font-medium text-slate-700">{afterHours ? 'اترك رسالتك وسنتابعها صباحًا' : 'موضوع المحادثة'}<input name="subject" maxLength={200} required placeholder="اكتب المشكلة باختصار" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/></label><button disabled={loading || Boolean(pendingAction)} className="h-11 w-full rounded-xl bg-cyan-700 font-semibold text-white disabled:opacity-50">{afterHours ? 'إرسال الرسالة' : 'ابدأ المحادثة'}</button></form> : null}
+        {(availability?.isAvailable || afterHours) && !conversation ? <form action={start} className="my-auto space-y-4">{afterHours ? <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"><h3 className="font-black">نحن الآن خارج مواعيد العمل الرسمية</h3><p className="mt-1">مواعيد العمل اليوم: من ١٠ صباحًا إلى ٢ صباحًا بعد منتصف الليل.</p>{contactNumber && <p className="mt-1">للتواصل العاجل: {whatsappNumber ? <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" dir="ltr" className="font-black underline">{contactNumber}</a> : <a href={`tel:${contactNumber.replace(/\s/g, '')}`} dir="ltr" className="font-black underline">{contactNumber}</a>} — وسنرد عليك صباحًا.</p>}</div> : <h3 className="text-lg font-bold text-slate-900">كيف نساعدك؟</h3>}<label className="block text-sm font-medium text-slate-700">{afterHours ? 'اترك رسالتك وسنتابعها صباحًا' : 'موضوع المحادثة'}<input name="subject" maxLength={200} required placeholder="اكتب المشكلة باختصار" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/></label><button disabled={loading || Boolean(pendingAction)} className="h-11 w-full rounded-xl bg-cyan-700 font-semibold text-white disabled:opacity-50">{afterHours ? 'إرسال الرسالة' : 'ابدأ المحادثة'}</button></form> : null}
         {conversation && <>{conversation.isSupportBlocked ? <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-900">تم حظرك من الدعم. السبب: {conversation.supportBlockReason}</p> : conversation.status === 'Waiting' ? (
           conversation.isAiActive ? (
             <AIConversationStatus turnState={aiTurnState} onRequestHuman={() => void requestHumanSupport().catch(() => setError('تعذر طلب موظف الدعم. حاول مرة أخرى.'))}/>
