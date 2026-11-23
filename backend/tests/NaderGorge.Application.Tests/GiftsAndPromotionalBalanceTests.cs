@@ -131,6 +131,68 @@ public sealed class GiftsAndPromotionalBalanceTests
         Assert.Equal(directLesson.Id, Assert.Single(lessons.Data!).Id);
     }
 
+    [Theory]
+    [InlineData(GiftTargetType.Package)]
+    [InlineData(GiftTargetType.Term)]
+    [InlineData(GiftTargetType.ContentSection)]
+    public async Task Closed_for_sale_course_can_be_selected_and_gifted_without_enabling_purchases(GiftTargetType targetType)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, "Compensation student", "152022");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Gift operator", "152023");
+        var (term, section) = await SeedGiftHierarchyAsync(db);
+        var package = term.Package;
+        package.IsActive = false;
+        package.ShowWhenUnavailable = false;
+        package.AllowFullPackagePurchase = false;
+        package.Teacher = new TeacherProfile { Id = package.TeacherId, User = admin };
+        db.Add(package.Teacher);
+        if (targetType == GiftTargetType.Package)
+            db.Packages.AddRange(Enumerable.Range(0, 55).Select(index => new Package
+            {
+                Name = $"A course {index:D2}", SubjectId = package.SubjectId, TeacherId = package.TeacherId,
+                TargetGrade = "SecondSecondary"
+            }));
+        await db.SaveChangesAsync();
+        var targetId = targetType == GiftTargetType.Package ? package.Id : targetType == GiftTargetType.Term ? term.Id : section.Id;
+        var options = await new GetGiftTargetsLookupQueryHandler(db).Handle(new(targetType, package.TeacherId), default);
+        Assert.Contains(options.Data!, option => option.Id == targetId);
+
+        var handler = new IssueGiftCommandHandler(db, new AccessCheckService(db), new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var response = await handler.Handle(new(new(Guid.NewGuid(), targetType, targetId, null, null, null, null, [student.Id], "تعويض حصة"), admin.Id), default);
+
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(GiftRecipientStatus.Active, Assert.Single(response.Data!.Recipients).Status);
+        Assert.False(package.IsActive);
+        Assert.False(package.ShowWhenUnavailable);
+        Assert.False(package.AllowFullPackagePurchase);
+    }
+
+    [Theory]
+    [InlineData(ContentArchiveMode.ActiveSubscribersOnly)]
+    [InlineData(ContentArchiveMode.HiddenFromEveryone)]
+    public async Task Archived_compensation_course_remains_unavailable_for_new_gifts(ContentArchiveMode mode)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Archive gift operator", "152024");
+        var package = await SeedPackageAsync(db, 120m);
+        package.IsActive = false;
+        package.ArchiveMode = mode;
+        package.AllowFullPackagePurchase = false;
+        package.Teacher = new TeacherProfile { Id = package.TeacherId, User = admin };
+        db.Add(package.Teacher);
+        await db.SaveChangesAsync();
+
+        var lookup = await new GetGiftTargetsLookupQueryHandler(db).Handle(new(GiftTargetType.Package), default);
+        var issuer = new IssueGiftCommandHandler(db, new AccessCheckService(db), new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var issue = await issuer.Handle(new(new(Guid.NewGuid(), GiftTargetType.Package, package.Id, null, null, null, null, [Guid.NewGuid()], "تعويض"), admin.Id), default);
+
+        Assert.DoesNotContain(lookup.Data!, option => option.Id == package.Id);
+        Assert.False(issue.Success);
+        Assert.Contains("CONTENT_ARCHIVED", issue.Errors!);
+        Assert.Empty(db.StudentAccessGrants);
+    }
+
     [Fact]
     public async Task StudentLookup_MarksRecipientsPreviouslyGiftedForTheSelectedTarget()
     {

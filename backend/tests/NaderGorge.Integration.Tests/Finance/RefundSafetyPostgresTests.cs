@@ -14,6 +14,87 @@ namespace NaderGorge.Integration.Tests.Finance;
 public sealed class RefundSafetyPostgresTests
 {
     [Theory]
+    [InlineData(0, 490, 0)]
+    [InlineData(100, 200, 190)]
+    public async Task Legacy_paid_recharge_can_be_refunded_from_the_external_screen_once(int general, int recharge, int gift)
+    {
+        await using var scenario = await RefundTestScenario.CreateAsync();
+        await SeedLegacyFunding(scenario, general, recharge, gift);
+        var request = scenario.CashRequest(290m);
+        var profile = await new NaderGorge.Application.Features.Admin.Queries.GetStudentProfileDetailQueryHandler(scenario.Db)
+            .Handle(new(scenario.Student.Id), default);
+        Assert.Equal(general + recharge, Assert.Single(profile.Packages).PaidAmount);
+
+        var first = await scenario.Controller().CreateExternalPackageRefund(request, default);
+        var replay = await scenario.Controller().CreateExternalPackageRefund(request, default);
+
+        Assert.IsType<OkObjectResult>(first.Result);
+        Assert.IsType<OkObjectResult>(replay.Result);
+        await using var verify = scenario.CreateDbContext();
+        var refund = await verify.PlatformRefunds.SingleAsync();
+        Assert.Equal(290m, refund.TotalAmount);
+        Assert.Equal(decimal.Round(120m * 290m / (general + recharge), 2), refund.TeacherAmount);
+        Assert.Equal(PlatformRefundStatus.Posted, refund.Status);
+        Assert.False((await verify.StudentAccessGrants.SingleAsync()).IsActive);
+        Assert.Equal(20m, (await verify.StudentBalances.SingleAsync()).CurrentBalance);
+        Assert.Empty(await verify.BalanceTransactions.ToArrayAsync());
+        var journal = await verify.JournalEntries.Include(entry => entry.Lines).SingleAsync();
+        Assert.Equal(290m, journal.Lines.Sum(line => line.Debit));
+        Assert.Equal(290m, journal.Lines.Sum(line => line.Credit));
+        Assert.Equal(general, (await verify.SalesFinancialEffects.SingleAsync()).PaidAmount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Legacy_mixed_funding_rejects_excess_cash_or_a_teacher_share_above_proven_cash(bool invalidTeacherShare)
+    {
+        await using var scenario = await RefundTestScenario.CreateAsync();
+        await SeedLegacyFunding(scenario, 100, 200, 190);
+        if (invalidTeacherShare)
+        {
+            var source = await scenario.Db.SalesFinancialEffects.SingleAsync();
+            source.TeacherShareImpact = 400m;
+            source.PlatformShareImpact = -300m;
+            await scenario.Db.SaveChangesAsync();
+        }
+
+        var response = await scenario.Controller().CreateExternalPackageRefund(scenario.CashRequest(invalidTeacherShare ? 290m : 300.01m), default);
+
+        Assert.IsType<BadRequestObjectResult>(response.Result);
+        await AssertUnchangedAsync(scenario);
+    }
+
+    private static async Task SeedLegacyFunding(RefundTestScenario scenario, int general, int recharge, int gift)
+    {
+        var source = await scenario.Db.SalesFinancialEffects.SingleAsync();
+        source.PaidAmount = general;
+        source.PromotionalAmount = recharge + gift;
+        source.PlatformShareImpact = general - source.TeacherShareImpact;
+        var fundingId = Guid.NewGuid();
+        scenario.Db.TeacherFinancialEvents.Add(new TeacherFinancialEvent { SourceId = source.PurchaseOperationId,
+            SourceType = TeacherFinancialSourceType.DirectPurchase, StudentId = source.StudentId,
+            TargetId = source.TargetId, TargetType = source.TargetType, GrossAmount = source.GrossAmount,
+            PaidAmount = general, PromotionalAmount = recharge + gift, IdempotencyKey = $"legacy:{fundingId}",
+            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { fundingOperationId = fundingId }) });
+        AddLegacyUsage(scenario, fundingId, recharge, "DIGITAL_RECHARGE");
+        if (gift > 0) AddLegacyUsage(scenario, fundingId, gift, "GRANTED");
+        await scenario.Db.SaveChangesAsync();
+    }
+
+    private static void AddLegacyUsage(RefundTestScenario scenario, Guid fundingId, int amount, string outcome)
+    {
+        var issuance = new GiftIssuance { RequestId = Guid.NewGuid(), TargetType = GiftTargetType.TeacherBalance,
+            TeacherId = scenario.Teacher.Id, Amount = amount, Reason = "Legacy funding", IssuedByUserId = scenario.Actor.Id };
+        var recipient = new GiftRecipient { GiftIssuance = issuance, StudentId = scenario.Student.Id, OutcomeCode = outcome };
+        var allocation = new PromotionalBalanceAllocation { GiftRecipient = recipient, StudentId = scenario.Student.Id,
+            TeacherId = scenario.Teacher.Id, OriginalAmount = amount, ConsumedAmount = amount };
+        scenario.Db.PromotionalBalanceUsages.Add(new PromotionalBalanceUsage { Allocation = allocation,
+            GiftRecipient = recipient, PurchaseOperationId = fundingId, ContentType = CodeType.Package,
+            ContentId = scenario.Grant.PackageId!.Value, Amount = amount });
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task StudentBalanceRefund_ReversalRemovesCreditOrRejectsSpentBalance(bool spent)

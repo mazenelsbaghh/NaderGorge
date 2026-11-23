@@ -156,10 +156,15 @@ public sealed class PlatformFinanceOperationsService(
 
     private async Task<decimal?> ResolveRefundSourceAmountAsync(CreatePlatformRefundRequest request, CancellationToken ct)
     {
-        var sourceAmount = await _db.SalesFinancialEffects
+        var source = await _db.SalesFinancialEffects.AsNoTracking()
             .Where(x => x.PurchaseOperationId == request.OriginalSourceId)
-            .Select(x => (decimal?)(x.PaidAmount > 0m ? x.PaidAmount : x.GrossAmount))
             .SingleOrDefaultAsync(ct);
+        decimal? sourceAmount = null;
+        if (source is not null)
+        {
+            var paid = await new PurchasePaidFundingReader(_db).ReadAsync(source, ct);
+            sourceAmount = paid > 0m ? paid : source.GrossAmount;
+        }
         if (sourceAmount > 0m || !request.AccessGrantId.HasValue) return sourceAmount;
         if (request.OriginalSourceType == "HistoricalAccessGrant" && request.AccessGrantId != request.OriginalSourceId)
             return sourceAmount;

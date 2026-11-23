@@ -240,7 +240,7 @@ public sealed class AdminPlatformFinanceController(
         var preview = await mediator.Send(
             new GetRefundUsagePreviewQuery(body.StudentId, body.AccessGrantId, body.PurchaseOperationId), ct);
         if (grant is null || preview is null || grant.UserId != body.StudentId || !grant.IsActive ||
-            (source is not null && (source.StudentId != body.StudentId || source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount)) ||
+            (source is not null && (source.StudentId != body.StudentId || source.TeacherShareImpact < 0m || source.TeacherShareImpact > preview.PaidAmount)) ||
             amount <= 0m || amount > preview.RemainingRefundableAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
         {
             existing = await db.PlatformRefunds.AsNoTracking()

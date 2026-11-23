@@ -9,6 +9,8 @@ using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Teacher;
+using NaderGorge.Application.Services;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
@@ -211,11 +213,20 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 effect.TeacherId,
                 TeacherName = effect.Teacher != null ? effect.Teacher.User.FullName : null,
                 effect.PaidAmount,
+                effect.PromotionalAmount,
+                effect.DetailsJson,
                 effect.PlatformShareImpact,
                 effect.TeacherShareImpact,
                 effect.CreatedAt
             })
             .ToListAsync(cancellationToken);
+
+        var paidFunding = await new PurchasePaidFundingReader(_context).ReadAsync(purchaseEffects.Select(effect => new SalesFinancialEffect
+        {
+            PurchaseOperationId = effect.PurchaseOperationId, StudentId = request.UserId, TargetType = effect.TargetType,
+            TargetId = effect.TargetId, TeacherId = effect.TeacherId, PaidAmount = effect.PaidAmount,
+            PromotionalAmount = effect.PromotionalAmount, DetailsJson = effect.DetailsJson
+        }).ToArray(), cancellationToken);
 
         var packages = new List<StudentPackageDto>();
         foreach (var grant in allGrants)
@@ -359,7 +370,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
                 TeacherId = resolvedTeacherId,
                 TeacherName = resolvedTeacherName,
-                PaidAmount = purchaseEffect?.PaidAmount ?? 0m,
+                PaidAmount = purchaseEffect is null ? 0m : paidFunding[purchaseEffect.PurchaseOperationId],
                 PlatformShareAmount = purchaseEffect?.PlatformShareImpact ?? 0m,
                 TeacherShareAmount = purchaseEffect?.TeacherShareImpact ?? 0m,
                 GrantType = grant.GrantType.ToString(),

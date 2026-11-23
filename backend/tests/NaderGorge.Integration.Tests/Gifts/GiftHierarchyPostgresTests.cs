@@ -8,8 +8,10 @@ namespace NaderGorge.Integration.Tests.Gifts;
 
 public sealed class GiftHierarchyPostgresTests
 {
-    [Fact]
-    public async Task ParentLookups_KeepDirectLessonInsideSelectedTeacherAndPackage()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ParentLookups_KeepDirectLessonInsideSelectedTeacherAndPackage(bool closedForSale)
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
         await using var db = fixture.CreateDbContext();
@@ -24,7 +26,8 @@ public sealed class GiftHierarchyPostgresTests
         {
             Name = "Selected package", Description = "Direct lessons", Price = 100m,
             Teacher = teacher, Subject = subject, TargetGrade = "SecondSecondary",
-            ContentMode = PackageContentMode.LessonsOnly
+            ContentMode = PackageContentMode.LessonsOnly,
+            IsActive = !closedForSale, ShowWhenUnavailable = false, AllowFullPackagePurchase = !closedForSale
         };
         var otherPackage = new Package
         {
@@ -58,5 +61,7 @@ public sealed class GiftHierarchyPostgresTests
         var wrongTeacher = await handler.Handle(new GetGiftTargetsLookupQuery(
             GiftTargetType.Lesson, otherTeacher.Id, ParentId: section.Id), default);
         Assert.Empty(wrongTeacher.Data!);
+        Assert.Equal(!closedForSale, package.IsActive);
+        Assert.False(package.ShowWhenUnavailable);
     }
 }

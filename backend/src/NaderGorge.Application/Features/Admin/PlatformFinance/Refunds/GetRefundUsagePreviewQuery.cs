@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -47,9 +48,10 @@ public sealed class GetRefundUsagePreviewQueryHandler(IAppDbContext db)
         if (source is not null && (source.TargetId != TargetId(grant) || source.TargetType != TargetType(grant))) return null;
         if (source is null && !isHistoricalSource) return null;
 
+        var paidAmount = source is null ? 0m : await new PurchasePaidFundingReader(db).ReadAsync(source, ct);
         var sourceAmount = source is null
             ? await RefundGrantPriceResolver.ResolveManualCeilingAsync(db, grant, ct)
-            : source.PaidAmount > 0m ? source.PaidAmount : source.GrossAmount;
+            : paidAmount > 0m ? paidAmount : source.GrossAmount;
         if (sourceAmount <= 0m)
             sourceAmount = await RefundGrantPriceResolver.ResolveManualCeilingAsync(db, grant, ct);
         if (sourceAmount is null || sourceAmount <= 0m) return null;

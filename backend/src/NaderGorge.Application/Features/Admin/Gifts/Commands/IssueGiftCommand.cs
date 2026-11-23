@@ -270,15 +270,16 @@ public sealed class IssueGiftCommandHandler
         }
 
         var id = request.TargetId!.Value;
+        var giftPackageIds = GiftPackageAvailability.EligibleIds(_db);
         return request.TargetType switch
         {
-            GiftTargetType.Package => await _db.Packages.Where(x => x.Id == id && (x.IsActive || x.ShowWhenUnavailable)).Select(x => new TargetDescriptor(x.Name, x.TeacherId)).FirstOrDefaultAsync(ct),
-            GiftTargetType.Term => await _db.Terms.Where(x => x.Id == id && (x.Package.IsActive || x.Package.ShowWhenUnavailable))
+            GiftTargetType.Package => await _db.Packages.Where(x => x.Id == id && giftPackageIds.Contains(x.Id)).Select(x => new TargetDescriptor(x.Name, x.TeacherId)).FirstOrDefaultAsync(ct),
+            GiftTargetType.Term => await _db.Terms.Where(x => x.Id == id && giftPackageIds.Contains(x.PackageId))
                 .Select(x => new TargetDescriptor(x.IsSystemContainer ? x.Package.Name : x.Title, x.Package.TeacherId)).FirstOrDefaultAsync(ct),
-            GiftTargetType.ContentSection => await _db.ContentSections.Where(x => x.Id == id && (x.Term.Package.IsActive || x.Term.Package.ShowWhenUnavailable))
+            GiftTargetType.ContentSection => await _db.ContentSections.Where(x => x.Id == id && giftPackageIds.Contains(x.Term.PackageId))
                 .Select(x => new TargetDescriptor(x.IsSystemContainer ? x.Term.Package.Name : x.Title, x.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
-            GiftTargetType.Lesson => await _db.Lessons.Where(x => x.Id == id).Select(x => new TargetDescriptor(x.Title, x.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
-            GiftTargetType.Video => await _db.LessonVideos.Where(x => x.Id == id && x.IsActive).Select(x => new TargetDescriptor(x.Title, x.Lesson.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
+            GiftTargetType.Lesson => await _db.Lessons.Where(x => x.Id == id && giftPackageIds.Contains(x.ContentSection.Term.PackageId)).Select(x => new TargetDescriptor(x.Title, x.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
+            GiftTargetType.Video => await _db.LessonVideos.Where(x => x.Id == id && x.IsActive && giftPackageIds.Contains(x.Lesson.ContentSection.Term.PackageId)).Select(x => new TargetDescriptor(x.Title, x.Lesson.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
             GiftTargetType.Exam => await _db.Exams.Where(x => x.Id == id).Select(x => new TargetDescriptor(x.Title, x.CreatedByTeacherId)).FirstOrDefaultAsync(ct),
             _ => null
         };
