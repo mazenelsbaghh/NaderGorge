@@ -308,7 +308,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 await _db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
                 return ApiResponse<ActivateCodeResponse>.Ok(
-                    new ActivateCodeResponse(grantId, $"تم شحن رصيدك للمدرس {teacherName ?? "المحدد"} بـ {amount} جنيه", CodeType.Balance, "/student/balance"));
+                    new ActivateCodeResponse(grantId, $"تم شحن رصيدك للمدرس {teacherName ?? "المحدد"} بـ {amount} جنيه", CodeType.Balance, $"/student/balance/recommendations/{grantId}"));
             }
 
             // For all other code types: create access grants
@@ -354,7 +354,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                     lastGrantId = grant.Id;
                 }
                 grantId = lastGrantId!.Value;
-                redirectUrl = "/student/content";
+                redirectUrl = codeGroup.LessonId.HasValue ? $"/student/lessons/{codeGroup.LessonId}" : "/student/lessons";
             }
             else
             {
@@ -377,11 +377,14 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                         break;
                     case CodeType.Term:
                         grant.TermId = codeGroup.TermId;
-                        redirectUrl = $"/student/content?termId={codeGroup.TermId}";
+                        var termPackageId = await _db.Terms.Where(term => term.Id == codeGroup.TermId).Select(term => term.PackageId).SingleAsync(ct);
+                        redirectUrl = $"/student/packages/{termPackageId}/terms/{codeGroup.TermId}";
                         break;
                     case CodeType.Month:
                         grant.ContentSectionId = codeGroup.ContentSectionId;
-                        redirectUrl = $"/student/content?sectionId={codeGroup.ContentSectionId}";
+                        var sectionPath = await _db.ContentSections.Where(section => section.Id == codeGroup.ContentSectionId)
+                            .Select(section => new { section.TermId, section.Term.PackageId }).SingleAsync(ct);
+                        redirectUrl = $"/student/packages/{sectionPath.PackageId}/terms/{sectionPath.TermId}/sections/{codeGroup.ContentSectionId}";
                         break;
                     case CodeType.Lesson:
                         grant.LessonId = codeGroup.LessonId;

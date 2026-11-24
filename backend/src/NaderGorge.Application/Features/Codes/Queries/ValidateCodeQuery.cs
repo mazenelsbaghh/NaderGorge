@@ -138,7 +138,9 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
                 }
                 break;
             case CodeType.Balance:
-                targetName = $"شحن رصيد بقيمة {codeGroup.BalanceAmount} جنيه";
+                targetName = codeGroup.TeacherId.HasValue
+                    ? $"رصيد خاص بالمدرس بقيمة {codeGroup.BalanceAmount} جنيه"
+                    : $"رصيد عام بقيمة {codeGroup.BalanceAmount} جنيه";
                 break;
         }
 

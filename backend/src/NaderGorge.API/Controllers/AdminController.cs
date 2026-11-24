@@ -665,6 +665,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateLessonDto dto)
     {
+        if (User.IsInRole("Teacher") && !User.IsInRole("Admin")) return Forbid();
         var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -686,6 +687,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetLessonCockpit(Guid lessonId)
     {
+        if (User.IsInRole("Teacher") && !User.IsInRole("Admin")) return Forbid();
         var result = await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetLessonCockpitQuery(lessonId));
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -702,6 +704,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
+        if (User.IsInRole("Teacher") && !User.IsInRole("Admin")) return Forbid();
         var result = await _mediator.Send(new UpdateVideoCommand(
             id,
             dto.Title,
@@ -1156,7 +1159,8 @@ public class AdminController : ControllerBase
             AccountingTiming: dto.AccountingTiming,
             ExpiresAt: dto.ExpiresAt,
             ExpireActivatedAccess: dto.ExpireActivatedAccess,
-            AcademicScopes: dto.AcademicScopes
+            AcademicScopes: dto.AcademicScopes,
+            BalanceScope: dto.BalanceScope
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -1598,7 +1602,8 @@ public record BulkGenerateRequest(
     Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation,
     DateTime? ExpiresAt = null,
     bool ExpireActivatedAccess = true,
-    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    string? BalanceScope = null
 );
 public record UpdateCodeGroupSettingsRequest(
     string? Name = null,

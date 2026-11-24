@@ -42,7 +42,8 @@ public record BulkGenerateCodesCommand(
     CodeAccountingTiming AccountingTiming = CodeAccountingTiming.OnActivation,
     DateTime? ExpiresAt = null,
     bool ExpireActivatedAccess = true,
-    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    string? BalanceScope = null
 ) : IRequest<ApiResponse<BulkGenerateCodesResponse>>;
 
 public record BulkGenerateCodesResponse(Guid CodeGroupId, int CodesGenerated, List<string> Codes);
@@ -185,6 +186,15 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             return ApiResponse<BulkGenerateCodesResponse>.Fail("Selected teacher does not match the selected content.");
 
         var groupTeacherId = targetTeacherId ?? explicitTeacherId;
+        if (request.CodeType == CodeType.Balance && request.BalanceScope != null)
+        {
+            if (request.BalanceScope is not ("Teacher" or "Platform"))
+                return ApiResponse<BulkGenerateCodesResponse>.Fail("نوع رصيد الكود غير صالح.");
+            if (request.BalanceScope == "Teacher" && !groupTeacherId.HasValue)
+                return ApiResponse<BulkGenerateCodesResponse>.Fail("اختر المدرس صاحب الرصيد الخاص.");
+            if (request.BalanceScope == "Platform" && groupTeacherId.HasValue)
+                return ApiResponse<BulkGenerateCodesResponse>.Fail("كود الرصيد العام لا يرتبط بمدرس.");
+        }
         var activationOnly = groupTeacherId.HasValue && await _db.TeacherProfiles.AnyAsync(x => x.Id == groupTeacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct);
         var accountingTiming = activationOnly ? CodeAccountingTiming.OnActivation : request.AccountingTiming;
 

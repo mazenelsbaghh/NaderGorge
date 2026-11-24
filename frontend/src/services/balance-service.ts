@@ -70,7 +70,9 @@ class BalanceService {
         couponCodes: discounts.couponCodes,
         printableCodes: discounts.printableCodes,
       });
-      return response.data?.success;
+      if (!response.data?.success || response.data?.data === false)
+        throw new Error(response.data?.message || 'لم تكتمل عملية الشراء.');
+      return true;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'فشل في عملية الشراء');
     }

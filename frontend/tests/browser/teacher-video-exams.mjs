@@ -27,7 +27,7 @@ for (const width of [390, 1440]) {
         let data = [];
         if (path === '/auth/session') data = { user, authorizationVersion: 1 };
         if (path === '/teacher/context') data = { isOwner: true, permissionKeys: ['content'] };
-        if (path === '/admin/lessons/lesson/cockpit') data = lesson;
+        if (path === '/teacher/lessons/lesson/cockpit') data = lesson;
         if (path === '/admin/exams/inline') {
           const submission = route.request().postDataJSON();
           submissions.push(submission);

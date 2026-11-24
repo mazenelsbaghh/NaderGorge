@@ -31,6 +31,7 @@ export interface CodeTypeSelection {
   includeFutureVideos?: boolean;
   videoTargetIds?: string[];
   balanceAmount?: number;
+  balanceScope?: 'Teacher' | 'Platform';
   expiresAt?: string;
   expireActivatedAccess?: boolean;
 }
@@ -45,7 +46,9 @@ interface CodeTypeSelectorProps {
 }
 
 // ── Code Types Metadata ──────────────────────────────────────────────────────
-const CODE_TYPES: { type: CodeTypeOption; label: string; icon: LucideIcon; description: string }[] = [
+const CODE_TYPES: { type: CodeTypeOption; balanceScope?: 'Teacher' | 'Platform'; label: string; icon: LucideIcon; description: string }[] = [
+  { type: 'Balance', balanceScope: 'Teacher', label: 'رصيد خاص بمدرس', icon: Wallet, description: 'يُستخدم لشراء محتوى المدرس المحدد فقط' },
+  { type: 'Balance', balanceScope: 'Platform', label: 'رصيد عام للمنصة', icon: Wallet, description: 'يُستخدم لشراء محتوى أي مدرس' },
   { type: 'Package', label: 'كورس / باكدج', icon: Layers, description: 'كود يفتح باكدج محدد للطالب' },
   { type: 'Term', label: 'ترم', icon: Calendar, description: 'كود يفتح ترم كامل بجميع شهوره' },
   { type: 'Month', label: 'شهر / قسم', icon: BookOpen, description: 'كود يفتح شهر دراسي كامل' },
@@ -54,7 +57,6 @@ const CODE_TYPES: { type: CodeTypeOption; label: string; icon: LucideIcon; descr
   { type: 'Video', label: 'فيديوهات محددة', icon: PlayCircle, description: 'يفتح فيديوهات تختارها يدوياً' },
   { type: 'Exam', label: 'امتحان', icon: Award, description: 'كود لفتح امتحان محدد' },
   { type: 'PublicExam', label: 'امتحان عام', icon: Award, description: 'كود لفتح امتحان عام مستقل' },
-  { type: 'Balance', label: 'شحن رصيد', icon: Wallet, description: 'يشحن محفظة الطالب بمبلغ نقدي' },
 ];
 
 
@@ -66,8 +68,8 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
   const [lessonDetail, setLessonDetail] = useState<LessonDetailDto | null>(null);
 
   // Handlers
-  const setType = (codeType: CodeTypeOption) => {
-    onChange({ codeType, expiresAt: value.expiresAt });
+  const setType = (choice: typeof CODE_TYPES[number]) => {
+    onChange({ codeType: choice.type, balanceScope: choice.balanceScope, expiresAt: value.expiresAt });
   };
 
   const handleField = (field: keyof CodeTypeSelection, val: string | string[] | number | boolean | undefined) => {
@@ -306,12 +308,13 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
       {/* ── Type Grid ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {CODE_TYPES.map((ct) => {
-          const isSelected = value.codeType === ct.type;
+          const isSelected = value.codeType === ct.type && (ct.type !== 'Balance' || (value.balanceScope ?? 'Teacher') === ct.balanceScope);
           return (
             <button
-              key={ct.type}
+              key={`${ct.type}-${ct.balanceScope ?? ''}`}
               type="button"
-              onClick={() => setType(ct.type)}
+              onClick={() => setType(ct)}
+              aria-pressed={isSelected}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 isSelected
                   ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
@@ -500,6 +503,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
                 type="number"
                 min="1"
                 placeholder="50"
+                required
                 className="w-full bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm text-[var(--admin-text)]"
                 value={value.balanceAmount || ''}
                 onChange={(e) => handleField('balanceAmount', e.target.value ? Number(e.target.value) : undefined)}

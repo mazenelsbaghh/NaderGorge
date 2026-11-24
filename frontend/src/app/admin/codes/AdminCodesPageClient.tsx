@@ -56,7 +56,7 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
   
   // Generation Form State
   const [genCount, setGenCount] = useState(10);
-  const [genSelection, setGenSelection] = useState<CodeTypeSelection>({ codeType: 'Package' });
+  const [genSelection, setGenSelection] = useState<CodeTypeSelection>({ codeType: 'Balance', balanceScope: 'Teacher' });
   const [genTeacherId, setGenTeacherId] = useState('');
   const [genGroupName, setGenGroupName] = useState('');
   const [genAcademicScopes, setGenAcademicScopes] = useState<AcademicScopePayload[]>([
@@ -123,6 +123,11 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
   async function handleGenerate(event: FormEvent) {
     event.preventDefault();
 
+    if (genSelection.codeType === 'Balance' && genSelection.balanceScope !== 'Platform' && !genTeacherId) {
+      toast.error('اختر المدرس المطلوب إصدار رصيد خاص له.');
+      return;
+    }
+
     if (genAcademicScopes.some((scope) => scope.scopeLevel === 'Exact' && !scope.subjectId)) {
       toast.error('اختر مادة مفعّلة للمرحلة والصف، أو غيّر النطاق إلى كل مواد الصف.');
       return;
@@ -147,7 +152,8 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
         includeFutureVideos: genSelection.codeType === 'VideoType' ? genSelection.includeFutureVideos !== false : undefined,
         videoTargetIds: genSelection.codeType === 'Video' && genSelection.videoTargetIds && genSelection.videoTargetIds.length > 0 ? genSelection.videoTargetIds : undefined,
         balanceAmount: genSelection.balanceAmount || undefined,
-        teacherId: genTeacherId || undefined,
+        teacherId: genSelection.codeType === 'Balance' && genSelection.balanceScope === 'Platform' ? undefined : genTeacherId || undefined,
+        balanceScope: genSelection.codeType === 'Balance' ? genSelection.balanceScope ?? 'Teacher' : undefined,
         accountingTiming: 'OnActivation',
         expiresAt: genSelection.expiresAt || undefined,
         expireActivatedAccess: genSelection.expiresAt ? genSelection.expireActivatedAccess !== false : undefined,
@@ -157,7 +163,7 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
       toast.success('تم التوليد بنجاح!');
       invalidateMany(['codes:groups', 'content:packages', 'reports']);
       setShowGenModal(false);
-      setGenSelection({ codeType: 'Package' });
+      setGenSelection({ codeType: 'Balance', balanceScope: 'Teacher' });
       setGenTeacherId('');
       setGenGroupName('');
       setGenCount(10);
@@ -437,27 +443,35 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
             <div>
-              <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">المدرس المسؤول عن الدفعة (اختياري)</label>
+              <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block" htmlFor="code-generation-teacher">
+                {genSelection.codeType === 'Balance' && genSelection.balanceScope !== 'Platform' ? 'المدرس صاحب الرصيد (مطلوب)' : 'المدرس المسؤول عن الدفعة (اختياري)'}
+              </label>
               <select
-                value={genTeacherId}
+                id="code-generation-teacher"
+                value={genSelection.codeType === 'Balance' && genSelection.balanceScope === 'Platform' ? '' : genTeacherId}
+                disabled={genSelection.codeType === 'Balance' && genSelection.balanceScope === 'Platform'}
+                required={genSelection.codeType === 'Balance' && genSelection.balanceScope !== 'Platform'}
                 onChange={(e) => {
                   setGenTeacherId(e.target.value);
                   setGenSelection({
                     codeType: genSelection.codeType,
                     expiresAt: genSelection.expiresAt,
                     balanceAmount: genSelection.balanceAmount,
+                    balanceScope: genSelection.balanceScope,
                   });
                 }}
                 className="admin-input"
               >
-                <option value="">عام للمنصة</option>
+                <option value="">{genSelection.codeType === 'Balance' && genSelection.balanceScope !== 'Platform' ? 'اختر المدرس' : 'عام للمنصة'}</option>
                 {teachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>
                 ))}
               </select>
             </div>
             <div className="flex items-center rounded-xl bg-[var(--admin-card-strong)] px-4 py-3 text-xs font-semibold text-[var(--admin-muted)]">
-              بدون مدرس: الكود عام للمنصة. مع مدرس: الرصيد يُحسب تحت هذا المدرس، وأكواد الباكدج يجب ربطها بباكدج محدد.
+              {genSelection.codeType === 'Balance'
+                ? genSelection.balanceScope === 'Platform' ? 'رصيد عام يمكن استخدامه مع أي مدرس.' : 'رصيد خاص بهذا المدرس فقط، ولا يستطيع الطالب تحويله إلى رصيد عام.'
+                : 'بدون مدرس: الكود عام للمنصة. أكواد الباكدج يجب ربطها بباكدج محدد.'}
             </div>
           </div>
 

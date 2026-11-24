@@ -6,7 +6,8 @@ import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookChec
 import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, ContentSubscribersTab } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { TeacherVideoExamsTab } from "@/components/teacher/TeacherVideoExamsTab";
-import { adminService, type LessonCockpitDto } from "@/services/admin-service";
+import type { LessonCockpitDto } from "@/services/admin-service";
+import { ContentTitleEditor } from "@/components/content/ContentTitleEditor";
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
@@ -33,8 +34,8 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await adminService.getLessonCockpit(params.id);
-      setLesson(res.data?.data);
+      const res = await teacherService.getLessonCockpit(params.id);
+      setLesson(res.data ?? null);
     } catch {
       toast.error("تعذر تحميل بيانات الحصة");
     } finally {
@@ -86,12 +87,19 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
       pageTitle={lesson.title}
       subtitle={lesson.summary || "إدارة محتويات وإعدادات الحصة"}
       action={
+        <div className="flex w-full flex-wrap items-center gap-3">
+        <ContentTitleEditor title={lesson.title} label="اسم الحصة" onSave={async (title) => {
+          await teacherService.renameLesson(lesson.lessonId, title);
+          setLesson((current) => current ? { ...current, title } : current);
+          toast.success("تم حفظ اسم الحصة");
+        }} />
         <button
           onClick={() => router.back()}
           className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
         >
           <ArrowRight className="h-4 w-4" /> عودة للقائمة
         </button>
+        </div>
       }
     >
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -119,7 +127,7 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
               <div>
                 <h3 className="text-xl font-bold text-[var(--admin-text)]">فيديوهات الحصة ({lesson.videos?.length || 0})</h3>
                 <p className="mt-1 text-sm font-medium text-[var(--admin-muted)]">
-                  الفيديوهات تظهر هنا للمتابعة والمعاينة فقط. إضافة أو تغيير مصدر الفيديو تتم من الإدارة.
+                  يمكنك تعديل اسم الفيديو ومعاينته هنا.
                 </p>
               </div>
             </div>
@@ -129,6 +137,13 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
               onRefresh={loadData}
               readOnly
               showProviderDetails={false}
+              onRenameTitle={async (videoId, title) => {
+                await teacherService.renameVideo(videoId, title);
+                setLesson((current) => current ? {
+                  ...current, videos: current.videos.map((video) => video.id === videoId ? { ...video, title } : video),
+                } : current);
+                toast.success("تم حفظ اسم الفيديو");
+              }}
             />
           </div>
         </div>

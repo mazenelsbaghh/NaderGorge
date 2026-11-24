@@ -18,6 +18,15 @@ public class CodesController : ControllerBase
 
     public CodesController(IMediator mediator) => _mediator = mediator;
 
+    [HttpGet("recharge-recommendations/{redemptionId:guid}")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> RechargeRecommendations(Guid redemptionId, [FromQuery] int page = 1, CancellationToken ct = default)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var response = await _mediator.Send(new NaderGorge.Application.Features.Codes.Queries.GetRechargeRecommendationsQuery(userId, redemptionId, page), ct);
+        return response.Success ? Ok(response) : NotFound(response);
+    }
+
     [HttpPost("activate")]
     [Idempotent]
     public async Task<IActionResult> Activate([FromBody] ActivateCodeRequest body)

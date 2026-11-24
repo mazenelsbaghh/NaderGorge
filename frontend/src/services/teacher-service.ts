@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { LessonCockpitDto } from './admin-service';
 import { invalidateMany } from '@/lib/cache-invalidation';
 import type { CreatePublicExamDto, PublicExamProductDto } from './admin-sales-service';
 import type { ModerationCommunityCommentDto, ModerationCommunityPostDto, ModerateCommunityCommentResponse, ModerateCommunityPostResponse, ModerationLessonCommentDto, ModerateLessonCommentResponse } from './admin-service';
@@ -238,6 +239,18 @@ export const teacherService = {
     }),
 
   // Teacher Workspace Surface
+  getLessonCockpit: (lessonId: string) =>
+    apiClient.get<ApiResponse<LessonCockpitDto>>(`/teacher/lessons/${lessonId}/cockpit`).then((res) => res.data),
+  renameLesson: async (lessonId: string, title: string) => {
+    const res = await apiClient.patch<ApiResponse<void>>(`/teacher/lessons/${lessonId}/title`, { title }, { suppressErrorToast: true });
+    if (!res.data.success) throw new Error(res.data.message || 'تعذر حفظ اسم الحصة.');
+    invalidateMany(['teacher:content', 'content:lessons', 'content:packages']);
+  },
+  renameVideo: async (videoId: string, title: string) => {
+    const res = await apiClient.patch<ApiResponse<void>>(`/teacher/videos/${videoId}/title`, { title }, { suppressErrorToast: true });
+    if (!res.data.success) throw new Error(res.data.message || 'تعذر حفظ اسم الفيديو.');
+    invalidateMany(['teacher:content', 'content:lessons']);
+  },
   getDashboardStats: () =>
     apiClient.get<ApiResponse<TeacherDashboardStatsDto>>('/teacher/dashboard/stats').then((res) => res.data),
   getStudents: (signal?: AbortSignal) =>

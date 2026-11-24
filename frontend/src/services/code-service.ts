@@ -24,6 +24,7 @@ export interface CreateCodeGroupData {
   includeFutureVideos?: boolean;
   videoTargetIds?: string[];
   balanceAmount?: number;
+  balanceScope?: 'Teacher' | 'Platform';
   teacherId?: string;
   discountPercentage?: number;
   revenueOwner?: CodeRevenueOwner;
@@ -55,6 +56,27 @@ export interface ActivateCodeResponse {
   redirectUrl?: string;
 }
 
+export interface RechargeRecommendation {
+  contentType: 'Package' | 'Term' | 'Month' | 'Lesson';
+  contentId: string;
+  title: string;
+  price: number;
+  packageName: string;
+  termName?: string | null;
+  sectionName?: string | null;
+  openUrl: string;
+}
+
+export interface RechargeRecommendations {
+  teacherId: string;
+  teacherName: string;
+  rechargedAmount: number;
+  availableBalance: number;
+  page: number;
+  hasMore: boolean;
+  items: RechargeRecommendation[];
+}
+
 // ── Generic API Response ─────────────────────────────────────────────────────
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -65,6 +87,13 @@ export interface ApiResponse<T = any> {
 
 // ── Code Service ─────────────────────────────────────────────────────────────
 export const codeService = {
+  getRechargeRecommendations: async (redemptionId: string, page: number, signal?: AbortSignal) => {
+    const response = await apiClient.get<ApiResponse<RechargeRecommendations>>(`/codes/recharge-recommendations/${redemptionId}`, {
+      params: { page }, signal, suppressErrorToast: true,
+    });
+    if (!response.data.success || !response.data.data) throw new Error(response.data.message || 'تعذر تحميل المحتوى المقترح.');
+    return response.data.data;
+  },
   getAcademicSubjectEligibilities: () =>
     apiClient.get<ApiResponse<AcademicSubjectEligibility[]>>('/admin/codes/academic-subject-eligibilities')
       .then((response) => response.data.data ?? []),

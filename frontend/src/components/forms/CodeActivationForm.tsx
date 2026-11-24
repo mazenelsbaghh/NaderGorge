@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 
 import { AxiosError } from "axios";
@@ -9,12 +10,15 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 import { authService } from "@/services/auth-service";
+import { codeService } from "@/services/code-service";
+import { invalidateMany } from "@/lib/cache-invalidation";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 interface CodeActivationFormProps {
   onSuccess: () => void;
 }
 export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
+  const router = useRouter();
   const inputId = "student-code-activation-input";
   const hintId = "student-code-activation-hint";
   const errorId = "student-code-activation-error";
@@ -29,6 +33,7 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
     codeType: string;
     targetName: string;
     teacherName: string;
+    teacherId?: string | null;
     teacherProfileImageUrl?: string;
   } | null>(null);
   const teacherAvatarFallback = preview
@@ -70,11 +75,18 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
     setLoading(true);
 
     try {
-      const { data } = await authService.activateCode(preview.code);
-      setSuccess(data.message || "تم تفعيل الكود بنجاح.");
+      const { data } = await codeService.redeemCode(preview.code);
+      if (!data.success || !data.data) {
+        setError(data.message || "تعذر تفعيل الكود حاليًا");
+        return;
+      }
+      setSuccess(data.data.message || data.message || "تم تفعيل الكود بنجاح.");
       setCode("");
       setPreview(null);
       onSuccess();
+      invalidateMany(['student:balance', 'student:shell', 'student:lessons', 'content:packages']);
+      const destination = data.data.redirectUrl;
+      if (destination?.startsWith('/student/') && destination !== '/student/balance') router.push(destination);
     } catch (err) {
       const message =
         err instanceof AxiosError
@@ -137,6 +149,10 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
             {error}
           </div>
         )}
+
+        {preview.codeType === 'Balance' && <p className="text-sm font-bold leading-7 text-[var(--admin-text)]">
+          {preview.teacherId ? 'هذا الرصيد مخصص لمحتوى المدرس الموضح فقط، ولا يمكن تحويله إلى رصيد عام.' : 'رصيد عام يمكنك استخدامه لشراء المحتوى المناسب لصفك من أي مدرس.'}
+        </p>}
 
         <div className="flex flex-col gap-3 sm:flex-row justify-center pt-2">
           <button

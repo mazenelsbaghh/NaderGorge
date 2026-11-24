@@ -16,6 +16,7 @@ import { aiJobStatusFromProgressEvent } from '@/lib/ai-job-status';
 import { extractApiErrorMessages, getApiErrorSummary } from '@/lib/api-errors';
 import { AddVideoForm } from './AddVideoForm';
 import { bunnyPlaybackSelection } from '@/lib/bunny-playback-mode';
+import { ContentTitleEditor } from '@/components/content/ContentTitleEditor';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
@@ -319,6 +320,7 @@ interface LessonVideoListProps {
   lessonId: string;
   readOnly?: boolean;
   showProviderDetails?: boolean;
+  onRenameTitle?: (videoId: string, title: string) => Promise<void>;
 }
 
 function bunnyAssetIsProcessing(status?: string | null) {
@@ -331,7 +333,7 @@ function bunnyAssetIsProcessing(status?: string | null) {
   );
 }
 
-export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false, showProviderDetails = true }: LessonVideoListProps) {
+export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false, showProviderDetails = true, onRenameTitle }: LessonVideoListProps) {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -343,7 +345,7 @@ export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false,
   const [cancellingBunnyReplacementId, setCancellingBunnyReplacementId] = useState<string | null>(null);
 
   const hasPendingBunnyVideo = videos.some((video) => {
-    return (video.provider.toLowerCase() === 'bunny' && bunnyAssetIsProcessing(video.bunnyStatus))
+    return ((video.provider.toLowerCase() === 'bunny' || (readOnly && !showProviderDetails)) && bunnyAssetIsProcessing(video.bunnyStatus))
       || bunnyAssetIsProcessing(video.pendingBunnyReplacement?.status);
   });
 
@@ -473,25 +475,29 @@ export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false,
               key={video.id}
               className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm"
             >
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-primary)]">
                     <PlaySquare className="h-4 w-4" />
                   </div>
-                  <h4 className="truncate text-sm font-black text-[var(--admin-text)]">{video.title}</h4>
+                  <h4 className="min-w-0 break-words text-sm font-black text-[var(--admin-text)] [overflow-wrap:anywhere]">{video.title}</h4>
                 </div>
 
-                <button
-                  type="button"
-                  aria-label={`معاينة الفيديو ${video.title}`}
-                  onClick={() => setPreviewVideoId(video.id)}
-                  disabled={bunnyManagedNotReady}
-                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                  title={bunnyManagedNotReady ? 'فيديو Bunny ما زال قيد التجهيز' : 'فتح البلاير'}
-                >
-                  <Play className="h-4 w-4" />
-                  البلاير
-                </button>
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                  {onRenameTitle && <ContentTitleEditor title={video.title} label="اسم الفيديو"
+                    onSave={(title) => onRenameTitle(video.id, title)} />}
+                  <button
+                    type="button"
+                    aria-label={`معاينة الفيديو ${video.title}`}
+                    onClick={() => setPreviewVideoId(video.id)}
+                    disabled={bunnyManagedNotReady || Boolean(video.bunnyStatus && normalizedBunnyStatus !== 'ready')}
+                    className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                    title={video.bunnyStatus && normalizedBunnyStatus !== 'ready' ? 'الفيديو غير جاهز للمعاينة حاليًا' : 'فتح البلاير'}
+                  >
+                    <Play className="h-4 w-4" />
+                    البلاير
+                  </button>
+                </div>
               </div>
             </div>
           );
