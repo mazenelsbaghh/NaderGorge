@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader2, Search, Send, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
   adminGiftsService,
@@ -13,6 +13,7 @@ import {
 import { getAcademicScopeLabel } from '@/lib/academic-labels';
 import { createClientId } from '@/lib/client-id';
 import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
+import { giftManagementPath } from '@/lib/gift-navigation';
 import { GiftContentPicker } from './GiftContentPicker';
 
 const targetTypes = Object.keys(giftTargetLabels) as GiftTargetType[];
@@ -20,6 +21,7 @@ const isBalance = (type: GiftTargetType) => type === 'GeneralBalance' || type ==
 
 export function GiftIssueForm() {
   const router = useRouter();
+  const giftsPath = giftManagementPath(usePathname());
   const [targetType, setTargetType] = useState<GiftTargetType>('Package');
   const [students, setStudents] = useState<GiftLookupDto[]>([]);
   const [teachers, setTeachers] = useState<GiftLookupDto[]>([]);
@@ -120,7 +122,7 @@ export function GiftIssueForm() {
       });
       requestIdRef.current = null;
       toast.success('تم إصدار الهدية وتسجيل نتائج الطلاب.');
-      router.push(`/admin/gifts/${result.id}`);
+      router.push(`${giftsPath}/${result.id}`);
     } finally {
       setSaving(false);
     }

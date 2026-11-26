@@ -17,7 +17,7 @@ import {
   Headphones, Home, LogOut, Menu, MessageSquareText, Palette, PanelRightClose,
   PanelRightOpen, PhoneCall, Search, Shield, Star, X, type LucideIcon,
   WalletCards, Users, BarChart3, MessageSquareMore,
-  KeyRound, ClipboardCheck, AlertTriangle,
+  KeyRound, ClipboardCheck, AlertTriangle, Gift,
 } from 'lucide-react';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -42,7 +42,7 @@ export type AssistantShellRoute =
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
   | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/recharge-conflicts' | '/assistant/students' | '/assistant/reports'
-  | '/assistant/codes' | '/assistant/refunds' | '/assistant/public-exams' | '/assistant/center-students';
+  | '/assistant/codes' | '/assistant/gifts' | '/assistant/refunds' | '/assistant/public-exams' | '/assistant/center-students';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -76,6 +76,7 @@ const navItems: AssistantNavItem[] = [
   { href: '/assistant/tasks', label: 'المهام والعمليات', icon: ClipboardList, group: 'operations', permission: 'tasks.manage' },
   { href: '/assistant/content', label: 'إدارة المحتوى التعليمي', icon: BookOpen, group: 'learning', permission: 'content.manage' },
   { href: '/assistant/codes', label: 'الأكواد', icon: KeyRound, group: 'operations', permission: 'codes.manage' },
+  { href: '/assistant/gifts', label: 'الهدايا', icon: Gift, group: 'operations', permission: 'gifts.manage' },
   { href: '/assistant/community', label: 'إدارة مجتمع الطلاب', icon: MessageSquareText, group: 'learning', permission: 'community.manage' },
   { href: '/assistant/questions', label: 'الامتحانات والأسئلة', icon: Shield, group: 'learning', permission: 'exams.manage' },
   { href: '/assistant/public-exams', label: 'الامتحانات العامة', icon: Shield, group: 'learning', permission: 'public_exams.manage' },

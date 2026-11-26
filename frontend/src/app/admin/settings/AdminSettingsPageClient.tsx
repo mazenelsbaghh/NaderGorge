@@ -129,7 +129,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/assistant/codes'
   ],
   'gifts.manage': [
-    '/admin/gifts'
+    '/admin/gifts',
+    '/assistant/gifts'
   ],
   'sales.manage': [
     '/admin/sales'
@@ -295,6 +296,7 @@ const ADMIN_NAV_OPTIONS: NavOption[] = [
 ];
 
 const ASSISTANT_NAV_OPTIONS: NavOption[] = [
+  { key: '/assistant/gifts', label: 'الهدايا والوصول المجاني' },
   { key: '/assistant/public-exams', label: 'الامتحانات العامة' },
   {
     key: '/assistant/dashboard',

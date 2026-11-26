@@ -911,12 +911,14 @@ export function AdminPage(
 ) {
   const pathname = usePathname();
 
-  // Detailed content routes are shared with the assistant surface. Keep their
+  // These workspaces are shared with the assistant surface. Keep their
   // page metadata while allowing the assistant layout to remain the frame owner.
-  if (pathname.startsWith('/assistant/content') || pathname.startsWith('/assistant/public-exams')) {
+  const assistantPath = (['/assistant/content', '/assistant/public-exams', '/assistant/gifts'] as const)
+    .find((path) => pathname === path || pathname.startsWith(`${path}/`));
+  if (assistantPath) {
     return (
       <AssistantShellChrome
-        activePath={pathname.startsWith('/assistant/public-exams') ? '/assistant/public-exams' : '/assistant/content'}
+        activePath={assistantPath}
         sectionLabel={props.sectionLabel}
         pageTitle={props.pageTitle}
         subtitle={props.subtitle}
