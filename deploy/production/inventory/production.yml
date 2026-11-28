@@ -38,6 +38,7 @@
     "staff.massar-academy.net": "staff",
     "api.massar-academy.net": "api",
     "ws.massar-academy.net": "websocket",
-    "assets.massar-academy.net": "assets"
+    "assets.massar-academy.net": "assets",
+    "emthntak.massar-academy.net": "emthntak"
   }
 }

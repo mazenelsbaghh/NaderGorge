@@ -64,6 +64,8 @@ services:
         required: false
       - path: /etc/massar/center-desktop-backend.env
         required: false
+      - path: /etc/massar/emthntak-backend.env
+        required: false
     image: ${MASSAR_BACKEND_IMAGE:?MASSAR_BACKEND_IMAGE is required}
     environment:
       Cluster__NodeId: ${MASSAR_NODE_ID}

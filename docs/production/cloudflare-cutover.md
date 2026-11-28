@@ -28,6 +28,7 @@ Create exactly these public hostnames on the same tunnel:
 | `api.massar-academy.net` | `http://127.0.0.1:8088` |
 | `ws.massar-academy.net` | `http://127.0.0.1:8088` |
 | `assets.massar-academy.net` | `http://127.0.0.1:8088` |
+| `emthntak.massar-academy.net` | `http://127.0.0.1:8088` → private Emthntak origin |
 
 The repository template is
 `deploy/production/config/cloudflared/config.yml.tmpl`. Its catch-all rule
@@ -50,7 +51,7 @@ returns 404 and must stay last.
 7. Rehearse first with an Access-protected temporary hostname and a Tunnel DNS
    route. The pre-DNS cluster acceptance does not require this external drill;
    the rehearsal starts only after that decision is `GO`.
-8. After the rehearsal passes, create Tunnel DNS routes for the eight hostnames,
+8. After the rehearsal passes, create Tunnel DNS routes for the approved hostnames,
    remove the temporary rehearsal route/config, and remove conflicting old
    origin records.
 
@@ -60,7 +61,7 @@ before the deny fallback and overrides the origin Host header to the approved
 landing host. Protect the rehearsal hostname with Cloudflare Access before
 creating its DNS route. Re-run the installer without `--rehearsal-hostname`
 after the rehearsal so the final connector configuration contains only the
-eight approved hosts plus the deny fallback.
+approved hosts plus the deny fallback.
 
 ## Zone controls
 
@@ -95,7 +96,7 @@ That decision requires:
 
 The final Tunnel DNS routes remain blocked until the rehearsal proves three
 healthy connector replicas, one-connector loss, and the browser/API/WebSocket/
-cookie/upload/protected-asset paths. After cutover, test all eight hosts from
+cookie/upload/protected-asset paths. After cutover, test all approved hosts from
 outside the server network, then stop one connector and one app gateway
 separately. Traffic must continue through the remaining nodes. Keep the
 previous DNS values recorded for rollback, but do not restore public origin

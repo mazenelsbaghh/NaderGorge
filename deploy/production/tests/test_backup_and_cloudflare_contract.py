@@ -15,6 +15,7 @@ HOSTS = [
     "api.massar-academy.net",
     "ws.massar-academy.net",
     "assets.massar-academy.net",
+    "emthntak.massar-academy.net",
 ]
 MANAGER_SPEC = importlib.util.spec_from_file_location(
     "manage_cloudflare",

@@ -35,7 +35,8 @@ def test_inventory_is_exactly_three_unique_approved_nodes(monkeypatch: pytest.Mo
     assert [node.id for node in inventory.nodes] == ["node-1", "node-2", "node-3"]
     assert len({node.public_address for node in inventory.nodes}) == 3
     assert len({node.overlay_address for node in inventory.nodes}) == 3
-    assert len(inventory.hostnames) == 8
+    assert len(inventory.hostnames) == 9
+    assert inventory.hostnames["emthntak.massar-academy.net"] == "emthntak"
     assert [node.id for node in inventory.nodes if "builder" in node.roles] == ["node-3"]
 
 

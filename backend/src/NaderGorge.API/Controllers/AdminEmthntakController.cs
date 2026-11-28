@@ -41,7 +41,7 @@ public sealed class AdminEmthntakController(IConfiguration configuration, IHttpC
             return StatusCode(503, new { error = "ربط امتحاناتك لم يُعد بعد." });
         string key;
         try { key = (await System.IO.File.ReadAllTextAsync(keyFile, ct)).Trim(); }
-        catch (IOException) { return StatusCode(503, new { error = "مفتاح ربط امتحاناتك غير متاح." }); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return StatusCode(503, new { error = "مفتاح ربط امتحاناتك غير متاح." }); }
         if (Encoding.UTF8.GetByteCount(key) < 32) return StatusCode(503, new { error = "إعداد الربط غير مكتمل." });
         var envelope = JsonSerializer.Serialize(new {
             aud = "emthntak-admin", subject = actor.ToString(), name = User.Identity?.Name ?? "موظف مسار",
@@ -50,7 +50,7 @@ public sealed class AdminEmthntakController(IConfiguration configuration, IHttpC
         });
         var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(envelope))).ToLowerInvariant();
         using var message = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-        message.Headers.Host = configuration["EmthntakAdmin:ApiHost"] ?? "admin.localhost:8080";
+        message.Headers.Host = configuration["EmthntakAdmin:ApiHost"] ?? message.RequestUri!.Authority;
         message.Headers.TryAddWithoutValidation("Origin", new Uri(apiUrl!).Scheme + "://" + message.Headers.Host);
         message.Headers.Add("X-Massar-Signature", signature);
         message.Content = JsonContent.Create(new { envelope });

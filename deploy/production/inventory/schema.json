@@ -46,10 +46,10 @@
     },
     "hostnames": {
       "type": "object",
-      "minProperties": 8,
-      "maxProperties": 8,
+      "minProperties": 9,
+      "maxProperties": 9,
       "additionalProperties": {
-        "enum": ["landing", "student", "admin", "teacher", "staff", "api", "websocket", "assets"]
+        "enum": ["landing", "student", "admin", "teacher", "staff", "api", "websocket", "assets", "emthntak"]
       }
     }
   },

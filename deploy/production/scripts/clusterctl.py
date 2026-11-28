@@ -157,9 +157,10 @@ def load_inventory(path: Path, require_operator_files: bool = False) -> Inventor
         "api.massar-academy.net",
         "ws.massar-academy.net",
         "assets.massar-academy.net",
+        "emthntak.massar-academy.net",
     }
     if set(hostnames) != expected:
-        raise ValueError("inventory must contain the exact eight approved hostnames")
+        raise ValueError("inventory must contain the exact approved hostnames")
     return Inventory(path.resolve(), cluster, nodes, hostnames)
 
 
