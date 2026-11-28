@@ -161,11 +161,6 @@ void main() {
       'Enter ${pending ? 'retries pending' : 'records fresh'} coverage from existing credits while a named five-session month is selected',
       (tester) async {
         await tester.runAsync(() async {
-          await store.renewPackage(
-            PackageRequest(studentId: student.id, groupId: originalGroup.id),
-          );
-          final payment = store.payments.single.toJson();
-          final originalPackage = store.packages.single;
           final month = await store.saveStudyMonth(
             StudyMonth(
               name: 'شهر خمس حصص',
@@ -180,6 +175,17 @@ void main() {
             groupId: originalGroup.id,
             preparedLessonId: month.lessons[1].id,
           );
+          // A four-lesson receipt can fund this five-lesson study month when
+          // it was collected for this session.
+          await store.renewPackage(
+            PackageRequest(
+              studentId: student.id,
+              groupId: originalGroup.id,
+              sessionId: session.id,
+            ),
+          );
+          final payment = store.payments.single.toJson();
+          final originalPackage = store.packages.single;
           if (pending) {
             await store.recordAttendance(
               EntryRequest(

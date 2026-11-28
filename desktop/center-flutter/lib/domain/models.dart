@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import 'center_exam_integration.dart';
 
 enum CatalogKind { subject, center, grade }
@@ -911,6 +913,7 @@ class PrepaidPackage {
     this.totalSessions = 4,
     this.monthPlanId,
     this.monthPlanName,
+    this.coverageMonthNumber,
     required this.paymentId,
   }) : remaining = remaining ?? totalSessions;
   final String id;
@@ -919,6 +922,7 @@ class PrepaidPackage {
   final DateTime purchasedAt;
   final int remaining;
   final int totalSessions;
+  final int? coverageMonthNumber;
   final String? monthPlanId, monthPlanName;
   final String paymentId;
   Map<String, dynamic> toJson() => {
@@ -930,6 +934,7 @@ class PrepaidPackage {
     'totalSessions': totalSessions,
     if (monthPlanId != null) 'monthPlanId': monthPlanId,
     if (monthPlanName != null) 'monthPlanName': monthPlanName,
+    if (coverageMonthNumber != null) 'coverageMonthNumber': coverageMonthNumber,
     'paymentId': paymentId,
   };
   factory PrepaidPackage.fromJson(Map<String, dynamic> value) => PrepaidPackage(
@@ -937,6 +942,7 @@ class PrepaidPackage {
     studentId: value['studentId'] as String,
     groupId: value['groupId'] as String,
     purchasedAt: DateTime.parse(value['purchasedAt'] as String),
+    coverageMonthNumber: value['coverageMonthNumber'] as int?,
     remaining: value['remaining'] as int,
     totalSessions: value['totalSessions'] as int? ?? 4,
     monthPlanId: value['monthPlanId'] as String?,
@@ -950,6 +956,7 @@ class PrepaidPackage {
     DateTime? purchasedAt,
     int? remaining,
     int? totalSessions,
+    int? coverageMonthNumber,
     String? monthPlanId,
     String? monthPlanName,
     String? paymentId,
@@ -960,6 +967,7 @@ class PrepaidPackage {
     purchasedAt: purchasedAt ?? this.purchasedAt,
     remaining: remaining ?? this.remaining,
     totalSessions: totalSessions ?? this.totalSessions,
+    coverageMonthNumber: coverageMonthNumber ?? this.coverageMonthNumber,
     monthPlanId: monthPlanId ?? this.monthPlanId,
     monthPlanName: monthPlanName ?? this.monthPlanName,
     paymentId: paymentId ?? this.paymentId,
@@ -1520,9 +1528,11 @@ class EntryConfirmation {
     this.centerFeeOnly = false,
     this.centerFeeAmount = 0,
     required this.eligibleRemaining,
+    this.priorAttendanceIds = const [],
   });
   final String staffId, groupId;
   final SessionKind sessionKind;
+  final List<String> priorAttendanceIds;
   final int baseAmount, netAmount, eligibleRemaining;
   final int? paidAmount;
   final String? monthPlanId, monthPlanName;
@@ -1546,7 +1556,8 @@ class EntryConfirmation {
       monthPlanSessions == other.monthPlanSessions &&
       centerFeeOnly == other.centerFeeOnly &&
       centerFeeAmount == other.centerFeeAmount &&
-      eligibleRemaining == other.eligibleRemaining;
+      eligibleRemaining == other.eligibleRemaining &&
+      listEquals(priorAttendanceIds, other.priorAttendanceIds);
   @override
   int get hashCode => Object.hash(
     staffId,
@@ -1562,6 +1573,7 @@ class EntryConfirmation {
     centerFeeOnly,
     centerFeeAmount,
     eligibleRemaining,
+    Object.hashAll(priorAttendanceIds),
   );
 }
 

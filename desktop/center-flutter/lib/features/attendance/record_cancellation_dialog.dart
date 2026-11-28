@@ -34,30 +34,34 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
   bool _busy = false, _finished = false;
   bool _reopenFinancialClosings = false;
 
-  PaymentRecord? get _payment => widget.store.allPayments
-      .where((record) => record.id == widget.paymentId)
-      .firstOrNull;
-  AttendanceRecord? get _attendance => widget.store.allAttendances
-      .where((record) => record.id == widget.attendanceId)
-      .firstOrNull;
+  PaymentRecord? get _payment => widget.store.paymentById(widget.paymentId);
+  AttendanceRecord? get _attendance =>
+      widget.store.attendanceById(widget.attendanceId);
   String? get _studentId => _payment?.studentId ?? _attendance?.studentId;
-  String? get _sessionId => _payment?.sessionId ?? _attendance?.sessionId;
-  LessonSession? get _session => widget.store.sessions
-      .where((record) => record.id == _sessionId)
-      .firstOrNull;
+  LessonSession? get _session =>
+      widget.store.sessionById(_payment?.sessionId ?? _attendance?.sessionId);
   bool get _isPayment => widget.paymentId != null;
-  bool get _active => _isPayment
-      ? widget.store.payments.any((record) => record.id == widget.paymentId)
-      : widget.store.attendances.any(
-          (record) =>
-              record.id == widget.attendanceId &&
-              record.status != AttendanceStatus.absent,
-        );
+  bool get _active {
+    final studentId = _studentId;
+    if (studentId == null) return false;
+    return _isPayment
+        ? widget.store
+              .paymentsForStudent(studentId)
+              .any((r) => r.id == widget.paymentId)
+        : widget.store
+              .attendancesForStudent(studentId)
+              .any(
+                (r) =>
+                    r.id == widget.attendanceId &&
+                    r.status != AttendanceStatus.absent,
+              );
+  }
 
   PaymentRecord? get _relatedPayment {
     final attendance = _attendance;
     if (attendance == null) return null;
-    return widget.store.payments
+    return widget.store
+        .paymentsForStudent(attendance.studentId)
         .where(
           (payment) => attendance.packageId != null
               ? payment.packageId == attendance.packageId
@@ -71,7 +75,8 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
   List<AttendanceRecord> get _relatedAttendances {
     final payment = _payment;
     if (payment == null) return const [];
-    return widget.store.attendances
+    return widget.store
+        .attendancesForStudent(payment.studentId)
         .where(
           (attendance) => payment.packageId != null
               ? attendance.packageId == payment.packageId
@@ -93,12 +98,14 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
   String? get _packageRestriction {
     final packageId = _payment?.packageId ?? _attendance?.packageId;
     if (packageId == null) return null;
-    final package = widget.store.packages
+    final package = widget.store
+        .packagesForStudent(_studentId!)
         .where((entry) => entry.id == packageId)
         .firstOrNull;
     if (package == null) return 'دفعة الشهر لم تعد سارية؛ راجع السجل.';
     if (!_isPayment && _mode == RecordCancellationMode.recordOnly) return null;
-    final linked = widget.store.attendances
+    final linked = widget.store
+        .attendancesForStudent(_studentId!)
         .where((entry) => entry.packageId == packageId)
         .toList();
     if (_isPayment && _mode == RecordCancellationMode.recordOnly) {
@@ -117,10 +124,7 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
     if (entries.any(
       (entry) =>
           entry.status == AttendanceStatus.absent ||
-          (widget.store.sessions
-                      .where((s) => s.id == entry.sessionId)
-                      .firstOrNull
-                      ?.status !=
+          (widget.store.sessionById(entry.sessionId)?.status !=
                   SessionStatus.open &&
               !(entry.status == AttendanceStatus.makeup &&
                   entry.makeupSourceGroupId != null)),
@@ -260,12 +264,10 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
     animation: widget.store,
     builder: (context, _) {
       final palette = MassarPalette.of(context);
-      final student = widget.store.students
-          .where((record) => record.id == _studentId)
-          .firstOrNull;
-      final group = widget.store.groups
-          .where((record) => record.id == _session?.groupId)
-          .firstOrNull;
+      final student = widget.store.studentById(_studentId);
+      final session = _session;
+      final group = widget.store.groupById(session?.groupId);
+      final relatedPayment = _relatedPayment;
       final financialClosings = _financialClosings;
       final restriction = _packageRestriction;
       return PopScope(
@@ -303,9 +305,9 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _session == null
+                      session == null
                           ? 'دفع غير مرتبط بحصة'
-                          : '${sessionLabel(_session!)} · ${sessionDateLabel(_session!)} · ${group?.name ?? 'المجموعة غير متاحة'}',
+                          : '${sessionLabel(session)} · ${sessionDateLabel(session)} · ${group?.name ?? 'المجموعة غير متاحة'}',
                     ),
                     if (_payment != null) ...[
                       const SizedBox(height: 8),
@@ -313,10 +315,10 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
                         '${_payment!.description} · المدفوع ${money(widget.store.paymentCollectedFor(_payment!.id))} · ${widget.store.effectivePaymentMethod(_payment!.id)}',
                       ),
                     ],
-                    if (!_isPayment && _relatedPayment != null) ...[
+                    if (!_isPayment && relatedPayment != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'الدفع المرتبط: ${_relatedPayment!.description} · ${money(widget.store.paymentCollectedFor(_relatedPayment!.id))} · ${widget.store.effectivePaymentMethod(_relatedPayment!.id)}',
+                        'الدفع المرتبط: ${relatedPayment.description} · ${money(widget.store.paymentCollectedFor(relatedPayment.id))} · ${widget.store.effectivePaymentMethod(relatedPayment.id)}',
                       ),
                     ],
                     const SizedBox(height: 18),
@@ -366,11 +368,9 @@ class _RecordCancellationDialogState extends State<RecordCancellationDialog> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       ..._relatedAttendances.map((attendance) {
-                        final session = widget.store.sessions
-                            .where(
-                              (record) => record.id == attendance.sessionId,
-                            )
-                            .firstOrNull;
+                        final session = widget.store.sessionById(
+                          attendance.sessionId,
+                        );
                         return Text(
                           session == null
                               ? 'حصة غير متاحة'

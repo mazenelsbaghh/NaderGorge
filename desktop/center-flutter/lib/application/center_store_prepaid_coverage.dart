@@ -71,7 +71,7 @@ extension _PrepaidAttendanceCoverage on CenterStore {
         attendanceId: entry.id,
         replacementAttendanceId: replacement.id,
         packageId: package.id,
-        reason: 'ربط حضور غير مسدد برصيد شهر سابق مؤهل دون تحصيل جديد',
+        reason: 'ربط حضور غير مسدد بدفعة من نفس الشهر الدراسي',
         staffId: staffId,
         createdAt: DateTime.now(),
       ),

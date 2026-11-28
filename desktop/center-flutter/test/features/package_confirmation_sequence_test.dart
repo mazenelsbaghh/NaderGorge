@@ -565,6 +565,48 @@ void main() {
     },
   );
 
+  testWidgets(
+    'cashier can settle the last two lessons from the month confirmation',
+    (tester) async {
+      await tester.runAsync(() async {
+        await store.closeSession(store.sessions.single.id);
+        final month = store.studyMonths.firstWhere((m) => m.id == months[4]);
+        final third = await store.startPreparedLesson(
+          groupId: group.id,
+          preparedLessonId: month.lessons[2].id,
+        );
+        await store.recordAttendance(
+          EntryRequest(
+            studentId: student.id,
+            sessionId: third.id,
+            mode: EntryMode.single,
+          ),
+        );
+        await store.closeSession(third.id);
+        await store.startPreparedLesson(
+          groupId: group.id,
+          preparedLessonId: month.lessons[3].id,
+        );
+      });
+      await openWorkspace(tester);
+      await scan(tester, student.code);
+      await confirmShortcut(tester, LogicalKeyboardKey.keyN);
+      await selectAttendanceMonth(
+        tester,
+        'آخر حصتين من الشهر · 2 حصص',
+        confirmation: true,
+      );
+      expect(
+        tester.widget<Text>(find.byKey(const Key('confirmation-net'))).data,
+        money(13500),
+      );
+      await accept(tester);
+      expect(store.packages.single.totalSessions, 2);
+      expect(store.payments.single.collectedAmount, 13500);
+      expect(store.packages.single.remaining, 0);
+    },
+  );
+
   testWidgets('newly imported command code blocks confirmation recheck', (
     tester,
   ) async {

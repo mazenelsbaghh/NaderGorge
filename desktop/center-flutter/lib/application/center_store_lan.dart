@@ -792,6 +792,8 @@ Map<String, dynamic> _encodeLanConfirmation(EntryConfirmation c) => {
   'centerFeeOnly': c.centerFeeOnly,
   'centerFeeAmount': c.centerFeeAmount,
   'eligibleRemaining': c.eligibleRemaining,
+  if (c.priorAttendanceIds.isNotEmpty)
+    'priorAttendanceIds': c.priorAttendanceIds,
 };
 EntryConfirmation _decodeLanConfirmation(Map<String, dynamic> a) =>
     EntryConfirmation(
@@ -808,4 +810,7 @@ EntryConfirmation _decodeLanConfirmation(Map<String, dynamic> a) =>
       centerFeeOnly: a['centerFeeOnly'] as bool? ?? false,
       centerFeeAmount: a['centerFeeAmount'] as int? ?? 0,
       eligibleRemaining: a['eligibleRemaining'] as int,
+      priorAttendanceIds: List<String>.from(
+        a['priorAttendanceIds'] as List? ?? const [],
+      ),
     );

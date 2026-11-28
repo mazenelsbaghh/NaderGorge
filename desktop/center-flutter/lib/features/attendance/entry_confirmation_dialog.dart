@@ -93,6 +93,7 @@ class EntryConfirmationDialog extends StatefulWidget {
     this.packageConfirmation,
     this.retainedSessionPayment = false,
     this.attendanceRecorded = false,
+    this.remainingMonthLessons,
     this.onPaidAmountConfirmed,
   });
   final Student student;
@@ -105,6 +106,7 @@ class EntryConfirmationDialog extends StatefulWidget {
   final PackageConfirmationController? packageConfirmation;
   final bool retainedSessionPayment;
   final bool attendanceRecorded;
+  final int? remainingMonthLessons;
   final ValueChanged<int?>? onPaidAmountConfirmed;
 
   static bool isScannerText(KeyEvent event) {
@@ -303,6 +305,12 @@ class _EntryConfirmationDialogState extends State<EntryConfirmationDialog> {
   }
 
   int get _remainingAfter {
+    final balance = _uncappedRemaining;
+    final slots = widget.remainingMonthLessons;
+    return slots != null && balance > slots ? slots : balance;
+  }
+
+  int get _uncappedRemaining {
     if (_quote?.centerFeeOnly == true) {
       return _quote?.eligibleRemaining ?? 0;
     }
@@ -384,13 +392,23 @@ class _EntryConfirmationDialogState extends State<EntryConfirmationDialog> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                if ((_quote?.priorAttendanceIds.length ?? 0) > 0)
+                  Text(
+                    'تشمل الدفعة ${_quote!.priorAttendanceIds.length} من حصص الحضور السابقة غير المسددة في نفس الشهر.',
+                  ),
                 if (widget.originalAbsenceLabel != null)
                   Text(widget.originalAbsenceLabel!),
                 if (widget.packageConfirmation != null) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     key: ValueKey('confirmation-month-${_request.monthPlanId}'),
-                    initialValue: _request.monthPlanId,
+                    initialValue:
+                        _request.monthPlanId ??
+                        (widget.packageConfirmation!.plans.any(
+                              (p) => p.id.isEmpty,
+                            )
+                            ? ''
+                            : null),
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'الشهر'),
                     items: widget.packageConfirmation!.plans

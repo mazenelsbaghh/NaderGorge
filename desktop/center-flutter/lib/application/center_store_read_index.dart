@@ -114,6 +114,11 @@ class _CenterReadIndex {
       return Map.unmodifiable(remaining);
     },
   );
+  late final attendancesById = _byId(
+    #attendancesById,
+    state.attendances,
+    (entry) => entry.id,
+  );
   late final studentsById = _byId(
     #studentsById,
     state.students,

@@ -457,17 +457,18 @@ void main() {
             createdAt: DateTime.now().subtract(const Duration(days: 1)),
           ),
         );
-        await store.renewPackage(
-          PackageRequest(
-            studentId: store.students.single.id,
-            groupId: group.id,
-          ),
-        );
         final month = await store.saveStudyMonth(
           StudyMonth(
             name: 'شهر الإغلاق',
             price: 40000,
             lessons: [for (var n = 1; n <= 4; n++) PreparedLesson(number: n)],
+          ),
+        );
+        await store.renewPackage(
+          PackageRequest(
+            studentId: store.students.single.id,
+            groupId: group.id,
+            monthPlanId: month.id,
           ),
         );
         await store.startPreparedLesson(

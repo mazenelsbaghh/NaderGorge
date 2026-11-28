@@ -1949,6 +1949,10 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
         : 'تعويض عن ${sessionLabel(originalSession)} · ${store.groupLabel(originalSession.groupId)} · ${sessionDateLabel(originalSession)}';
     final blocked = ValueNotifier(false);
     final actorId = store.currentUser?.id;
+    final purchaseGroup = _manualMakeupSource ?? group!;
+    final twoLessonPrice = chosenMode == EntryMode.package
+        ? store.lastTwoLessonPrice(selected.id, purchaseGroup, current)
+        : null;
     final packageConfirmation = chosenMode != EntryMode.package
         ? null
         : PackageConfirmationController(
@@ -1959,16 +1963,22 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
             ),
             scannerBlocked: blocked,
             studentCodes: () => store.students.expand(studentIdentifiers),
-            plans: List.unmodifiable(
-              _attendanceMonthPlans(_manualMakeupSource ?? group),
-            ),
+            plans: [
+              ..._attendanceMonthPlans(purchaseGroup),
+              if (twoLessonPrice != null)
+                GroupMonthPlan(
+                  name: 'آخر حصتين من الشهر',
+                  sessions: 2,
+                  price: twoLessonPrice,
+                ),
+            ],
             previewForPlan: (plan) {
               final changed = EntryRequest(
                 studentId: draft.studentId,
                 sessionId: draft.sessionId,
                 mode: draft.mode,
                 packageSessions: plan.sessions,
-                monthPlanId: plan.id,
+                monthPlanId: plan.id.isEmpty ? null : plan.id,
                 method: draft.method,
                 originalAttendanceId: draft.originalAttendanceId,
                 makeupSourceGroupId: draft.makeupSourceGroupId,
@@ -1989,7 +1999,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                     sessionId: changed.sessionId,
                     mode: changed.mode,
                     packageSessions: plan.sessions,
-                    monthPlanId: plan.id,
+                    monthPlanId: plan.id.isEmpty ? null : plan.id,
                     method: changed.method,
                     originalAttendanceId: changed.originalAttendanceId,
                     makeupSourceGroupId: changed.makeupSourceGroupId,
@@ -2035,6 +2045,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
           quote: quote,
           scannerBlocked: blocked,
           packageConfirmation: packageConfirmation,
+          remainingMonthLessons: store.remainingMonthLessonsAfter(current),
           retainedSessionPayment: retainedSessionPayment,
           attendanceRecorded: store
               .attendancesForStudent(selected.id)
@@ -2124,6 +2135,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
     discountPercent: quote.discountPercent,
     netAmount: quote.netAmount,
     eligibleRemaining: quote.eligibleRemaining,
+    priorAttendanceIds: quote.priorAttendanceIds,
     paidAmount: paidAmount,
     monthPlanId: quote.monthPlanId,
     monthPlanName: quote.monthPlanName,
@@ -4623,7 +4635,7 @@ class _AttendanceWorkspaceState extends State<AttendanceWorkspace> {
                       ? 'سيُستخدم رصيد الباقة. المتبقي بعد الدخول: ${remaining - 1}.'
                       : net == null
                       ? 'حدد سعر الباقة في المجموعة قبل التحصيل.'
-                      : 'تحصيل $_monthLabel (${_countLabel(_packageSessions)}) وتسجيل الحضور. المتبقي بعد الدخول: ${_packageSessions - 1}.',
+                      : 'تحصيل $_monthLabel (${_countLabel(_packageSessions)}) وتسجيل الحضور. الرصيد صالح لحصص نفس الشهر فقط.',
                 ),
               ),
             const SizedBox(height: 18),

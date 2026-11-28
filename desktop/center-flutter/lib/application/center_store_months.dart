@@ -132,6 +132,87 @@ extension CenterStoreMonths on CenterStore {
         _legacyStudyMonthNumber(planName);
   }
 
+  int? _groupMonthAtPurchase(String groupId, DateTime purchasedAt) {
+    LessonSession? previous, next;
+    for (final session in _state.sessions) {
+      if (session.groupId != groupId ||
+          !session.startsAtKnown ||
+          session.status == SessionStatus.canceled ||
+          session.kind != SessionKind.counted ||
+          session.createdAt.isAfter(purchasedAt)) {
+        continue;
+      }
+      if (!session.startsAt.isAfter(purchasedAt)) {
+        if (previous == null || _precedes(previous, session)) {
+          previous = session;
+        }
+      } else if (next == null || _precedes(session, next)) {
+        next = session;
+      }
+    }
+    return previous?.monthNumber ?? next?.monthNumber;
+  }
+
+  List<int> _countedLessonNumbers(LessonSession session) {
+    final month = _state.studyMonths
+        .where((m) => m.number == session.monthNumber)
+        .firstOrNull;
+    return [
+      for (final lesson in month?.lessons ?? const <PreparedLesson>[])
+        if (lesson.kind == SessionKind.counted) lesson.number,
+    ]..sort();
+  }
+
+  int? remainingMonthLessonsAfter(LessonSession session) {
+    final numbers = _countedLessonNumbers(session);
+    return numbers.contains(session.number)
+        ? numbers.where((n) => n > session.number).length
+        : null;
+  }
+
+  List<AttendanceRecord> _unpaidMonthEndLessons(
+    String studentId,
+    String groupId,
+    LessonSession anchor,
+    int quantity,
+  ) {
+    final numbers = _countedLessonNumbers(anchor);
+    if (anchor.kind != SessionKind.counted ||
+        numbers.lastOrNull != anchor.number ||
+        quantity < 2) {
+      return const [];
+    }
+    final earlier = numbers.reversed.skip(1).take(quantity - 1).toSet();
+    return _attendancesForStudent(studentId).where((entry) {
+      if (!entry.paymentPending ||
+          entry.status != AttendanceStatus.present ||
+          entry.packageId != null ||
+          entry.centerFeeOnly ||
+          entry.packageMember ||
+          entry.importSource.isNotEmpty) {
+        return false;
+      }
+      final lesson = _session(entry.sessionId);
+      return lesson.groupId == groupId &&
+          lesson.monthNumber == anchor.monthNumber &&
+          lesson.kind == SessionKind.counted &&
+          lesson.status == SessionStatus.closed &&
+          earlier.contains(lesson.number);
+    }).toList();
+  }
+
+  int? lastTwoLessonPrice(
+    String studentId,
+    StudyGroup group,
+    LessonSession session,
+  ) {
+    if (!group.priceConfigured ||
+        _unpaidMonthEndLessons(studentId, group.id, session, 2).isEmpty) {
+      return null;
+    }
+    return group.twoSessionPrice ?? 2 * group.sessionPrice;
+  }
+
   List<GroupMonthPlan> attendanceMonthPlansFor(
     StudyGroup group,
     LessonSession session,
@@ -154,11 +235,15 @@ extension CenterStoreMonths on CenterStore {
     int sessions,
     String? monthPlanId, {
     LessonSession? attendanceSession,
+    String? studentId,
   }) {
     if (monthPlanId == null) {
       return _MonthPurchase(
         sessions,
-        _configuredPackageAmount(group, sessions),
+        (sessions == 2 && attendanceSession != null && studentId != null
+                ? lastTwoLessonPrice(studentId, group, attendanceSession)
+                : null) ??
+            _configuredPackageAmount(group, sessions),
         _packageLabel(sessions),
         null,
       );

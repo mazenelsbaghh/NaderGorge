@@ -397,6 +397,22 @@ class CenterStore extends ChangeNotifier {
   List<Student> get students => List.unmodifiable(_state.students);
   List<LessonSession> get sessions => List.unmodifiable(_state.sessions);
 
+  AttendanceRecord? attendanceById(String? id) {
+    if (id == null) return null;
+    final index = _readIndex;
+    return index != null
+        ? index.attendancesById[id]
+        : _state.attendances.where((r) => r.id == id).firstOrNull;
+  }
+
+  PaymentRecord? paymentById(String? id) {
+    if (id == null) return null;
+    final index = _readIndex;
+    return index != null
+        ? index.paymentsById[id]
+        : _financialPayments.where((r) => r.id == id).firstOrNull;
+  }
+
   Student? studentById(String? id) {
     final index = _readIndex;
     return index != null
@@ -1715,9 +1731,6 @@ class CenterStore extends ChangeNotifier {
     String sessionId,
   ) {
     final session = _session(sessionId);
-    final month = _state.studyMonths
-        .where((month) => month.number == session.monthNumber)
-        .firstOrNull;
     final attendance = _attendancesForStudent(
       studentId,
     ).where((entry) => entry.sessionId == sessionId).firstOrNull;
@@ -1725,13 +1738,7 @@ class CenterStore extends ChangeNotifier {
         session.status == SessionStatus.open && attendance?.packageId == null
         ? 1
         : 0;
-    final futureSlots = month?.lessons
-        .where(
-          (lesson) =>
-              lesson.kind == SessionKind.counted &&
-              lesson.number > session.number,
-        )
-        .length;
+    final futureSlots = remainingMonthLessonsAfter(session);
     final slots = futureSlots == null ? null : futureSlots + currentSlot;
     return {
       for (final package in _eligiblePackages(
@@ -1739,7 +1746,10 @@ class CenterStore extends ChangeNotifier {
         groupId,
         forClosure: session,
       ))
-        package.id: package.monthPlanId == null || slots == null
+        package.id:
+            slots == null ||
+                (package.monthPlanId == null &&
+                    session.preparedLessonId == null)
             ? package.remaining
             : min(package.remaining, slots),
     };
@@ -1752,8 +1762,25 @@ class CenterStore extends ChangeNotifier {
   ) {
     final planId = package.monthPlanId;
     if (planId == null || planId == 'legacy-month4') {
-      final purchaseMonth = sessionById(payment.sessionId)?.monthNumber;
-      return purchaseMonth == null || purchaseMonth == monthNumber;
+      final anchored =
+          sessionById(payment.sessionId)?.monthNumber ??
+          package.coverageMonthNumber;
+      if (anchored != null) return anchored == monthNumber;
+      // Use the timetable that existed at purchase. Early installations may
+      // have only the original consumption record as evidence of the month.
+      final scheduledMonth = _groupMonthAtPurchase(
+        package.groupId,
+        package.purchasedAt,
+      );
+      if (scheduledMonth != null) return scheduledMonth == monthNumber;
+      final history =
+          _readIndex?.allAttendancesByStudent[package.studentId] ??
+          _state.attendances;
+      final firstUse = history
+          .where((entry) => entry.packageId == package.id)
+          .firstOrNull;
+      final originalMonth = sessionById(firstUse?.sessionId)?.monthNumber ?? 1;
+      return originalMonth == monthNumber;
     }
     return _studyMonthNumberForPlan(planId, package.monthPlanName!) ==
         monthNumber;
@@ -1866,6 +1893,7 @@ class CenterStore extends ChangeNotifier {
       sessions,
       monthPlanId,
       attendanceSession: attendanceSession,
+      studentId: student.id,
     );
     if (expectedMonthPlan != null && expectedMonthPlan != purchase.plan) {
       throw const CenterException(
@@ -1888,6 +1916,12 @@ class CenterStore extends ChangeNotifier {
       totalSessions: purchase.sessions,
       monthPlanId: purchase.plan?.id,
       monthPlanName: purchase.plan?.name,
+      coverageMonthNumber:
+          attendanceSession == null &&
+              sessionId == null &&
+              (purchase.plan == null || purchase.plan?.id == 'legacy-month4')
+          ? (_groupMonthAtPurchase(group.id, now) ?? 1)
+          : null,
       paymentId: paymentId,
     );
     _state.packages.add(package);
@@ -1910,7 +1944,26 @@ class CenterStore extends ChangeNotifier {
         staffId: currentUser!.id,
       ),
     );
-    return package;
+    final anchor = attendanceSession ?? sessionById(sessionId);
+    if (anchor == null ||
+        !_packageCoversMonth(
+          package,
+          _state.payments.last,
+          anchor.monthNumber,
+        )) {
+      return package;
+    }
+    var balance = package;
+    for (final entry in _unpaidMonthEndLessons(
+      student.id,
+      group.id,
+      anchor,
+      package.totalSessions,
+    )) {
+      _correctPrepaidAttendance(entry, balance, currentUser!.id);
+      balance = balance.copyWith(remaining: balance.remaining - 1);
+    }
+    return balance;
   }
 
   Future<void> renewPackage(PackageRequest request) => _change(
@@ -2148,6 +2201,7 @@ class CenterStore extends ChangeNotifier {
               request.packageSessions,
               request.monthPlanId,
               attendanceSession: session,
+              studentId: student.id,
             ).baseAmount
           : _configuredSessionAmount(source);
     } else if (reserved ||
@@ -2167,6 +2221,7 @@ class CenterStore extends ChangeNotifier {
               request.packageSessions,
               request.monthPlanId,
               attendanceSession: session,
+              studentId: student.id,
             ).baseAmount;
     }
     final net = _studentDiscounted(student, baseAmount);
@@ -2183,6 +2238,20 @@ class CenterStore extends ChangeNotifier {
       monthPlanName: selectedMonth?.name,
       monthPlanSessions: selectedMonth?.sessions,
       eligibleRemaining: balance,
+      priorAttendanceIds:
+          request.mode == EntryMode.package &&
+              balance == 0 &&
+              !reserved &&
+              !hasRetainedSessionPayment(student.id, session.id)
+          ? List.unmodifiable(
+              _unpaidMonthEndLessons(
+                student.id,
+                sourceGroupId ?? group.id,
+                session,
+                selectedMonth?.sessions ?? request.packageSessions,
+              ).map((r) => r.id),
+            )
+          : const [],
     );
   }
 
@@ -5801,6 +5870,8 @@ void validateState(CenterState state) {
           payment.packageId == package.id &&
           payment.studentId == package.studentId &&
           payment.groupId == package.groupId &&
+          (package.coverageMonthNumber == null ||
+              package.coverageMonthNumber! > 0) &&
           package.remaining >= 0 &&
           package.remaining <= package.totalSessions &&
           (package.monthPlanId == null

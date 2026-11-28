@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massar_center/application/center_store.dart';
 import 'package:massar_center/domain/models.dart';
+import 'package:massar_center/data/center_state.dart';
 import 'package:massar_center/features/attendance/attendance_workspace.dart';
 import 'package:massar_center/shared/theme.dart';
 
@@ -136,7 +138,7 @@ void main() {
     await tester.runAsync(() => tester.tap(action));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('record-cancellation-dialog')), findsOneWidget);
-    expect(find.text('مينا صاحب السجل · كود 701'), findsOneWidget);
+    expect(find.text('${student.name} · كود ${student.code}'), findsOneWidget);
   }
 
   Future<void> chooseRelated(WidgetTester tester, bool isPayment) async {
@@ -202,6 +204,56 @@ void main() {
       image.dispose();
     });
   }
+
+  testWidgets(
+    'open and confirm attendance cancellation with 5000 paid attendees',
+    (tester) async {
+      await tester.runAsync(() async {
+        final backup =
+            jsonDecode(await File(await store.createBackup()).readAsString())
+                as Map;
+        final data = CenterState.fromJson(
+          backup['data'] as Map<String, dynamic>,
+        );
+        for (var i = 1; i < 5000; i++) {
+          final copy = student.copyWith(id: 'load-$i', code: 'T$i');
+          data.students.add(copy);
+          data.enrollments['${copy.id}:${session.groupId}'] = student.createdAt
+              .toIso8601String();
+          data.attendances.add(
+            attendance.copyWith(id: 'attendance-$i', studentId: copy.id),
+          );
+          data.payments.add(
+            payment.copyWith(id: 'payment-$i', studentId: copy.id),
+          );
+        }
+        await store.close();
+        store = await CenterStore.open(
+          directory: '${directory.path}/synthetic',
+          initialState: () async => data,
+        );
+        await store.signIn('الإدارة', 'cancel-ui-password');
+        student = store.students.last;
+        attendance = store.attendances.last;
+      });
+      await open(tester);
+      final openTime = Stopwatch()..start();
+      await openCancellation(tester, false);
+      openTime.stop();
+      await tester.enterText(reason, 'تصحيح حضور الطالب');
+      await tester.ensureVisible(confirm);
+      final saveTime = Stopwatch()..start();
+      await mutate(tester, () => tester.tap(confirm), 'إلغاء الحضور');
+      saveTime.stop();
+      debugPrint(
+        '5000 paid attendees: dialog ${openTime.elapsedMilliseconds} ms, cancellation ${saveTime.elapsedMilliseconds} ms',
+      );
+      expect(openTime.elapsed, lessThan(const Duration(seconds: 5)));
+      expect(saveTime.elapsed, lessThan(const Duration(seconds: 5)));
+      expect(store.attendancesForStudent(student.id), isEmpty);
+      expect(store.paymentsForStudent(student.id), hasLength(1));
+    },
+  );
 
   testWidgets('registration edits the receipt beside cancellation', (
     tester,
@@ -474,7 +526,8 @@ void main() {
         isFalse,
       );
       await tester.runAsync(
-        () => tester.tap(find.widgetWithText(OutlinedButton, 'فتح أو عرض الحصة')),
+        () =>
+            tester.tap(find.widgetWithText(OutlinedButton, 'فتح أو عرض الحصة')),
       );
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.byKey(const Key('closed-session-dialog')), findsOneWidget);

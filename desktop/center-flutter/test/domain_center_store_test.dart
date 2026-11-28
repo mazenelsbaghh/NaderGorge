@@ -74,6 +74,110 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test(
+    '120 EGP at the last lesson settles the two final lessons once',
+    () async {
+      await store.saveStudent(
+        store.students.single.copyWith(discountPercent: 0),
+      );
+      await store.saveGroup(store.groups.single.copyWith(sessionPrice: 6000));
+      Future<StudyMonth> month(String name) => store.saveStudyMonth(
+        StudyMonth(
+          name: name,
+          lessons: [for (var n = 1; n <= 4; n++) PreparedLesson(number: n)],
+        ),
+      );
+      await month('الشهر الثاني');
+      final thirdMonth = await month('الشهر الثالث');
+      final fourthMonth = await month('الشهر الرابع');
+      Future<LessonSession> start(StudyMonth month, int n) =>
+          store.startPreparedLesson(
+            groupId: groupId,
+            preparedLessonId: month.lessons[n - 1].id,
+          );
+      EntryRequest single(LessonSession s) => EntryRequest(
+        studentId: studentId,
+        sessionId: s.id,
+        mode: EntryMode.single,
+      );
+      final third = await start(thirdMonth, 3);
+      await store.recordAttendance(single(third));
+      await store.closeSession(third.id);
+      await store.finalizeSession(sessionId: third.id, actualCash: 0);
+      final originalClosing = store.closings.single.summary.toJson();
+      final fourth = await start(thirdMonth, 4);
+      await store.recordAttendance(single(fourth));
+      final pair = EntryRequest(
+        studentId: studentId,
+        sessionId: fourth.id,
+        mode: EntryMode.package,
+        packageSessions: 2,
+      );
+      final quote = store.entryConfirmationFor(pair);
+      expect(quote.netAmount, 12000);
+      expect(quote.priorAttendanceIds, [store.attendances.first.id]);
+      await store.collectAndAttend(
+        EntryRequest(
+          studentId: studentId,
+          sessionId: fourth.id,
+          mode: EntryMode.package,
+          packageSessions: 2,
+          confirmation: quote,
+        ),
+      );
+      expect(store.packages.single.remaining, 0);
+      expect(
+        store.attendances.map((e) => e.packageId),
+        everyElement(store.packages.single.id),
+      );
+      expect(store.payments.single.sessionId, fourth.id);
+      expect(store.payments.single.collectedAmount, 12000);
+      expect(store.paymentDebtFor(store.payments.single.id), 0);
+      expect(store.closings.single.summary.toJson(), originalClosing);
+      await store.closeSession(fourth.id);
+      await store.close();
+      store = await CenterStore.open(directory: directory.path);
+      await store.signIn('مدير', 'test-pass-123');
+      final first = await start(fourthMonth, 1);
+      expect(store.entryConfirmationFor(single(first)).netAmount, 6000);
+      await store.recordAttendanceWithCredit(single(first));
+      expect(store.attendanceNeedsPayment(studentId, first.id), isTrue);
+      expect(store.attendanceNeedsPayment(studentId, third.id), isFalse);
+      expect(store.closings.single.summary.toJson(), originalClosing);
+      expect(store.payments, hasLength(1));
+    },
+  );
+
+  test(
+    'unassigned renewal keeps its purchase month across a restart',
+    () async {
+      final firstMonth = store.studyMonths.single;
+      final last = await store.startPreparedLesson(
+        groupId: groupId,
+        preparedLessonId: firstMonth.lessons.last.id,
+      );
+      await store.renewPackage(
+        PackageRequest(studentId: studentId, groupId: groupId),
+      );
+      await store.closeSession(last.id);
+      expect(store.packages.single.remaining, 4);
+      final next = await store.saveStudyMonth(
+        StudyMonth(name: 'الشهر التالي', lessons: [PreparedLesson(number: 1)]),
+      );
+      await store.close();
+      store = await CenterStore.open(directory: directory.path);
+      await store.signIn('مدير', 'test-pass-123');
+      final lesson = await store.startPreparedLesson(
+        groupId: groupId,
+        preparedLessonId: next.lessons.first.id,
+      );
+      expect(store.eligibleRemainingFor(studentId, lesson.id), 0);
+      await store.closeSession(lesson.id);
+      expect(store.attendances.last.packageId, isNull);
+      expect(store.packages.single.remaining, 4);
+    },
+  );
+
   for (final lateLesson in [2, 4]) {
     test(
       'monthly payment at lesson $lateLesson expires before the next month',
